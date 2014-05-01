@@ -20,7 +20,7 @@ module VpsAdmin
 
       end
 
-      def get_action(resources, action)
+      def get_action(resources, action, args)
         @spec ||= describe_api(@version)
 
         tmp = @spec
@@ -34,14 +34,20 @@ module VpsAdmin
         a = tmp[:actions][action]
 
         if a
-          Action.new(a)
+          Action.new(self, a, args)
         else
           false
         end
       end
 
-      def call(action)
-        parse(@rest[action.url].method(action.http_method.downcase.to_sym).call)
+      def call(action, raw: false)
+        response = @rest[action.url].method(action.http_method.downcase.to_sym).call
+
+        if raw
+          response
+        else
+          parse(response)
+        end
       end
 
       private

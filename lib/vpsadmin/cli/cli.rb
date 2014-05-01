@@ -20,10 +20,10 @@ module VpsAdmin
         resources = ARGV[0].split('.')
         action = translate_action(ARGV[1].to_sym)
 
-        action = @api.get_action(resources, action)
+        action = @api.get_action(resources, action, ARGV[2..-1])
 
         if action
-          format_output(@api.call(action))
+          format_output(action, action.execute(raw: @opts[:raw]))
 
         else
           warn "Action #{ARGV[0]}##{ARGV[1]} not valid"
@@ -54,6 +54,10 @@ module VpsAdmin
 
           opts.on('--list-actions VERSION', 'List all resources and actions in API version') do |v|
             @action = [:list_actions, v.sub(/^v/, '')]
+          end
+
+          opts.on('-r', '--raw', 'Print raw response as is') do
+            options[:raw] = true
           end
 
           opts.on('-v', '--[no-]verbose', 'Run verbosely') do |v|
@@ -119,8 +123,87 @@ module VpsAdmin
         end
       end
 
-      def format_output(response)
-        pp response
+      def format_output(action, response)
+        if @opts[:raw]
+          puts response
+          return
+        end
+
+        return if response.empty?
+
+        s = action.structure
+
+        case action.layout.to_sym
+          when :list
+            # Print header row
+            response.first.each do |param, _|
+              print sprintf('%-25.25s', header_for(action, param))
+            end
+
+            puts ''
+
+            # Print items
+            response.each do |item|
+              item.each do |_, v|
+                print sprintf('%-25.25s', v)
+              end
+
+              puts ''
+            end
+
+
+          when :object
+            response.each do |k, v|
+              puts "#{k}: #{v}"
+            end
+
+
+          when :custom
+            pp response
+
+        end
+
+        # if s.is_a?(Array) # assume list of items
+        #   # find headers
+        #   first = response.first
+        #
+        #   if first.is_a?(Hash)
+        #     first.each do |param, _|
+        #       print sprintf('%-25.25s', header_for(action, param))
+        #     end
+        #
+        #     puts ''
+        #
+        #     response.each do |item|
+        #       item.each do |_, v|
+        #         print sprintf('%-25.25s', v)
+        #       end
+        #
+        #       puts ''
+        #     end
+        #
+        #   else
+        #     pp response
+        #   end
+        #
+        # elsif s.is_a?(Hash) # assume item representation
+        #   response.each do |k, v|
+        #     puts "#{k}: #{v}"
+        #   end
+        #
+        # else
+        #   pp response
+        # end
+      end
+
+      def header_for(action, param)
+        params = action.params
+
+        if params.has_key?(param) && params[param][:label]
+          params[param][:label]
+        else
+          param.to_s.upcase
+        end
       end
     end
   end

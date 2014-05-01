@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+
+require 'require_all'
+require_rel '../lib/vpsadmin/api', '../lib/vpsadmin/cli'
+
+VpsAdmin::CLI::Cli.run

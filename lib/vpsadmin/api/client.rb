@@ -12,6 +12,10 @@ module VpsAdmin
         @version = 1
       end
 
+      def login(user, password)
+        @rest = RestClient::Resource.new(@url, user, password)
+      end
+
       def describe_api(v=nil)
         description_for(path_for(v))
       end
@@ -41,16 +45,32 @@ module VpsAdmin
       end
 
       def call(action, raw: false)
-        response = @rest[action.url].method(action.http_method.downcase.to_sym).call
+        begin
+          response = @rest[action.url].method(action.http_method.downcase.to_sym).call
+
+        rescue RestClient::Forbidden
+          return error('Access forbidden. Bad user name or password?')
+
+        rescue => e
+          return error("Fatal API error: #{e.inspect}")
+        end
 
         if raw
-          response
+          ok(response)
         else
-          parse(response)
+          ok(parse(response))
         end
       end
 
       private
+        def ok(response)
+          {status: true, response: response}
+        end
+
+        def error(msg)
+          {status: false, message: msg}
+        end
+
         def path_for(v=nil, r=nil)
           ret = '/'
 

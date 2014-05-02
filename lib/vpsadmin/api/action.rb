@@ -12,6 +12,10 @@ module VpsAdmin
         @api.call(self, *args)
       end
 
+      def auth?
+        @spec[:auth]
+      end
+
       def input
         @spec[:input]
       end

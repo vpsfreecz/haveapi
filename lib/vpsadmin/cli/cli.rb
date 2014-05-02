@@ -1,5 +1,6 @@
 require 'optparse'
 require 'pp'
+require 'highline/import'
 
 module VpsAdmin
   module CLI
@@ -23,7 +24,17 @@ module VpsAdmin
         action = @api.get_action(resources, action, ARGV[2..-1])
 
         if action
-          format_output(action, action.execute(raw: @opts[:raw]))
+          unless params_valid?(action)
+            warn 'Missing required parameters'
+          end
+
+          ret = action.execute(raw: @opts[:raw])
+
+          if ret[:status]
+            format_output(action, ret[:response])
+          else
+            warn "Error occured: #{ret[:message]}"
+          end
 
         else
           warn "Action #{ARGV[0]}##{ARGV[1]} not valid"
@@ -58,6 +69,14 @@ module VpsAdmin
 
           opts.on('-r', '--raw', 'Print raw response as is') do
             options[:raw] = true
+          end
+
+          opts.on('-u', '--username USER', 'User name') do |u|
+            options[:user] = u
+          end
+
+          opts.on('-p', '--password PASSWORD', 'Password') do |p|
+            options[:password] = p
           end
 
           opts.on('-v', '--[no-]verbose', 'Run verbosely') do |v|
@@ -162,38 +181,6 @@ module VpsAdmin
             pp response
 
         end
-
-        # if s.is_a?(Array) # assume list of items
-        #   # find headers
-        #   first = response.first
-        #
-        #   if first.is_a?(Hash)
-        #     first.each do |param, _|
-        #       print sprintf('%-25.25s', header_for(action, param))
-        #     end
-        #
-        #     puts ''
-        #
-        #     response.each do |item|
-        #       item.each do |_, v|
-        #         print sprintf('%-25.25s', v)
-        #       end
-        #
-        #       puts ''
-        #     end
-        #
-        #   else
-        #     pp response
-        #   end
-        #
-        # elsif s.is_a?(Hash) # assume item representation
-        #   response.each do |k, v|
-        #     puts "#{k}: #{v}"
-        #   end
-        #
-        # else
-        #   pp response
-        # end
       end
 
       def header_for(action, param)
@@ -204,6 +191,25 @@ module VpsAdmin
         else
           param.to_s.upcase
         end
+      end
+
+      def params_valid?(action)
+        if action.auth?
+          @opts[:user] ||= ask('User name: ') { |q| q.default = nil }
+
+          @opts[:password] ||= ask('Password: ') do |q|
+            q.default = nil
+            q.echo = false
+          end
+        end
+        
+        if action.auth? && !(@opts[:user] || @opts[:password])
+          return false
+        end
+
+        @api.login(@opts[:user], @opts[:password])
+
+        true
       end
     end
   end

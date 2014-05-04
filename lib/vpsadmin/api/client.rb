@@ -49,7 +49,7 @@ module VpsAdmin
         args = []
 
         if %w(POST PUT).include?(action.http_method)
-          args << {action.namespace => params}.to_json
+          args << {action.namespace(:input) => params}.to_json
         end
 
         args << {:content_type => :json, :accept => :json}

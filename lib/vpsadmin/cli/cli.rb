@@ -233,7 +233,7 @@ module VpsAdmin
         return if response.empty?
 
         s = action.structure
-        namespace = action.namespace.to_sym
+        namespace = action.namespace(:output).to_sym
 
         case action.layout.to_sym
           when :list

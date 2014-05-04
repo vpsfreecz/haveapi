@@ -32,6 +32,10 @@ module VpsAdmin
         @spec[:output][:format]
       end
 
+      def namespace
+        @spec[:output][:namespace]
+      end
+
       def params
         @spec[:output][:parameters]
       end

@@ -151,18 +151,19 @@ module VpsAdmin
         return if response.empty?
 
         s = action.structure
+        namespace = action.namespace.to_sym
 
         case action.layout.to_sym
           when :list
             # Print header row
-            response.first.each do |param, _|
+            response[namespace].first.each do |param, _|
               print sprintf('%-25.25s', header_for(action, param))
             end
 
             puts ''
 
             # Print items
-            response.each do |item|
+            response[namespace].each do |item|
               item.each do |_, v|
                 print sprintf('%-25.25s', v)
               end
@@ -172,13 +173,13 @@ module VpsAdmin
 
 
           when :object
-            response.each do |k, v|
+            response[namespace].each do |k, v|
               puts "#{k}: #{v}"
             end
 
 
           when :custom
-            pp response
+            pp response[namespace]
 
         end
       end
@@ -202,7 +203,7 @@ module VpsAdmin
             q.echo = false
           end
         end
-        
+
         if action.auth? && !(@opts[:user] || @opts[:password])
           return false
         end

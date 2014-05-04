@@ -19,22 +19,36 @@ module VpsAdmin
           exit
         end
 
+        if @opts[:help] && ARGV.empty?
+          puts @global_opt.help
+          exit(true)
+        end
+
         resources = ARGV[0].split('.')
         action = translate_action(ARGV[1].to_sym)
 
         action = @api.get_action(resources, action, ARGV[2..-1])
+
+        @input_params = parameters(action)
 
         if action
           unless params_valid?(action)
             warn 'Missing required parameters'
           end
 
-          ret = action.execute(raw: @opts[:raw])
+          ret = action.execute(@input_params, raw: @opts[:raw])
 
           if ret[:status]
             format_output(action, ret[:response])
           else
-            warn "Error occured: #{ret[:message]}"
+            warn "Action failed: #{ret[:message]}"
+
+            if ret[:errors].any?
+              puts 'Errors:'
+              ret[:errors].each do |param, e|
+                puts "\t#{param}: #{e.join('; ')}"
+              end
+            end
           end
 
         else
@@ -49,8 +63,8 @@ module VpsAdmin
             verbose: false,
         }
 
-        OptionParser.new do |opts|
-          opts.banner = 'Usage: vpsadminctl [options] <resource> <action> [parameters]'
+        @global_opt = OptionParser.new do |opts|
+          opts.banner = 'Usage: vpsadminctl [options] <resource> <action> [objects ids] -- [parameters]'
 
           opts.on('-a', '--api URL', 'API URL') do |url|
             options[:api] = url
@@ -83,12 +97,79 @@ module VpsAdmin
           opts.on('-v', '--[no-]verbose', 'Run verbosely') do |v|
             options[:verbose] = v
           end
-        end.parse!
 
-        #p options
+          opts.on('-h', '--help', 'Show this message') do
+            options[:help] = true
+          end
+        end
+
+        args = []
+
+        ARGV.each do |arg|
+          if arg == '--'
+            break
+          else
+            args << arg
+          end
+        end
+
+        @global_opt.parse!(args)
+
+        # p options
         #p ARGV
 
         options
+      end
+
+      def parameters(action)
+        options = {}
+        sep = ARGV.index('--')
+
+        return {} unless sep
+
+        @action_opt = OptionParser.new do |opts|
+          opts.banner = ''
+
+          action.input[:parameters].each do |name, p|
+            opts.on(param_option(name, p), p[:description]) do |*args|
+              if p[:type] == 'Boolean'
+                options[name] = true
+              else
+                options[name] = args.first
+              end
+            end
+          end
+
+          opts.on('-h', '--help', 'Show this message') do
+            @opts[:help] = true
+          end
+        end
+
+        @action_opt.parse!(ARGV[sep+1..-1])
+
+        if @opts[:help]
+          puts @global_opt.help
+          puts ''
+          print 'Action parameters:'
+          puts @action_opt.help
+          exit
+        end
+
+        options
+      end
+
+      def param_option(name, p)
+        ret = '--'
+        name = name.to_s.dasherize
+
+        if p[:type] == 'Boolean'
+          ret += "[no-]#{name}"
+
+        else
+          ret += "#{name} #{name.upcase}"
+        end
+
+        ret
       end
 
       def translate_action(action)

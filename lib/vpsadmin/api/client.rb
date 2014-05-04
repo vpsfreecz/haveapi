@@ -1,6 +1,7 @@
 require 'rest_client'
 require 'json'
 require 'active_support/inflections'
+require 'active_support/inflector'
 require_rel '../../restclient_ext'
 
 module VpsAdmin
@@ -44,9 +45,12 @@ module VpsAdmin
         end
       end
 
-      def call(action, raw: false)
+      def call(action, params, raw: false)
         begin
-          response = parse(@rest[action.url].method(action.http_method.downcase.to_sym).call)
+          response = parse(@rest[action.url].method(action.http_method.downcase.to_sym).call(
+                       {action.namespace => params}.to_json,
+                       :content_type => :json, :accept => :json
+          ))
 
         rescue RestClient::Forbidden
           return error('Access forbidden. Bad user name or password?')
@@ -63,7 +67,7 @@ module VpsAdmin
           end
 
         else
-          error(response[:message])
+          error(response[:message], response[:errors])
         end
       end
 
@@ -72,8 +76,8 @@ module VpsAdmin
           {status: true, response: response}
         end
 
-        def error(msg)
-          {status: false, message: msg}
+        def error(msg, errors={})
+          {status: false, message: msg, errors: errors}
         end
 
         def path_for(v=nil, r=nil)

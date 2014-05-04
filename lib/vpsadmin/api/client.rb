@@ -46,7 +46,7 @@ module VpsAdmin
 
       def call(action, raw: false)
         begin
-          response = @rest[action.url].method(action.http_method.downcase.to_sym).call
+          response = parse(@rest[action.url].method(action.http_method.downcase.to_sym).call)
 
         rescue RestClient::Forbidden
           return error('Access forbidden. Bad user name or password?')
@@ -55,10 +55,15 @@ module VpsAdmin
           return error("Fatal API error: #{e.inspect}")
         end
 
-        if raw
-          ok(response)
+        if response[:status]
+          if raw
+            ok(JSON.pretty_generate(response[:response]))
+          else
+            ok(response[:response])
+          end
+
         else
-          ok(parse(response))
+          error(response[:message])
         end
       end
 

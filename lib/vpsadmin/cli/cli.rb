@@ -11,7 +11,7 @@ module VpsAdmin
       end
 
       def initialize
-        @opts = options
+        args, @opts = options
         @api = VpsAdmin::API::Client.new(@opts[:api])
 
         if @action
@@ -19,15 +19,15 @@ module VpsAdmin
           exit
         end
 
-        if @opts[:help] && ARGV.empty?
+        if @opts[:help] && args.empty?
           puts @global_opt.help
           exit(true)
         end
 
-        resources = ARGV[0].split('.')
-        action = translate_action(ARGV[1].to_sym)
+        resources = args[0].split('.')
+        action = translate_action(args[1].to_sym)
 
-        action = @api.get_action(resources, action, ARGV[2..-1])
+        action = @api.get_action(resources, action, args[2..-1])
 
         @input_params = parameters(action)
 
@@ -118,7 +118,7 @@ module VpsAdmin
         # p options
         #p ARGV
 
-        options
+        [args, options]
       end
 
       def parameters(action)

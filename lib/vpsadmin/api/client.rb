@@ -46,14 +46,19 @@ module VpsAdmin
       end
 
       def call(action, params, raw: false)
+        args = []
+
+        if %w(POST PUT).include?(action.http_method)
+          args << {action.namespace => params}.to_json
+        end
+
+        args << {:content_type => :json, :accept => :json}
+
         begin
-          response = parse(@rest[action.url].method(action.http_method.downcase.to_sym).call(
-                       {action.namespace => params}.to_json,
-                       :content_type => :json, :accept => :json
-          ))
+          response = parse(@rest[action.url].method(action.http_method.downcase.to_sym).call(*args))
 
         rescue RestClient::Forbidden
-          return error('Access forbidden. Bad user name or password?')
+          return error('Access forbidden. Bad user name or password? Not authorized?')
 
         rescue => e
           return error("Fatal API error: #{e.inspect}")

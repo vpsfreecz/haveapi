@@ -64,7 +64,7 @@ module VpsAdmin
         }
 
         @global_opt = OptionParser.new do |opts|
-          opts.banner = 'Usage: vpsadminctl [options] <resource> <action> [objects ids] -- [parameters]'
+          opts.banner = 'Usage: vpsadminctl [options] <resource> <action> [objects ids] [-- [parameters]]'
 
           opts.on('-a', '--api URL', 'API URL') do |url|
             options[:api] = url
@@ -125,8 +125,6 @@ module VpsAdmin
         options = {}
         sep = ARGV.index('--')
 
-        return {} unless sep
-
         @action_opt = OptionParser.new do |opts|
           opts.banner = ''
 
@@ -145,8 +143,6 @@ module VpsAdmin
           end
         end
 
-        @action_opt.parse!(ARGV[sep+1..-1])
-
         if @opts[:help]
           puts @global_opt.help
           puts ''
@@ -154,6 +150,10 @@ module VpsAdmin
           puts @action_opt.help
           exit
         end
+
+        return {} unless sep
+
+        @action_opt.parse!(ARGV[sep+1..-1])
 
         options
       end

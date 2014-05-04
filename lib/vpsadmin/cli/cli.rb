@@ -1,6 +1,7 @@
 require 'optparse'
 require 'pp'
 require 'highline/import'
+require 'table_print'
 
 module VpsAdmin
   module CLI
@@ -155,21 +156,7 @@ module VpsAdmin
 
         case action.layout.to_sym
           when :list
-            # Print header row
-            response[namespace].first.each do |param, _|
-              print sprintf('%-25.25s', header_for(action, param))
-            end
-
-            puts ''
-
-            # Print items
-            response[namespace].each do |item|
-              item.each do |_, v|
-                print sprintf('%-25.25s', v)
-              end
-
-              puts ''
-            end
+            tp response[namespace]
 
 
           when :object

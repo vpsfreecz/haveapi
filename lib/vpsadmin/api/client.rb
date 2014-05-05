@@ -47,12 +47,21 @@ module VpsAdmin
 
       def call(action, params, raw: false)
         args = []
+        input_namespace = action.namespace(:input)
 
         if %w(POST PUT).include?(action.http_method)
-          args << {action.namespace(:input) => params}.to_json
-        end
+          args << {input_namespace => params}.to_json
+          args << {:content_type => :json, :accept => :json}
 
-        args << {:content_type => :json, :accept => :json}
+        elsif action.http_method == 'GET'
+          get_params = {}
+
+          params.each do |k, v|
+            get_params["#{input_namespace}[#{k}]"] = v
+          end
+
+          args << {params: get_params, accept: :json}
+        end
 
         begin
           response = parse(@rest[action.url].method(action.http_method.downcase.to_sym).call(*args))

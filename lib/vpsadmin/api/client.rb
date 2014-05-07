@@ -53,7 +53,7 @@ module VpsAdmin
           args << {input_namespace => params}.to_json
           args << {:content_type => :json, :accept => :json}
 
-        elsif action.http_method == 'GET'
+        elsif %w(GET DELETE).include?(action.http_method)
           get_params = {}
 
           params.each do |k, v|

@@ -12,7 +12,7 @@ module VpsAdmin
 
       def initialize
         args, @opts = options
-        @api = VpsAdmin::API::Client.new(@opts[:api])
+        @api = VpsAdmin::API::Communicator.new(@opts[:api])
 
         if @action
           method(@action.first).call( * @action[1..-1] )

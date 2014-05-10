@@ -9,7 +9,9 @@ module VpsAdmin
       end
 
       def execute(*args)
-        @api.call(self, *args)
+        ret = @api.call(self, *args)
+        @prepared_url = nil
+        ret
       end
 
       def auth?
@@ -44,14 +46,29 @@ module VpsAdmin
         @spec[:url]
       end
 
+      # Url with resolved parameters.
+      def prepared_url
+        @prepared_url || @spec[:url]
+      end
+
       def http_method
         @spec[:method]
       end
 
+      def unresolved_args?
+        prepared_url =~ /:[a-zA-Z\-_]+/
+      end
+
+      def provide_args(*args)
+        apply_args(args)
+      end
+
       private
         def apply_args(args)
+          @prepared_url ||= @spec[:url].dup
+
           args.each do |arg|
-            @spec[:url].sub!(/:[a-zA-Z\-_]+/, arg)
+            @prepared_url.sub!(/:[a-zA-Z\-_]+/, arg.to_s)
           end
         end
     end

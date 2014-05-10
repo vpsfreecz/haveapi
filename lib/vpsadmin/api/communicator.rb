@@ -39,7 +39,7 @@ module VpsAdmin
         a = tmp[:actions][action]
 
         if a
-          Action.new(self, a, args)
+          Action.new(self, action, a, args)
         else
           false
         end

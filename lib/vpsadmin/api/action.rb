@@ -1,8 +1,9 @@
 module VpsAdmin
   module API
     class Action
-      def initialize(api, spec, args)
+      def initialize(api, name, spec, args)
         @api = api
+        @name = name
         @spec = spec
 
         apply_args(args)
@@ -12,6 +13,10 @@ module VpsAdmin
         ret = @api.call(self, *args)
         @prepared_url = nil
         ret
+      end
+
+      def name
+        @name
       end
 
       def auth?

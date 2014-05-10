@@ -24,8 +24,11 @@ class VpsAdmin::API::Client
       r = VpsAdmin::API::Resource.new(@api, name)
       r.setup(desc)
 
-      define_singleton_method(name) do
-        r
+      define_singleton_method(name) do |*args|
+        tmp = r.dup
+        tmp.prepared_args = args
+        tmp.setup_from_clone(r)
+        tmp
       end
 
       @resources[name] = r

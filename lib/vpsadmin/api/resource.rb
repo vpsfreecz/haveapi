@@ -58,6 +58,13 @@ class VpsAdmin::API::Resource
 
       VpsAdmin::API::Response.new(action, action.execute(*all_args))
     end
+
+    define_singleton_method("#{action.name}!".to_sym) do |*args|
+      ret = method(action.name).call(*args)
+      raise VpsAdmin::API::ActionFailed.new(ret) unless ret.ok?
+
+      ret
+    end
   end
 
   def define_resource(resource)

@@ -1,4 +1,6 @@
 class VpsAdmin::API::Response
+  attr_reader :action
+
   def initialize(action, response)
     @action = action
     @response = response

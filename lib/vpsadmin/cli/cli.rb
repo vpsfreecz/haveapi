@@ -129,7 +129,7 @@ module VpsAdmin
           opts.banner = ''
 
           action.input[:parameters].each do |name, p|
-            opts.on(param_option(name, p), p[:description]) do |*args|
+            opts.on(param_option(name, p), p[:description] || p[:label] || '') do |*args|
               if p[:type] == 'Boolean'
                 options[name] = true
               else
@@ -166,7 +166,7 @@ module VpsAdmin
           ret += "[no-]#{name}"
 
         else
-          ret += "#{name} #{name.upcase}"
+          ret += "#{name} #{name.underscore.upcase}"
         end
 
         ret

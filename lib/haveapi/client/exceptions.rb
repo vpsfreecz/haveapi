@@ -1,5 +1,5 @@
-module VpsAdmin
-  module API
+module HaveAPI
+  module Client
     class ActionFailed < Exception
       def initialize(response)
         @response = response

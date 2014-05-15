@@ -4,8 +4,8 @@ require 'active_support/inflections'
 require 'active_support/inflector'
 require_rel '../../restclient_ext'
 
-module VpsAdmin
-  module API
+module HaveAPI
+  module Client
     class Communicator
       def initialize(url)
         @url = url

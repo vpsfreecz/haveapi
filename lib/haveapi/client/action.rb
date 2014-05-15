@@ -1,5 +1,5 @@
-module VpsAdmin
-  module API
+module HaveAPI
+  module Client
     class Action
       def initialize(api, name, spec, args)
         @api = api

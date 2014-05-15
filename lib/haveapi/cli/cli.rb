@@ -3,7 +3,7 @@ require 'pp'
 require 'highline/import'
 require 'table_print'
 
-module VpsAdmin
+module HaveAPI
   module CLI
     class Cli
       def self.run
@@ -12,7 +12,7 @@ module VpsAdmin
 
       def initialize
         args, @opts = options
-        @api = VpsAdmin::API::Communicator.new(@opts[:api])
+        @api = HaveAPI::Client::Communicator.new(@opts[:client])
 
         if @action
           method(@action.first).call( * @action[1..-1] )
@@ -59,7 +59,7 @@ module VpsAdmin
 
       def options
         options = {
-            api: 'http://localhost:4567',
+            client: 'http://localhost:4567',
             verbose: false,
         }
 
@@ -67,7 +67,7 @@ module VpsAdmin
           opts.banner = 'Usage: vpsadminctl [options] <resource> <action> [objects ids] [-- [parameters]]'
 
           opts.on('-a', '--api URL', 'API URL') do |url|
-            options[:api] = url
+            options[:client] = url
           end
 
           opts.on('--list-versions', 'List all available API versions') do

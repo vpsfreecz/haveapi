@@ -1,4 +1,4 @@
-class VpsAdmin::API::Response
+class HaveAPI::Client::Response
   attr_reader :action
 
   def initialize(action, response)

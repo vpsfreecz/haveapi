@@ -1,4 +1,4 @@
-class VpsAdmin::API::Resource
+class HaveAPI::Client::Resource
   attr_reader :actions, :resources, :name
   attr_accessor :prepared_args
 
@@ -13,13 +13,13 @@ class VpsAdmin::API::Resource
     @resources = {}
 
     description[:actions].each do |name, desc|
-      action = VpsAdmin::API::Action.new(@api, name, desc, [])
+      action = HaveAPI::Client::Action.new(@api, name, desc, [])
       define_action(action)
       @actions[name] = action
     end
 
     description[:resources].each do |name, desc|
-      r = VpsAdmin::API::Resource.new(@api, name)
+      r = HaveAPI::Client::Resource.new(@api, name)
       r.setup(desc)
       define_resource(r)
       @resources[name] = r
@@ -56,12 +56,12 @@ class VpsAdmin::API::Resource
 
       all_args << {} if all_args.empty?
 
-      VpsAdmin::API::Response.new(action, action.execute(*all_args))
+      HaveAPI::Client::Response.new(action, action.execute(*all_args))
     end
 
     define_singleton_method("#{action.name}!".to_sym) do |*args|
       ret = method(action.name).call(*args)
-      raise VpsAdmin::API::ActionFailed.new(ret) unless ret.ok?
+      raise HaveAPI::Client::ActionFailed.new(ret) unless ret.ok?
 
       ret
     end

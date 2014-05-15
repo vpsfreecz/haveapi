@@ -1,6 +1,6 @@
 require 'pp'
 
-class VpsAdmin::API::Client
+class HaveAPI::Client::Client
   attr_reader :resources
 
   def initialize(v=nil)

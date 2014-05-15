@@ -1,0 +1,13 @@
+source 'https://rubygems.org'
+
+gem 'activerecord'
+gem 'paper_trail'
+gem 'require_all'
+gem 'json'
+gem 'sinatra'
+gem 'mysql'
+gem 'sinatra-activerecord'
+gem 'rake'
+gem 'rspec'
+gem 'rack-test'
+gem 'railties'

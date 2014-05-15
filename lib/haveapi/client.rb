@@ -1,2 +1,2 @@
 require 'require_all'
-require_rel 'api'
+require_rel 'client'

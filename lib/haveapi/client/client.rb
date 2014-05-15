@@ -3,9 +3,9 @@ require 'pp'
 class HaveAPI::Client::Client
   attr_reader :resources
 
-  def initialize(v=nil)
+  def initialize(url, v=nil)
     @version = v
-    @api = VpsAdmin::API::Communicator.new('http://localhost:4567')
+    @api = VpsAdmin::API::Communicator.new(url)
 
     setup_api(@api.describe_api)
   end

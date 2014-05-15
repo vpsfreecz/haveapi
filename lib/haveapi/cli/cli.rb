@@ -12,7 +12,7 @@ module HaveAPI
 
       def initialize
         args, @opts = options
-        @api = HaveAPI::Client::Communicator.new(@opts[:client])
+        @api = HaveAPI::Client::Communicator.new(api_url)
 
         if @action
           method(@action.first).call( * @action[1..-1] )
@@ -57,6 +57,10 @@ module HaveAPI
         end
       end
 
+      def api_url
+        @opts[:client]
+      end
+
       def options
         options = {
             client: 'http://localhost:4567',
@@ -64,7 +68,7 @@ module HaveAPI
         }
 
         @global_opt = OptionParser.new do |opts|
-          opts.banner = 'Usage: vpsadminctl [options] <resource> <action> [objects ids] [-- [parameters]]'
+          opts.banner = "Usage: #{$0} [options] <resource> <action> [objects ids] [-- [parameters]]"
 
           opts.on('-a', '--api URL', 'API URL') do |url|
             options[:client] = url

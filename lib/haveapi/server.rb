@@ -10,14 +10,7 @@ module HaveAPI
       def authenticated?
         return @current_user if @current_user
 
-        auth = Rack::Auth::Basic::Request.new(request.env)
-        if auth.provided? && auth.basic? && auth.credentials
-            @current_user = User.authenticate(*auth.credentials)
-        end
-
-        User.current = @current_user
-
-        @current_user
+        @current_user = settings.api_server.send(:do_authenticate, request)
       end
 
       def current_user
@@ -303,12 +296,21 @@ module HaveAPI
       "#{@root}v#{v}/"
     end
 
+    def authenticate(&block)
+      @authenticate = block
+    end
+
     def app
       @sinatra
     end
 
     def start!
       @sinatra.run!
+    end
+
+    private
+    def do_authenticate(request)
+      @authenticate.call(request) if @authenticate
     end
   end
 end

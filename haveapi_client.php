@@ -1,6 +1,6 @@
 <?php
 
-namespace VpsAdmin;
+namespace HaveAPI;
 
 class Action {
 	private $m_name;

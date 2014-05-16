@@ -1,7 +1,7 @@
-vpsadminctl-php
-===============
+haveapi-client-php
+==================
 
-vpsadminctl-php is a PHP client for vpsAdmin API.
+haveapi-client-php is a PHP client for HaveAPI based APIs.
 
 Requirements
 ------------
@@ -17,13 +17,13 @@ are available.
 Include client:
 
 	<?php
-	include 'vpsadmin.php';
+	include 'haveapi.php';
 
-`vpsadmin.php` includes Httpful from `vendor/`.
+`haveapi.php` includes Httpful from `vendor/`.
 
 Create client instance:
 
-	$api = new \VpsAdmin\Client();
+	$api = new \H\Client();
 
 Authenticate with HTTP basic auth:
 
@@ -89,4 +89,4 @@ Action returns `Response` object. It has several helper methods.
 
 License
 -------
-vpsadminctl-php is released under GNU/GPL.
+haveapi-client-php is released under GNU/GPL.

@@ -55,4 +55,12 @@ module HaveAPI
   def self.module_name
     @module_name
   end
+
+  def self.set_default_authenticate(&block)
+    @default_auth = block
+  end
+
+  def self.default_authenticate
+    @default_auth
+  end
 end

@@ -310,7 +310,13 @@ module HaveAPI
 
     private
     def do_authenticate(request)
-      @authenticate.call(request) if @authenticate
+      if @authenticate
+        @authenticate.call(request)
+
+      elsif HaveAPI.default_authenticate
+        HaveAPI.default_authenticate.call(request)
+      end
+
     end
   end
 end

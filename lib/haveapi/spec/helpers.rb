@@ -3,6 +3,10 @@ require 'rack/test'
 module HaveAPI
   # Contains methods for specification of API to be used in +description+ block.
   module ApiBuilder
+    def authenticate(&block)
+      @authenticate = block
+    end
+
     def use_version(v)
       before(:each) do
         @versions = v
@@ -68,6 +72,7 @@ module HaveAPI
 
     def app
       api = HaveAPI::Server.new
+      api.authenticate(&@authenticate) if @authenticate
       api.use_version(@versions || :all)
       api.set_default_version(@default_version) if @default_version
       api.mount(@mount || '/')

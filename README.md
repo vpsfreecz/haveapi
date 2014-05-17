@@ -176,6 +176,16 @@ module MyAPI
         })
         comment 'Create new user like this'
       end
+      
+      def exec
+        user = ::User.new(params[:user])
+        
+        if user.save
+          ok({id: user.id})
+        else
+          error('save failed', user.errors.to_hash)
+        end
+      end
     end
   end
 end

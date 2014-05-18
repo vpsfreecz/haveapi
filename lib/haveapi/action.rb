@@ -245,11 +245,10 @@ module HaveAPI
     end
 
     def validate
+      @safe_params = @params.dup
       input = self.class.input
 
       if input
-        @safe_params = @params.dup
-
         # First check layout
         input.check_layout(@safe_params)
 

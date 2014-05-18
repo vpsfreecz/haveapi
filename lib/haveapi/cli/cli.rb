@@ -134,11 +134,7 @@ module HaveAPI
 
           action.input[:parameters].each do |name, p|
             opts.on(param_option(name, p), p[:description] || p[:label] || '') do |*args|
-              if p[:type] == 'Boolean'
-                options[name] = true
-              else
-                options[name] = args.first
-              end
+              options[name] = args.first
             end
           end
 

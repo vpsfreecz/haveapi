@@ -111,9 +111,9 @@ module HaveAPI
 
     def validate!
       begin
-        @params = validate(params)
+        @params = validate
       rescue ValidationError => e
-        error('input parameters not valid', e.to_hash)
+        error(e.message, e.to_hash)
       end
     end
 
@@ -127,15 +127,6 @@ module HaveAPI
     end
 
     def params
-      return @safe_params if @safe_params
-
-      @safe_params = @params
-      input = self.class.input
-
-      if input
-        @safe_params[self.class.input.namespace] = @authorization.filter_input(@params[input.namespace])
-      end
-
       @safe_params
     end
 
@@ -253,11 +244,23 @@ module HaveAPI
       ret
     end
 
-    def validate(params)
-      if self.class.input
-        self.class.input.validate(params)
-      else
-        params
+    def validate
+      input = self.class.input
+
+      if input
+        @safe_params = @params.dup
+
+        # First check layout
+        input.check_layout(@safe_params)
+
+        # Then filter allowed params
+        @safe_params[input.namespace] = @authorization.filter_input(@params[input.namespace])
+
+        # Remove duplicit key
+        @safe_params.delete(input.namespace.to_s)
+
+        # Now check required params, convert types and set defaults
+        input.validate(@safe_params)
       end
     end
 

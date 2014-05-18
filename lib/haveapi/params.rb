@@ -1,7 +1,12 @@
 module HaveAPI
   class ValidationError < Exception
-    def initialize(errors)
+    def initialize(msg, errors)
+      @msg = msg
       @errors = errors
+    end
+
+    def message
+      @msg
     end
 
     def to_hash
@@ -12,13 +17,14 @@ module HaveAPI
   class Param
     attr_reader :name, :label, :desc, :type
 
-    def initialize(name, required: nil, label: nil, desc: nil, type: nil, db_name: nil)
+    def initialize(name, required: nil, label: nil, desc: nil, type: nil, db_name: nil, default: :_nil)
       @required = required
       @name = name
       @label = label || name.to_s.capitalize
       @desc = desc
       @type = type
       @db_name = db_name
+      @default = default
       @layout = :custom
       @validators = {}
     end
@@ -51,6 +57,24 @@ module HaveAPI
           type: @type ? @type.to_s : String.to_s,
           validators: @validators,
       }
+    end
+
+    def clean(raw)
+      if raw.nil?
+        @default
+
+      elsif @type.nil?
+        nil
+
+      elsif @type == Integer
+        raw.to_i
+
+      elsif @type == Boolean
+        Boolean.to_b(raw)
+
+      else
+        raw
+      end
     end
   end
 
@@ -151,19 +175,32 @@ module HaveAPI
       ret
     end
 
+    # First step of validation. Check if input is in correct namespace
+    # and has a correct layout.
+    def check_layout(params)
+      if (params[@namespace].nil? || !valid_layout?(params)) && !@params.empty?
+        raise ValidationError.new('invalid input layout', {})
+      end
+    end
+
+    # Third step of validation. Check if all required params are present,
+    # convert params to correct data types, set default values if necessary.
     def validate(params)
       errors = {}
 
-      @params.each do |p|
-        next unless p.required?
+      layout_aware(params) do |input|
+        @params.each do |p|
+          if p.required? && input[p.name].nil?
+            errors[p.name] = ['required parameter missing']
+          end
 
-        if params[@namespace].nil? || !valid_layout?(params) || params[@namespace][p.name].nil?
-          errors[p.name] = ['required parameter missing']
+          cleaned = p.clean(input[p.name])
+          input[p.name] = cleaned if cleaned != :_nil
         end
       end
 
       unless errors.empty?
-        raise ValidationError.new(errors)
+        raise ValidationError.new('input parameters not valid', errors)
       end
 
       params
@@ -187,6 +224,21 @@ module HaveAPI
 
         when :list
           params[@namespace].is_a?(Array)
+
+        else
+          false
+      end
+    end
+
+    def layout_aware(params)
+      case @layout
+        when :object
+          yield(params[@namespace])
+
+        when :list
+          params[@namespace].each do |object|
+            yield(object)
+          end
 
         else
           false

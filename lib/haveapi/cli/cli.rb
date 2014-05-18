@@ -63,7 +63,7 @@ module HaveAPI
 
       def options
         options = {
-            client: 'http://localhost:4567',
+            client: default_url,
             verbose: false,
         }
 
@@ -279,6 +279,11 @@ module HaveAPI
         @api.login(@opts[:user], @opts[:password])
 
         true
+      end
+
+      protected
+      def default_url
+        'http://localhost:4567'
       end
     end
   end

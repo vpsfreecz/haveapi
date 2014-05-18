@@ -20,7 +20,7 @@ class Action {
 		$args = $this->args + func_get_args();
 		$cnt = count($args);
 		$replaced_cnt = 0;
-		$params = [];
+		$params = array();
 		
 		for($i = 0; $i < $cnt; $i++) {
 			$arg = $args[$i];
@@ -252,7 +252,7 @@ class Client extends Resource {
 		$request = \Httpful\Request::$fn($this->uri."/".$action->url());
 		$request->sendsJson();
 		$request->expectsJson();
-		$request->body(empty($params) ? '{}' : json_encode([$action->getNamespace('input') => $params]));
+		$request->body(empty($params) ? '{}' : json_encode(array($action->getNamespace('input') => $params)));
 		
 		if($this->user)
 			$request->authenticateWith($this->user, $this->password);

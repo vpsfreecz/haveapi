@@ -5,7 +5,7 @@ haveapi-client-php is a PHP client for HaveAPI based APIs.
 
 Requirements
 ------------
- - PHP >= 5.4
+ - PHP >= 5.3
  - [Httpful](http://phphttpclient.com/) - already included in `vendor/`
 
 Usage
@@ -23,7 +23,7 @@ Include client:
 
 Create client instance:
 
-	$api = new \H\Client();
+	$api = new \HaveAPI\Client();
 
 Authenticate with HTTP basic auth:
 
@@ -63,8 +63,8 @@ Object IDs must be in front of it.
 		'template_id' => 1
 	]);
 
-	$api->vps->ip_address->create(101, ['version' => 4]);
-	$api->vps(101)->ip_address->create(['version' => 4]);
+	$api->vps->ip_address->create(101, array('version' => 4));
+	$api->vps(101)->ip_address->create(array('version' => 4));
 
 ### Response
 Action returns `Response` object. It has several helper methods.

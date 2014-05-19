@@ -21,6 +21,19 @@ module HaveAPI
         description_for(path_for(v))
       end
 
+      def describe_resource(path)
+        api = describe_api
+        tmp = describe_api[:versions][ describe_api[:default_version].to_s.to_sym ]
+
+        path.each do |r|
+          tmp = tmp[:resources][r.to_sym]
+
+          return false unless tmp
+        end
+
+        tmp
+      end
+
       def describe_action(v, r)
 
       end

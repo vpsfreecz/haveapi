@@ -21,10 +21,18 @@ module HaveAPI
 
         if (@opts[:help] && args.empty?) || args.empty?
           puts @global_opt.help
+          puts "\nAvailable resources:"
+          list_resources
           exit(true)
         end
 
         resources = args[0].split('.')
+
+        if args.count == 1
+          describe_resource(resources)
+          exit(true)
+        end
+
         action = translate_action(args[1].to_sym)
 
         action = @api.get_action(resources, action, args[2..-1])
@@ -78,12 +86,12 @@ module HaveAPI
             @action = [:list_versions]
           end
 
-          opts.on('--list-resources VERSION', 'List all resource in API version') do |v|
-            @action = [:list_resources, v.sub(/^v/, '')]
+          opts.on('--list-resources [VERSION]', 'List all resource in API version') do |v|
+            @action = [:list_resources, v && v.sub(/^v/, '')]
           end
 
-          opts.on('--list-actions VERSION', 'List all resources and actions in API version') do |v|
-            @action = [:list_actions, v.sub(/^v/, '')]
+          opts.on('--list-actions [VERSION]', 'List all resources and actions in API version') do |v|
+            @action = [:list_actions, v && v.sub(/^v/, '')]
           end
 
           opts.on('-r', '--raw', 'Print raw response as is') do
@@ -198,15 +206,46 @@ module HaveAPI
         end
       end
 
-      def list_resources(v)
-        @api.describe_api(v)[:resources].each do |resource, children|
+      def list_resources(v=nil)
+        desc = @api.describe_api
+
+        desc[:versions][v || desc[:default_version].to_s.to_sym][:resources].each do |resource, children|
           nested_resource(resource, children, false)
         end
       end
 
-      def list_actions(v)
-        @api.describe_api(v)[:resources].each do |resource, children|
+      def list_actions(v=nil)
+        desc = @api.describe_api
+
+        desc[:versions][v || desc[:default_version].to_s.to_sym][:resources].each do |resource, children|
           nested_resource(resource, children, true)
+        end
+      end
+
+      def describe_resource(path)
+        desc = @api.describe_resource(path)
+
+        unless desc
+          warn "Resource #{path.join('.')} does not exist"
+          exit(false)
+        end
+
+        unless desc[:resources].empty?
+          puts 'Resources:'
+
+          desc[:resources].each_key do |r|
+            puts "  #{r}"
+          end
+        end
+
+        puts '' if !desc[:resources].empty? && !desc[:actions].empty?
+
+        unless desc[:actions].empty?
+          puts 'Actions:'
+
+          desc[:actions].each_key do |a|
+            puts "  #{a}"
+          end
         end
       end
 

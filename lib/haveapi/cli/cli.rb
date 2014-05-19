@@ -19,7 +19,7 @@ module HaveAPI
           exit
         end
 
-        if @opts[:help] && args.empty?
+        if @opts[:help] || args.empty?
           puts @global_opt.help
           exit(true)
         end

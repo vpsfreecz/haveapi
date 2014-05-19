@@ -253,7 +253,7 @@ module HaveAPI
         input.check_layout(@safe_params)
 
         # Then filter allowed params
-        @safe_params[input.namespace] = @authorization.filter_input(@params[input.namespace])
+        @safe_params[input.namespace] = @authorization.filter_input(@safe_params[input.namespace])
 
         # Remove duplicit key
         @safe_params.delete(input.namespace.to_s)

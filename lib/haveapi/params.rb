@@ -179,8 +179,16 @@ module HaveAPI
     # First step of validation. Check if input is in correct namespace
     # and has a correct layout.
     def check_layout(params)
-      if (params[@namespace].nil? || !valid_layout?(params)) && !@params.empty?
+      if (params[@namespace].nil? || !valid_layout?(params)) && any_required_params?
         raise ValidationError.new('invalid input layout', {})
+      end
+
+      case @layout
+        when :object
+          params[@namespace] ||= {}
+
+        when :list
+          params[@namespace] ||= []
       end
     end
 
@@ -244,6 +252,14 @@ module HaveAPI
         else
           false
       end
+    end
+
+    def any_required_params?
+      @params.each do |p|
+        return true if p.required?
+      end
+
+      false
     end
   end
 end

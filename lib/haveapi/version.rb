@@ -1,3 +1,3 @@
 module HaveAPI
-  VERSION = '1.0.0-dev'
+  VERSION = '0.1.0'
 end

@@ -56,6 +56,7 @@ module HaveAPI
           description: @desc,
           type: @type ? @type.to_s : String.to_s,
           validators: @validators,
+          default: @default
       }
     end
 

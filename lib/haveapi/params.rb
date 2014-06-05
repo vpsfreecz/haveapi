@@ -82,12 +82,18 @@ module HaveAPI
   class Params
     attr_reader :namespace, :layout, :params
 
-    def initialize(direction, action, namespace)
+    def initialize(direction, action, layout = :object, namespace = nil)
       @direction = direction
       @params = []
       @action = action
-      @namespace = namespace.to_sym
-      @layout = :object
+      @layout = layout
+
+      if namespace
+        @namespace = namespace
+      else
+        @namespace = action.resource.to_s.demodulize.underscore
+        @namespace = @namespace.pluralize if @layout == :list
+      end
     end
 
     def requires(*args)
@@ -137,16 +143,6 @@ module HaveAPI
       @namespace = name
       @layout = :custom
       @structure = s
-    end
-
-    # Action returns a list of objects.
-    def list_of_objects
-      @layout = :list
-    end
-
-    # Action returns properties describing one object.
-    def object
-      @layout = :object
     end
 
     def load_validators(model)

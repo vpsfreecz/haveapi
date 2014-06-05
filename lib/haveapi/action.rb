@@ -30,9 +30,9 @@ module HaveAPI
     class << self
       attr_reader :resource, :authorization, :input, :output
 
-      def input(namespace=nil, &block)
+      def input(layout = :object, namespace: nil, &block)
         if block
-          @input = Params.new(:input, self, namespace || self.resource.to_s.demodulize.underscore)
+          @input = Params.new(:input, self, layout, namespace)
           @input.instance_eval(&block)
           @input.load_validators(model) if model
         else
@@ -40,9 +40,9 @@ module HaveAPI
         end
       end
 
-      def output(namespace=nil, &block)
+      def output(layout = :object, namespace: nil, &block)
         if block
-          @output = Params.new(:output, self, namespace || self.resource.to_s.demodulize.underscore)
+          @output = Params.new(:output, self, layout, namespace)
           @output.instance_eval(&block)
         else
           @output

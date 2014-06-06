@@ -229,6 +229,10 @@ module HaveAPI
 
         desc = route.action.describe(Context.new(settings.api_server, version: v, action: route.action, url: route.url, user: current_user))
 
+        unless desc
+          report_error(403, {}, 'Access denied. Insufficient permissions.')
+        end
+
         JSON.pretty_generate(desc)
       end
     end

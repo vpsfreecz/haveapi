@@ -59,38 +59,44 @@ module HaveAPI
       ret
     end
 
-    def filter_input(params)
-      filter_inner(@input, params)
+    def filter_input(input, params)
+      filter_inner(input, @input, params)
     end
 
-    def filter_output(params)
-      filter_inner(@output, params)
+    def filter_output(output, params)
+      filter_inner(output, @output, params)
     end
 
     private
-    def filter_inner(hash, params)
-      return params unless hash
+    def filter_inner(allowed_params, direction, params)
+      allowed = {}
 
-      if hash[:whitelist]
+      allowed_params.each do |p|
+        allowed[p.name] = params[p.name]
+      end
+
+      return allowed unless direction
+
+      if direction[:whitelist]
         ret = {}
 
-        hash[:whitelist].each do |p|
-          ret[p] = params[p] if params
+        direction[:whitelist].each do |p|
+          ret[p] = allowed[p] if allowed && allowed[p]
         end
 
         ret
 
-      elsif hash[:blacklist]
-        ret = params.dup
+      elsif direction[:blacklist]
+        ret = allowed.dup
 
-        hash[:blacklist].each do |p|
+        direction[:blacklist].each do |p|
           ret.delete(p)
         end
 
         ret
 
       else
-        params
+        allowed
       end
     end
   end

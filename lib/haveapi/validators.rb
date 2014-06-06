@@ -49,6 +49,8 @@ module HaveAPI
 
     def validator_for(param, v)
       @params.each do |p|
+        next unless p.is_a?(Parameters::Param)
+
         if p.db_name == param
           p.add_validator(v)
           break

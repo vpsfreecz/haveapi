@@ -1,6 +1,6 @@
 module HaveAPI
   class Server
-    attr_reader :root
+    attr_reader :root, :routes, :module_name
 
     module ServerHelpers
       def authenticate!
@@ -111,12 +111,12 @@ module HaveAPI
 
       # Mount root
       @sinatra.get @root do
-        @api = settings.api_server.describe(current_user)
+        @api = settings.api_server.describe(Context.new(settings.api_server, user: current_user))
         erb :index, layout: :main
       end
 
       @sinatra.options @root do
-        JSON.pretty_generate(settings.api_server.describe(current_user))
+        JSON.pretty_generate(settings.api_server.describe(Context.new(settings.api_server, user: current_user)))
       end
 
       # Login/logout links
@@ -147,12 +147,12 @@ module HaveAPI
 
       @sinatra.get prefix do
         @v = v
-        @help = settings.api_server.describe_version(v, current_user)
+        @help = settings.api_server.describe_version(Context.new(settings.api_server, version: v, user: current_user))
         erb :version, layout: :main
       end
 
       @sinatra.options prefix do
-        JSON.pretty_generate(settings.api_server.describe_version(v, current_user))
+        JSON.pretty_generate(settings.api_server.describe_version(Context.new(settings.api_server, version: v, user: current_user)))
       end
 
       HaveAPI.get_version_resources(@module_name, v).each do |resource|
@@ -227,36 +227,36 @@ module HaveAPI
 
         pass if params[:method] && params[:method] != route_method
 
-        desc = route.action.describe(current_user)
-        desc[:url] = route.url
-        desc[:method] = route_method
-        desc[:help] = "#{route.url}?method=#{route_method}"
+        desc = route.action.describe(Context.new(settings.api_server, version: v, action: route.action, url: route.url, user: current_user))
 
         JSON.pretty_generate(desc)
       end
     end
 
-    def describe(user)
+    def describe(context)
+      context.version = @default_version
+
       ret = {
           default_version: @default_version,
-          versions: {default: describe_version(@default_version, user)},
+          versions: {default: describe_version(context)},
       }
 
       @versions.each do |v|
-        ret[:versions][v] = describe_version(v, user)
+        context.version = v
+        ret[:versions][v] = describe_version(context)
       end
 
       ret
     end
 
-    def describe_version(v, user)
-      ret = {resources: {}, help: version_prefix(v)}
+    def describe_version(context)
+      ret = {resources: {}, help: version_prefix(context.version)}
 
       #puts JSON.pretty_generate(@routes)
 
-      @routes[v].each do |resource, children|
+      @routes[context.version].each do |resource, children|
         r_name = resource.to_s.demodulize.underscore
-        r_desc = describe_resource(resource, children, user)
+        r_desc = describe_resource(resource, children, context)
 
         unless r_desc[:actions].empty? && r_desc[:resources].empty?
           ret[:resources][r_name] = r_desc
@@ -266,27 +266,24 @@ module HaveAPI
       ret
     end
 
-    def describe_resource(r, hash, user)
+    def describe_resource(r, hash, context)
       ret = {description: r.desc, actions: {}, resources: {}}
 
+      context.resource = r
+
       hash[:actions].each do |action, url|
+        context.action = action
+        context.url = url
+
         a_name = action.to_s.demodulize.underscore
-        route_method = action.http_method.to_s.upcase
 
-        a_desc = action.describe(user)
+        a_desc = action.describe(context)
 
-        if a_desc
-          ret[:actions][a_name] = a_desc
-          ret[:actions][a_name].update({
-                                           url: url,
-                                           method: route_method,
-                                           help: "#{url}?method=#{route_method}"
-                                       })
-        end
+        ret[:actions][a_name] = a_desc if a_desc
       end
 
       hash[:resources].each do |resource, children|
-        ret[:resources][resource.to_s.demodulize.underscore] = describe_resource(resource, children, user)
+        ret[:resources][resource.to_s.demodulize.underscore] = describe_resource(resource, children, context)
       end
 
       ret

@@ -11,4 +11,5 @@ module HaveAPI
 end
 
 require_rel 'haveapi/*.rb'
+require_rel 'haveapi/params'
 require_rel 'haveapi/actions/*.rb'

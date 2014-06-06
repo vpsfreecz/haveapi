@@ -66,17 +66,23 @@ module HaveAPI
         prefix + (@route || to_s.demodulize.underscore) % {resource: self.resource.to_s.demodulize.underscore}
       end
 
-      def describe(user)
+      def describe(context)
         authorization = (@authorization && @authorization.clone) || Authorization.new
 
-        return false if user && !authorization.authorized?(user)
+        return false if context.current_user && !authorization.authorized?(context.current_user)
+
+        route_method = context.action.http_method.to_s.upcase
+        context.authorization = authorization
 
         {
             auth: @auth,
             description: @desc,
-            input: @input ? @input.describe(authorization) : {parameters: {}},
-            output: @output ? @output.describe(authorization) : {parameters: {}},
+            input: @input ? @input.describe(context) : {parameters: {}},
+            output: @output ? @output.describe(context) : {parameters: {}},
             example: @example ? @example.describe : {},
+            url: context.url,
+            method: route_method,
+            help: "#{context.url}?method=#{route_method}"
         }
       end
 
@@ -141,17 +147,16 @@ module HaveAPI
     # Return array +[status, data|error, errors]+
     def safe_exec
       ret = catch(:return) do
-        validate!
-
         begin
+          validate!
           exec
         rescue ActiveRecord::RecordNotFound => e
-          pp e
-          error('object not found')
-
-          # rescue => e
-          #   puts "#{e} just happened"
+          if /find ([^\s]+)[^=]+=(\d+)/ =~ e.message
+            error("object #{$~[1]} = #{$~[2]} not found")
+          else
+            error("object not found: #{e.to_s}")
           end
+        end
       end
 
       if ret
@@ -160,11 +165,11 @@ module HaveAPI
         if output
           case output.layout
             when :object
-               ret = @authorization.filter_output(ret)
+              ret = resourcify(@authorization.filter_output(self.class.output.params, ret))
 
             when :list
               ret.map! do |obj|
-                @authorization.filter_output(obj)
+                resourcify(@authorization.filter_output(self.class.output.params, obj))
               end
           end
 
@@ -244,23 +249,14 @@ module HaveAPI
       ret
     end
 
-    def validate
-      @safe_params = @params.dup
-      input = self.class.input
+    def all_attrs(m)
+      ret = m.attributes
 
-      if input
-        # First check layout
-        input.check_layout(@safe_params)
-
-        # Then filter allowed params
-        @safe_params[input.namespace] = @authorization.filter_input(@safe_params[input.namespace])
-
-        # Remove duplicit key
-        @safe_params.delete(input.namespace.to_s)
-
-        # Now check required params, convert types and set defaults
-        input.validate(@safe_params)
+      m.reflections.each_key do |name|
+        ret[name] = m.method(name).call
       end
+
+      ret
     end
 
     def ok(ret={})
@@ -271,6 +267,41 @@ module HaveAPI
       @message = msg
       @errors = errs
       throw(:return, false)
+    end
+
+    private
+    def validate
+      @safe_params = @params.dup
+      input = self.class.input
+
+      if input
+        # First check layout
+        input.check_layout(@safe_params)
+
+        # Then filter allowed params
+        @safe_params[input.namespace] = @authorization.filter_input(self.class.input.params, @safe_params[input.namespace])
+
+        # Remove duplicit key
+        @safe_params.delete(input.namespace.to_s)
+
+        # Now check required params, convert types and set defaults
+        input.validate(@safe_params)
+      end
+    end
+
+    def resourcify(hash)
+      self.class.output.params.each do |p|
+        next unless p.is_a?(Parameters::Resource) && hash[p.name]
+
+        tmp = hash[p.name]
+
+        hash[p.name] = {
+            p.value_id => tmp.method(p.value_id).call,
+            p.value_label => tmp.method(p.value_label).call
+        }
+      end
+
+      hash
     end
   end
 end

@@ -37,6 +37,8 @@ module HaveAPI
 
         action = @api.get_action(resources, action, args[2..-1])
 
+        action.update_description(@api.describe_action(action)) if login(action)
+
         @input_params = parameters(action)
 
         if action
@@ -271,17 +273,31 @@ module HaveAPI
 
         return if response.empty?
 
-        s = action.structure
         namespace = action.namespace(:output).to_sym
 
         case action.layout.to_sym
           when :list
-            tp response[namespace]
+            cols = []
+
+            action.params.each do |name, p|
+              if p[:type] == 'Resource'
+                cols << {name => {display_method: ->(r) { r[name][p[:value_label].to_sym] } }}
+              else
+                cols << name
+              end
+            end
+
+            tp response[namespace], *cols
 
 
           when :object
             response[namespace].each do |k, v|
-              puts "#{k}: #{v}"
+
+              if action.params[k][:type] == 'Resource'
+                puts "#{k}: #{v[action.params[k][:value_label].to_sym]}"
+              else
+                puts "#{k}: #{v}"
+              end
             end
 
 
@@ -301,7 +317,7 @@ module HaveAPI
         end
       end
 
-      def params_valid?(action)
+      def login(action)
         if action.auth?
           @opts[:user] ||= ask('User name: ') { |q| q.default = nil }
 
@@ -309,13 +325,19 @@ module HaveAPI
             q.default = nil
             q.echo = false
           end
+
+          @api.login(@opts[:user], @opts[:password])
+
+          return true
         end
 
+        false
+      end
+
+      def params_valid?(action)
         if action.auth? && !(@opts[:user] || @opts[:password])
           return false
         end
-
-        @api.login(@opts[:user], @opts[:password])
 
         true
       end

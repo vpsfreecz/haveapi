@@ -34,8 +34,8 @@ module HaveAPI
         tmp
       end
 
-      def describe_action(v, r)
-
+      def describe_action(action)
+        description_for(action.help)
       end
 
       def get_action(resources, action, args)

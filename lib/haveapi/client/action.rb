@@ -51,6 +51,10 @@ module HaveAPI
         @spec[:url]
       end
 
+      def help
+        @spec[:help]
+      end
+
       # Url with resolved parameters.
       def prepared_url
         @prepared_url || @spec[:url]
@@ -66,6 +70,10 @@ module HaveAPI
 
       def provide_args(*args)
         apply_args(args)
+      end
+
+      def update_description(spec)
+        @spec = spec
       end
 
       private

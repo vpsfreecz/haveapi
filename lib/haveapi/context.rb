@@ -1,18 +1,36 @@
 module HaveAPI
   class Context
-    attr_accessor :server, :version, :resource, :action, :url, :current_user, :authorization
+    attr_accessor :server, :version, :resource, :action, :url, :args,
+                  :params, :current_user, :authorization, :endpoint
 
-    def initialize(server, version: nil, resource: [], action: nil, url: nil, user: nil, authorization: nil)
+    def initialize(server, version: nil, resource: [], action: nil,
+                  url: nil, args: nil, params: nil, user: nil,
+                  authorization: nil, endpoint: nil)
       @server = server
       @version = version
       @resource = resource
       @action = action
       @url = url
+      @args = args
+      @params = params
       @current_user = user
       @authorization = authorization
+      @endpoint = endpoint
     end
 
-    def url_for(action)
+    def resolved_url
+      return @url unless @args
+
+      ret = @url.dup
+
+      @args.each do |arg|
+        resolve_arg!(ret, arg)
+      end
+
+      ret
+    end
+
+    def url_for(action, args=nil)
       top_module = Kernel
       top_route = @server.routes[@version]
 
@@ -33,7 +51,16 @@ module HaveAPI
         end
       end
 
-      top_route
+      ret = top_route.dup
+
+      args.each { |arg| resolve_arg!(ret, arg) } if args
+
+      ret
+    end
+
+    private
+    def resolve_arg!(url, arg)
+      url.sub!(/:[a-zA-Z\-_]+/, arg.to_s)
     end
   end
 end

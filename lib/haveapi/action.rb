@@ -69,7 +69,7 @@ module HaveAPI
       def describe(context)
         authorization = (@authorization && @authorization.clone) || Authorization.new
 
-        return false if context.current_user && !authorization.authorized?(context.current_user)
+        return false if (context.endpoint || context.current_user) && !authorization.authorized?(context.current_user)
 
         route_method = context.action.http_method.to_s.upcase
         context.authorization = authorization
@@ -80,7 +80,7 @@ module HaveAPI
             input: @input ? @input.describe(context) : {parameters: {}},
             output: @output ? @output.describe(context) : {parameters: {}},
             example: @example ? @example.describe : {},
-            url: context.url,
+            url: context.resolved_url,
             method: route_method,
             help: "#{context.url}?method=#{route_method}"
         }
@@ -98,6 +98,15 @@ module HaveAPI
         attrs.each do |attr|
           action.method(attr).call(r.method(attr).call)
         end
+      end
+
+      def from_context(c)
+        ret = new(c.version, c.params, nil)
+        ret.instance_exec do
+          @authorization = c.authorization
+        end
+        ret.validate!
+        ret
       end
     end
 
@@ -136,6 +145,12 @@ module HaveAPI
       @safe_params
     end
 
+    # Prepare objects, set instance variables from URL parameters.
+    # This method does not return anything, it should only setup environment.
+    def prepare
+
+    end
+
     # This method must be reimplemented in every action.
     # It must not be invoked directly, only via safe_exec, which restricts output.
     def exec
@@ -149,6 +164,7 @@ module HaveAPI
       ret = catch(:return) do
         begin
           validate!
+          prepare
           exec
         rescue ActiveRecord::RecordNotFound => e
           if /find ([^\s]+)[^=]+=(\d+)/ =~ e.message

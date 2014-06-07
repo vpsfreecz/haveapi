@@ -28,6 +28,7 @@ module HaveAPI
       end
 
       def report_error(code, headers, msg)
+        @halted = true
         halt code, headers, JSON.pretty_generate({
                                                      status: false,
                                                      response: nil,
@@ -97,7 +98,7 @@ module HaveAPI
         helpers ServerHelpers
 
         not_found do
-          report_error(404, {}, 'Action not found')
+          report_error(404, {}, 'Action not found') unless @halted
         end
 
         after do
@@ -111,12 +112,14 @@ module HaveAPI
 
       # Mount root
       @sinatra.get @root do
-        @api = settings.api_server.describe(Context.new(settings.api_server, user: current_user))
+        @api = settings.api_server.describe(Context.new(settings.api_server, user: current_user,
+                                            params: params))
         erb :index, layout: :main
       end
 
       @sinatra.options @root do
-        JSON.pretty_generate(settings.api_server.describe(Context.new(settings.api_server, user: current_user)))
+        JSON.pretty_generate(settings.api_server.describe(Context.new(settings.api_server, user: current_user,
+                                                          params: params)))
       end
 
       # Login/logout links
@@ -147,12 +150,14 @@ module HaveAPI
 
       @sinatra.get prefix do
         @v = v
-        @help = settings.api_server.describe_version(Context.new(settings.api_server, version: v, user: current_user))
+        @help = settings.api_server.describe_version(Context.new(settings.api_server, version: v,
+                                                                 user: current_user, params: params))
         erb :version, layout: :main
       end
 
       @sinatra.options prefix do
-        JSON.pretty_generate(settings.api_server.describe_version(Context.new(settings.api_server, version: v, user: current_user)))
+        JSON.pretty_generate(settings.api_server.describe_version(Context.new(settings.api_server, version: v,
+                                                                              user: current_user, params: params)))
       end
 
       HaveAPI.get_version_resources(@module_name, v).each do |resource|
@@ -222,15 +227,25 @@ module HaveAPI
         JSON.pretty_generate(reply)
       end
 
-      @sinatra.options route.url do
+      @sinatra.options route.url do |*args|
         route_method = route.http_method.to_s.upcase
 
         pass if params[:method] && params[:method] != route_method
 
-        desc = route.action.describe(Context.new(settings.api_server, version: v, action: route.action, url: route.url, user: current_user))
+        authenticate! if route.action.auth
 
-        unless desc
-          report_error(403, {}, 'Access denied. Insufficient permissions.')
+        begin
+          desc = route.action.describe(Context.new(settings.api_server, version: v,
+                                                   action: route.action, url: route.url,
+                                                   args: args, params: params,
+                                                   user: current_user, endpoint: true))
+
+          unless desc
+            report_error(403, {}, 'Access denied. Insufficient permissions.')
+          end
+
+        rescue ActiveRecord::RecordNotFound
+          report_error(404, {}, 'Object not found')
         end
 
         JSON.pretty_generate(desc)

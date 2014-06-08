@@ -102,6 +102,8 @@ module HaveAPI
     end
 
     def describe(context)
+      context.layout = @layout
+
       ret = {parameters: {}}
       ret[:layout] = @layout
       ret[:namespace] = @namespace

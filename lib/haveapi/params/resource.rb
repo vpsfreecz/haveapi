@@ -38,10 +38,10 @@ module HaveAPI::Parameters
         action.prepare
       end
 
-      val_url = context.url_for(@resource::Show, context.endpoint && call_url_params(@value_params, action))
+      val_url = context.url_for(@resource::Show, context.endpoint && context.layout == :object && call_url_params(@value_params, action))
       val_method = @resource::Index.http_method.to_s.upcase
 
-      choices_url = context.url_for(@choices, context.endpoint && call_url_params(@choices_params, action))
+      choices_url = context.url_for(@choices, context.endpoint && context.layout == :object && call_url_params(@choices_params, action))
       choices_method = @choices.http_method.to_s.upcase
 
       {

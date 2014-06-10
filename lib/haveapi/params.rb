@@ -161,6 +161,11 @@ module HaveAPI
       params
     end
 
+    def [](name)
+      @params.each { |p| return p if p.name == name }
+      nil
+    end
+
     private
     def add_param(*args)
       @params << Parameters::Param.new(*args)

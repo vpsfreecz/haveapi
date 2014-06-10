@@ -309,11 +309,13 @@ module HaveAPI
       self.class.output.params.each do |p|
         next unless p.is_a?(Parameters::Resource) && hash[p.name]
 
+        res_out = p.show_action.output
+
         tmp = hash[p.name]
 
         hash[p.name] = {
-            p.value_id => tmp.method(p.value_id).call,
-            p.value_label => tmp.method(p.value_label).call
+            p.value_id => tmp.send(res_out[p.value_id].db_name),
+            p.value_label => tmp.send(res_out[p.value_label].db_name)
         }
       end
 

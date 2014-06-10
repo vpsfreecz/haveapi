@@ -1,6 +1,6 @@
 module HaveAPI::Parameters
   class Resource
-    attr_reader :name, :label, :desc, :type, :value_id, :value_label
+    attr_reader :name, :label, :desc, :type, :value_id, :value_label, :choices
 
     def initialize(resource, name: nil, label: nil, desc: nil,
         choices: nil, value_id: :id, value_label: :label, required: nil,
@@ -28,6 +28,10 @@ module HaveAPI::Parameters
 
     def optional?
       !@required
+    end
+
+    def show_action
+      @resource::Show
     end
 
     def describe(context)

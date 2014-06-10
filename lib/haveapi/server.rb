@@ -1,16 +1,16 @@
 module HaveAPI
   class Server
-    attr_reader :root, :routes, :module_name
+    attr_reader :root, :routes, :module_name, :auth_chain, :default_version
 
     module ServerHelpers
-      def authenticate!
-        require_auth! unless authenticated?
+      def authenticate!(v)
+        require_auth! unless authenticated?(v)
       end
 
-      def authenticated?
+      def authenticated?(v)
         return @current_user if @current_user
 
-        @current_user = settings.api_server.send(:do_authenticate, request)
+        @current_user = settings.api_server.send(:do_authenticate, v, request)
       end
 
       def current_user
@@ -48,6 +48,7 @@ module HaveAPI
 
     def initialize(module_name = HaveAPI.module_name)
       @module_name = module_name
+      @auth_chain = HaveAPI::Authentication::Chain.new(self)
     end
 
     # Include specific version +v+ of API.
@@ -89,9 +90,9 @@ module HaveAPI
 
         # This must be called before registering paper trail, or else it will
         # not be logging current user.
-        before do
-          authenticated?
-        end
+        # before do
+        #   authenticated?
+        # end
 
         register PaperTrail::Sinatra
 
@@ -109,15 +110,20 @@ module HaveAPI
       @sinatra.set(:api_server, self)
 
       @routes = {}
+      @default_version ||= @versions.last
 
       # Mount root
       @sinatra.get @root do
+        authenticated?(settings.api_server.default_version)
+
         @api = settings.api_server.describe(Context.new(settings.api_server, user: current_user,
                                             params: params))
         erb :index, layout: :main
       end
 
       @sinatra.options @root do
+        authenticated?(settings.api_server.default_version)
+
         JSON.pretty_generate(settings.api_server.describe(Context.new(settings.api_server, user: current_user,
                                                           params: params)))
       end
@@ -127,7 +133,7 @@ module HaveAPI
         if current_user
           redirect back
         else
-          require_auth!
+          authenticate!(settings.api_server.default_version) # FIXME
         end
       end
 
@@ -135,7 +141,8 @@ module HaveAPI
         require_auth!
       end
 
-      @default_version ||= @versions.last
+      @auth_chain << HaveAPI.default_authenticate if @auth_chain.empty?
+      @auth_chain.setup(@versions)
 
       # Mount default version first
       mount_version(@root, @default_version)
@@ -146,9 +153,12 @@ module HaveAPI
     end
 
     def mount_version(prefix, v)
-      @routes[v] = {}
+      @routes[v] ||= {}
+      @routes[v][:resources] = {}
 
       @sinatra.get prefix do
+        authenticated?(v)
+
         @v = v
         @help = settings.api_server.describe_version(Context.new(settings.api_server, version: v,
                                                                  user: current_user, params: params))
@@ -156,21 +166,27 @@ module HaveAPI
       end
 
       @sinatra.options prefix do
+        authenticated?(v)
+
         JSON.pretty_generate(settings.api_server.describe_version(Context.new(settings.api_server, version: v,
                                                                               user: current_user, params: params)))
       end
 
       HaveAPI.get_version_resources(@module_name, v).each do |resource|
-        @routes[v][resource] = {resources: {}, actions: {}}
+        mount_resource(prefix, v, resource, @routes[v][:resources])
+      end
+    end
 
-        resource.routes(prefix).each do |route|
-          if route.is_a?(Hash)
-            @routes[v][resource][:resources][route.keys.first] = mount_nested_resource(v, route.values.first)
+    def mount_resource(prefix, v, resource, hash)
+      hash[resource] = {resources: {}, actions: {}}
 
-          else
-            @routes[v][resource][:actions][route.action] = route.url
-            mount_action(v, route)
-          end
+      resource.routes(prefix).each do |route|
+        if route.is_a?(Hash)
+          hash[resource][:resources][route.keys.first] = mount_nested_resource(v, route.values.first)
+
+        else
+          hash[resource][:actions][route.action] = route.url
+          mount_action(v, route)
         end
       end
     end
@@ -193,7 +209,7 @@ module HaveAPI
 
     def mount_action(v, route)
       @sinatra.method(route.http_method).call(route.url) do
-        authenticate! if route.action.auth
+        authenticate!(v) if route.action.auth
 
         request.body.rewind
 
@@ -232,7 +248,7 @@ module HaveAPI
 
         pass if params[:method] && params[:method] != route_method
 
-        authenticate! if route.action.auth
+        authenticate!(v) if route.action.auth
 
         begin
           desc = route.action.describe(Context.new(settings.api_server, version: v,
@@ -269,11 +285,15 @@ module HaveAPI
     end
 
     def describe_version(context)
-      ret = {resources: {}, help: version_prefix(context.version)}
+      ret = {
+          authentication: @auth_chain.describe(context),
+          resources: {},
+          help: version_prefix(context.version)
+      }
 
       #puts JSON.pretty_generate(@routes)
 
-      @routes[context.version].each do |resource, children|
+      @routes[context.version][:resources].each do |resource, children|
         r_name = resource.to_s.demodulize.underscore
         r_desc = describe_resource(resource, children, context)
 
@@ -286,34 +306,19 @@ module HaveAPI
     end
 
     def describe_resource(r, hash, context)
-      ret = {description: r.desc, actions: {}, resources: {}}
-
-      context.resource = r
-
-      hash[:actions].each do |action, url|
-        context.action = action
-        context.url = url
-
-        a_name = action.to_s.demodulize.underscore
-
-        a_desc = action.describe(context)
-
-        ret[:actions][a_name] = a_desc if a_desc
-      end
-
-      hash[:resources].each do |resource, children|
-        ret[:resources][resource.to_s.demodulize.underscore] = describe_resource(resource, children, context)
-      end
-
-      ret
+      r.describe(hash, context)
     end
 
     def version_prefix(v)
       "#{@root}v#{v}/"
     end
 
-    def authenticate(&block)
-      @authenticate = block
+    def add_auth_module(v, name, mod, prefix: '')
+      @routes[v] ||= {authentication: {name => {resources: {}}}}
+
+      HaveAPI.get_version_resources(mod, v).each do |r|
+        mount_resource("#{@root}_auth/#{prefix}/", v, r, @routes[v][:authentication][name][:resources])
+      end
     end
 
     def app
@@ -325,14 +330,8 @@ module HaveAPI
     end
 
     private
-    def do_authenticate(request)
-      if @authenticate
-        @authenticate.call(request)
-
-      elsif HaveAPI.default_authenticate
-        HaveAPI.default_authenticate.call(request)
-      end
-
+    def do_authenticate(v, request)
+      @auth_chain.authenticate(v, request)
     end
   end
 end

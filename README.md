@@ -1,6 +1,6 @@
 HaveAPI
 =======
-A framework for creating self-describing APIs.
+A framework for creating self-describing APIs in Ruby.
 
 Note: HaveAPI is under development. It is not stable, the interface may change.
 
@@ -17,10 +17,13 @@ The description is encoded in JSON.
 
 ## Main features
 - RESTful - divided into resources, which may be nested, and their actions
+- Handles network communication on both server and client, you need to only
+  define resources and actions
 - By writing the code you get documentation for free
 - Auto-generated online HTML documentation
 - Generic interface for clients - one client can be used to access all APIs
-  built using this framework
+  using this framework
+- Ruby and PHP clients already available
 - A change in the API is immediately reflected in all clients
 - Supports API versioning
 - Ready for ActiveRecord - validators from models are included in the
@@ -42,7 +45,7 @@ For the purposes of this document, all resources will be in module `MyAPI`.
 ### Example
 This is a basic example, it does not show all options and functions.
 
-Assume you have a model:
+Let's assume a model:
 
 ```ruby
 class User < ActiveRecord::Base
@@ -106,7 +109,7 @@ module MyAPI
       
       # Output parameters
       # :users means, that the list of users will be in hash with key :users
-      output(:users) do
+      output(:list) do
         use :id
         use :common
       end
@@ -204,20 +207,16 @@ Online HTML documentation will also be available.
 ```ruby
 api = HaveAPI::Server.new(MyAPI)
 
-# Define authentication method, the block should return current user object.
-api.authenticate do |request|
-  user = nil
-  
-  auth = Rack::Auth::Basic::Request.new(request.env)
-  if auth.provided? && auth.basic? && auth.credentials
-    user = User.authenticate(*auth.credentials)
+# Use HTTP basic auth
+class BasicAuth < HaveAPI::Authentication::Basic::Provider
+  def find_user(username, password)
+      User.authenticate(username, password)
   end
-
-  user
 end
 
 api.use_version(:all)
 api.set_default_version(1)
+api.auth_chain << BasicAuth
 api.mount('/')
 
 api.start!
@@ -244,7 +243,7 @@ In addition to output parameters specified for all actions, every API response
 succeeded or failed, provides return value or error messages.
 
     {
-      "status": true if action succeeded or false if error occured,
+      "status": true if action succeeded or false if error occurred,
       "response": return value,
       "message": error message, if status is false,
       "errors: {
@@ -254,8 +253,11 @@ succeeded or failed, provides return value or error messages.
     }
 
 ## Authentication
-HaveAPI does not deal with authentication itself. This process is delegated to
-the application, which can use HTTP basic auth or any other method.
+HaveAPI defines an interface for creating authentication providers.
+HTTP basic auth and token providers are built-in.
+
+Authentication options are self-described. Clients can choose what authentication
+method they understand and want to use.
 
 ## Authorization
 HaveAPI provides means for authorizing user access to actions. This process
@@ -266,6 +268,21 @@ resources, actions and parameters will be returned.
 
 ## Input/output formats
 For now, the only supported input/output format is JSON.
+
+## Available clients
+These clients completely rely on the API description and can be used for all
+APIs that are using HaveAPI.
+
+- Ruby client library and CLI: https://github.com/vpsfreecz/haveapi-client
+- PHP client: https://github.com/vpsfreecz/haveapi-client-php
+
+## How to create a client
+A client for HaveAPI must completely depend on the API description. There
+mustn't be any assumptions and specific code. It does not know any
+resources, actions, parameters, nothing. Everything the client knows he must find out
+from the API description.
+That way, the client can be used for all APIs using this framework, not
+just for your instance.
 
 ## Contributing
 

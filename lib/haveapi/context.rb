@@ -46,7 +46,7 @@ module HaveAPI
         end
 
         if top_module.obj_type == :resource
-          top_route = top_route[:resources] ? top_route[:resources][top_module] : top_route[top_module]
+          top_route = top_route[:resources][top_module]
         else
           top_route = top_route[:actions][top_module]
         end

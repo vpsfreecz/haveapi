@@ -65,8 +65,27 @@ module HaveAPI
       ret
     end
 
-    def self.describe
+    def self.describe(hash, context)
+      ret = {description: self.desc, actions: {}, resources: {}}
 
+      context.resource = self
+
+      hash[:actions].each do |action, url|
+        context.action = action
+        context.url = url
+
+        a_name = action.to_s.demodulize.underscore
+
+        a_desc = action.describe(context)
+
+        ret[:actions][a_name] = a_desc if a_desc
+      end
+
+      hash[:resources].each do |resource, children|
+        ret[:resources][resource.to_s.demodulize.underscore] = resource.describe(children, context)
+      end
+
+      ret
     end
   end
 end

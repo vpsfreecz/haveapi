@@ -5,7 +5,7 @@ class HaveAPI::Client::Client
 
   def initialize(url, v=nil)
     @version = v
-    @api = VpsAdmin::API::Communicator.new(url)
+    @api = HaveAPI::Client::Communicator.new(url)
 
     setup_api(@api.describe_api)
   end
@@ -21,7 +21,7 @@ class HaveAPI::Client::Client
     @resources = {}
 
     description[:versions][v.to_s.to_sym][:resources].each do |name, desc|
-      r = VpsAdmin::API::Resource.new(@api, name)
+      r = HaveAPI::Client::Resource.new(@api, name)
       r.setup(desc)
 
       define_singleton_method(name) do |*args|

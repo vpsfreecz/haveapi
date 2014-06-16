@@ -13,12 +13,12 @@ module HaveAPI::CLI::Authentication
     end
 
     def validate
-      @user ||= ask('User name: ') { |q| q.default = nil }
+      @user ||= ask('User name: ') { |q| q.default = nil }.to_s
 
       @password ||= ask('Password: ') do |q|
         q.default = nil
         q.echo = false
-      end
+      end.to_s
     end
 
     def authenticate

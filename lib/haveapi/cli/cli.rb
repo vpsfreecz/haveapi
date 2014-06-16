@@ -147,8 +147,11 @@ module HaveAPI
 
         @global_opt.parse!(args)
 
-        # p options
-        #p ARGV
+        unless options[:auth]
+          cfg = server_config(options[:client])
+
+          @auth = Cli.auth_methods[cfg[:last_auth]].new(cfg[:auth][cfg[:last_auth]]) if cfg[:last_auth]
+        end
 
         [args, options]
       end
@@ -351,7 +354,9 @@ module HaveAPI
             @auth.authenticate
 
             if @opts[:save]
-              server_config(api_url)[:auth][@opts[:auth]] = @auth.save
+              cfg = server_config(api_url)
+              cfg[:auth][@opts[:auth]] = @auth.save
+              cfg[:last_auth] = @opts[:auth]
               write_config
             end
 

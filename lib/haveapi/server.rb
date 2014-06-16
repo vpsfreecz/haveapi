@@ -226,7 +226,7 @@ module HaveAPI
           report_error(400, {}, 'Bad JSON syntax')
         end
 
-        action = route.action.new(v, params, body)
+        action = route.action.new(request, v, params, body)
 
         unless action.authorized?(current_user)
           report_error(403, {}, 'Access denied. Insufficient permissions.')

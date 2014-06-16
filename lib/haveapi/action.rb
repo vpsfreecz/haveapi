@@ -101,7 +101,7 @@ module HaveAPI
       end
 
       def from_context(c)
-        ret = new(c.version, c.params, nil)
+        ret = new(nil, c.version, c.params, nil)
         ret.instance_exec do
           @authorization = c.authorization
         end
@@ -110,7 +110,8 @@ module HaveAPI
       end
     end
 
-    def initialize(version, params, body)
+    def initialize(request, version, params, body)
+      @request = request
       @version = version
       @params = params
       @params.update(body) if body

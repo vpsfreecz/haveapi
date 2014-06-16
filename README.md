@@ -48,7 +48,7 @@ where `10` is user ID.
 require 'haveapi/client'
 
 api = HaveAPI::Client::Client.new('https://your.api.tld')
-api.login('yourname', 'yourpassword')
+api.authenticate(:basic, user: 'yourname', password: 'yourpassword')
 
 response = api.user.index
 p response.ok?

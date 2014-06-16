@@ -22,7 +22,7 @@ module HaveAPI::Authentication::Token
 
         output do
           string :token
-          datetime :valid_until
+          datetime :valid_to
         end
 
         authorize do
@@ -35,12 +35,12 @@ module HaveAPI::Authentication::Token
           user = klass.send(:find_user_by_credentials, params[:token][:login], params[:token][:password])
           error('bad login or password') unless user
 
-          token = nil
+          token = expiration = nil
 
           loop do
             begin
               token = klass.send(:generate_token)
-              klass.send(:save_token, user, token, params[:token][:validity])
+              expiration = klass.send(:save_token, user, token, params[:token][:validity])
               break
 
             rescue TokenExists
@@ -48,7 +48,7 @@ module HaveAPI::Authentication::Token
             end
           end
 
-          {token: token}
+          {token: token, valid_to: expiration}
         end
       end
 

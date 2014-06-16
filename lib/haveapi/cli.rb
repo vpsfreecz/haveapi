@@ -1,2 +1,2 @@
-require 'haveapi/client'
-require 'haveapi/cli/cli'
+require_relative 'client'
+require_rel 'cli'

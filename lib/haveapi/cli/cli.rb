@@ -6,8 +6,17 @@ require 'table_print'
 module HaveAPI
   module CLI
     class Cli
-      def self.run
-        c = new
+      class << self
+        attr_accessor :auth_methods
+
+        def run
+          c = new
+        end
+
+        def register_auth_method(name, klass)
+          @auth_methods ||= {}
+          @auth_methods[name] = klass
+        end
       end
 
       def initialize
@@ -37,7 +46,7 @@ module HaveAPI
 
         action = @api.get_action(resources, action, args[2..-1])
 
-        action.update_description(@api.describe_action(action)) if login(action)
+        action.update_description(@api.describe_action(action)) if authenticate(action)
 
         @input_params = parameters(action)
 
@@ -80,12 +89,21 @@ module HaveAPI
         @global_opt = OptionParser.new do |opts|
           opts.banner = "Usage: #{$0} [options] <resource> <action> [objects ids] [-- [parameters]]"
 
-          opts.on('-a', '--api URL', 'API URL') do |url|
+          opts.on('-u', '--api URL', 'API URL') do |url|
             options[:client] = url
+          end
+
+          opts.on('-a', '--auth METHOD', Cli.auth_methods.keys, 'Authentication method') do |m|
+            @auth = Cli.auth_methods[m].new
+            @auth.options(opts)
           end
 
           opts.on('--list-versions', 'List all available API versions') do
             @action = [:list_versions]
+          end
+
+          opts.on('--list-auth-methods [VERSION]', 'List available authentication methods') do |v|
+            @action = [:list_auth, v && v.sub(/^v/, '')]
           end
 
           opts.on('--list-resources [VERSION]', 'List all resource in API version') do |v|
@@ -98,14 +116,6 @@ module HaveAPI
 
           opts.on('-r', '--raw', 'Print raw response as is') do
             options[:raw] = true
-          end
-
-          opts.on('-u', '--username USER', 'User name') do |u|
-            options[:user] = u
-          end
-
-          opts.on('-p', '--password PASSWORD', 'Password') do |p|
-            options[:password] = p
           end
 
           opts.on('-v', '--[no-]verbose', 'Run verbosely') do |v|
@@ -208,10 +218,18 @@ module HaveAPI
         end
       end
 
+      def list_auth(v=nil)
+        desc = @api.describe_api
+
+        desc[:versions][(v && v.to_sym) || desc[:default_version].to_s.to_sym][:authentication].each_key do |auth|
+          puts auth if Cli.auth_methods.has_key?(auth)
+        end
+      end
+
       def list_resources(v=nil)
         desc = @api.describe_api
 
-        desc[:versions][v || desc[:default_version].to_s.to_sym][:resources].each do |resource, children|
+        desc[:versions][(v && v.to_sym) || desc[:default_version].to_s.to_sym][:resources].each do |resource, children|
           nested_resource(resource, children, false)
         end
       end
@@ -219,7 +237,7 @@ module HaveAPI
       def list_actions(v=nil)
         desc = @api.describe_api
 
-        desc[:versions][v || desc[:default_version].to_s.to_sym][:resources].each do |resource, children|
+        desc[:versions][(v && v.to_sym) || desc[:default_version].to_s.to_sym][:resources].each do |resource, children|
           nested_resource(resource, children, true)
         end
       end
@@ -317,16 +335,16 @@ module HaveAPI
         end
       end
 
-      def login(action)
+      def authenticate(action)
         if action.auth?
-          @opts[:user] ||= ask('User name: ') { |q| q.default = nil }
+          if @auth
+            @auth.communicator = @api
+            @auth.validate
+            @auth.authenticate
 
-          @opts[:password] ||= ask('Password: ') do |q|
-            q.default = nil
-            q.echo = false
+          else
+            # FIXME: exit as auth is needed and has not been selected
           end
-
-          @api.login(@opts[:user], @opts[:password])
 
           return true
         end
@@ -335,11 +353,7 @@ module HaveAPI
       end
 
       def params_valid?(action)
-        if action.auth? && !(@opts[:user] || @opts[:password])
-          return false
-        end
-
-        true
+        true # FIXME
       end
 
       protected

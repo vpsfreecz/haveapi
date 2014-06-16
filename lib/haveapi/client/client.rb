@@ -5,13 +5,14 @@ class HaveAPI::Client::Client
 
   def initialize(url, v=nil)
     @version = v
-    @api = HaveAPI::Client::Communicator.new(url)
+    @api = HaveAPI::Client::Communicator.new(url, v)
 
     setup_api(@api.describe_api)
   end
 
-  def login(*credentials)
-    @api.login(*credentials)
+  # See Communicator#authenticate.
+  def authenticate(*args)
+    @api.authenticate(*args)
   end
 
   private

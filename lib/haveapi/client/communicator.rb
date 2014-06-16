@@ -7,14 +7,33 @@ require_rel '../../restclient_ext'
 module HaveAPI
   module Client
     class Communicator
-      def initialize(url)
-        @url = url
-        @rest = RestClient::Resource.new(@url)
-        @version = 1
+      class << self
+        attr_reader :auth_methods
+
+        def register_auth_method(name, klass)
+          @auth_methods ||= {}
+          @auth_methods[name] = klass
+        end
       end
 
-      def login(user, password)
-        @rest = RestClient::Resource.new(@url, user, password)
+      attr_reader :url
+
+      def initialize(url, v = nil)
+        @url = url
+        @auth = Authentication::NoAuth.new(self, {}, {})
+        @rest = RestClient::Resource.new(@url)
+        @version = v
+      end
+
+      # Authenticate user with selected +auth_method+.
+      # +auth_method+ is a name of registered authentication provider.
+      # +options+ are specific for each authentication provider.
+      def authenticate(auth_method, options = {})
+        desc = describe_api(@version)
+        desc = desc[:versions][desc[:default_version].to_s.to_sym] unless @version
+
+        @auth = self.class.auth_methods[auth_method].new(self, desc[:authentication][auth_method], options)
+        @rest = @auth.resource || @rest
       end
 
       def describe_api(v=nil)
@@ -23,7 +42,7 @@ module HaveAPI
 
       def describe_resource(path)
         api = describe_api
-        tmp = describe_api[:versions][ describe_api[:default_version].to_s.to_sym ]
+        tmp = api[:versions][ api[:default_version].to_s.to_sym ]
 
         path.each do |r|
           tmp = tmp[:resources][r.to_sym]
@@ -35,11 +54,12 @@ module HaveAPI
       end
 
       def describe_action(action)
-        description_for(action.help)
+        description_for(action.prepared_help)
       end
 
       def get_action(resources, action, args)
         @spec ||= describe_api(@version)
+        @spec = @spec[:versions][@spec[:default_version].to_s.to_sym] unless @version
 
         tmp = @spec
 
@@ -63,8 +83,8 @@ module HaveAPI
         input_namespace = action.namespace(:input)
 
         if %w(POST PUT).include?(action.http_method)
-          args << {input_namespace => params}.to_json
-          args << {:content_type => :json, :accept => :json}
+          args << {input_namespace => params}.update(@auth.request_payload).to_json
+          args << {:content_type => :json, :accept => :json}.update(@auth.request_headers)
 
         elsif %w(GET DELETE).include?(action.http_method)
           get_params = {}
@@ -73,7 +93,7 @@ module HaveAPI
             get_params["#{input_namespace}[#{k}]"] = v
           end
 
-          args << {params: get_params, accept: :json}
+          args << {params: get_params.update(@auth.request_url_params), accept: :json}.update(@auth.request_headers)
         end
 
         begin
@@ -117,7 +137,7 @@ module HaveAPI
         end
 
         def description_for(path)
-          parse(@rest[path].get_options)
+          parse(@rest[path].get_options({params: @auth.request_payload.update(@auth.request_url_params)}.update(@auth.request_headers)))
         end
 
         def parse(str)

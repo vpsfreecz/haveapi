@@ -12,6 +12,7 @@ module HaveAPI
       def execute(*args)
         ret = @api.call(self, *args)
         @prepared_url = nil
+        @prepared_help = nil
         ret
       end
 
@@ -60,6 +61,10 @@ module HaveAPI
         @prepared_url || @spec[:url]
       end
 
+      def prepared_help
+        @prepared_help || @spec[:help]
+      end
+
       def http_method
         @spec[:method]
       end
@@ -79,9 +84,11 @@ module HaveAPI
       private
         def apply_args(args)
           @prepared_url ||= @spec[:url].dup
+          @prepared_help ||= @spec[:help].dup
 
           args.each do |arg|
             @prepared_url.sub!(/:[a-zA-Z\-_]+/, arg.to_s)
+            @prepared_help.sub!(/:[a-zA-Z\-_]+/, arg.to_s)
           end
         end
     end

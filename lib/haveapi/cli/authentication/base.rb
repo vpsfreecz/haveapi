@@ -14,6 +14,12 @@ module HaveAPI::CLI
 
       attr_accessor :communicator
 
+      def initialize(opts = {})
+        opts.each do |k, v|
+          instance_variable_set("@#{k}", v)
+        end
+      end
+
       # Implement this method to add CLI options for auth provider.
       # +opts+ is an instance of OptionParser.
       def options(opts)
@@ -31,6 +37,10 @@ module HaveAPI::CLI
       # with arguments specific for this authentication provider.
       def authenticate
 
+      end
+
+      def save
+        @communicator.auth_save
       end
     end
   end

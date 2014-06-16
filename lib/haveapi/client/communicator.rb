@@ -36,6 +36,10 @@ module HaveAPI
         @rest = @auth.resource || @rest
       end
 
+      def auth_save
+        @auth.save
+      end
+
       def describe_api(v=nil)
         description_for(path_for(v))
       end

@@ -43,5 +43,9 @@ module HaveAPI::CLI::Authentication
           via: @via
       })
     end
+
+    def save
+      super.update({via: @via})
+    end
   end
 end

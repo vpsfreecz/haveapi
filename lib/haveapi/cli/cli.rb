@@ -2,6 +2,7 @@ require 'optparse'
 require 'pp'
 require 'highline/import'
 require 'table_print'
+require 'yaml'
 
 module HaveAPI
   module CLI
@@ -20,7 +21,9 @@ module HaveAPI
       end
 
       def initialize
+        @config = read_config || {}
         args, @opts = options
+
         @api = HaveAPI::Client::Communicator.new(api_url)
 
         if @action
@@ -94,7 +97,8 @@ module HaveAPI
           end
 
           opts.on('-a', '--auth METHOD', Cli.auth_methods.keys, 'Authentication method') do |m|
-            @auth = Cli.auth_methods[m].new
+            options[:auth] = m
+            @auth = Cli.auth_methods[m].new(server_config(options[:client])[:auth][m])
             @auth.options(opts)
           end
 
@@ -116,6 +120,10 @@ module HaveAPI
 
           opts.on('-r', '--raw', 'Print raw response as is') do
             options[:raw] = true
+          end
+
+          opts.on('-s', '--save', 'Save credentials to config file for later use') do
+            options[:save] = true
           end
 
           opts.on('-v', '--[no-]verbose', 'Run verbosely') do |v|
@@ -342,6 +350,11 @@ module HaveAPI
             @auth.validate
             @auth.authenticate
 
+            if @opts[:save]
+              server_config(api_url)[:auth][@opts[:auth]] = @auth.save
+              write_config
+            end
+
           else
             # FIXME: exit as auth is needed and has not been selected
           end
@@ -359,6 +372,31 @@ module HaveAPI
       protected
       def default_url
         'http://localhost:4567'
+      end
+
+      def config_path
+        "#{Dir.home}/.haveapi-client.yml"
+      end
+
+      def write_config
+        File.open(config_path, 'w') do |f|
+          f.write(YAML.dump(@config))
+        end
+      end
+
+      def read_config
+        @config = YAML.load_file(config_path) if File.exists?(config_path)
+      end
+
+      def server_config(url)
+        unless @config[:servers]
+          @config[:servers] = [{url: url, auth: {}}]
+          return @config[:servers].first
+        end
+
+        @config[:servers].each do |s|
+          return s if s[:url] == url
+        end
       end
     end
   end

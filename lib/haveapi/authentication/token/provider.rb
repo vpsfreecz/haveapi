@@ -81,7 +81,7 @@ module HaveAPI::Authentication
       # Save generated +token+ for +user+. Token has given +validity+ period.
       # Returns a date time which is token expiration.
       # Must be implemented.
-      def save_token(user, token, validity)
+      def save_token(request, user, token, validity)
 
       end
 

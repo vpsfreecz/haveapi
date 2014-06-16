@@ -40,7 +40,7 @@ module HaveAPI::Authentication::Token
           loop do
             begin
               token = klass.send(:generate_token)
-              expiration = klass.send(:save_token, user, token, params[:token][:validity])
+              expiration = klass.send(:save_token, @request, user, token, params[:token][:validity])
               break
 
             rescue TokenExists

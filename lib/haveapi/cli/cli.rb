@@ -397,6 +397,9 @@ module HaveAPI
         @config[:servers].each do |s|
           return s if s[:url] == url
         end
+
+        @config[:servers] << {url: url, auth: {}}
+        @config[:servers].last
       end
     end
   end

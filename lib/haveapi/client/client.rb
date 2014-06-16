@@ -6,6 +6,7 @@ class HaveAPI::Client::Client
   def initialize(url, v=nil)
     @version = v
     @api = HaveAPI::Client::Communicator.new(url, v)
+    @api.identity = 'haveapi-client'
 
     setup_api(@api.describe_api)
   end

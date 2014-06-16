@@ -25,6 +25,7 @@ module HaveAPI
         args, @opts = options
 
         @api = HaveAPI::Client::Communicator.new(api_url)
+        @api.identity = $0.split('/').last
 
         if @action
           method(@action.first).call( * @action[1..-1] )

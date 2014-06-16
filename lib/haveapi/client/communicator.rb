@@ -17,12 +17,14 @@ module HaveAPI
       end
 
       attr_reader :url
+      attr_accessor :identity
 
       def initialize(url, v = nil)
         @url = url
         @auth = Authentication::NoAuth.new(self, {}, {})
         @rest = RestClient::Resource.new(@url)
         @version = v
+        @identity = 'haveapi-client-ruby'
       end
 
       # Authenticate user with selected +auth_method+.
@@ -88,7 +90,7 @@ module HaveAPI
 
         if %w(POST PUT).include?(action.http_method)
           args << {input_namespace => params}.update(@auth.request_payload).to_json
-          args << {:content_type => :json, :accept => :json}.update(@auth.request_headers)
+          args << {content_type: :json, accept: :json, user_agent: @identity}.update(@auth.request_headers)
 
         elsif %w(GET DELETE).include?(action.http_method)
           get_params = {}
@@ -97,7 +99,7 @@ module HaveAPI
             get_params["#{input_namespace}[#{k}]"] = v
           end
 
-          args << {params: get_params.update(@auth.request_url_params), accept: :json}.update(@auth.request_headers)
+          args << {params: get_params.update(@auth.request_url_params), accept: :json, user_agent: @identity}.update(@auth.request_headers)
         end
 
         begin
@@ -141,7 +143,10 @@ module HaveAPI
         end
 
         def description_for(path)
-          parse(@rest[path].get_options({params: @auth.request_payload.update(@auth.request_url_params)}.update(@auth.request_headers)))
+          parse(@rest[path].get_options({
+              params: @auth.request_payload.update(@auth.request_url_params),
+              user_agent: @identity
+          }.update(@auth.request_headers)))
         end
 
         def parse(str)

@@ -92,7 +92,7 @@ module HaveAPI::Authentication
 
     protected
     def register_provider(v, p)
-      instance = p.new(@server)
+      instance = p.new(@server, v)
       parts = p.superclass.name.split('::')
 
       instance.name = parts[-2].underscore.to_sym

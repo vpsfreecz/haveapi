@@ -43,7 +43,8 @@ module HaveAPI::Authentication
     #   api.auth_chain << MyTokenAuth
     class Provider < Base
       def setup
-        Resources::Token.token_instance(self)
+        Resources::Token.token_instance ||= {}
+        Resources::Token.token_instance[@version] = self
       end
 
       def authenticate(request)
@@ -78,6 +79,7 @@ module HaveAPI::Authentication
       end
 
       # Save generated +token+ for +user+. Token has given +validity+ period.
+      # Returns a Time object which is token expiration.
       # Must be implemented.
       def save_token(user, token, validity)
 

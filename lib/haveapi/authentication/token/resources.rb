@@ -1,9 +1,12 @@
 module HaveAPI::Authentication::Token
   module Resources
     class Token < HaveAPI::Resource
-      has_attr :token_instance
       auth false
       version :all
+
+      class << self
+        attr_accessor :token_instance
+      end
 
       class Request < HaveAPI::Action
         route ''
@@ -27,10 +30,12 @@ module HaveAPI::Authentication::Token
         end
 
         def exec
-          klass = self.class.token_instance
+          klass = self.class.resource.token_instance[@version]
 
           user = klass.send(:find_user_by_credentials, params[:token][:login], params[:token][:password])
           error('bad login or password') unless user
+
+          token = nil
 
           loop do
             begin

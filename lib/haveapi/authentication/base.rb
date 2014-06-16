@@ -4,8 +4,9 @@ module HaveAPI
     class Base
       attr_accessor :name, :resources
 
-      def initialize(server)
+      def initialize(server, v)
         @server = server
+        @version = v
         setup
       end
 

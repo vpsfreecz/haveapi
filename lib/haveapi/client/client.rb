@@ -3,10 +3,10 @@ require 'pp'
 class HaveAPI::Client::Client
   attr_reader :resources
 
-  def initialize(url, v=nil)
+  def initialize(url, v=nil, identity: 'haveapi-client')
     @version = v
     @api = HaveAPI::Client::Communicator.new(url, v)
-    @api.identity = 'haveapi-client'
+    @api.identity = identity
 
     setup_api(@api.describe_api)
   end

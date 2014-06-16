@@ -5,6 +5,7 @@ module HaveAPI::Client::Authentication
     def setup
       @via = @opts[:via] || :header
       @token = @opts[:token]
+      @valid_to = @opts[:valid_to]
 
       request_token unless @token
 
@@ -24,11 +25,12 @@ module HaveAPI::Client::Authentication
     end
 
     def save
-      {token: @token}
+      {token: @token, valid_to: @valid_to}
     end
 
     def load(hash)
       @token = hash[:token]
+      @valid_to = hash[:valid_to]
     end
 
     protected
@@ -39,11 +41,19 @@ module HaveAPI::Client::Authentication
       raise AuthenticationFailed.new('bad username or password') unless ret[:status]
 
       @token = ret[:response][:token][:token]
-      @valid_until = ret[:response][:token][:valid_until]
+
+      @valid_to = ret[:response][:token][:valid_to]
+      @valid_to = @valid_to && DateTime.iso8601(@valid_to).to_time
     end
 
     def check_validity
-
+      if @valid_to && @valid_to < Time.now
+        if @opts[:user] && @opts[:password]
+          request_token
+        else
+          raise AuthenticationFailed.new('token expired')
+        end
+      end
     end
   end
 end

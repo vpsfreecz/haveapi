@@ -15,6 +15,15 @@ module HaveAPI::CLI::Authentication
         @token = t
       end
 
+      opts.on('--token-validity SECONDS', Integer,
+              'How long will token be valid in seconds, 0 for forever') do |s|
+        @validity = s
+      end
+
+      opts.on('--new-token', 'Request new token') do
+        @token = nil
+      end
+
       via = %i(query_param header)
 
       opts.on('--token-via VIA', via,
@@ -40,12 +49,17 @@ module HaveAPI::CLI::Authentication
           user: @user,
           password: @password,
           token: @token,
+          validity: @validity,
+          valid_to: @valid_to,
           via: @via
       })
     end
 
     def save
-      super.update({via: @via})
+      super.update({
+                       via: @via,
+                       validity: @validity
+                   })
     end
   end
 end

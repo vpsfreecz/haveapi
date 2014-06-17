@@ -74,6 +74,11 @@ module HaveAPI
         route_method = context.action.http_method.to_s.upcase
         context.authorization = authorization
 
+        if context.endpoint
+          context.action_instance = context.action.from_context(context)
+          context.action_prepare = context.action_instance.prepare
+        end
+
         {
             auth: @auth,
             description: @desc,
@@ -103,9 +108,10 @@ module HaveAPI
       def from_context(c)
         ret = new(nil, c.version, c.params, nil)
         ret.instance_exec do
+          @safe_params = @params.dup
           @authorization = c.authorization
         end
-        ret.validate!
+
         ret
       end
     end
@@ -146,8 +152,13 @@ module HaveAPI
       @safe_params
     end
 
-    # Prepare objects, set instance variables from URL parameters.
-    # This method does not return anything, it should only setup environment.
+    # Prepare object, set instance variables from URL parameters.
+    # This method should return queried object. If the method is
+    # not implemented or returns nil, action description will not
+    # contain link to an associated resource.
+    # --
+    # FIXME: is this correct behaviour?
+    # ++
     def prepare
 
     end

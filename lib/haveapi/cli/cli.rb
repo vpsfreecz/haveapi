@@ -311,7 +311,7 @@ module HaveAPI
 
             action.params.each do |name, p|
               if p[:type] == 'Resource'
-                cols << {name => {display_method: ->(r) { r[name][p[:value_label].to_sym] } }}
+                cols << {name => {display_method: ->(r) { r[name] && r[name][p[:value_label].to_sym] } }}
               else
                 cols << name
               end

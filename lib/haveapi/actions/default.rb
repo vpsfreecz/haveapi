@@ -4,6 +4,8 @@ module HaveAPI
       class Index < Action
         route ''
         http_method :get
+
+        include HaveAPI::Actions::Paginable
       end
 
       class Create < Action
@@ -19,10 +21,6 @@ module HaveAPI
       class Update < Action
         route ':%{resource}_id'
         http_method :put
-
-        input do
-          requires :id
-        end
       end
 
       class Delete < Action

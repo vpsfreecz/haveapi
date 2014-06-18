@@ -69,7 +69,7 @@ module HaveAPI::Parameters
     end
 
     def clean(raw)
-      @resource.model.find(raw)
+      @resource.model.find(raw) if raw
     end
 
     private

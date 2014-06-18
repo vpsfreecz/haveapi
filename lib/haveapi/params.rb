@@ -19,22 +19,49 @@ module HaveAPI
   end
 
   class Params
-    attr_reader :namespace, :layout, :params
+    attr_reader :params
+    attr_accessor :action
 
-    def initialize(direction, action, layout = :object, namespace = nil)
+    def initialize(direction, action = nil)
       @direction = direction
       @params = []
       @action = action
-      @layout = layout
+      @cache = {}
+    end
 
-      if namespace
-        @namespace = namespace
-      else
-        @namespace = action.resource.to_s.demodulize.underscore
-        @namespace = @namespace.pluralize if @layout == :list
+    def clone
+      obj = super
+      params = @params
+
+      obj.instance_eval do
+        @params = params.dup
+        @cache = {}
       end
 
-      @namespace = @namespace.to_sym
+      obj
+    end
+
+    def layout
+      return @cache[:layout] if @cache[:layout]
+
+      @cache[:layout] = @layout ? @layout : :object
+    end
+
+    def layout=(l)
+      @layout = l if l
+    end
+
+    def namespace
+      return @cache[:namespace] if @cache[:namespace]
+      return @cache[:namespace] = @namespace if @namespace
+
+      n = @action.resource.to_s.demodulize.underscore
+      n = n.pluralize if layout == :list
+      @cache[:namespace] = n.to_sym
+    end
+
+    def namespace=(n)
+      @namespace = n.to_sym if n
     end
 
     def requires(*args)
@@ -102,11 +129,11 @@ module HaveAPI
     end
 
     def describe(context)
-      context.layout = @layout
+      context.layout = layout
 
       ret = {parameters: {}}
-      ret[:layout] = @layout
-      ret[:namespace] = @namespace
+      ret[:layout] = layout
+      ret[:namespace] = namespace
       ret[:format] = @structure if @structure
 
       @params.each do |p|
@@ -125,16 +152,16 @@ module HaveAPI
     # First step of validation. Check if input is in correct namespace
     # and has a correct layout.
     def check_layout(params)
-      if (params[@namespace].nil? || !valid_layout?(params)) && any_required_params?
+      if (params[namespace].nil? || !valid_layout?(params)) && any_required_params?
         raise ValidationError.new('invalid input layout', {})
       end
 
-      case @layout
+      case layout
         when :object
-          params[@namespace] ||= {}
+          params[namespace] ||= {}
 
         when :list
-          params[@namespace] ||= []
+          params[namespace] ||= []
       end
     end
 
@@ -182,12 +209,12 @@ module HaveAPI
     end
 
     def valid_layout?(params)
-      case @layout
+      case layout
         when :object
-          params[@namespace].is_a?(Hash)
+          params[namespace].is_a?(Hash)
 
         when :list
-          params[@namespace].is_a?(Array)
+          params[namespace].is_a?(Array)
 
         else
           false
@@ -195,12 +222,12 @@ module HaveAPI
     end
 
     def layout_aware(params)
-      case @layout
+      case layout
         when :object
-          yield(params[@namespace])
+          yield(params[namespace])
 
         when :list
-          params[@namespace].each do |object|
+          params[namespace].each do |object|
             yield(object)
           end
 

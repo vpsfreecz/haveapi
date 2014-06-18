@@ -8,31 +8,41 @@ module HaveAPI
     has_attr :auth, true
 
     attr_reader :message, :errors
-
-    def self.inherited(subclass)
-      #puts "Action.inherited called #{subclass} from #{to_s}"
-
-      subclass.instance_variable_set(:@obj_type, obj_type)
-
-      resource = Kernel.const_get(subclass.to_s.deconstantize)
-
-      inherit_attrs(subclass)
-      inherit_attrs_from_resource(subclass, resource, [:auth])
-
-      begin
-        subclass.instance_variable_set(:@resource, resource)
-        subclass.instance_variable_set(:@model, resource.model)
-      rescue NoMethodError
-        return
-      end
-    end
-
     class << self
       attr_reader :resource, :authorization, :input, :output
 
-      def input(layout = :object, namespace: nil, &block)
+      def inherited(subclass)
+        # puts "Action.inherited called #{subclass} from #{to_s}"
+
+        subclass.instance_variable_set(:@obj_type, obj_type)
+
+        resource = Kernel.const_get(subclass.to_s.deconstantize)
+
+        inherit_attrs(subclass)
+        inherit_attrs_from_resource(subclass, resource, [:auth])
+
+        i = @input.clone
+        i.action = subclass
+
+        o = @output.clone
+        o.action = subclass
+
+        subclass.instance_variable_set(:@input, i)
+        subclass.instance_variable_set(:@output, o)
+
+        begin
+          subclass.instance_variable_set(:@resource, resource)
+          subclass.instance_variable_set(:@model, resource.model)
+        rescue NoMethodError
+          return
+        end
+      end
+
+      def input(layout = nil, namespace: nil, &block)
         if block
-          @input = Params.new(:input, self, layout, namespace)
+          @input ||= Params.new(:input, self)
+          @input.layout = layout
+          @input.namespace = namespace
           @input.instance_eval(&block)
           @input.load_validators(model) if model
         else
@@ -40,9 +50,11 @@ module HaveAPI
         end
       end
 
-      def output(layout = :object, namespace: nil, &block)
+      def output(layout = nil, namespace: nil, &block)
         if block
-          @output = Params.new(:output, self, layout, namespace)
+          @output ||= Params.new(:output, self)
+          @output.layout = layout
+          @output.namespace = namespace
           @output.instance_eval(&block)
         else
           @output
@@ -215,6 +227,9 @@ module HaveAPI
     def v?(v)
       @version == v
     end
+
+    input {}
+    output {}
 
     protected
     def with_restricted(*args)

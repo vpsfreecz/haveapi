@@ -176,6 +176,8 @@ module HaveAPI
             errors[p.name] = ['required parameter missing']
           end
 
+          next unless input.has_key?(p.name)
+
           cleaned = p.clean(input[p.name])
           input[p.name] = cleaned if cleaned != :_nil
         end

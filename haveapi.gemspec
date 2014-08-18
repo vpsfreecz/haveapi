@@ -11,7 +11,7 @@ Gem::Specification.new do |s|
   s.authors     = 'Jakub Skokan'
   s.email       = 'jakub.skokan@vpsfree.cz'
   s.files       = Dir['lib/**/*']
-  s.license     = 'GPL'
+  s.license     = 'MIT'
 
   s.required_ruby_version = '~> 2.0'
 

@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.summary       =
   spec.description   = 'Ruby API and CLI for HaveAPI'
   spec.homepage      = ''
-  spec.license       = 'GPL'
+  spec.license       = 'MIT'
 
   spec.files         = `git ls-files -z`.split("\x0")
   spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }

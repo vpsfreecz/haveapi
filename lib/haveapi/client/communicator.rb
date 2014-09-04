@@ -25,6 +25,7 @@ module HaveAPI
         @rest = RestClient::Resource.new(@url)
         @version = v
         @identity = 'haveapi-client-ruby'
+        @desc = {}
       end
 
       # Authenticate user with selected +auth_method+.
@@ -32,7 +33,6 @@ module HaveAPI
       # +options+ are specific for each authentication provider.
       def authenticate(auth_method, options = {})
         desc = describe_api(@version)
-        desc = desc[:versions][desc[:default_version].to_s.to_sym] unless @version
 
         @auth = self.class.auth_methods[auth_method].new(self, desc[:authentication][auth_method], options)
         @rest = @auth.resource || @rest
@@ -42,8 +42,14 @@ module HaveAPI
         @auth.save
       end
 
+      def available_versions
+        description_for(path_for, {describe: :versions})
+      end
+
       def describe_api(v=nil)
-        description_for(path_for(v))
+        return @desc[v] if @desc.has_key?(v)
+
+        @desc[v] = description_for(path_for(v), v.nil? ? {describe: :default} : {})
       end
 
       def describe_resource(path)
@@ -142,9 +148,9 @@ module HaveAPI
           ret
         end
 
-        def description_for(path)
+        def description_for(path, query_params={})
           parse(@rest[path].get_options({
-              params: @auth.request_payload.update(@auth.request_url_params),
+              params: @auth.request_payload.update(@auth.request_url_params).update(query_params),
               user_agent: @identity
           }.update(@auth.request_headers)))
         end

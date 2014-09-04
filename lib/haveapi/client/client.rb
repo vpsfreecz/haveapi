@@ -3,12 +3,20 @@ require 'pp'
 class HaveAPI::Client::Client
   attr_reader :resources
 
-  def initialize(url, v=nil, identity: 'haveapi-client')
+  def initialize(url, v = nil, identity: 'haveapi-client')
+    @setup = false
     @version = v
     @api = HaveAPI::Client::Communicator.new(url, v)
     @api.identity = identity
+  end
 
-    setup_api(@api.describe_api)
+  def setup(v = :_nil)
+    @version = v unless v == :_nil
+    setup_api
+  end
+
+  def versions
+    @api.available_versions
   end
 
   # See Communicator#authenticate.
@@ -16,13 +24,25 @@ class HaveAPI::Client::Client
     @api.authenticate(*args)
   end
 
-  private
-  def setup_api(description)
-    v = @version || description[:default_version]
+  def method_missing(symbol, *args)
+    return super(symbol, *args) if @setup
 
+    setup_api
+
+    if @resources.include?(symbol)
+      method(symbol).call(*args)
+
+    else
+      super(symbol, *args)
+    end
+  end
+
+  private
+  def setup_api
+    @description = @api.describe_api(@version)
     @resources = {}
 
-    description[:versions][v.to_s.to_sym][:resources].each do |name, desc|
+    @description[:resources].each do |name, desc|
       r = HaveAPI::Client::Resource.new(@api, name)
       r.setup(desc)
 
@@ -35,5 +55,7 @@ class HaveAPI::Client::Client
 
       @resources[name] = r
     end
+
+    @setup = true
   end
 end

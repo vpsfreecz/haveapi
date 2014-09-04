@@ -12,6 +12,7 @@ module HaveAPI
       class Create < Action
         route ''
         http_method :post
+        aliases %i(new)
       end
 
       class Show < Action

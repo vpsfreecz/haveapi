@@ -1,6 +1,6 @@
 module HaveAPI
   class Server
-    attr_reader :root, :routes, :module_name, :auth_chain, :default_version
+    attr_reader :root, :routes, :module_name, :auth_chain, :versions, :default_version
 
     module ServerHelpers
       def authenticate!(v)
@@ -123,9 +123,23 @@ module HaveAPI
 
       @sinatra.options @root do
         authenticated?(settings.api_server.default_version)
+        ret = nil
 
-        JSON.pretty_generate(settings.api_server.describe(Context.new(settings.api_server, user: current_user,
-                                                          params: params)))
+        case params[:describe]
+          when 'versions'
+            ret = {versions: settings.api_server.versions,
+                   default: settings.api_server.default_version}
+
+          when 'default'
+            ret = settings.api_server.describe_version(Context.new(settings.api_server, version: settings.api_server.default_version,
+                                                                  user: current_user, params: params))
+
+          else
+            ret = settings.api_server.describe(Context.new(settings.api_server, user: current_user,
+                                                           params: params))
+        end
+
+        JSON.pretty_generate(ret)
       end
 
       # Login/logout links

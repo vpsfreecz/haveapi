@@ -14,6 +14,8 @@
             <dd><%= info[:description] %></dd>
             <dt>Authentication required:</dt>
             <dd><%= info[:auth] ? 'yes' : 'no' %></dd>
+            <dt>Aliases:</dt>
+            <dd><%= info[:aliases].join(', ') %></dd>
           </dl>
 
           <h4>Input parameters</h4>

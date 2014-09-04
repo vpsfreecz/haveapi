@@ -6,6 +6,7 @@ module HaveAPI
     has_attr :route
     has_attr :http_method, :get
     has_attr :auth, true
+    has_attr :aliases, []
 
     attr_reader :message, :errors
     class << self
@@ -94,6 +95,7 @@ module HaveAPI
         {
             auth: @auth,
             description: @desc,
+            aliases: @aliases,
             input: @input ? @input.describe(context) : {parameters: {}},
             output: @output ? @output.describe(context) : {parameters: {}},
             example: @example ? @example.describe : {},

@@ -4,6 +4,7 @@ module HaveAPI
       class Index < Action
         route ''
         http_method :get
+        aliases %i(list)
 
         include HaveAPI::Actions::Paginable
       end
@@ -16,6 +17,7 @@ module HaveAPI
       class Show < Action
         route ':%{resource}_id'
         http_method :get
+        aliases %i(find)
       end
 
       class Update < Action
@@ -26,6 +28,7 @@ module HaveAPI
       class Delete < Action
         route ':%{resource}_id'
         http_method :delete
+        aliases %i(destroy)
       end
     end
   end

@@ -59,6 +59,17 @@ module HaveAPI
       ret
     end
 
+    def call_url_params(action, obj)
+      ret = params && action.resolve.call(obj)
+
+      return [ret] if ret && !ret.is_a?(Array)
+      ret
+    end
+
+    def url_with_params(action, obj)
+      url_for(action, call_url_params(action, obj))
+    end
+
     private
     def resolve_arg!(url, arg)
       url.sub!(/:[a-zA-Z\-_]+/, arg.to_s)

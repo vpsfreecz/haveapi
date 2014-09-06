@@ -1,10 +1,10 @@
 module HaveAPI::Parameters
   class Resource
-    attr_reader :name, :label, :desc, :type, :value_id, :value_label, :choices
+    attr_reader :name, :resource, :label, :desc, :type, :value_id, :value_label,
+                :choices, :value_params
 
     def initialize(resource, name: nil, label: nil, desc: nil,
-        choices: nil, value_id: :id, value_label: :label, required: nil,
-        value_params: nil, choices_params: nil)
+        choices: nil, value_id: :id, value_label: :label, required: nil)
       @resource = resource
       @resource_path = build_resource_path(resource)
       @name = name || resource.to_s.demodulize.underscore.to_sym
@@ -14,8 +14,6 @@ module HaveAPI::Parameters
       @value_id = value_id
       @value_label = value_label
       @required = required
-      @value_params = value_params
-      @choices_params = choices_params
     end
 
     def db_name
@@ -37,13 +35,13 @@ module HaveAPI::Parameters
     def describe(context)
       val_url = context.url_for(
           @resource::Show,
-          context.endpoint && context.action_prepare && context.layout == :object && call_url_params(@value_params, context.action_instance)
+          context.endpoint && context.action_prepare && context.layout == :object && context.call_url_params(@value_params, context.action_prepare)
       )
       val_method = @resource::Index.http_method.to_s.upcase
 
       choices_url = context.url_for(
           @choices,
-          context.endpoint && context.layout == :object && call_url_params(@choices_params, context.action_instance)
+          context.endpoint && context.layout == :object && context.call_url_params(context.action, context.action_prepare)
       )
       choices_method = @choices.http_method.to_s.upcase
 
@@ -91,13 +89,6 @@ module HaveAPI::Parameters
       end
 
       path
-    end
-
-    def call_url_params(params, action)
-      ret = params && action.instance_exec(&params)
-
-      return [ret] if ret && !ret.is_a?(Array)
-      ret
     end
   end
 end

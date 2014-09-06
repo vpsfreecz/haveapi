@@ -4,6 +4,7 @@ module HaveAPI
     has_attr :version
     has_attr :desc
     has_attr :route
+    has_attr :resolve, ->(klass){ klass.id }
     has_attr :http_method, :get
     has_attr :auth, true
     has_attr :aliases, []
@@ -120,7 +121,7 @@ module HaveAPI
       end
 
       def from_context(c)
-        ret = new(nil, c.version, c.params, nil)
+        ret = new(nil, c.version, c.params, nil, c)
         ret.instance_exec do
           @safe_params = @params.dup
           @authorization = c.authorization
@@ -130,11 +131,13 @@ module HaveAPI
       end
     end
 
-    def initialize(request, version, params, body)
+    def initialize(request, version, params, body, context)
       @request = request
       @version = version
       @params = params
       @params.update(body) if body
+      @context = context
+      @context.action_instance = self
 
       class_auth = self.class.authorization
 
@@ -205,17 +208,42 @@ module HaveAPI
         output = self.class.output
 
         if output
+          safe_ret = nil
+
           case output.layout
             when :object
-              ret = resourcify(@authorization.filter_output(self.class.output.params, ret))
+              safe_ret = {}
 
-            when :list
-              ret.map! do |obj|
-                resourcify(@authorization.filter_output(self.class.output.params, obj))
+              if ret.is_a?(ActiveRecord::Base)
+                safe_ret = to_param_names(all_attrs(ret), :output)
+                safe_ret = resourcify(@authorization.filter_output(self.class.output.params, safe_ret), ret)
               end
+
+            when :object_list
+              safe_ret = []
+
+              ret.each do |obj|
+                if obj.is_a?(ActiveRecord::Base)
+                  tmp = to_param_names(all_attrs(obj), :output)
+
+                  safe_ret << resourcify(@authorization.filter_output(self.class.output.params, tmp), obj)
+                end
+              end
+
+            when :hash
+              safe_ret = @authorization.filter_output(self.class.output.params, to_param_names(ret))
+
+            when :hash_list
+              safe_ret = ret
+              safe_ret.map! do |hash|
+                @authorization.filter_output(self.class.output.params, to_param_names(hash))
+              end
+
+            else
+              safe_ret = ret
           end
 
-          [true, {output.namespace => ret}]
+          [true, {output.namespace => safe_ret}]
 
         else
           [true, {}]
@@ -334,7 +362,7 @@ module HaveAPI
       end
     end
 
-    def resourcify(hash)
+    def resourcify(hash, klass)
       self.class.output.params.each do |p|
         next unless p.is_a?(Parameters::Resource) && hash[p.name]
 
@@ -342,9 +370,15 @@ module HaveAPI
 
         tmp = hash[p.name]
 
+        val_url = @context.url_with_params(p.resource::Show, klass.method(p.name).call)
+        val_method = p.resource::Show.http_method.to_s.upcase
+
         hash[p.name] = {
             p.value_id => tmp.send(res_out[p.value_id].db_name),
-            p.value_label => tmp.send(res_out[p.value_label].db_name)
+            p.value_label => tmp.send(res_out[p.value_label].db_name),
+            :url => val_url,
+            :method => val_method,
+            :help => "#{val_url}?method=#{val_method}"
         }
       end
 

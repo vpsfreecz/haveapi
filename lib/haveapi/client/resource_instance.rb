@@ -38,6 +38,10 @@ module HaveAPI::Client
       end
     end
 
+    def new
+      raise NoMethodError.new
+    end
+
     # Invoke +create+ action if the object is not persistent,
     # +update+ action if it is.
     def save

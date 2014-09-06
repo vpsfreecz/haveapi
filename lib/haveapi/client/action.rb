@@ -24,6 +24,14 @@ module HaveAPI
         @spec[:auth]
       end
 
+      def aliases(include_name = false)
+        if include_name
+          [@name] + @spec[:aliases]
+        else
+          @spec[:aliases]
+        end
+      end
+
       def input
         @spec[:input]
       end

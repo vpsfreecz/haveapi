@@ -54,49 +54,60 @@ module HaveAPI::Client
     protected
     # Define access/write methods for action +action+.
     def define_action(action)
-      define_singleton_method(action.name) do |*args|
-        all_args = @prepared_args + args
+      action.aliases(true).each do |name|
+        next unless define_method?(action, name)
 
-        if action.unresolved_args?
-          all_args.delete_if do |arg|
-            break unless action.unresolved_args?
-
-            action.provide_args(arg)
-            true
-          end
+        define_singleton_method(name) do |*args|
+          all_args = @prepared_args + args
 
           if action.unresolved_args?
-            raise ArgumentError.new('One or more object ids missing')
+            all_args.delete_if do |arg|
+              break unless action.unresolved_args?
+
+              action.provide_args(arg)
+              true
+            end
+
+            if action.unresolved_args?
+              raise ArgumentError.new('One or more object ids missing')
+            end
           end
-        end
 
-        if all_args.empty?
-          all_args << default_action_input_params(action)
-
-        else
-          last = all_args.pop
-
-          all_args << default_action_input_params(action).update(last)
-        end
-
-        ret = Response.new(action, action.execute(*all_args))
-
-        raise ActionFailed.new(ret) unless ret.ok?
-
-        case action.output_layout
-          when :object
-            ResourceInstance.new(@client, @api, self, action: action, response: ret)
-
-          when :object_list
-            ResourceInstanceList.new(@client, @api, self, action, ret)
-
-          when :hash, :hash_list
-            ret
+          if all_args.empty?
+            all_args << default_action_input_params(action)
 
           else
-            ret
+            last = all_args.pop
+
+            all_args << default_action_input_params(action).update(last)
+          end
+
+          ret = Response.new(action, action.execute(*all_args))
+
+          raise ActionFailed.new(ret) unless ret.ok?
+
+          case action.output_layout
+            when :object
+              ResourceInstance.new(@client, @api, self, action: action, response: ret)
+
+            when :object_list
+              ResourceInstanceList.new(@client, @api, self, action, ret)
+
+            when :hash, :hash_list
+              ret
+
+            else
+              ret
+          end
         end
       end
+    end
+
+    # Called before defining a method named +name+ that will
+    # invoke +action+.
+    def define_method?(action, name)
+      return false if %i(new).include?(name.to_sym)
+      true
     end
 
     # This method is called when an action is invoked.

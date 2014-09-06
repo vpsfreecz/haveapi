@@ -32,8 +32,12 @@ module HaveAPI
         @spec[:output]
       end
 
-      def layout
-        @spec[:output][:layout]
+      def input_layout
+        @spec[:input][:layout].to_sym
+      end
+
+      def output_layout
+        @spec[:output][:layout].to_sym
       end
 
       def structure
@@ -42,6 +46,10 @@ module HaveAPI
 
       def namespace(src)
         @spec[src][:namespace]
+      end
+
+      def input_params
+        @spec[:input][:parameters]
       end
 
       def params
@@ -75,6 +83,11 @@ module HaveAPI
 
       def provide_args(*args)
         apply_args(args)
+      end
+
+      def provide_url(url, help)
+        @prepared_url = url
+        @prepared_help = help
       end
 
       def update_description(spec)

@@ -121,6 +121,8 @@ module HaveAPI
 
         @api = settings.api_server.describe(Context.new(settings.api_server, user: current_user,
                                             params: params))
+
+        content_type 'text/html'
         erb :index, layout: :main
       end
 
@@ -179,6 +181,7 @@ module HaveAPI
         @v = v
         @help = settings.api_server.describe_version(Context.new(settings.api_server, version: v,
                                                                  user: current_user, params: params))
+        content_type 'text/html'
         erb :version, layout: :main
       end
 

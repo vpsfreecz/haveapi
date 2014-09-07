@@ -31,11 +31,8 @@ module HaveAPI
 
       def report_error(code, headers, msg)
         @halted = true
-        halt code, headers, JSON.pretty_generate({
-                                                     status: false,
-                                                     response: nil,
-                                                     message: msg
-                                                 })
+        content_type @formatter.content_type, charset: 'utf-8'
+        halt code, headers, @formatter.format(false, nil, msg)
       end
 
       def root
@@ -93,6 +90,17 @@ module HaveAPI
 
         helpers ServerHelpers
 
+        before do
+          @formatter = OutputFormatter.new
+
+          unless @formatter.supports?(request.accept)
+            @halted = true
+            halt 406, "Not Acceptable\n"
+          end
+
+          content_type @formatter.content_type, charset: 'utf-8'
+        end
+
         not_found do
           report_error(404, {}, 'Action not found') unless @halted
         end
@@ -134,7 +142,7 @@ module HaveAPI
                                                            params: params))
         end
 
-        JSON.pretty_generate(ret)
+        @formatter.format(true, ret)
       end
 
       # Login/logout links
@@ -177,7 +185,7 @@ module HaveAPI
       @sinatra.options prefix do
         authenticated?(v)
 
-        JSON.pretty_generate(settings.api_server.describe_version(Context.new(settings.api_server, version: v,
+        @formatter.format(true, settings.api_server.describe_version(Context.new(settings.api_server, version: v,
                                                                               user: current_user, params: params)))
       end
 
@@ -245,14 +253,13 @@ module HaveAPI
         end
 
         status, reply, errors = action.safe_exec
-        reply = {
-            status: status,
-            response: status ? reply : nil,
-            message: !status ? reply : nil,
-            errors: errors
-        }
 
-        JSON.pretty_generate(reply)
+        @formatter.format(
+            status,
+            status  ? reply : nil,
+            !status ? reply : nil,
+            errors
+        )
       end
 
       @sinatra.options route.url do |*args|
@@ -276,7 +283,7 @@ module HaveAPI
           report_error(404, {}, 'Object not found')
         end
 
-        JSON.pretty_generate(desc)
+        @formatter.format(true, desc)
       end
     end
 

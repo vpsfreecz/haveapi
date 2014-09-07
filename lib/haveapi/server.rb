@@ -11,6 +11,8 @@ module HaveAPI
         return @current_user if @current_user
 
         @current_user = settings.api_server.send(:do_authenticate, v, request)
+        settings.api_server.send(:invoke_hook, :post_authenticated, @current_user)
+        @current_user
       end
 
       def current_user
@@ -49,6 +51,7 @@ module HaveAPI
     def initialize(module_name = HaveAPI.module_name)
       @module_name = module_name
       @auth_chain = HaveAPI::Authentication::Chain.new(self)
+      @hooks = {post_authenticated: []}
     end
 
     # Include specific version +v+ of API.
@@ -87,14 +90,6 @@ module HaveAPI
         set :views, settings.root + '/views'
         set :public_folder, settings.root + '/public'
         set :bind, '0.0.0.0'
-
-        # This must be called before registering paper trail, or else it will
-        # not be logging current user.
-        # before do
-        #   authenticated?
-        # end
-
-        register PaperTrail::Sinatra
 
         helpers ServerHelpers
 
@@ -338,6 +333,16 @@ module HaveAPI
       end
     end
 
+    # Register a block that will be called for hook +name+.
+    # The block is passed arguments depending on hook type.
+    # === Hook types
+    # ==== :post_authenticated
+    # Called after the user was authenticated (or not). The block is passed
+    # current user object or nil as an argument.
+    def register_hook(name, &block)
+      @hooks[name] << block
+    end
+
     def app
       @sinatra
     end
@@ -349,6 +354,12 @@ module HaveAPI
     private
     def do_authenticate(v, request)
       @auth_chain.authenticate(v, request)
+    end
+
+    def invoke_hook(name, *args)
+      @hooks[name].each do |block|
+        block.call(*args)
+      end
     end
   end
 end

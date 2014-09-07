@@ -152,7 +152,7 @@ module HaveAPI
           parse(@rest[path].get_options({
               params: @auth.request_payload.update(@auth.request_url_params).update(query_params),
               user_agent: @identity
-          }.update(@auth.request_headers)))
+          }.update(@auth.request_headers)))[:response]
         end
 
         def parse(str)

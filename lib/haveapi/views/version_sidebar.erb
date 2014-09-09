@@ -1,0 +1,48 @@
+<% def render_resource_nav(resource, info, prefix='root') %>
+    <li>
+      <a href="#<%= "#{prefix}-#{resource}" %>">.<%= resource.humanize %></a>
+
+      <ul>
+        <% info[:actions].each do |action, info| %>
+            <li>
+              <a href="#<%= "#{prefix}-#{resource}-#{action}" %>">#<%= action.capitalize %></a>
+            </li>
+        <% end %>
+
+        <% info[:resources].each do |r, i| %>
+            <% render_resource_nav(r, i, "#{prefix}-#{resource}") %>
+        <% end %>
+      </ul>
+    </li>
+<% end %>
+
+<h1>Authorization</h1>
+<p class="authentication">
+  <% if current_user %>
+      Logged as <%= current_user.login %> [<a class="logout" href="<%= logout_url %>">logout</a>]
+  <% else %>
+      <a class="login btn btn-default" href="<%= url("#{root}_login") %>">Login</a>
+  <% end %>
+</p>
+<p>
+  <% if current_user %>
+      Listing only accessible resources, actions and parameters.
+  <% else %>
+      Listing all resources, actions and parameters.
+  <% end %>
+</p>
+
+<h1>Contents</h1>
+<ul class="top-level">
+  <li>
+    <a href="#api">API v<%= @v %></a>
+    <ul>
+      <li><a href="#authentication">Authentication</a></li>
+      <li></li>
+    </ul>
+  </li>
+  <li><a href="#resources">Resources</a></li>
+  <% @help[:resources].each do |resource, info| %>
+      <% render_resource_nav(resource, info) %>
+  <% end %>
+</ul>

@@ -43,6 +43,11 @@ module HaveAPI
         ret = url("#{root}_logout")
         ret.insert(ret.index('//') + 2, '_log:out@')
       end
+
+      def placeholder(name)
+        @placeholders = yield unless @placeholders
+        @placeholders[name]
+      end
     end
 
     def initialize(module_name = HaveAPI.module_name)
@@ -123,7 +128,7 @@ module HaveAPI
                                             params: params))
 
         content_type 'text/html'
-        erb :index, layout: :main
+        erb :index, layout: :main_layout
       end
 
       @sinatra.options @root do
@@ -145,6 +150,21 @@ module HaveAPI
         end
 
         @formatter.format(true, ret)
+      end
+
+      # Doc
+      @sinatra.get "#{@root}doc/*" do |f|
+        content_type 'text/html'
+        erb :doc_layout, layout: :main_layout do
+          begin
+            @content = markdown :"../../../doc/#{f}"
+
+          rescue Errno::ENOENT
+            halt 404
+          end
+
+          @sidebar = erb :protocol_sidebar
+        end
       end
 
       # Login/logout links
@@ -182,7 +202,10 @@ module HaveAPI
         @help = settings.api_server.describe_version(Context.new(settings.api_server, version: v,
                                                                  user: current_user, params: params))
         content_type 'text/html'
-        erb :version, layout: :main
+        erb :doc_layout, layout: :main_layout do
+          @content = erb :version_page
+          @sidebar = erb :version_sidebar
+        end
       end
 
       @sinatra.options prefix do

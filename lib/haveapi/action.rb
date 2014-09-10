@@ -4,14 +4,14 @@ module HaveAPI
     has_attr :version
     has_attr :desc
     has_attr :route
-    has_attr :resolve, ->(klass){ klass.id }
+    has_attr :resolve, ->(klass){ klass.respond_to?(:id) ? klass.id : nil }
     has_attr :http_method, :get
     has_attr :auth, true
     has_attr :aliases, []
 
     attr_reader :message, :errors
     class << self
-      attr_reader :resource, :authorization, :input, :output
+      attr_reader :resource, :authorization, :input, :output, :examples
 
       def inherited(subclass)
         # puts "Action.inherited called #{subclass} from #{to_s}"
@@ -67,13 +67,11 @@ module HaveAPI
         @authorization = Authorization.new(&block)
       end
 
-      def example(&block)
-        if block
-          @example = Example.new
-          @example.instance_eval(&block)
-        else
-          @example
-        end
+      def example(title = '', &block)
+        @examples ||= []
+        e = Example.new(title)
+        e.instance_eval(&block)
+        @examples << e
       end
 
       def build_route(prefix)
@@ -99,7 +97,7 @@ module HaveAPI
             aliases: @aliases,
             input: @input ? @input.describe(context) : {parameters: {}},
             output: @output ? @output.describe(context) : {parameters: {}},
-            example: @example ? @example.describe : {},
+            examples: @examples ? @examples.map { |e| e.describe } : [],
             url: context.resolved_url,
             method: route_method,
             help: "#{context.url}?method=#{route_method}"

@@ -244,6 +244,7 @@ Examples are described in a generic way, so that every client can
 render them according to its syntax.
 
     {
+        "title": "A title",
         "request": {
             ... a hash of request parameters ...
         },

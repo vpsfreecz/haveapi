@@ -92,15 +92,18 @@
             <pre><code><%= JSON.pretty_generate(info) %></code></pre>
           </div>
 
-          <% unless info[:example].empty? %>
-            <h4>Example</h4>
-            <p><%= info[:example][:comment] %></p>
+          <% unless info[:examples].empty? %>
+            <h4>Examples</h4>
+            <% info[:examples].each do |example| %>
+                <h5><%= example[:label] %></h5>
+                <p><%= example[:comment] %></p>
 
-            <h5>Request</h5>
-            <pre><code><%= JSON.pretty_generate(info[:example][:request]) %></code></pre>
+                <h6>Request</h6>
+                <pre><code><%= JSON.pretty_generate(example[:request]) %></code></pre>
 
-            <h5>Response</h5>
-            <pre><code><%= JSON.pretty_generate(info[:example][:response]) %></code></pre>
+                <h6>Response</h6>
+                <pre><code><%= JSON.pretty_generate(example[:response]) %></code></pre>
+            <% end %>
           <% end %>
 
         </div>

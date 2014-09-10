@@ -1,5 +1,9 @@
 module HaveAPI
   class Example
+    def initialize(title)
+      @title = title
+    end
+
     def request(f)
       @request = f
     end
@@ -19,6 +23,7 @@ module HaveAPI
     def describe
       if provided?
         {
+            title: @title,
             request: @request,
             response: @response,
             comment: @comment

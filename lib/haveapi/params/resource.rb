@@ -35,7 +35,7 @@ module HaveAPI::Parameters
     def describe(context)
       val_url = context.url_for(
           @resource::Show,
-          context.endpoint && context.action_prepare && context.layout == :object && context.call_url_params(@value_params, context.action_prepare)
+          context.endpoint && context.action_prepare && context.layout == :object && context.call_url_params(context.action, context.action_prepare)
       )
       val_method = @resource::Index.http_method.to_s.upcase
 

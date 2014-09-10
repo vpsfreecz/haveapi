@@ -1,14 +1,6 @@
-HaveAPI
-=======
-
-[HaveAPI](https://github.com/vpsfreecz/haveapi) is a framework for creating
-custom self-describing APIs.
-
-The resulting API aims to be RESTful. It is divided into resources, which may be nested,
-and their actions (list, create, update, ...).
-
-Every action has assigned URL, which may be identical for several actions, but
-differ in HTTP method.
+# Protocol definition
+HaveAPI defines the format for the self-description and URLs where the self-description
+can be found.
 
 ## Self-description
 The API is self-describing. It documents itself. Clients use the self-description

@@ -47,6 +47,10 @@ module HaveAPI
       def doc(file)
         markdown :"../../../doc/#{file}"
       end
+
+      def version
+        HaveAPI::VERSION
+      end
     end
 
     def initialize(module_name = HaveAPI.module_name)
@@ -153,6 +157,13 @@ module HaveAPI
 
       # Doc
       @sinatra.get "#{@root}doc" do
+        content_type 'text/html'
+        erb :main_layout do
+          doc(:index)
+        end
+      end
+
+      @sinatra.get "#{@root}doc/readme" do
         content_type 'text/html'
         erb :main_layout do
           GitHub::Markdown.render(File.new(settings.views + '/../../../README.md').read)

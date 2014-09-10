@@ -53,8 +53,7 @@ module HaveAPI
       end
 
       def describe_resource(path)
-        api = describe_api
-        tmp = api[:versions][ api[:default_version].to_s.to_sym ]
+        tmp = describe_api
 
         path.each do |r|
           tmp = tmp[:resources][r.to_sym]
@@ -70,10 +69,7 @@ module HaveAPI
       end
 
       def get_action(resources, action, args)
-        @spec ||= describe_api(@version)
-        @spec = @spec[:versions][@spec[:default_version].to_s.to_sym] unless @version
-
-        tmp = @spec
+        tmp = describe_api(@version)
 
         resources.each do |r|
           tmp = tmp[:resources][r.to_sym]
@@ -84,7 +80,9 @@ module HaveAPI
         a = tmp[:actions][action]
 
         if a
-          Action.new(self, action, a, args)
+          obj = Action.new(self, action, a, args)
+          obj.resource_path = resources
+          obj
         else
           false
         end

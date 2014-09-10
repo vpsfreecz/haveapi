@@ -26,5 +26,5 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency 'rest_client', '~> 1.7.3'
   spec.add_runtime_dependency 'json', '~> 1.8.1'
   spec.add_runtime_dependency 'highline', '~> 1.6.21'
-  spec.add_runtime_dependency 'table_print', '~> 1.5.1'
+  spec.add_runtime_dependency 'table_print', '~> 1.5.3'
 end

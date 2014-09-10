@@ -63,6 +63,7 @@ module HaveAPI
 
           if ret[:status]
             format_output(action, ret[:response])
+
           else
             warn "Action failed: #{ret[:message]}"
 
@@ -72,6 +73,8 @@ module HaveAPI
                 puts "\t#{param}: #{e.join('; ')}"
               end
             end
+
+            print_examples(action)
           end
 
         else
@@ -178,8 +181,11 @@ module HaveAPI
         if @opts[:help]
           puts @global_opt.help
           puts ''
+          puts 'Action description:'
+          puts action.description, "\n"
           print 'Action parameters:'
           puts @action_opt.help
+          print_examples(action)
           exit
         end
 
@@ -219,37 +225,37 @@ module HaveAPI
       end
 
       def list_versions
-        desc = @api.describe_api
+        desc = @api.available_versions
 
         desc[:versions].each do |v, _|
           next if v == :default
 
           v_int = v.to_s.to_i
 
-          puts "#{v_int == desc[:default_version] ? '*' : ' '} v#{v}"
+          puts "#{v_int == desc[:default] ? '*' : ' '} v#{v}"
         end
       end
 
       def list_auth(v=nil)
-        desc = @api.describe_api
+        desc = @api.describe_api(v)
 
-        desc[:versions][(v && v.to_sym) || desc[:default_version].to_s.to_sym][:authentication].each_key do |auth|
+        desc[:authentication].each_key do |auth|
           puts auth if Cli.auth_methods.has_key?(auth)
         end
       end
 
       def list_resources(v=nil)
-        desc = @api.describe_api
+        desc = @api.describe_api(v)
 
-        desc[:versions][(v && v.to_sym) || desc[:default_version].to_s.to_sym][:resources].each do |resource, children|
+        desc[:resources].each do |resource, children|
           nested_resource(resource, children, false)
         end
       end
 
       def list_actions(v=nil)
-        desc = @api.describe_api
+        desc = @api.describe_api(v)
 
-        desc[:versions][(v && v.to_sym) || desc[:default_version].to_s.to_sym][:resources].each do |resource, children|
+        desc[:resources].each do |resource, children|
           nested_resource(resource, children, true)
         end
       end
@@ -295,7 +301,14 @@ module HaveAPI
         end
       end
 
-      def format_output(action, response)
+      def print_examples(action)
+        unless action.examples.empty?
+          puts "\nExamples:\n"
+          ExampleFormatter.format_examples(self, action)
+        end
+      end
+
+      def format_output(action, response, out = $>)
         if @opts[:raw]
           puts response
           return
@@ -303,10 +316,12 @@ module HaveAPI
 
         return if response.empty?
 
+        tp.set :io, out
+
         namespace = action.namespace(:output).to_sym
 
-        case action.layout.to_sym
-          when :list
+        case action.output_layout.to_sym
+          when :object_list, :hash_list
             cols = []
 
             action.params.each do |name, p|
@@ -320,19 +335,19 @@ module HaveAPI
             tp response[namespace], *cols
 
 
-          when :object
+          when :object, :hash
             response[namespace].each do |k, v|
 
               if action.params[k][:type] == 'Resource'
-                puts "#{k}: #{v[action.params[k][:value_label].to_sym]}"
+                out << "#{k}: #{v[action.params[k][:value_label].to_sym]}\n"
               else
-                puts "#{k}: #{v}"
+                out << "#{k}: #{v}\n"
               end
             end
 
 
           when :custom
-            pp response[namespace]
+            PP.pp(response[namespace], out)
 
         end
       end

@@ -1,6 +1,8 @@
 module HaveAPI
   module Client
     class Action
+      attr_accessor :resource_path
+
       def initialize(api, name, spec, args)
         @api = api
         @name = name
@@ -32,6 +34,10 @@ module HaveAPI
         end
       end
 
+      def description
+        @spec[:description]
+      end
+
       def input
         @spec[:input]
       end
@@ -56,12 +62,20 @@ module HaveAPI
         @spec[src][:namespace]
       end
 
+      def examples
+        @spec[:examples]
+      end
+
       def input_params
         @spec[:input][:parameters]
       end
 
       def params
         @spec[:output][:parameters]
+      end
+
+      def param_description(dir, name)
+        @spec[dir][:parameters][name]
       end
 
       def url

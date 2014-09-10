@@ -2,24 +2,22 @@ HaveAPI
 =======
 A framework for creating self-describing APIs in Ruby.
 
-Note: HaveAPI is under development. It is not stable, the interface may change.
+Note: HaveAPI is under heavy development. It is not stable, its interface may change.
 
 ## What is self-describing API?
-Self-describing API responds to HTTP method `OPTIONS` and returns description
-of available resources, their actions and parameters. The description contains
+A self-describing API responds to HTTP method `OPTIONS` and returns description
+of available resources and their actions. The description contains
 full list of parameters, their labels, text notes, data types, validators
 and example usage.
 
-You can ask for description either whole API, specific version of the API
-or concrete action.
-
-The description is encoded in JSON.
+Clients use the self-description to learn how to communicate with the API,
+which they otherwise know nothing about.
 
 ## Main features
 - RESTful - divided into resources, which may be nested, and their actions
-- Handles network communication on both server and client, you need to only
+- Handles network communication on both server and client, you need only to
   define resources and actions
-- By writing the code you get documentation for free
+- By writing the code you get the documentation for free
 - Auto-generated online HTML documentation
 - Generic interface for clients - one client can be used to access all APIs
   using this framework
@@ -33,7 +31,7 @@ The description is encoded in JSON.
 This text might not be complete or up-to-date, as things still often change.
 Full use of HaveAPI may be seen
 in [vpsadminapi](https://github.com/vpsfreecz/vpsadminapi), which may serve
-as an example and how are things meant to be used.
+as an example of how are things meant to be used.
 
 All resources and actions are represented by classes. They all must be stored
 in a module, whose name is later given to HaveAPI.
@@ -139,13 +137,7 @@ module MyAPI
       
       # Execute action, return the list
       def exec
-        ret = []
-        
-        ::User.all.each do |u|
-          ret << u.attributes
-        end
-        
-        ret
+        ::User.all
       end
     end
     
@@ -158,6 +150,7 @@ module MyAPI
       
       output do
         use :id
+        use :common
       end
       
       authorize do |u|
@@ -184,7 +177,7 @@ module MyAPI
         user = ::User.new(params[:user])
         
         if user.save
-          ok({id: user.id})
+          ok(user)
         else
           error('save failed', user.errors.to_hash)
         end
@@ -195,15 +188,13 @@ end
 ```
 
 ### What you get
-From this piece of code, HaveAPI will generate self-describing API.
-It will contain resource `User` with actions `Index` and `Create`.
+From this piece of code, HaveAPI will generate a self-describing API.
+It will contain resource `User` with actions `Index` and `Create`,
+using which you can list existing users and create new ones.
 
-HaveAPI will also load validators from the model and it will be included
-in the self-description.
+You can use any of the available clients to work with the API.
 
-Online HTML documentation will also be available.
-
-### Run example
+### Run the example
 ```ruby
 api = HaveAPI::Server.new(MyAPI)
 
@@ -226,9 +217,12 @@ This should start the application using WEBrick. Check
 [http://localhost:4567](http://localhost:4567).
 
 - `GET /` - a list of API versions
+- `GET /doc` - HaveAPI documentation
 - `GET /v1/` - documentation for version 1
-- `OPTIONS /` - description for whole API
+- `OPTIONS /` - description for the whole API
 - `OPTIONS /v1/` - description for API version 1
+
+and more.
 
 ### Run with rackup
 Use the same code as above, only the last line would be
@@ -237,27 +231,12 @@ Use the same code as above, only the last line would be
 run api.app
 ```
 
-## Envelope
-In addition to output parameters specified for all actions, every API response
-(except description) is wrapped in an envelope. The envelope reports if action
-succeeded or failed, provides return value or error messages.
-
-    {
-      "status": true if action succeeded or false if error occurred,
-      "response": return value,
-      "message": error message, if status is false,
-      "errors: {
-        "parameter1": ["list", "of", "errors"],
-        "parameter2": ["and", "so", "on"]
-      }
-    }
-
 ## Authentication
 HaveAPI defines an interface for creating authentication providers.
 HTTP basic auth and token providers are built-in.
 
-Authentication options are self-described. Clients can choose what authentication
-method they understand and want to use.
+Authentication options are self-described. A client can choose what authentication
+method it understands and wants to use.
 
 ## Authorization
 HaveAPI provides means for authorizing user access to actions. This process
@@ -265,9 +244,6 @@ is not self-described.
 
 If the user is authenticated when requesting self-description, only allowed
 resources, actions and parameters will be returned.
-
-## Input/output formats
-For now, the only supported input/output format is JSON.
 
 ## Available clients
 These clients completely rely on the API description and can be used for all
@@ -283,6 +259,9 @@ resources, actions, parameters, nothing. Everything the client knows he must fin
 from the API description.
 That way, the client can be used for all APIs using this framework, not
 just for your instance.
+
+## Read more
+ - [Protocol definition](doc/protocol.md)
 
 ## Contributing
 

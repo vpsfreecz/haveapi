@@ -3,6 +3,7 @@ require 'active_record'
 require 'sinatra/base'
 require 'sinatra/activerecord'
 require 'pp'
+require 'github/markdown'
 
 module HaveAPI
   module Actions

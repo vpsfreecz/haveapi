@@ -44,9 +44,8 @@ module HaveAPI
         ret.insert(ret.index('//') + 2, '_log:out@')
       end
 
-      def placeholder(name)
-        @placeholders = yield unless @placeholders
-        @placeholders[name]
+      def doc(file)
+        markdown :"../../../doc/#{file}"
       end
     end
 
@@ -153,11 +152,18 @@ module HaveAPI
       end
 
       # Doc
-      @sinatra.get "#{@root}doc/*" do |f|
+      @sinatra.get "#{@root}doc" do
+        content_type 'text/html'
+        erb :main_layout do
+          GitHub::Markdown.render(File.new(settings.views + '/../../../README.md').read)
+        end
+      end
+
+      @sinatra.get %r{#{@root}doc/([^\.]+)[\.md]?} do |f|
         content_type 'text/html'
         erb :doc_layout, layout: :main_layout do
           begin
-            @content = markdown :"../../../doc/#{f}"
+            @content = doc(f)
 
           rescue Errno::ENOENT
             halt 404

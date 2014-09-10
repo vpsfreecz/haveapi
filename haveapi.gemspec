@@ -23,6 +23,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'mysql'
   s.add_runtime_dependency 'sinatra-activerecord'
   s.add_runtime_dependency 'rake'
+  s.add_runtime_dependency 'github-markdown', '~> 0.6.6'
 
   s.add_development_dependency 'rspec'
   s.add_development_dependency 'railties'

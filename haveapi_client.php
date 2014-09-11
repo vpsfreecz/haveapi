@@ -2,16 +2,113 @@
 
 namespace HaveAPI;
 
+abstract class AuthProvider {
+	protected $client;
+	protected $description;
+	protected $opts;
+	
+	public function __construct($client, $description, $opts) {
+		$this->client = $client;
+		$this->description = $description;
+		$this->opts = $opts;
+		
+		$this->setup();
+	}
+	
+	protected function setup() {
+		
+	}
+	
+	abstract public function authenticate($request);
+}
+
+class NoAuth extends AuthProvider {
+	public function authenticate($request) {
+		
+	}
+}
+
+class BasicAuth extends AuthProvider {
+	public function authenticate($request) {
+		$request->authenticateWith($this->opts['username'], $this->opts['password']);
+	}
+}
+
+class TokenAuth extends AuthProvider {
+	const HTTP_HEADER = 0;
+	const QUERY_PARAMETER = 1;
+	
+	private $rs;
+	private $configured = false;
+	private $token;
+	private $validTo;
+	private $via;
+	
+	protected function setup() {
+		$this->rs = new Resource($this->client, 'token', $this->description->resources->token, array());
+		$this->via = isSet($this->opts['via']) ? $this->opts['via'] : self::HTTP_HEADER;
+		
+		if(isSet($this->opts['token'])) {
+			$this->configured = true;
+			return;
+		}
+		
+		$this->requestToken();
+	}
+	
+	public function authenticate($request) {
+		if(!$this->configured)
+			return;
+		
+		$this->checkValidity();
+		
+		switch($this->via) {
+			case self::HTTP_HEADER:
+				$request->addHeader($this->description->http_header, $this->token);
+				break;
+			
+			case self::QUERY_PARAMETER:
+				throw new \Exception("Query parameter not implemented");
+		}
+	}
+	
+	protected function requestToken() {
+		$ret = $this->rs->request(array(
+			'login' => $this->opts['username'],
+			'password' => $this->opts['password'],
+			'validity' => isSet($this->opts['validity']) ? $this->opts['validity'] : 300
+		));
+		
+		$this->token = $ret->response()->token;
+		$this->validTo = strtotime($ret->response()->valid_to);
+		
+		$this->configured = true;
+	}
+	
+	protected function checkValidity() {
+		if($this->validTo < time() && isSet($this->opts['username']) && isSet($this->opts['password']))
+			$this->requestToken();
+	}
+	
+	public function getToken() {
+		return $this->token;
+	}
+	
+	public function getValidTo() {
+		return $this->validTo;
+	}
+}
+
 class Action {
 	private $m_name;
-	private $options;
+	private $description;
 	private $client;
 	private $prepared_url;
 
-	public function __construct($client, $name, $options, $args) {
+	public function __construct($client, $name, $description, $args) {
 		$this->client = $client;
 		$this->m_name = $name;
-		$this->options = $options;
+		$this->description = $description;
 		$this->args = $args;
 	}
 	
@@ -49,22 +146,22 @@ class Action {
 	}
 	
 	public function httpMethod() {
-		return $this->options->method;
+		return $this->description->method;
 	}
 	
 	public function url() {
 		if($this->prepared_url)
 			return $this->prepared_url;
 		
-		return $this->options->url;
+		return $this->description->url;
 	}
 	
 	public function layout($src) {
-		return $this->options->$src->layout;
+		return $this->description->$src->layout;
 	}
 	
 	public function getNamespace($src) {
-		return $this->options->$src->{'namespace'};
+		return $this->description->$src->{'namespace'};
 	}
 	
 	public function name() {
@@ -77,14 +174,14 @@ class Action {
 }
 
 class Resource implements \ArrayAccess {
-	protected $options;
-	private $client;
+	protected $description;
+	protected $client;
 	private $args = array();
 	
-	public function __construct($client, $name, $options, $args) {
+	public function __construct($client, $name, $description, $args) {
 		$this->client = $client;
 		$this->name = $name;
-		$this->options = $options;
+		$this->description = $description;
 		$this->args = $args;
 	}
 	
@@ -105,7 +202,7 @@ class Resource implements \ArrayAccess {
 			return $this->findObject($offset);
 		
 		else
-			return $this->findNestedObject($offset, $this->options);
+			return $this->findNestedObject($offset, $this->description);
 		
 	}
 	
@@ -139,21 +236,23 @@ class Resource implements \ArrayAccess {
 		throw new \Exception("'$name' is not an action nor a resource.");
 	}
 	
-	protected function findObject($name, $options = null) {
-		if(!$options)
-			$options = $this->options;
-	
-		if(isSet($options->actions) && array_key_exists($name, (array) $options->actions)) {
-			return new Action($this->client, $name, $options->actions->$name, $this->args);
+	protected function findObject($name, $description = null) {
+		$this->client->setup();
 		
-		} if(array_key_exists($name, (array) $options->resources)) {
-			return new Resource($this->client, $name, $options->resources->$name, $this->args);
+		if(!$description)
+			$description = $this->description;
+	
+		if(isSet($description->actions) && array_key_exists($name, (array) $description->actions)) {
+			return new Action($this->client, $name, $description->actions->$name, $this->args);
+		
+		} if(array_key_exists($name, (array) $description->resources)) {
+			return new Resource($this->client, $name, $description->resources->$name, $this->args);
 		}
 		
 		return false;
 	}
 	
-	protected function findNestedObject($path, $options) {
+	protected function findNestedObject($path, $description) {
 		$parts = explode('.', $path);
 		$ask = $this;
 		$len = count($parts);
@@ -161,11 +260,11 @@ class Resource implements \ArrayAccess {
 		for($i = 0; $i < $len; $i++) {
 			$name = $parts[$i];
 			
-			$obj = $ask->findObject($name, $options);
+			$obj = $ask->findObject($name, $description);
 			
 			if($obj instanceof Resource) {
 				$ask = $obj;
-				$options = null;
+				$description = null;
 				
 			} else if($obj === null) {
 				throw new \Exception("Resource or action '$name' not found.");
@@ -180,6 +279,10 @@ class Resource implements \ArrayAccess {
 		
 		return $ask;
 	}
+}
+
+class ResourceInstance extends Resource {
+
 }
 
 class Response {
@@ -207,7 +310,9 @@ class Response {
 		
 		switch($l) {
 			case 'object':
-			case 'list':
+			case 'object_list':
+			case 'hash':
+			case 'hash_list':
 				return $this->envelope->response->{$this->action->getNamespace('output')};
 				
 			default:
@@ -226,44 +331,87 @@ class Response {
 
 class Client extends Resource {
 	private $uri;
-	private $user = null;
-	private $password;
+	private $version;
+	private $identity;
+	private $authProvider;
+	private static $authProviders = array();
 	
-	public function __construct($uri = 'http://localhost:4567') {
-		$this->uri = $uri;
+	public static function registerAuthProvider($name, $class, $force = true) {
+		if(!$force && in_array($name, self::$authProviders))
+			return;
 		
-		$description = \Httpful\Request::options($uri)
-			->expectsJson()
-			->send()->body;
-		
-		$this->options = $description->versions->{$description->default_version};
+		self::$authProviders[$name] = $class;
 	}
 	
-	public function login($user, $password) {
-		$this->user = $user;
-		$this->password = $password;
+	public function __construct($uri = 'http://localhost:4567', $version = null, $identity = 'haveapi-client-php') {
+		$this->client = $this;
+		$this->uri = chop($uri, '/');
+		$this->version = $version;
+		$this->identity = $identity;
+		
+		self::registerAuthProvider('none', 'HaveAPI\NoAuth');
+		self::registerAuthProvider('basic', 'HaveAPI\BasicAuth');
+		self::registerAuthProvider('token', 'HaveAPI\TokenAuth');
+		
+		$this->authProvider = new NoAuth($this, array(), array());
+	}
+	
+	public function setup($force = false) {
+		if(!$force && $this->description)
+			return;
+		
+		$this->description = $this->getDescription();
+	}
+	
+	public function authenticate($method, $opts) {
+		if(!array_key_exists($method, self::$authProviders))
+			throw new \Exception("Auth method '$method' is not registered");
+		
+		$this->setup();
+		
+		$this->authProvider = new self::$authProviders[$method]($this, $this->description->authentication->{$method}, $opts);
+		
+		$this->setup(true);
 	}
 	
 	public function call($action, $params = array()) {
 		$fn = strtolower($action->httpMethod());
 		
-		echo "execute {$action->httpMethod()} {$action->url()}\n<br>\n";
+// 		echo "execute {$action->httpMethod()} {$action->url()}\n<br>\n";
 		
-		$request = \Httpful\Request::$fn($this->uri."/".$action->url());
-		$request->sendsJson();
-		$request->expectsJson();
+		$request = $this->getRequest($fn, $this->uri . $action->url());
 		$request->body(empty($params) ? '{}' : json_encode(array($action->getNamespace('input') => $params)));
-		
-		if($this->user)
-			$request->authenticateWith($this->user, $this->password);
+		$this->authProvider->authenticate($request);
 		
 		$response = $request->send();
 		
 		return new Response($action, $response->body);
 	}
 	
-	protected function findObject($name, $options = null) {
-		$obj = parent::findObject($name, $options);
+	protected function getRequest($method, $url) {
+		$request = \Httpful\Request::$method($url);
+		$request->sendsJson();
+		$request->expectsJson();
+		$request->addHeader('User-Agent', $this->identity);
+		return $request;
+	}
+	
+	protected function getDescription() {
+		$url = $this->uri;
+		
+		if($this->version)
+			$url .= "/v".$this->version."/";
+		else
+			$url .= "/?describe=default";
+		
+		$request = $this->getRequest('options', $url);
+		$this->authProvider->authenticate($request);
+		
+		return $request->send()->body->response;
+	}
+	
+	protected function findObject($name, $description = null) {
+		$obj = parent::findObject($name, $description);
 		
 		if($obj instanceof Resource) {
 			$obj->setApiClient($this);

@@ -2,7 +2,7 @@ module HaveAPI::CLI
   module ExampleFormatter
     def self.format_examples(cli, action, out = $>)
       action.examples.each do |example|
-        out << ' >' << example[:title] << "\n" unless example[:title].empty?
+        out << ' > ' << example[:title] << ":\n" unless example[:title].empty?
 
         # request
         out << "$ #{$0} #{action.resource_path.join('.')} #{action.name}"

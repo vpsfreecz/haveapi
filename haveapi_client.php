@@ -20,6 +20,10 @@ abstract class AuthProvider {
 	}
 	
 	abstract public function authenticate($request);
+	
+	public function queryParameters() {
+		return array();
+	}
 }
 
 class NoAuth extends AuthProvider {
@@ -62,14 +66,15 @@ class TokenAuth extends AuthProvider {
 		
 		$this->checkValidity();
 		
-		switch($this->via) {
-			case self::HTTP_HEADER:
-				$request->addHeader($this->description->http_header, $this->token);
-				break;
-			
-			case self::QUERY_PARAMETER:
-				throw new \Exception("Query parameter not implemented");
-		}
+		if($this->via == self::HTTP_HEADER)
+			$request->addHeader($this->description->http_header, $this->token);
+	}
+	
+	public function queryParameters() {
+		if(!$this->configured || $this->via != self::QUERY_PARAMETER)
+			return array();
+		
+		return array($this->description->query_parameter => $this->token);
 	}
 	
 	protected function requestToken() {
@@ -404,6 +409,8 @@ class Client extends Resource {
 	}
 	
 	protected function sendRequest($request, $action = null, $params = array()) {
+		$this->queryParams += $this->authProvider->queryParameters();
+		
 		if($action && $this->sendAsQueryParams($action->httpMethod())) {
 			foreach($params as $k => $v) {
 				$this->queryParams[ $action->getNamespace('input')."[$k]" ] = $v;
@@ -438,10 +445,12 @@ class Client extends Resource {
 		
 		if($this->version)
 			$url .= "/v".$this->version."/";
-		else
-			$url .= "/?describe=default";
 		
 		$request = $this->getRequest('options', $url);
+		
+		if(!$this->version)
+			$this->queryParams['describe'] = 'default';
+		
 		$this->authProvider->authenticate($request);
 		
 		return $this->sendRequest($request)->body->response;

@@ -247,10 +247,15 @@ class Resource implements \ArrayAccess {
 		if(!$description)
 			$description = $this->description;
 	
-		if(isSet($description->actions) && array_key_exists($name, (array) $description->actions)) {
-			return new Action($this->client, $name, $description->actions->$name, $this->args);
+		if(isSet($description->actions)) {
+			foreach($description->actions as $searched_name => $desc) {
+				if($searched_name == $name || in_array($name, $desc->aliases)) {
+					return new Action($this->client, $searched_name, $description->actions->$searched_name, $this->args);
+				}
+			}
+		}
 		
-		} if(array_key_exists($name, (array) $description->resources)) {
+		if(array_key_exists($name, (array) $description->resources)) {
 			return new Resource($this->client, $name, $description->resources->$name, $this->args);
 		}
 		

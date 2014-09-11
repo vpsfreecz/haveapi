@@ -72,7 +72,12 @@ module HaveAPI
       allowed = {}
 
       allowed_params.each do |p|
-        allowed[p.name] = params[p.name] if params.has_key?(p.name)
+        if params.has_key?(p.name)
+          allowed[p.name] = params[p.name]
+
+        elsif params.has_key?(p.name.to_s)
+          allowed[p.name] = params[p.name.to_s]
+        end
       end
 
       return allowed unless direction

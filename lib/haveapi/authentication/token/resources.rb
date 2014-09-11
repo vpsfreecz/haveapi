@@ -12,7 +12,7 @@ module HaveAPI::Authentication::Token
         route ''
         http_method :post
 
-        input do
+        input(:hash) do
           string :login, label: 'Login', required: true
           string :password, label: 'Password', required: true
           integer :validity, label: 'Validity',
@@ -20,7 +20,7 @@ module HaveAPI::Authentication::Token
                   default: 60*5
         end
 
-        output do
+        output(:hash) do
           string :token
           datetime :valid_to
         end

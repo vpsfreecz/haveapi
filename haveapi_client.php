@@ -334,6 +334,7 @@ class Client extends Resource {
 	private $version;
 	private $identity;
 	private $authProvider;
+	private $queryParams;
 	private static $authProviders = array();
 	
 	public static function registerAuthProvider($name, $class, $force = true) {
@@ -380,20 +381,56 @@ class Client extends Resource {
 // 		echo "execute {$action->httpMethod()} {$action->url()}\n<br>\n";
 		
 		$request = $this->getRequest($fn, $this->uri . $action->url());
-		$request->body(empty($params) ? '{}' : json_encode(array($action->getNamespace('input') => $params)));
+		
+		if(!$this->sendAsQueryParams($fn))
+			$request->body(empty($params) ? '{}' : json_encode(array($action->getNamespace('input') => $params)));
+		
 		$this->authProvider->authenticate($request);
 		
-		$response = $request->send();
+		$response = $this->sendRequest($request, $action, $params);
 		
 		return new Response($action, $response->body);
 	}
 	
 	protected function getRequest($method, $url) {
+		$this->queryParams = array();
+		
 		$request = \Httpful\Request::$method($url);
 		$request->sendsJson();
 		$request->expectsJson();
 		$request->addHeader('User-Agent', $this->identity);
+		
 		return $request;
+	}
+	
+	protected function sendRequest($request, $action = null, $params = array()) {
+		if($action && $this->sendAsQueryParams($action->httpMethod())) {
+			foreach($params as $k => $v) {
+				$this->queryParams[ $action->getNamespace('input')."[$k]" ] = $v;
+			}
+		}
+		
+		if(count($this->queryParams) > 0) {
+			$url = $request->uri;
+			$first = true;
+			
+			foreach($this->queryParams as $k => $v) {
+				if($first) {
+					$url .= '?';
+					$first = false;
+				} else $url .= '&';
+				
+				$url .= $k.'='.urlencode($v);
+			}
+			
+			$request->uri = $url;
+		}
+		
+		return $request->send();
+	}
+	
+	protected function sendAsQueryParams($method) {
+		return in_array(strtolower($method), array('get', 'options'));
 	}
 	
 	protected function getDescription() {
@@ -407,7 +444,7 @@ class Client extends Resource {
 		$request = $this->getRequest('options', $url);
 		$this->authProvider->authenticate($request);
 		
-		return $request->send()->body->response;
+		return $this->sendRequest($request)->body->response;
 	}
 	
 	protected function findObject($name, $description = null) {

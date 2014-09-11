@@ -24,7 +24,7 @@ module HaveAPI
         @config = read_config || {}
         args, @opts = options
 
-        @api = HaveAPI::Client::Communicator.new(api_url)
+        @api = HaveAPI::Client::Communicator.new(api_url, @opts[:version])
         @api.identity = $0.split('/').last
 
         if @action
@@ -122,6 +122,10 @@ module HaveAPI
             @action = [:list_actions, v && v.sub(/^v/, '')]
           end
 
+          opts.on('--version VERSION', 'Use specified API version') do |v|
+            options[:version] = v
+          end
+
           opts.on('-r', '--raw', 'Print raw response as is') do
             options[:raw] = true
           end
@@ -132,6 +136,10 @@ module HaveAPI
 
           opts.on('-v', '--[no-]verbose', 'Run verbosely') do |v|
             options[:verbose] = v
+          end
+
+          opts.on('--client-version', 'Show client version') do
+            @action = [:show_version]
           end
 
           opts.on('-h', '--help', 'Show this message') do
@@ -258,6 +266,10 @@ module HaveAPI
         desc[:resources].each do |resource, children|
           nested_resource(resource, children, true)
         end
+      end
+
+      def show_version
+        puts HaveAPI::Client::VERSION
       end
 
       def describe_resource(path)

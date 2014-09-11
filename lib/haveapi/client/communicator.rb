@@ -53,7 +53,7 @@ module HaveAPI
       end
 
       def describe_resource(path)
-        tmp = describe_api
+        tmp = describe_api(@version)
 
         path.each do |r|
           tmp = tmp[:resources][r.to_sym]

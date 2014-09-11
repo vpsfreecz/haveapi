@@ -17,8 +17,7 @@ Or install it yourself as:
 
     $ gem install haveapi-client
 
-## Usage
-### CLI
+## CLI
     $ haveapi-cli -h
     Usage: haveapi-cli [options] <resource> <action> [objects ids] [-- [parameters]]
         -u, --api URL                    API URL
@@ -28,50 +27,72 @@ Or install it yourself as:
                                          List available authentication methods
             --list-resources [VERSION]   List all resource in API version
             --list-actions [VERSION]     List all resources and actions in API version
+            --version VERSION            Use specified API version
         -r, --raw                        Print raw response as is
         -s, --save                       Save credentials to config file for later use
         -v, --[no-]verbose               Run verbosely
+            --client-version             Show client version
         -h, --help                       Show this message
   
 Using the API example from
-[HaveAPI README](https://github.com/vpsfreecz/haveapi/blob/master/README.md#example),
+[HaveAPI README](https://github.com/vpsfreecz/haveapi#example),
 users would be listed with:
 
-    $ haveapi-cli --url https://your.api.tld --auth basic --username yourname --password yourpassword user index
+    $ haveapi-cli --url https://your.api.tld --auth basic --username yourname --password yourpassword user list
     
 Nested resources and object IDs:
 
-    $ haveapi-cli --url https://your.api.tld --auth basic --username yourname --password yourpassword user.invoice index 10
+    $ haveapi-cli --url https://your.api.tld --auth basic --username yourname --password yourpassword user.invoice list 10
 
 where `10` is user ID.
 
 User credentials can be saved to a config:
 
-    $ haveapi-cli --url https://your.api.tld --auth basic --username yourname --password yourpassword --save user index
+    $ haveapi-cli --url https://your.api.tld --auth basic --username yourname --password yourpassword --save user list
     
 When saved, they don't have to be specified as command line options:
 
-    $ haveapi-cli --url https://your.api.tld user index
+    $ haveapi-cli --url https://your.api.tld user list
  
-### Client library
+List options specific to authentication methods:
+
+    $ haveapi-cli --url https://your.api.tld --auth basic -h
+    $ haveapi-cli --url https://your.api.tld --auth token -h
+ 
+List action parameters with examples:
+
+    $ haveapi-cli --url https://your.api.tld user new -h
+
+Provide action parameters (notice the ``--`` separator):
+
+    $ haveapi-cli --url https://your.api.tld user new -- --login mylogin --full-name "My Full Name" --role user
+
+ 
+## Client library
 ```ruby
 require 'haveapi/client'
 
 api = HaveAPI::Client::Client.new('https://your.api.tld')
 api.authenticate(:basic, user: 'yourname', password: 'yourpassword')
 
-response = api.user.index
-p response.ok?
-p response.response
+api.user.list.each do |user|
+    puts user.login
+end
 
-p api.user(10).invoice
-p api.user(10).delete
-p api.user(10).delete!
-p api.user.delete(10)
+user = api.user.find(10)
+p user.invoice
+user.destroy
 
 p api.user.create({
   login: 'mylogin',
   full_name: 'Very Full Name',
   role: 'user'
 })
+
+user = api.user.new
+user.login = 'mylogin'
+user.full_name = 'Very Full Name'
+user.role = 'user'
+user.save
+p user.id
 ```

@@ -23,7 +23,7 @@ Include client:
 
 Create a client instance:
 
-	$api = new \HaveAPI\Client();
+	$api = new \HaveAPI\Client("http://your.api.tld");
 
 Authenticate with HTTP basic:
 
@@ -35,7 +35,7 @@ Authenticate with token:
 
 or
 
-	$api->authenticate('basic', ['token' => 'abcedfghijklmopqrstuvxyz']);
+	$api->authenticate('token', ['token' => 'abcedfghijklmopqrstuvxyz']);
 
 Resources and actions can be accessed using two methods.
 
@@ -99,7 +99,7 @@ List of resources:
 	}
 
 ### Response
-If the action does not return object or object list, \HaveAPI\Response class is returned instead.
+If the action does not return object or object list, `\HaveAPI\Response` class is returned instead.
 
 	$vps = $api->vps->find(101);
 	$response = $vps->custom_action();

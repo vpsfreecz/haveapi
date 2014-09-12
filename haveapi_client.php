@@ -618,7 +618,7 @@ class ResourceInstanceList implements \ArrayAccess, \Iterator {
 	}
 }
 
-class Response {
+class Response implements \ArrayAccess {
 	private $action;
 	private $envelope;
 	
@@ -656,6 +656,31 @@ class Response {
 	
 	public function __toString() {
 		return json_encode($this->response());
+	}
+	
+	// ArrayAccess
+	public function offsetExists($offset) {
+		$r = $this->response();
+		
+		return isSet($r->{$offset});
+	}
+	
+	public function offsetGet($offset) {
+		$r = $this->response();
+		
+		return $r->{$offset};
+	}
+	
+	public function offsetSet($offset, $value) {
+		$r = $this->response();
+		
+		$r->{$offset} = $value;
+	}
+	
+	public function offsetUnset($offset) {
+		$r = $this->response();
+		
+		unset($r->{$offset});
 	}
 }
 

@@ -106,6 +106,10 @@ If the action does not return object or object list, `\HaveAPI\Response` class i
 	
 	print_r($response->response());
 
+Parameters can be accessed directly as:
+
+	echo $response['hostname'];
+
 ### Error handling
 If an action fails, exception `\HaveAPI\ActionFailed` is thrown. Authentication errors
 result in exception `\HaveAPI\AuthenticationFailed`.

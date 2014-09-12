@@ -19,15 +19,23 @@ Include client:
 	<?php
 	include 'haveapi.php';
 
-`haveapi.php` includes Httpful from `vendor/`.
+`haveapi.php` includes Httpful from `vendor/`, `haveapi_client.php` does not.
 
-Create client instance:
+Create a client instance:
 
 	$api = new \HaveAPI\Client();
 
-Authenticate with HTTP basic auth:
+Authenticate with HTTP basic:
 
-	$api->login('yourname', 'password');
+	$api->authenticate('basic', ['username' => 'yourname', 'password' => 'password']);
+
+Authenticate with token:
+
+	$api->authenticate('token', ['username' => 'yourname', 'password' => 'password']);
+
+or
+
+	$api->authenticate('basic', ['token' => 'abcedfghijklmopqrstuvxyz']);
 
 Resources and actions can be accessed using two methods.
 
@@ -43,14 +51,14 @@ or
 
 ### Access as properties/methods
 
-	$api->vps->index();
+	$api->vps->list();
 
 Arguments can be supplied to resources and/or to the action.
 
-	$api->vps->show(101);
+	$api->vps->find(101);
 	$api->vps->ip_address->delete(101, 10);
 
-	$api->vps(101)->show();
+	$api->vps(101)->find();
 	$api->vps(101)->ip_address(10)->delete();
 	$api->vps(101)->ip_address->delete(10);
 
@@ -60,31 +68,54 @@ Object IDs must be in front of it.
 
 	$api->vps->create([
 		'hostname' => 'myhostname',
-		'template_id' => 1
+		'template' => 1
 	]);
 
 	$api->vps->ip_address->create(101, array('version' => 4));
 	$api->vps(101)->ip_address->create(array('version' => 4));
 
-### Response
-Action returns `Response` object. It has several helper methods.
+### Object-like behaviour
+Fetch existing resource:
 
-	$response = $api->vps->index();
+	$vps = $api->vps->find(101);
+	echo $vps->id . "<br>";
+	echo $vps->hostname . "<br>";
+	$vps->hostname = 'gotcha';
+	$vps->save();
+
+Create new instance:
+
+	$vps = $api->vps->newInstance();
+	$vps->hostname = 'new vps';
+	$vps->save();
+	echo $vps->id . "<br>";
+
+List of resources:
+
+	$vpses = $api->vps->list();
 	
-	// Check if action succeeded
-	if($response->isOk()) { // Succeeded
+	foreach($vpses as $vps) {
+		echo $vps->id ." = ". $vps->hostname ."<br>";
+	}
+
+### Response
+If the action does not return object or object list, \HaveAPI\Response class is returned instead.
+
+	$vps = $api->vps->find(101);
+	$response = $vps->custom_action();
+	
+	print_r($response->response());
+
+### Error handling
+If an action fails, exception `\HaveAPI\ActionFailed` is thrown. Authentication errors
+result in exception `\HaveAPI\AuthenticationFailed`.
+
+	try {
+		$api->vps->create();
 		
-		// Print received data
-		// This method raises an exception if action failed
-		print_r($response->response());
-		
-	} else { // Action failed
-		
-		// See what/why failed
-		echo "Action failed: ". $response->message(); 
-		
-		// Print errors
-		print_r($response->errors());
+	} catch(\HaveAPI\ActionFailed $e) {
+		echo $e->getMessage();
+		print_r($e->errors());
 	}
 
 License

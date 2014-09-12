@@ -2,6 +2,23 @@
 
 namespace HaveAPI;
 
+class ActionFailed extends \Exception {
+	private $response;
+	
+	public function __construct($response, $message, $code = 0, $previous = null) {
+		$this->response = $response;
+		
+		parent::__construct($message, $code, $previous);
+	}
+	
+	public function errors() {
+		return $this->response->errors();
+	}
+}
+
+class AuthenticationFailed extends \Exception {
+}
+
 abstract class AuthProvider {
 	protected $client;
 	protected $description;
@@ -108,21 +125,49 @@ class Action {
 	private $m_name;
 	private $description;
 	private $client;
+	private $resource;
 	private $prepared_url;
+	private $args;
+	private $lastArgs = array();
 
-	public function __construct($client, $name, $description, $args) {
+	public function __construct($client, $resource, $name, $description, $args) {
 		$this->client = $client;
+		$this->resource = $resource;
 		$this->m_name = $name;
 		$this->description = $description;
 		$this->args = $args;
 	}
 	
 	public function call() {
-		$this->prepared_url = $this->url();
-		$args = $this->args + func_get_args();
+		$params = $this->prepareCall(func_get_args());
+		
+		$ret = $this->client->call($this, $params);
+		
+		$this->prepared_url = null;
+		
+		return $ret;
+	}
+	
+	public function directCall() {
+		$params = $this->prepareCall(func_get_args());
+		
+		$ret = $this->client->directCall($this, $params);
+		
+		$this->prepared_url = null;
+		
+		return $ret;
+	}
+	
+	protected function prepareCall($func_args) {
+		if(!$this->prepared_url)
+			$this->prepared_url = $this->url();
+		
+		$args = array_merge($this->args, $func_args);
+		
 		$cnt = count($args);
 		$replaced_cnt = 0;
 		$params = array();
+		$this->lastArgs = array();
 		
 		for($i = 0; $i < $cnt; $i++) {
 			$arg = $args[$i];
@@ -134,20 +179,23 @@ class Action {
 			
 			$this->prepared_url = preg_replace("/:[a-zA-Z\-_]+/", $arg, $this->prepared_url, 1, $replaced_cnt);
 			
-			if(!$replaced_cnt) {
+			if($replaced_cnt) {
+				$this->lastArgs[] = $arg;
+				
+			} else {
 				$params = $arg;
 				break;
 			}
 		}
 		
 		if(preg_match("/:[a-zA-Z\-_]+/", $this->prepared_url))
-			throw new \Exception("Cannot call action '{$this->m_name}': unresolved arguments.");
+			throw new ActionFailed("Cannot call action '{$this->m_name}': unresolved arguments.");
+		
+		return $params;
+	}
 	
-		$ret = $this->client->call($this, $params);
-		
-		$this->prepared_url = null;
-		
-		return $ret;
+	public function prepareUrl($url) {
+		$this->prepared_url = $url;
 	}
 	
 	public function httpMethod() {
@@ -173,6 +221,14 @@ class Action {
 		return $this->m_name;
 	}
 	
+	public function getResource() {
+		return $this->resource;
+	}
+	
+	public function getLastArgs() {
+		return $this->lastArgs;
+	}
+	
 	public function __toString() {
 		return $this->m_name;
 	}
@@ -181,7 +237,8 @@ class Action {
 class Resource implements \ArrayAccess {
 	protected $description;
 	protected $client;
-	private $args = array();
+	protected $name;
+	protected $args = array();
 	
 	public function __construct($client, $name, $description, $args) {
 		$this->client = $client;
@@ -196,6 +253,14 @@ class Resource implements \ArrayAccess {
 	
 	public function setArguments($args) {;
 		$this->args = $args;
+	}
+	
+	public function getName() {
+		return $this->name;
+	}
+	
+	public function getDescription() {
+		return $this->description;
 	}
 	
 	public function offsetExists($offset) {
@@ -238,7 +303,11 @@ class Resource implements \ArrayAccess {
 			return $obj;
 		}
 		
-		throw new \Exception("'$name' is not an action nor a resource.");
+		throw new ActionFailed("'$name' is not an action nor a resource.");
+	}
+	
+	public function newInstance() {
+		return new ResourceInstance($this->client, $this->create, null);
 	}
 	
 	protected function findObject($name, $description = null) {
@@ -250,7 +319,7 @@ class Resource implements \ArrayAccess {
 		if(isSet($description->actions)) {
 			foreach($description->actions as $searched_name => $desc) {
 				if($searched_name == $name || in_array($name, $desc->aliases)) {
-					return new Action($this->client, $searched_name, $description->actions->$searched_name, $this->args);
+					return new Action($this->client, $this, $searched_name, $description->actions->$searched_name, $this->args);
 				}
 			}
 		}
@@ -292,7 +361,261 @@ class Resource implements \ArrayAccess {
 }
 
 class ResourceInstance extends Resource {
+	protected $persistent = false;
+	protected $resolved = false;
+	protected $response;
+	protected $attrs = array();
+	protected $action;
+	protected $associations = array();
+	
+	public function __construct($client, $action, $response) {
+		$r = $action->getResource();
+		
+		parent::__construct($client, $r->getName(), $r->getDescription(), $action->getLastArgs());
+		
+		$this->action = $action;
+		$this->response = $response;
+		
+		if($response) {
+			$this->persistent = true;
+			
+			if($response instanceof Response) {
+				$this->attrs = (array) $response->response();
+				
+			} else {
+				$this->attrs = (array) $response;
+				$this->args[] = $this->id;
+			}
+			
+		} else {
+			$this->persistent = false;
+			$this->defineStubAttrs();
+		}
+	}
+	
+	public function newInstance() {
+		throw \Exception('Cannot create a new instance from existing instance');
+	}
+	
+	public function apiResponse() {
+		return $this->response instanceof Response ? $this->response : null;
+	}
+	
+	public function attributes() {
+		return $this->attrs;
+	}
+	
+	public function __get($name) {
+		$id = false;
+		
+		if($this->endsWith($name, '_id')) {
+			$name = substr($name, 0, -3);
+			$id = true;
+		}
+		
+		if(array_key_exists($name, $this->attrs)) {
+			$param = $this->description->actions->{$this->action->name()}->output->parameters->{$name};
+			
+			switch($param->type) {
+				case 'Resource':
+					if($id)
+						return $this->attrs[$name]->{ $param->value_id };
+					
+					if(isSet($this->associations[$name]))
+						return $this->associations[$name];
+					
+					$action = $this->client[ implode('.', $param->resource) ]->show;
+					$action->prepareUrl($this->attrs[$name]->url);
+					
+					return $this->associations[$name] = $action->call();
+					
+				default:
+					return $this->attrs[$name];
+			}
+		}
+		
+		return parent::__get($name);
+	}
+	
+	public function __set($name, $value) {
+		$id = false;
+		
+		if($this->endsWith($name, '_id')) {
+			$name = substr($name, 0, -3);
+			$id = true;
+		}
+		
+		if(array_key_exists($name, $this->attrs)) {
+			$param = $this->description->actions->{$this->action->name()}->output->parameters->{$name};
+			
+			switch($param->type) {
+				case 'Resource':
+					if($id) {
+						$this->attrs[$name]->{ $param->value_id } = $value;
+						break;
+					}
+					
+					$this->associations[$name] = $value;
+					$this->attrs[$name]->{ $param->value_id } = $value->{ $param->value_id };
+					$this->attrs[$name]->{ $param->value_label } = $value->{ $param->value_label };
+					
+					break;
+					
+				default:
+					$this->attrs[$name] = $value;
+			}
+			
+			return;
+		}
+		
+		$trace = debug_backtrace();
+		trigger_error(
+			'Undefined property via __get(): ' . $name .
+			' in ' . $trace[0]['file'] .
+			' on line ' . $trace[0]['line'],
+			E_USER_NOTICE
+		);
+        return null;
+	}
+	
+	public function save() {
+		if($this->persistent) {
+			$action = $this->{'update'};
+			$action->directCall($this->attrsForApi($action));
+			
+		} else {
+			// insert
+			$action = $this->{'create'};
+			$ret = new Response($action, $action->directCall($this->attrsForApi($action)));
+			
+			if($ret->isOk()) {
+				$this->attrs = array_merge($this->attrs, (array) $ret->response());
+				
+			} else {
+				throw new ActionFailed($ret, "Action '".$action->name()."' failed: ".$ret->message());
+			}
+			
+			$this->persistent = true;
+		}
+	}
+	
+	protected function attrsForApi($action) {
+		$ret = array();
+		$desc = $this->description->actions->{$action}->input->parameters;
+		
+		foreach($this->attrs as $k => $v) {
+			if(!isSet($desc->{$k}))
+				continue;
+			
+			$param = $desc->{$k};
+			
+			switch($param->type) {
+				case 'Resource':
+					$ret[$k] = $v->{ $param->{'value_id'} };
+					break;
+				
+				default:
+					$ret[$k] = $v;
+			}
+		}
+		
+		return $ret;
+	}
+	
+	protected function defineStubAttrs() {
+		$params = $this->description->actions->{$this->action->name()}->input->parameters;
+		
+		foreach($params as $name => $desc) {
+			switch($desc->type) {
+				case 'Resource':
+					$c = new \stdClass();
+					$c->{$desc->value_id} = null;
+					$c->{$desc->value_label} = null;
+					
+					$this->attrs[$name] = $c;
+					break;
+				
+				default:
+					$this->attrs[$name] = null;
+			}
+		}
+	}
+	
+	protected function endsWith($str, $ending) {
+		return $ending === "" || substr($str, -strlen($ending)) === $ending;
+	}
+}
 
+class ResourceInstanceList implements \ArrayAccess, \Iterator {
+	private $items = array();
+	private $index = 0;
+	private $response;
+	
+	public function __construct($client, $action, $response) {
+		$this->response = $response;
+		
+		foreach($response->response() as $item) {
+			$this->items[] = new ResourceInstance($client, $action, $item);
+		}
+	}
+	
+	public function count() {
+		return count($this->items);
+	}
+	
+	public function apiResponse() {
+		return $this->response;
+	}
+	
+	public function first() {
+		return $this->items[0];
+	}
+	
+	public function last() {
+		return $this->items[ $this->count() - 1 ];
+	}
+	
+	public function asArray() {
+		return $this->items;
+	}
+	
+	// ArrayAccess
+	public function offsetExists($offset) {
+		return isSet($this->items[$offset]);
+	}
+	
+	public function offsetGet($offset) {
+		return $this->items[$offset];
+	}
+	
+	public function offsetSet($offset, $value) {
+		$this->items[$offset] = $value;
+	}
+	
+	public function offsetUnset($offset) {
+		unset($this->items[$offset]);
+	}
+	
+	// Iterator
+	public function current() {
+		return $this->items[$this->index];
+	}
+	
+	public function key() {
+		return $this->index;
+	}
+	
+	public function next() {
+		++$this->index;
+	}
+	
+	public function rewind() {
+		$this->index = 0;
+	}
+	
+	public function valid() {
+		return isSet($this->items[$this->index]);
+	}
 }
 
 class Response {
@@ -313,9 +636,6 @@ class Response {
 	}
 	
 	public function response() {
-		if(!$this->isOk())
-			throw new \Exception("Action '".$this->action->name()."' failed: ".$this->message());
-		
 		$l = $this->action->layout('output');
 		
 		switch($l) {
@@ -371,12 +691,12 @@ class Client extends Resource {
 		if(!$force && $this->description)
 			return;
 		
-		$this->description = $this->getDescription();
+		$this->description = $this->fetchDescription();
 	}
 	
 	public function authenticate($method, $opts) {
 		if(!array_key_exists($method, self::$authProviders))
-			throw new \Exception("Auth method '$method' is not registered");
+			throw new AuthenticationFailed("Auth method '$method' is not registered");
 		
 		$this->setup();
 		
@@ -386,6 +706,25 @@ class Client extends Resource {
 	}
 	
 	public function call($action, $params = array()) {
+		$response = new Response($action, $this->directCall($action, $params));
+		
+		if(!$response->isOk()) {
+			throw new ActionFailed($response, "Action '".$action->name()."' failed: ".$ret->message());
+		}
+		
+		switch($action->layout('output')) {
+			case 'object':
+				return new ResourceInstance($this->client, $action, $response);
+			
+			case 'object_list':
+				return new ResourceInstanceList($this->client, $action, $response);
+			
+			default:
+				return $response;
+		}
+	}
+	
+	public function directCall($action, $params = array()) {
 		$fn = strtolower($action->httpMethod());
 		
 // 		echo "execute {$action->httpMethod()} {$action->url()}\n<br>\n";
@@ -397,9 +736,7 @@ class Client extends Resource {
 		
 		$this->authProvider->authenticate($request);
 		
-		$response = $this->sendRequest($request, $action, $params);
-		
-		return new Response($action, $response->body);
+		return $this->sendRequest($request, $action, $params)->body;
 	}
 	
 	protected function getRequest($method, $url) {
@@ -445,7 +782,7 @@ class Client extends Resource {
 		return in_array(strtolower($method), array('get', 'options'));
 	}
 	
-	protected function getDescription() {
+	protected function fetchDescription() {
 		$url = $this->uri;
 		
 		if($this->version)

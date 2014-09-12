@@ -120,4 +120,4 @@ result in exception `\HaveAPI\AuthenticationFailed`.
 
 License
 -------
-haveapi-client-php is released under GNU/GPL.
+haveapi-client-php is released under the MIT license.

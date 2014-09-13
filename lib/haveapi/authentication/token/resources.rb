@@ -15,8 +15,10 @@ module HaveAPI::Authentication::Token
         input(:hash) do
           string :login, label: 'Login', required: true
           string :password, label: 'Password', required: true
-          integer :validity, label: 'Validity',
-                  desc: 'How long will requested token be valid, in seconds. 0 is permanent.',
+          integer :lifetime, label: 'Lifetime', required: true,
+                  desc: '0 - fixed, 1 - manually renewable, 2 - auto-renewal, 3 - permanent'
+          integer :interval, label: 'Interval',
+                  desc: 'How long will requested token be valid, in seconds.',
                   default: 60*5
         end
 
@@ -37,10 +39,19 @@ module HaveAPI::Authentication::Token
 
           token = expiration = nil
 
+          if params[:token][:lifetime] < 0 || params[:token][:lifetime] > 3
+            error('invalid lifetime')
+          end
+
           loop do
             begin
               token = klass.send(:generate_token)
-              expiration = klass.send(:save_token, @request, user, token, params[:token][:validity])
+              expiration = klass.send(:save_token,
+                                      @request,
+                                      user,
+                                      token,
+                                      params[:token][:lifetime],
+                                      params[:token][:interval])
               break
 
             rescue TokenExists
@@ -56,6 +67,29 @@ module HaveAPI::Authentication::Token
         # route ''
         http_method :post
         auth true
+
+        def exec
+          klass = self.class.resource.token_instance[@version]
+          klass.revoke_token(current_user, klass.token(request))
+        end
+      end
+
+      class Renew < HaveAPI::Action
+        http_method :post
+        auth true
+
+        output(:hash) do
+          datetime :valid_to
+        end
+
+        authorize do
+          allow
+        end
+
+        def exec
+          klass = self.class.resource.token_instance[@version]
+          klass.renew_token(current_user, klass.token(request))
+        end
       end
     end
   end

@@ -48,11 +48,13 @@ module HaveAPI::Authentication
       end
 
       def authenticate(request)
-        token = nil
-        token ||= request[query_parameter]
-        token ||= request.env[header_to_env]
+        t = token(request)
 
-        token && find_user_by_token(token)
+        t && find_user_by_token(t)
+      end
+
+      def token(request)
+        request[query_parameter] || request.env[header_to_env]
       end
 
       def describe
@@ -78,16 +80,26 @@ module HaveAPI::Authentication
         SecureRandom.hex(50)
       end
 
-      # Save generated +token+ for +user+. Token has given +validity+ period.
+      # Save generated +token+ for +user+. Token has given +lifetime+
+      # and when not permanent, also a +interval+ of validity.
       # Returns a date time which is token expiration.
+      # It is up to the implementation of this method to remember
+      # token lifetime and interval.
       # Must be implemented.
-      def save_token(request, user, token, validity)
+      def save_token(request, user, token, lifetime, interval)
 
       end
 
       # Revoke existing +token+ for +user+.
       # Must be implemented.
       def revoke_token(user, token)
+
+      end
+
+      # Renew existing +token+ for +user+.
+      # Returns a date time which is token expiration.
+      # Must be implemented.
+      def renew_token(user, token)
 
       end
 
@@ -99,6 +111,8 @@ module HaveAPI::Authentication
       end
 
       # Authenticate user by +token+. Return user object or nil.
+      # If the token was created as auto-renewable, this method
+      # is responsible for its renewal.
       # Must be implemented.
       def find_user_by_token(token)
 

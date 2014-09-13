@@ -167,6 +167,10 @@ module HaveAPI
       @safe_params
     end
 
+    def request
+      @request
+    end
+
     # Prepare object, set instance variables from URL parameters.
     # This method should return queried object. If the method is
     # not implemented or returns nil, action description will not

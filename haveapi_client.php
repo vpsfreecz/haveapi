@@ -2,6 +2,9 @@
 
 namespace HaveAPI;
 
+/**
+ * Thrown when an action fails.
+ */
 class ActionFailed extends \Exception {
 	private $response;
 	
@@ -11,19 +14,34 @@ class ActionFailed extends \Exception {
 		parent::__construct($message, $code, $previous);
 	}
 	
+	/**
+	 * Return an array of errors.
+	 * @return array
+	 */
 	public function errors() {
 		return $this->response->errors();
 	}
 }
 
+/**
+ * Thrown when an authentication fails.
+ */
 class AuthenticationFailed extends \Exception {
 }
 
+/**
+ * Base class extended by all authentication providers.
+ */
 abstract class AuthProvider {
 	protected $client;
 	protected $description;
 	protected $opts;
 	
+	/**
+	 * @param Client $client
+	 * @param \stdClass $description description of this auth provider
+	 * @param array $opts options passed on to the provider
+	 */
 	public function __construct($client, $description, $opts) {
 		$this->client = $client;
 		$this->description = $description;
@@ -32,29 +50,60 @@ abstract class AuthProvider {
 		$this->setup();
 	}
 	
+	/**
+	 * Called right after the constructor.
+	 * Overload it to setup your authentication provider.
+	 */
 	protected function setup() {
 		
 	}
 	
+	/**
+	 * Authenticate request to the API.
+	 * 
+	 * Called for every request sent to the API.
+	 * @param \Httpful\Request $request
+	 */
 	abstract public function authenticate($request);
 	
+	/**
+	 * Return query parameters to be sent in the request.
+	 * 
+	 * Called for every request sent to the API.
+	 * @return array
+	 */
 	public function queryParameters() {
 		return array();
 	}
 }
 
+/**
+ * Used when no authentication provider is selected. Does no authentication.
+ */
 class NoAuth extends AuthProvider {
 	public function authenticate($request) {
 		
 	}
 }
 
+/**
+ * Provider for HTTP basic authentication.
+ * 
+ * It accepts `username` and `password` as options.
+ */
 class BasicAuth extends AuthProvider {
 	public function authenticate($request) {
 		$request->authenticateWith($this->opts['username'], $this->opts['password']);
 	}
 }
 
+/**
+ * Provider for token authentication.
+ *
+ * Accepts either a `token` or `username` and `password` to acquire a token.
+ * Option `via` determines how the token is sent to the API. It defaults
+ * to TokenAuth::HTTP_HEADER.
+ */
 class TokenAuth extends AuthProvider {
 	const HTTP_HEADER = 0;
 	const QUERY_PARAMETER = 1;
@@ -65,6 +114,9 @@ class TokenAuth extends AuthProvider {
 	private $validTo;
 	private $via;
 	
+	/**
+	 * Request a new token if it isn't in the options.
+	 */
 	protected function setup() {
 		$this->rs = new Resource($this->client, 'token', $this->description->resources->token, array());
 		$this->via = isSet($this->opts['via']) ? $this->opts['via'] : self::HTTP_HEADER;
@@ -77,6 +129,9 @@ class TokenAuth extends AuthProvider {
 		$this->requestToken();
 	}
 	
+	/**
+	 * Add token header if configured. Checks token validity.
+	 */
 	public function authenticate($request) {
 		if(!$this->configured)
 			return;
@@ -87,6 +142,9 @@ class TokenAuth extends AuthProvider {
 			$request->addHeader($this->description->http_header, $this->token);
 	}
 	
+	/**
+	 * Returns token query parameter if configured.
+	 */
 	public function queryParameters() {
 		if(!$this->configured || $this->via != self::QUERY_PARAMETER)
 			return array();
@@ -94,6 +152,9 @@ class TokenAuth extends AuthProvider {
 		return array($this->description->query_parameter => $this->token);
 	}
 	
+	/**
+	 * Request a new token from the API.
+	 */
 	protected function requestToken() {
 		$ret = $this->rs->request(array(
 			'login' => $this->opts['username'],
@@ -107,20 +168,32 @@ class TokenAuth extends AuthProvider {
 		$this->configured = true;
 	}
 	
+	/**
+	 * Get a new token if the current one expired.
+	 */
 	protected function checkValidity() {
 		if($this->validTo < time() && isSet($this->opts['username']) && isSet($this->opts['password']))
 			$this->requestToken();
 	}
 	
+	/**
+	 * @return string the token
+	 */
 	public function getToken() {
 		return $this->token;
 	}
 	
+	/**
+	 * @return int expiration time
+	 */
 	public function getValidTo() {
 		return $this->validTo;
 	}
 }
 
+/**
+ * Represents a callable resource action.
+ */
 class Action {
 	private $m_name;
 	private $description;
@@ -129,7 +202,14 @@ class Action {
 	private $prepared_url;
 	private $args;
 	private $lastArgs = array();
-
+	
+	/**
+	 * @param Client $client
+	 * @param Resource $resource parent
+	 * @param string $name action name
+	 * @param \stdClass $description action description
+	 * @param array $args arguments passed from the parent
+	 */
 	public function __construct($client, $resource, $name, $description, $args) {
 		$this->client = $client;
 		$this->resource = $resource;
@@ -138,6 +218,15 @@ class Action {
 		$this->args = $args;
 	}
 	
+	/**
+	 * Inovoke the action.
+	 * The return value depends on action's output layout:
+	 * - object - ResourceInstance
+	 * - object_list - ResourceInstanceList
+	 * - hash - Response
+	 * - hash_list - Response
+	 * @return mixed
+	 */
 	public function call() {
 		$params = $this->prepareCall(func_get_args());
 		
@@ -148,6 +237,10 @@ class Action {
 		return $ret;
 	}
 	
+	/**
+	 * Invoke the action without interpreting its response.
+	 * @return \stdClass response body
+	 */
 	public function directCall() {
 		$params = $this->prepareCall(func_get_args());
 		
@@ -158,6 +251,9 @@ class Action {
 		return $ret;
 	}
 	
+	/**
+	 * Prepare parameters for the action invocation.
+	 */
 	protected function prepareCall($func_args) {
 		if(!$this->prepared_url)
 			$this->prepared_url = $this->url();
@@ -194,14 +290,23 @@ class Action {
 		return $params;
 	}
 	
+	/**
+	 * Set action URL.
+	 */
 	public function prepareUrl($url) {
 		$this->prepared_url = $url;
 	}
 	
+	/**
+	 * @return string HTTP method
+	 */
 	public function httpMethod() {
 		return $this->description->method;
 	}
 	
+	/**
+	 * @return string raw or prepared URL
+	 */
 	public function url() {
 		if($this->prepared_url)
 			return $this->prepared_url;
@@ -209,22 +314,38 @@ class Action {
 		return $this->description->url;
 	}
 	
+	/**
+	 * @param string $src direction, input or output
+	 * @return string layout for direction
+	 */
 	public function layout($src) {
 		return $this->description->$src->layout;
 	}
 	
+	/**
+	 * @return string namespace
+	 */
 	public function getNamespace($src) {
 		return $this->description->$src->{'namespace'};
 	}
 	
+	/**
+	 * @return string action name
+	 */
 	public function name() {
 		return $this->m_name;
 	}
 	
+	/**
+	 * @return Resource parent
+	 */
 	public function getResource() {
 		return $this->resource;
 	}
 	
+	/**
+	 * @return array an array of arguments that resulted in creation of this action
+	 */
 	public function getLastArgs() {
 		return $this->lastArgs;
 	}
@@ -234,12 +355,21 @@ class Action {
 	}
 }
 
+/**
+ * A resource in the API.
+ */
 class Resource implements \ArrayAccess {
 	protected $description;
 	protected $client;
 	protected $name;
 	protected $args = array();
 	
+	/**
+	 * @param Client $client
+	 * @param string $name resource name
+	 * @param \stdClass $description
+	 * @param array $args arguments passed from the parent
+	 */
 	public function __construct($client, $name, $description, $args) {
 		$this->client = $client;
 		$this->name = $name;
@@ -247,18 +377,32 @@ class Resource implements \ArrayAccess {
 		$this->args = $args;
 	}
 	
+	/**
+	 * Set client instance.
+	 * @param Client $c
+	 */
 	public function setApiClient($c) {
 		$this->client = $c;
 	}
 	
+	/**
+	 * Set an array of arguments.
+	 * @param array $args
+	 */
 	public function setArguments($args) {;
 		$this->args = $args;
 	}
 	
+	/**
+	 * @return string resource name
+	 */
 	public function getName() {
 		return $this->name;
 	}
 	
+	/**
+	 * @return \stdClass description
+	 */
 	public function getDescription() {
 		return $this->description;
 	}
@@ -267,6 +411,10 @@ class Resource implements \ArrayAccess {
 		
 	}
 	
+	/**
+	 * Return child resource or action.
+	 * @return mixed
+	 */
 	public function offsetGet($offset) {
 		if(strpos($offset, '.') === false)
 			return $this->findObject($offset);
@@ -288,10 +436,18 @@ class Resource implements \ArrayAccess {
 		return $this->name;
 	}
 	
+	/**
+	 * Return child resource or action.
+	 * @return mixed
+	 */
 	public function __get($name) {
 		return $this->findObject($name);
 	}
 	
+	/**
+	 * Invoke an action and return its response or a resource with provided arguments.
+	 * @return mixed
+	 */
 	public function __call($name, $arguments) {
 		$obj = $this->findObject($name);
 		
@@ -306,10 +462,19 @@ class Resource implements \ArrayAccess {
 		throw new ActionFailed("'$name' is not an action nor a resource.");
 	}
 	
+	/**
+	 * Create a new resource object instance.
+	 * @return ResourceInstance
+	 */
 	public function newInstance() {
 		return new ResourceInstance($this->client, $this->create, null);
 	}
 	
+	/**
+	 * Find an action or a resource with $name in $description.
+	 * @param string name to be found
+	 * @param \stdClass description to be searched in
+	 */
 	protected function findObject($name, $description = null) {
 		$this->client->setup();
 		
@@ -331,6 +496,11 @@ class Resource implements \ArrayAccess {
 		return false;
 	}
 	
+	/**
+	 * Find and return an action or a resource which may be nested (names separated by dot).
+	 * Used for array access method.
+	 * @return mixed
+	 */
 	protected function findNestedObject($path, $description) {
 		$parts = explode('.', $path);
 		$ask = $this;
@@ -360,6 +530,9 @@ class Resource implements \ArrayAccess {
 	}
 }
 
+/**
+ * Resource object instance.
+ */
 class ResourceInstance extends Resource {
 	protected $persistent = false;
 	protected $resolved = false;
@@ -368,6 +541,12 @@ class ResourceInstance extends Resource {
 	protected $action;
 	protected $associations = array();
 	
+	/**
+	 * If $response is NULL, created instance is not persistent.
+	 * @param Client $client
+	 * @param Action $action
+	 * @param mixed $response Response or \stdclass
+	 */
 	public function __construct($client, $action, $response) {
 		$r = $action->getResource();
 		
@@ -393,18 +572,33 @@ class ResourceInstance extends Resource {
 		}
 	}
 	
+	/**
+	 * Do not allow creating an instance from instance.
+	 */
 	public function newInstance() {
 		throw \Exception('Cannot create a new instance from existing instance');
 	}
 	
+	/**
+	 * @return Response
+	 */
 	public function apiResponse() {
 		return $this->response instanceof Response ? $this->response : null;
 	}
 	
+	/**
+	 * Returns all resource parameters.
+	 * @return array
+	 */
 	public function attributes() {
 		return $this->attrs;
 	}
 	
+	/**
+	 * Handle resource objecti nstance parameters. Resource parameters also have <name>_id properties,
+	 * which returns IDs without resolving the associated resource.
+	 * @return mixed
+	 */
 	public function __get($name) {
 		$id = false;
 		
@@ -437,6 +631,9 @@ class ResourceInstance extends Resource {
 		return parent::__get($name);
 	}
 	
+	/**
+	 * Handle resource object instance parameters.
+	 */
 	public function __set($name, $value) {
 		$id = false;
 		
@@ -478,6 +675,9 @@ class ResourceInstance extends Resource {
         return null;
 	}
 	
+	/**
+	 * Create the resource object if it isn't persistent, update it if it is.
+	 */
 	public function save() {
 		if($this->persistent) {
 			$action = $this->{'update'};
@@ -499,6 +699,10 @@ class ResourceInstance extends Resource {
 		}
 	}
 	
+	/**
+	 * Returns an array of parameters ready to be sent to the API.
+	 * @return array
+	 */
 	protected function attrsForApi($action) {
 		$ret = array();
 		$desc = $this->description->actions->{$action}->input->parameters;
@@ -522,6 +726,9 @@ class ResourceInstance extends Resource {
 		return $ret;
 	}
 	
+	/**
+	 * Create initial - NULL - resource object instance parameters.
+	 */
 	protected function defineStubAttrs() {
 		$params = $this->description->actions->{$this->action->name()}->input->parameters;
 		
@@ -541,16 +748,28 @@ class ResourceInstance extends Resource {
 		}
 	}
 	
+	/**
+	 * Return true if $str ends with $ending.
+	 * @return boolean
+	 */
 	protected function endsWith($str, $ending) {
 		return $ending === "" || substr($str, -strlen($ending)) === $ending;
 	}
 }
 
+/**
+ * A list of resource object instances.
+ */
 class ResourceInstanceList implements \ArrayAccess, \Iterator {
 	private $items = array();
 	private $index = 0;
 	private $response;
 	
+	/**
+	 * @param Client $client
+	 * @param Action $action
+	 * @param Response $response
+	 */
 	public function __construct($client, $action, $response) {
 		$this->response = $response;
 		
@@ -559,22 +778,38 @@ class ResourceInstanceList implements \ArrayAccess, \Iterator {
 		}
 	}
 	
+	/**
+	 * @return int object count
+	 */
 	public function count() {
 		return count($this->items);
 	}
 	
+	/**
+	 * @return Response
+	 */
 	public function apiResponse() {
 		return $this->response;
 	}
 	
+	/**
+	 * @return ResourceInstance first object
+	 */
 	public function first() {
 		return $this->items[0];
 	}
 	
+	/**
+	 * @return ResourceInstance last object
+	 */
 	public function last() {
 		return $this->items[ $this->count() - 1 ];
 	}
 	
+	/**
+	 * Returns all objects in an array.
+	 * @return array
+	 */
 	public function asArray() {
 		return $this->items;
 	}
@@ -618,23 +853,40 @@ class ResourceInstanceList implements \ArrayAccess, \Iterator {
 	}
 }
 
+/**
+ * Response from the API.
+ */
 class Response implements \ArrayAccess {
 	private $action;
 	private $envelope;
 	
+	/**
+	 * @param Action $action
+	 * @param \stdClass envelope received response body
+	 */
 	public function __construct($action, $envelope) {
 		$this->action = $action;
 		$this->envelope = $envelope;
 	}
 	
+	/**
+	 * @return boolean
+	 */
 	public function isOk() {
 		return $this->envelope->status;
 	}
 	
+	/**
+	 * @return string
+	 */
 	public function message() {
 		return $this->envelope->message;
 	}
 	
+	/**
+	 * For known layouts, namespaced response is returned, or else the data is returned as is.
+	 * @return \stdClass
+	 */
 	public function response() {
 		$l = $this->action->layout('output');
 		
@@ -650,6 +902,9 @@ class Response implements \ArrayAccess {
 		}
 	}
 	
+	/**
+	 * @return \stdClass
+	 */
 	public function errors() {
 		return $this->envelope->errors;
 	}
@@ -684,6 +939,9 @@ class Response implements \ArrayAccess {
 	}
 }
 
+/**
+ * A client for a HaveAPI based API.
+ */
 class Client extends Resource {
 	private $uri;
 	private $version;
@@ -692,6 +950,12 @@ class Client extends Resource {
 	private $queryParams;
 	private static $authProviders = array();
 	
+	/**
+	 * Register authentication provider with $name and implementation in $class.
+	 * @param string $name name of authentication method (has to match with names in API)
+	 * @param string $class name of a class
+	 * @param boolean $force replace the provider if it already exists
+	 */
 	public static function registerAuthProvider($name, $class, $force = true) {
 		if(!$force && in_array($name, self::$authProviders))
 			return;
@@ -699,6 +963,11 @@ class Client extends Resource {
 		self::$authProviders[$name] = $class;
 	}
 	
+	/**
+	 * @param string $uri URL to the API root, do not specify version here
+	 * @param mixed $version API version to use, defaults to default version
+	 * @param string $identity string to be sent in User-Agent in every request
+	 */
 	public function __construct($uri = 'http://localhost:4567', $version = null, $identity = 'haveapi-client-php') {
 		$this->client = $this;
 		$this->uri = chop($uri, '/');
@@ -712,6 +981,10 @@ class Client extends Resource {
 		$this->authProvider = new NoAuth($this, array(), array());
 	}
 	
+	/**
+	 * Fetch the API description if it isn't fetched yet.
+	 * @param boolean $force fetch even it is already fetched
+	 */
 	public function setup($force = false) {
 		if(!$force && $this->description)
 			return;
@@ -719,6 +992,11 @@ class Client extends Resource {
 		$this->description = $this->fetchDescription();
 	}
 	
+	/**
+	 * Authenticate with $method and options $opts.
+	 * @param string $method authentication provider name
+	 * @param array $opts options passed to the provider
+	 */
 	public function authenticate($method, $opts) {
 		if(!array_key_exists($method, self::$authProviders))
 			throw new AuthenticationFailed("Auth method '$method' is not registered");
@@ -730,6 +1008,12 @@ class Client extends Resource {
 		$this->setup(true);
 	}
 	
+	/**
+	 * Invoke action $action with $params and interpret the response.
+	 * @param Action $action
+	 * @param array $params
+	 * @return mixed response
+	 */
 	public function call($action, $params = array()) {
 		$response = new Response($action, $this->directCall($action, $params));
 		
@@ -749,6 +1033,12 @@ class Client extends Resource {
 		}
 	}
 	
+	/**
+	 * Invoke action $action with $params and do notinterpret the response.
+	 * @param Action $action
+	 * @param array $params
+	 * @return mixed response
+	 */
 	public function directCall($action, $params = array()) {
 		$fn = strtolower($action->httpMethod());
 		
@@ -764,6 +1054,11 @@ class Client extends Resource {
 		return $this->sendRequest($request, $action, $params)->body;
 	}
 	
+	/**
+	 * Create \Httpful\Request instance.
+	 * @param string $method HTTP method
+	 * @param string $url
+	 */
 	protected function getRequest($method, $url) {
 		$this->queryParams = array();
 		
@@ -775,6 +1070,12 @@ class Client extends Resource {
 		return $request;
 	}
 	
+	/**
+	 * Send \Httpful\Request.
+	 * @param \Httpful\Request $request
+	 * @param Action $action
+	 * @param array $params
+	 */
 	protected function sendRequest($request, $action = null, $params = array()) {
 		$this->queryParams += $this->authProvider->queryParameters();
 		
@@ -803,10 +1104,18 @@ class Client extends Resource {
 		return $request->send();
 	}
 	
+	/**
+	 * @param string $method
+	 * @return boolean true for HTTP methods GET and OPTIONS.
+	 */
 	protected function sendAsQueryParams($method) {
 		return in_array(strtolower($method), array('get', 'options'));
 	}
 	
+	/**
+	 * Fetch the description.
+	 * @return \stdClass
+	 */
 	protected function fetchDescription() {
 		$url = $this->uri;
 		

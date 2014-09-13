@@ -15,9 +15,15 @@ module HaveAPI::CLI::Authentication
         @token = t
       end
 
-      opts.on('--token-validity SECONDS', Integer,
-              'How long will token be valid in seconds, 0 for forever') do |s|
-        @validity = s
+      opts.on('--token-lifetime LIFETIME',
+              %i(fixed renewable_manual renewable_auto permanent),
+              'Token lifetime, defaults to renewable_auto') do |l|
+        @lifetime = l
+      end
+
+      opts.on('--token-interval SECONDS', Integer,
+              'How long will token be valid in seconds') do |s|
+        @interval = s
       end
 
       opts.on('--new-token', 'Request new token') do
@@ -49,7 +55,8 @@ module HaveAPI::CLI::Authentication
           user: @user,
           password: @password,
           token: @token,
-          validity: @validity,
+          lifetime: @lifetime || :renewable_auto,
+          interval: @interval,
           valid_to: @valid_to,
           via: @via
       })
@@ -58,7 +65,7 @@ module HaveAPI::CLI::Authentication
     def save
       super.update({
                        via: @via,
-                       validity: @validity
+                       interval: @interval
                    })
     end
   end

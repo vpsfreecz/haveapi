@@ -36,7 +36,11 @@ module HaveAPI::Client::Authentication
     protected
     def request_token
       a = HaveAPI::Client::Action.new(@communicator, :request, @desc[:resources][:token][:actions][:request], [])
-      ret = a.execute({login: @opts[:user], password: @opts[:password], validity: @opts[:validity] || 300})
+      ret = a.execute({
+                          login: @opts[:user],
+                          password: @opts[:password],
+                          lifetime: translate_lifetime(@opts[:lifetime]),
+                          interval: @opts[:interval] || 300})
 
       raise AuthenticationFailed.new('bad username or password') unless ret[:status]
 
@@ -44,6 +48,11 @@ module HaveAPI::Client::Authentication
 
       @valid_to = ret[:response][:token][:valid_to]
       @valid_to = @valid_to && DateTime.iso8601(@valid_to).to_time
+    end
+
+    def translate_lifetime(lifetime)
+      lifetime ||= :renewable_auto
+      %i(fixed renewable_manual renewable_auto permanent).index(lifetime)
     end
 
     def check_validity

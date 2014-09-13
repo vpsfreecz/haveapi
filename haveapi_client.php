@@ -111,7 +111,7 @@ class TokenAuth extends AuthProvider {
 	private $rs;
 	private $configured = false;
 	private $token;
-	private $validTo;
+	private $validTo = null;
 	private $via;
 	
 	/**
@@ -123,6 +123,7 @@ class TokenAuth extends AuthProvider {
 		
 		if(isSet($this->opts['token'])) {
 			$this->configured = true;
+			$this->token = $this->opts['token'];
 			return;
 		}
 		
@@ -159,11 +160,16 @@ class TokenAuth extends AuthProvider {
 		$ret = $this->rs->request(array(
 			'login' => $this->opts['username'],
 			'password' => $this->opts['password'],
-			'validity' => isSet($this->opts['validity']) ? $this->opts['validity'] : 300
+			'lifetime' => $this->translateLifetime(isSet($this->opts['lifetime']) ? $this->opts['lifetime'] : 'renewable_auto'),
+			'interval' => isSet($this->opts['interval']) ? $this->opts['interval'] : 300
 		));
 		
 		$this->token = $ret->response()->token;
-		$this->validTo = strtotime($ret->response()->valid_to);
+		
+		$v = $ret->response()->valid_to;
+		
+		if($v)
+			$this->validTo = strtotime($v);
 		
 		$this->configured = true;
 	}
@@ -172,7 +178,7 @@ class TokenAuth extends AuthProvider {
 	 * Get a new token if the current one expired.
 	 */
 	protected function checkValidity() {
-		if($this->validTo < time() && isSet($this->opts['username']) && isSet($this->opts['password']))
+		if($this->validTo && $this->validTo < time() && isSet($this->opts['username']) && isSet($this->opts['password']))
 			$this->requestToken();
 	}
 	
@@ -188,6 +194,11 @@ class TokenAuth extends AuthProvider {
 	 */
 	public function getValidTo() {
 		return $this->validTo;
+	}
+	
+	private function translateLifetime($lifetime) {
+		$options = array('fixed', 'renewable_manual', 'renewable_auto', 'permanent');
+		return array_search($lifetime, $options);
 	}
 }
 
@@ -1018,7 +1029,7 @@ class Client extends Resource {
 		$response = new Response($action, $this->directCall($action, $params));
 		
 		if(!$response->isOk()) {
-			throw new ActionFailed($response, "Action '".$action->name()."' failed: ".$ret->message());
+			throw new ActionFailed($response, "Action '".$action->name()."' failed: ".$response->message());
 		}
 		
 		switch($action->layout('output')) {

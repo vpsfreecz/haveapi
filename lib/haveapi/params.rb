@@ -4,7 +4,7 @@ module HaveAPI
   end
 
   class ValidationError < Exception
-    def initialize(msg, errors)
+    def initialize(msg, errors = {})
       @msg = msg
       @errors = errors
     end
@@ -174,11 +174,20 @@ module HaveAPI
         @params.each do |p|
           if p.required? && input[p.name].nil?
             errors[p.name] = ['required parameter missing']
+            next
           end
 
           next unless input.has_key?(p.name)
 
-          cleaned = p.clean(input[p.name])
+          begin
+            cleaned = p.clean(input[p.name])
+
+          rescue ValidationError => e
+            errors[p.name] ||= []
+            errors[p.name] << e.message
+            next
+          end
+
           input[p.name] = cleaned if cleaned != :_nil
         end
       end

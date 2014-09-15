@@ -167,6 +167,10 @@ module HaveAPI
       @safe_params
     end
 
+    def input
+      @safe_params[ self.class.input.namespace ] if self.class.input
+    end
+
     def request
       @request
     end

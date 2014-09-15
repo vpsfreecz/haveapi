@@ -89,7 +89,8 @@ Token can be revoked by calling the ``revoke`` action.
                         "parameters": {
                             "login": ...
                             "password": ...
-                            "validity": ...
+                            "lifetime": ...
+                            "interval": ...
                         },
                         ...
                     },
@@ -195,9 +196,14 @@ The type can be one of:
             "label": "Label for this parameter",
             "description": "Describe it's meaning",
             "type": "<one of the data types>",
+            "choices": a list or a hash of accepted values
             "validators": ... validators ...,
             "default": "default value that is used if the parameter is omitted"
         }
+
+If the choices are in a list, than it is a list of accepted values.
+If the choices are in a hash, the keys of that hash are accepted values,
+values in that hash are to be shown in UI.
 
 #### Resource association
 This is used for associations between resources, e.g. car has a wheel.

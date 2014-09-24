@@ -75,6 +75,13 @@ abstract class AuthProvider {
 	public function queryParameters() {
 		return array();
 	}
+	
+	/**
+	 * Logout, revoke all tokens, cleanup.
+	 */
+	public function logout() {
+		
+	}
 }
 
 /**
@@ -151,6 +158,13 @@ class TokenAuth extends AuthProvider {
 			return array();
 		
 		return array($this->description->query_parameter => $this->token);
+	}
+	
+	/**
+	 * Revoke the token.
+	 */
+	public function logout() {
+		$this->rs->revoke();
 	}
 	
 	/**
@@ -1004,10 +1018,7 @@ class Client extends Resource {
 		if(!$force && $this->description)
 			return;
 		
-		$this->description = $this->fetchDescription();
-		
-		if($this->descCallback)
-			call_user_func($this->descCallback, $this);
+		$this->changeDescription($this->fetchDescription());
 	}
 	
 	/**
@@ -1051,6 +1062,15 @@ class Client extends Resource {
 		$this->authProvider = new self::$authProviders[$method]($this, $this->description->authentication->{$method}, $opts);
 		
 		$this->setup($forceSetup);
+	}
+	
+	/**
+	 * Logout the authenticated user and destroy the authentication provider.
+	 */
+	public function logout() {
+		$this->authProvider->logout();
+		$this->authProvider = new NoAuth($this, array(), array());
+		$this->changeDescription(NULL);
 	}
 	
 	/**
@@ -1193,5 +1213,12 @@ class Client extends Resource {
 		}
 		
 		return $obj;
+	}
+	
+	private function changeDescription($d) {
+		$this->description = $d;
+		
+		if($this->descCallback)
+			call_user_func($this->descCallback, $this);
 	}
 }

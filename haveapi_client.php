@@ -873,11 +873,14 @@ class Response implements \ArrayAccess {
 	
 	/**
 	 * @param Action $action
-	 * @param \stdClass envelope received response body
+	 * @param \Httpful\Response envelope received response
 	 */
-	public function __construct($action, $envelope) {
+	public function __construct($action, $response) {
+		if($response->code == 401)
+			throw new AuthenticationFailed($response->body->message);
+		
 		$this->action = $action;
-		$this->envelope = $envelope;
+		$this->envelope = $response->body;
 	}
 	
 	/**
@@ -1087,7 +1090,7 @@ class Client extends Resource {
 		
 		$this->authProvider->authenticate($request);
 		
-		return $this->sendRequest($request, $action, $params)->body;
+		return $this->sendRequest($request, $action, $params);
 	}
 	
 	/**

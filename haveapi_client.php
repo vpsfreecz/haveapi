@@ -1037,6 +1037,14 @@ class Client extends Resource {
 	}
 	
 	/**
+	 * Return the authentication provider.
+	 * @return AuthProvider
+	 */
+	public function getAuthenticationProvider() {
+		return $this->authProvider;
+	}
+	
+	/**
 	 * Invoke action $action with $params and interpret the response.
 	 * @param Action $action
 	 * @param array $params

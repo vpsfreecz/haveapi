@@ -962,6 +962,7 @@ class Client extends Resource {
 	private $identity;
 	private $authProvider;
 	private $queryParams;
+	private $descCallback = null;
 	private static $authProviders = array();
 	
 	/**
@@ -1004,6 +1005,9 @@ class Client extends Resource {
 			return;
 		
 		$this->description = $this->fetchDescription();
+		
+		if($this->descCallback)
+			call_user_func($this->descCallback, $this);
 	}
 	
 	/**
@@ -1024,11 +1028,21 @@ class Client extends Resource {
 	}
 	
 	/**
+	 * Register a callback function that will be called when the description
+	 * is changed. The function is passed instance of Client as an argument.
+	 * @param callable $fn
+	 */
+	public function registerDescriptionChangeFunc($fn) {
+		$this->descCallback = $fn;
+	}
+	
+	/**
 	 * Authenticate with $method and options $opts.
 	 * @param string $method authentication provider name
 	 * @param array $opts options passed to the provider
+	 * @param boolean $forceSetup force reloading the description of the API
 	 */
-	public function authenticate($method, $opts) {
+	public function authenticate($method, $opts, $forceSetup = true) {
 		if(!array_key_exists($method, self::$authProviders))
 			throw new AuthenticationFailed("Auth method '$method' is not registered");
 		
@@ -1036,7 +1050,7 @@ class Client extends Resource {
 		
 		$this->authProvider = new self::$authProviders[$method]($this, $this->description->authentication->{$method}, $opts);
 		
-		$this->setup(true);
+		$this->setup($forceSetup);
 	}
 	
 	/**

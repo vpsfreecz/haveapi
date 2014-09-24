@@ -68,9 +68,13 @@ module HaveAPI::Authentication::Token
         http_method :post
         auth true
 
+        authorize do
+          allow
+        end
+
         def exec
           klass = self.class.resource.token_instance[@version]
-          klass.revoke_token(current_user, klass.token(request))
+          klass.send(:revoke_token, current_user, klass.token(request))
         end
       end
 
@@ -88,7 +92,7 @@ module HaveAPI::Authentication::Token
 
         def exec
           klass = self.class.resource.token_instance[@version]
-          klass.renew_token(current_user, klass.token(request))
+          klass.send(:renew_token, current_user, klass.token(request))
         end
       end
     end

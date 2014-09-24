@@ -1004,6 +1004,23 @@ class Client extends Resource {
 	}
 	
 	/**
+	 * Return the API description.
+	 * @return \stdClass may be NULL if the client is not set up yet
+	 */
+	public function getDescription() {
+		return $this->description;
+	}
+	
+	/**
+	 * Set the description to $desc. The client will use this description
+	 * and will not ask the API about it.
+	 * @param \stdClass $desc
+	 */
+	public function setDescription($desc) {
+		$this->description = $desc;
+	}
+	
+	/**
 	 * Authenticate with $method and options $opts.
 	 * @param string $method authentication provider name
 	 * @param array $opts options passed to the provider

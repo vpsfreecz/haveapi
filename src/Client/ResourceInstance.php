@@ -164,7 +164,7 @@ class ResourceInstance extends Resource {
 				$this->attrs = array_merge($this->attrs, (array) $ret->response());
 				
 			} else {
-				throw new ActionFailed($ret, "Action '".$action->name()."' failed: ".$ret->message());
+				throw new Exception\ActionFailed($ret, "Action '".$action->name()."' failed: ".$ret->message());
 			}
 			
 			$this->persistent = true;

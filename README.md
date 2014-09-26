@@ -111,8 +111,8 @@ Parameters can be accessed directly as:
 	echo $response['hostname'];
 
 ### Error handling
-If an action fails, exception `\HaveAPI\ActionFailed` is thrown. Authentication errors
-result in exception `\HaveAPI\AuthenticationFailed`.
+If an action fails, exception `\HaveAPI\Client\Exception\ActionFailed` is thrown. Authentication errors
+result in exception `\HaveAPI\Client\Exception\AuthenticationFailed`.
 
 	try {
 		$api->vps->create();

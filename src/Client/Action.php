@@ -96,7 +96,7 @@ class Action {
 		}
 		
 		if(preg_match("/:[a-zA-Z\-_]+/", $this->prepared_url))
-			throw new ActionFailed("Cannot call action '{$this->m_name}': unresolved arguments.");
+			throw new Exception\ActionFailed("Cannot call action '{$this->m_name}': unresolved arguments.");
 		
 		return $params;
 	}

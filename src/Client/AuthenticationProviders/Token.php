@@ -23,7 +23,7 @@ class Token extends Base {
 	 * Request a new token if it isn't in the options.
 	 */
 	protected function setup() {
-		$this->rs = new Resource($this->client, 'token', $this->description->resources->token, array());
+		$this->rs = new \HaveAPI\Client\Resource($this->client, 'token', $this->description->resources->token, array());
 		$this->via = isSet($this->opts['via']) ? $this->opts['via'] : self::HTTP_HEADER;
 		
 		if(isSet($this->opts['token'])) {

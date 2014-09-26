@@ -42,7 +42,7 @@ class Client extends Client\Resource {
 		self::registerAuthProvider('basic', 'HaveAPI\Client\AuthenticationProviders\Basic');
 		self::registerAuthProvider('token', 'HaveAPI\Client\AuthenticationProviders\Token');
 		
-		$this->authProvider = new NoAuth($this, array(), array());
+		$this->authProvider = new Client\AuthenticationProviders\NoAuth($this, array(), array());
 	}
 	
 	/**
@@ -123,7 +123,7 @@ class Client extends Client\Resource {
 	 * @return mixed response
 	 */
 	public function call($action, $params = array()) {
-		$response = new Response($action, $this->directCall($action, $params));
+		$response = new Client\Response($action, $this->directCall($action, $params));
 		
 		if(!$response->isOk()) {
 			throw new Client\Exception\ActionFailed($response, "Action '".$action->name()."' failed: ".$response->message());
@@ -131,10 +131,10 @@ class Client extends Client\Resource {
 		
 		switch($action->layout('output')) {
 			case 'object':
-				return new ResourceInstance($this->client, $action, $response);
+				return new Client\ResourceInstance($this->client, $action, $response);
 			
 			case 'object_list':
-				return new ResourceInstanceList($this->client, $action, $response);
+				return new Client\ResourceInstanceList($this->client, $action, $response);
 			
 			default:
 				return $response;

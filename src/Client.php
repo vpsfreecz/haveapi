@@ -110,7 +110,7 @@ class Client extends Client\Resource {
 	
 	/**
 	 * Return the authentication provider.
-	 * @return AuthProvider
+	 * @return Client\Authentication\Base
 	 */
 	public function getAuthenticationProvider() {
 		return $this->authProvider;
@@ -145,7 +145,7 @@ class Client extends Client\Resource {
 	 * Invoke action $action with $params and do notinterpret the response.
 	 * @param Action $action
 	 * @param array $params
-	 * @return mixed response
+	 * @return \Httpful\Response response
 	 */
 	public function directCall($action, $params = array()) {
 		$fn = strtolower($action->httpMethod());

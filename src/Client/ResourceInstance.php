@@ -54,7 +54,7 @@ class ResourceInstance extends Resource {
 	/**
 	 * @return Response
 	 */
-	public function apiResponse() {
+	public function getApiResponse() {
 		return $this->response instanceof Response ? $this->response : null;
 	}
 	

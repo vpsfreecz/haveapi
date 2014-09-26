@@ -115,7 +115,7 @@ If the action does not return object or object list, `\HaveAPI\Client\Response` 
 	$vps = $api->vps->find(101);
 	$response = $vps->custom_action();
 	
-	print_r($response->response());
+	print_r($response->getResponse());
 
 Parameters can be accessed directly as:
 
@@ -130,7 +130,7 @@ result in exception `\HaveAPI\Client\Exception\AuthenticationFailed`.
 		
 	} catch(\HaveAPI\ActionFailed $e) {
 		echo $e->getMessage();
-		print_r($e->errors());
+		print_r($e->getErrors());
 	}
 
 License

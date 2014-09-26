@@ -31,7 +31,7 @@ class Response implements \ArrayAccess {
 	/**
 	 * @return string
 	 */
-	public function message() {
+	public function getMessage() {
 		return $this->envelope->message;
 	}
 	
@@ -39,7 +39,7 @@ class Response implements \ArrayAccess {
 	 * For known layouts, namespaced response is returned, or else the data is returned as is.
 	 * @return \stdClass
 	 */
-	public function response() {
+	public function getResponse() {
 		$l = $this->action->layout('output');
 		
 		switch($l) {
@@ -57,7 +57,7 @@ class Response implements \ArrayAccess {
 	/**
 	 * @return \stdClass
 	 */
-	public function errors() {
+	public function getErrors() {
 		return $this->envelope->errors;
 	}
 	

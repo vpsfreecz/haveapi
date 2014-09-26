@@ -5,7 +5,7 @@ namespace HaveAPI;
 /**
  * A client for a HaveAPI based API.
  */
-class Client extends Resource {
+class Client extends Client\Resource {
 	private $uri;
 	private $version;
 	private $identity;
@@ -243,7 +243,7 @@ class Client extends Resource {
 	protected function findObject($name, $description = null) {
 		$obj = parent::findObject($name, $description);
 		
-		if($obj instanceof Resource) {
+		if($obj instanceof Client\Resource) {
 			$obj->setApiClient($this);
 		}
 		

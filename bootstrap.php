@@ -1,10 +1,10 @@
 <?php
 
-$classes = array(
-	'Client/AuthenticationProviders/Base',
-	'Client/AuthenticationProviders/NoAuth',
-	'Client/AuthenticationProviders/Basic',
-	'Client/AuthenticationProviders/Token',
+$_haveapi_client_classes = array(
+	'Client/Authentication/Base',
+	'Client/Authentication/NoAuth',
+	'Client/Authentication/Basic',
+	'Client/Authentication/Token',
 	'Client/Exception/ActionFailed',
 	'Client/Exception/AuthenticationFailed',
 	'Client/Action',
@@ -15,6 +15,6 @@ $classes = array(
 	'Client'
 );
 
-foreach($classes as $class) {
+foreach($_haveapi_client_classes as $class) {
 	include "src/$class.php";
 }

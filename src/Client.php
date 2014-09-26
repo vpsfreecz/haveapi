@@ -38,11 +38,11 @@ class Client extends Client\Resource {
 		$this->version = $version;
 		$this->identity = $identity;
 		
-		self::registerAuthProvider('none', 'HaveAPI\Client\AuthenticationProviders\NoAuth');
-		self::registerAuthProvider('basic', 'HaveAPI\Client\AuthenticationProviders\Basic');
-		self::registerAuthProvider('token', 'HaveAPI\Client\AuthenticationProviders\Token');
+		self::registerAuthProvider('none', 'HaveAPI\Client\Authentication\NoAuth');
+		self::registerAuthProvider('basic', 'HaveAPI\Client\Authentication\Basic');
+		self::registerAuthProvider('token', 'HaveAPI\Client\Authentication\Token');
 		
-		$this->authProvider = new Client\AuthenticationProviders\NoAuth($this, array(), array());
+		$this->authProvider = new Client\Authentication\NoAuth($this, array(), array());
 	}
 	
 	/**
@@ -104,7 +104,7 @@ class Client extends Client\Resource {
 	 */
 	public function logout() {
 		$this->authProvider->logout();
-		$this->authProvider = new NoAuth($this, array(), array());
+		$this->authProvider = new Client\Authentication\NoAuth($this, array(), array());
 		$this->changeDescription(NULL);
 	}
 	

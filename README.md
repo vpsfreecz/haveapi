@@ -8,18 +8,25 @@ Requirements
  - PHP >= 5.3
  - [Httpful](http://phphttpclient.com/) - already included in `vendor/`
 
+Installation
+------------
+haveapi-client-php can be installed with composer, add `haveapi/client` to your `composer.json`:
+
+	{
+		"require": {
+			"haveapi/client": "*"
+		}
+	}
+
+You can also clone this repository and use a PSR-4 compatible autoloader, or include
+`bootstrap.php`, which loads all necessary classes. When using the repository, you
+have to install Httpful yourself.
+
 Usage
 -----
 
-First check out API documentation, see how it works and what resources/actions
+First check out the API documentation, see how it works and what resources/actions
 are available.
-
-Include client:
-
-	<?php
-	include 'haveapi.php';
-
-`haveapi.php` includes Httpful from `vendor/`, `haveapi_client.php` does not.
 
 Create a client instance:
 
@@ -33,9 +40,13 @@ Authenticate with token:
 
 	$api->authenticate('token', ['username' => 'yourname', 'password' => 'password']);
 
-or
+When using the token authentication, it is usually necessary to save the token for later use:
 
-	$api->authenticate('token', ['token' => 'abcedfghijklmopqrstuvxyz']);
+	$token = $api->authenticationProvider()->getToken();
+
+Next time, authenticate with the previously received token:
+
+	$api->authenticate('token', ['token' => $token]);
 
 Resources and actions can be accessed using two methods.
 
@@ -83,7 +94,7 @@ Fetch existing resource:
 	$vps->hostname = 'gotcha';
 	$vps->save();
 
-Create new instance:
+Create a new instance:
 
 	$vps = $api->vps->newInstance();
 	$vps->hostname = 'new vps';
@@ -99,7 +110,7 @@ List of resources:
 	}
 
 ### Response
-If the action does not return object or object list, `\HaveAPI\Response` class is returned instead.
+If the action does not return object or object list, `\HaveAPI\Client\Response` class is returned instead.
 
 	$vps = $api->vps->find(101);
 	$response = $vps->custom_action();

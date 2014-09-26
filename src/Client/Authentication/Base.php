@@ -1,6 +1,6 @@
 <?php
 
-namespace HaveAPI\Client\AuthenticationProviders;
+namespace HaveAPI\Client\Authentication;
 
 /**
  * Base class extended by all authentication providers.

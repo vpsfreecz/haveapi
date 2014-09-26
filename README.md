@@ -42,7 +42,7 @@ Authenticate with token:
 
 When using the token authentication, it is usually necessary to save the token for later use:
 
-	$token = $api->authenticationProvider()->getToken();
+	$token = $api->getAuthenticationProvider()->getToken();
 
 Next time, authenticate with the previously received token:
 
@@ -82,8 +82,8 @@ Object IDs must be in front of it.
 		'template' => 1
 	]);
 
-	$api->vps->ip_address->create(101, array('version' => 4));
-	$api->vps(101)->ip_address->create(array('version' => 4));
+	$api->vps->ip_address->create(101, ['version' => 4]);
+	$api->vps(101)->ip_address->create(['version' => 4]);
 
 ### Object-like behaviour
 Fetch existing resource:
@@ -132,6 +132,10 @@ result in exception `\HaveAPI\Client\Exception\AuthenticationFailed`.
 		echo $e->getMessage();
 		print_r($e->getErrors());
 	}
+
+Documentation
+-------------
+https://projects.vpsfree.cz/haveapi-client-php/ref/
 
 License
 -------

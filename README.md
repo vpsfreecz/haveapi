@@ -1,12 +1,12 @@
 haveapi-client-php
 ==================
 
-haveapi-client-php is a PHP client for HaveAPI based APIs.
+haveapi-client-php is a PHP client for [HaveAPI](https://github.com/vpsfreecz/haveapi) based APIs.
 
 Requirements
 ------------
  - PHP >= 5.3
- - [Httpful](http://phphttpclient.com/) - already included in `vendor/`
+ - [Httpful](http://phphttpclient.com/)
 
 Installation
 ------------

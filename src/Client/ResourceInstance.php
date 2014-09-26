@@ -31,7 +31,7 @@ class ResourceInstance extends Resource {
 			$this->persistent = true;
 			
 			if($response instanceof Response) {
-				$this->attrs = (array) $response->response();
+				$this->attrs = (array) $response->getResponse();
 				
 			} else {
 				$this->attrs = (array) $response;
@@ -161,7 +161,7 @@ class ResourceInstance extends Resource {
 			$ret = new Response($action, $action->directCall($this->attrsForApi($action)));
 			
 			if($ret->isOk()) {
-				$this->attrs = array_merge($this->attrs, (array) $ret->response());
+				$this->attrs = array_merge($this->attrs, (array) $ret->getResponse());
 				
 			} else {
 				throw new Exception\ActionFailed($ret, "Action '".$action->name()."' failed: ".$ret->message());

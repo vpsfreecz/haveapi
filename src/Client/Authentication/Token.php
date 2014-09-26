@@ -76,9 +76,9 @@ class Token extends Base {
 			'interval' => isSet($this->opts['interval']) ? $this->opts['interval'] : 300
 		));
 		
-		$this->token = $ret->response()->token;
+		$this->token = $ret->getResponse()->token;
 		
-		$v = $ret->response()->valid_to;
+		$v = $ret->getResponse()->valid_to;
 		
 		if($v)
 			$this->validTo = strtotime($v);

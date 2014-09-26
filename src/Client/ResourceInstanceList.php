@@ -18,7 +18,7 @@ class ResourceInstanceList implements \ArrayAccess, \Iterator {
 	public function __construct($client, $action, $response) {
 		$this->response = $response;
 		
-		foreach($response->response() as $item) {
+		foreach($response->getResponse() as $item) {
 			$this->items[] = new ResourceInstance($client, $action, $item);
 		}
 	}

@@ -62,30 +62,30 @@ class Response implements \ArrayAccess {
 	}
 	
 	public function __toString() {
-		return json_encode($this->response());
+		return json_encode($this->getResponse());
 	}
 	
 	// ArrayAccess
 	public function offsetExists($offset) {
-		$r = $this->response();
+		$r = $this->getResponse();
 		
 		return isSet($r->{$offset});
 	}
 	
 	public function offsetGet($offset) {
-		$r = $this->response();
+		$r = $this->getResponse();
 		
 		return $r->{$offset};
 	}
 	
 	public function offsetSet($offset, $value) {
-		$r = $this->response();
+		$r = $this->getResponse();
 		
 		$r->{$offset} = $value;
 	}
 	
 	public function offsetUnset($offset) {
-		$r = $this->response();
+		$r = $this->getResponse();
 		
 		unset($r->{$offset});
 	}

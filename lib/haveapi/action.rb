@@ -331,7 +331,7 @@ module HaveAPI
     def all_attrs(m)
       ret = m.attributes
 
-      m.reflections.each_key do |name|
+      m.class.reflections.each_key do |name|
         ret[name] = m.method(name).call
       end
 

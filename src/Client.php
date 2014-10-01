@@ -126,7 +126,7 @@ class Client extends Client\Resource {
 		$response = new Client\Response($action, $this->directCall($action, $params));
 		
 		if(!$response->isOk()) {
-			throw new Client\Exception\ActionFailed($response, "Action '".$action->name()."' failed: ".$response->message());
+			throw new Client\Exception\ActionFailed($response, "Action '".$action->name()."' failed: ".$response->getMessage());
 		}
 		
 		switch($action->layout('output')) {

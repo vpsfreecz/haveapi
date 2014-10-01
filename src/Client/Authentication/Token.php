@@ -7,7 +7,7 @@ namespace HaveAPI\Client\Authentication;
  *
  * Accepts either a `token` or `username` and `password` to acquire a token.
  * Option `via` determines how the token is sent to the API. It defaults
- * to TokenAuth::HTTP_HEADER.
+ * to Token::HTTP_HEADER.
  */
 class Token extends Base {
 	const HTTP_HEADER = 0;

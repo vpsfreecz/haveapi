@@ -113,6 +113,10 @@ module HaveAPI
     alias_method :references, :resource
     alias_method :belongs_to, :resource
 
+    def patch(name, changes = {})
+      @params.detect { |p| p.name == name }.patch(changes)
+    end
+
     # Action returns custom data.
     def custom_structure(name, s)
       @namespace = name

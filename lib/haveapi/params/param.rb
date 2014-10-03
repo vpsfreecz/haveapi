@@ -48,6 +48,10 @@ module HaveAPI::Parameters
       }
     end
 
+    def patch(attrs)
+      attrs.each { |k, v| instance_variable_set("@#{k}", v) }
+    end
+
     def clean(raw)
       if raw.nil?
         val = @default

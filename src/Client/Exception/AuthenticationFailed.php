@@ -5,5 +5,5 @@ namespace HaveAPI\Client\Exception;
 /**
  * Thrown when an authentication fails.
  */
-class AuthenticationFailed extends \Exception {
+class AuthenticationFailed extends Base {
 }

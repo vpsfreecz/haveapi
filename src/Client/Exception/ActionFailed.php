@@ -5,7 +5,7 @@ namespace HaveAPI\Client\Exception;
 /**
  * Thrown when an action fails.
  */
-class ActionFailed extends \Exception {
+class ActionFailed extends Base {
 	private $response;
 	
 	/**

@@ -45,10 +45,6 @@ END
 
           token = expiration = nil
 
-          if params[:token][:lifetime] < 0 || params[:token][:lifetime] > 3
-            error('invalid lifetime')
-          end
-
           loop do
             begin
               token = klass.send(:generate_token)

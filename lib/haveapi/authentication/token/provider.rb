@@ -16,8 +16,9 @@ module HaveAPI::Authentication
     #
     # Token can be revoked by calling Resources::Token::Revoke.
     #
-    # ### Example usage:
-    # Token model:
+    # === \Example usage:
+    #
+    # \Token model:
     #   class ApiToken < ActiveRecord::Base
     #     belongs_to :user
     #

@@ -16,15 +16,42 @@ module HaveAPI::Authentication
     #
     # Token can be revoked by calling Resources::Token::Revoke.
     #
-    # Example usage:
+    # ### Example usage:
+    # Token model:
+    #   class ApiToken < ActiveRecord::Base
+    #     belongs_to :user
+    #
+    #     validates :user_id, :token, presence: true
+    #     validates :token, length: {is: 100}
+    #
+    #     enum lifetime: %i(fixed renewable_manual renewable_auto permanent)
+    #
+    #     def renew
+    #       self.valid_to = Time.now + interval
+    #     end
+    #   end
+    #
+    # Authentication provider:
     #   class MyTokenAuth < HaveAPI::Authentication::Token::Provider
     #     protected
-    #     def save_token(user, token, validity)
-    #       user.tokens << ::Token.new(token: token, validity: validity)
+    #     def save_token(request, user, token, lifetime, interval)
+    #       user.tokens << ::Token.new(token: token, lifetime: lifetime,
+    #                                  valid_to: (lifetime != 'permanent' ? Time.now + interval : nil),
+    #                                  interval: interval, label: request.user_agent)
     #     end
     #
     #     def revoke_token(user, token)
     #       user.tokens.delete(token: token)
+    #     end
+    #
+    #     def renew_token(user, token)
+    #       t = ::Token.find_by(user: user, token: token)
+    #
+    #       if t.lifetime.start_with('renewable')
+    #         t.renew
+    #         t.save
+    #         t.valid_to
+    #       end
     #     end
     #
     #     def find_user_by_credentials(username, password)
@@ -33,7 +60,16 @@ module HaveAPI::Authentication
     #
     #     def find_user_by_token(token)
     #       t = ::Token.find_by(token: token)
-    #       t && t.user
+    #
+    #       if t
+    #         # Renew the token if needed
+    #         if t.lifetime == 'renewable_auto'
+    #           t.renew
+    #           t.save
+    #         end
+    #
+    #         t.user # return the user
+    #       end
     #     end
     #   end
     #

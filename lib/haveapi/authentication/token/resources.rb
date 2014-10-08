@@ -15,8 +15,8 @@ module HaveAPI::Authentication::Token
         input(:hash) do
           string :login, label: 'Login', required: true
           string :password, label: 'Password', required: true
-          integer :lifetime, label: 'Lifetime', required: true,
-                  desc: '0 - fixed, 1 - manually renewable, 2 - auto-renewal, 3 - permanent'
+          string :lifetime, label: 'Lifetime', required: true,
+                  choices: %i(fixed renewable_manual renewable_auto permanent)
           integer :interval, label: 'Interval',
                   desc: 'How long will requested token be valid, in seconds.',
                   default: 60*5

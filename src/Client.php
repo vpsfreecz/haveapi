@@ -142,7 +142,7 @@ class Client extends Client\Resource {
 	}
 	
 	/**
-	 * Invoke action $action with $params and do notinterpret the response.
+	 * Invoke action $action with $params and do not interpret the response.
 	 * @param Action $action
 	 * @param array $params
 	 * @return \Httpful\Response response

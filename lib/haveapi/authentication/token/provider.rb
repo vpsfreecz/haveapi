@@ -109,7 +109,7 @@ module HaveAPI::Authentication
 
       # Query parameter searched for token.
       def query_parameter
-        :auth_token
+        :_auth_token
       end
 
       # Generate token. Implicit implementation returns token of 100 chars.

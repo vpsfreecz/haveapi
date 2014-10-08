@@ -329,7 +329,8 @@ module HaveAPI
     end
 
     def all_attrs(m)
-      ret = m.attributes
+      ret = {}
+      m.attribute_names.each { |k| ret[k] = m.send(k) }
 
       m.class.reflections.each_key do |name|
         ret[name] = m.method(name).call

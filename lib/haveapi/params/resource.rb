@@ -71,7 +71,7 @@ module HaveAPI::Parameters
     end
 
     def clean(raw)
-      @resource.model.find(raw) if (raw.is_a?(String) && !raw.empty?) || (!raw.is_a?(String) && raw)
+      ::HaveAPI::ModelAdapter.for(@resource.model).input_clean(@resource.model, raw)
     end
 
     private

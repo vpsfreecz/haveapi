@@ -11,7 +11,8 @@ module HaveAPI
 
     attr_reader :message, :errors
     class << self
-      attr_reader :resource, :authorization, :input, :output, :examples
+      attr_reader :resource, :authorization, :input, :output, :model_adapter,
+                  :examples
 
       def inherited(subclass)
         # puts "Action.inherited called #{subclass} from #{to_s}"
@@ -35,6 +36,7 @@ module HaveAPI
         begin
           subclass.instance_variable_set(:@resource, resource)
           subclass.instance_variable_set(:@model, resource.model)
+          subclass.instance_variable_set(:@model_adapter, ModelAdapter.for(resource.model))
         rescue NoMethodError
           return
         end
@@ -46,7 +48,7 @@ module HaveAPI
           @input.layout = layout
           @input.namespace = namespace
           @input.instance_eval(&block)
-          @input.load_validators(model) if model
+          @model_adapter.load_validators(model, @input) if model
         else
           @input
         end
@@ -218,31 +220,30 @@ module HaveAPI
 
           case output.layout
             when :object
-              safe_ret = {}
-
-              if ret.is_a?(ActiveRecord::Base)
-                safe_ret = to_param_names(all_attrs(ret), :output)
-                safe_ret = resourcify(@authorization.filter_output(self.class.output.params, safe_ret), ret)
-              end
+              safe_ret = @authorization.filter_output(
+                          self.class.output.params,
+                          self.class.model_adapter.output(@context, ret))
 
             when :object_list
               safe_ret = []
 
               ret.each do |obj|
-                if obj.is_a?(ActiveRecord::Base)
-                  tmp = to_param_names(all_attrs(obj), :output)
-
-                  safe_ret << resourcify(@authorization.filter_output(self.class.output.params, tmp), obj)
-                end
+                safe_ret << @authorization.filter_output(
+                              self.class.output.params,
+                              self.class.model_adapter.output(@context, obj))
               end
 
             when :hash
-              safe_ret = @authorization.filter_output(self.class.output.params, to_param_names(ret))
+              safe_ret = @authorization.filter_output(
+                          self.class.output.params,
+                          self.class.model_adapter.output(@context, ret))
 
             when :hash_list
               safe_ret = ret
               safe_ret.map! do |hash|
-                @authorization.filter_output(self.class.output.params, to_param_names(hash))
+                @authorization.filter_output(
+                    self.class.output.params,
+                    self.class.model_adapter.output(@context, hash))
               end
 
             else
@@ -328,17 +329,6 @@ module HaveAPI
       ret
     end
 
-    def all_attrs(m)
-      ret = {}
-      m.attribute_names.each { |k| ret[k] = m.send(k) }
-
-      m.class.reflections.each_key do |name|
-        ret[name] = m.method(name).call
-      end
-
-      ret
-    end
-
     def ok(ret={})
       throw(:return, ret)
     end
@@ -359,7 +349,9 @@ module HaveAPI
         input.check_layout(@safe_params)
 
         # Then filter allowed params
-        @safe_params[input.namespace] = @authorization.filter_input(self.class.input.params, @safe_params[input.namespace])
+        @safe_params[input.namespace] = @authorization.filter_input(
+                                          self.class.input.params,
+                                          self.class.model_adapter.input(@safe_params[input.namespace]))
 
         # Remove duplicit key
         @safe_params.delete(input.namespace.to_s)
@@ -367,29 +359,6 @@ module HaveAPI
         # Now check required params, convert types and set defaults
         input.validate(@safe_params)
       end
-    end
-
-    def resourcify(hash, klass)
-      self.class.output.params.each do |p|
-        next unless p.is_a?(Parameters::Resource) && hash[p.name]
-
-        res_out = p.show_action.output
-
-        tmp = hash[p.name]
-
-        val_url = @context.url_with_params(p.resource::Show, klass.method(p.name).call)
-        val_method = p.resource::Show.http_method.to_s.upcase
-
-        hash[p.name] = {
-            p.value_id => tmp.send(res_out[p.value_id].db_name),
-            p.value_label => tmp.send(res_out[p.value_label].db_name),
-            :url => val_url,
-            :method => val_method,
-            :help => "#{val_url}?method=#{val_method}"
-        }
-      end
-
-      hash
     end
   end
 end

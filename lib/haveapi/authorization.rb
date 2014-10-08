@@ -72,10 +72,10 @@ module HaveAPI
       allowed = {}
 
       allowed_params.each do |p|
-        if params.has_key?(p.name)
+        if params.has_param?(p.name)
           allowed[p.name] = params[p.name]
 
-        elsif params.has_key?(p.name.to_s)
+        elsif params.has_param?(p.name.to_s) # FIXME: remove double checking
           allowed[p.name] = params[p.name.to_s]
         end
       end

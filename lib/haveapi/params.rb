@@ -124,14 +124,6 @@ module HaveAPI
       @structure = s
     end
 
-    def load_validators(model)
-      tr = ValidatorTranslator.new(@params)
-
-      model.validators.each do |validator|
-        tr.translate(validator)
-      end
-    end
-
     def describe(context)
       context.layout = layout
 
@@ -145,9 +137,13 @@ module HaveAPI
       end
 
       if @direction == :input
-        ret[:parameters] = context.authorization.filter_input(@params, ret[:parameters])
+        ret[:parameters] = context.authorization.filter_input(
+                             @params,
+                             ModelAdapters::Hash.output(context, ret[:parameters]))
       else
-        ret[:parameters] = context.authorization.filter_output(@params, ret[:parameters])
+        ret[:parameters] = context.authorization.filter_output(
+                             @params,
+                             ModelAdapters::Hash.output(context, ret[:parameters]))
       end
 
       ret
@@ -204,8 +200,7 @@ module HaveAPI
     end
 
     def [](name)
-      @params.each { |p| return p if p.name == name }
-      nil
+      @params.detect { |p| p.name == name }
     end
 
     private

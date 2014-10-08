@@ -4,7 +4,7 @@
   <% @api[:versions].each do |v, info| %>
     <% next if v == :default %>
     <li>
-      <a href="<%= info[:help] %>"><%= v.to_s %></a>
+      <a href="<%= info[:help] %>">Version <%= v.to_s %></a>
       <%= '(default)' if v == @api[:default_version] %>
     </li>
   <% end %>

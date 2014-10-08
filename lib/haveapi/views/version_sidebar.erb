@@ -16,7 +16,7 @@
     </li>
 <% end %>
 
-<h1>Authorization</h1>
+<h1>Authentication</h1>
 <p class="authentication">
   <% if current_user %>
       Logged as <%= current_user.login %> [<a class="logout" href="<%= logout_url %>">logout</a>]
@@ -34,13 +34,7 @@
 
 <h1>Contents</h1>
 <ul class="top-level">
-  <li>
-    <a href="#api">API v<%= @v %></a>
-    <ul>
-      <li><a href="#authentication">Authentication</a></li>
-      <li></li>
-    </ul>
-  </li>
+  <li><a href="#api">API v<%= @v %></a></li>
   <li><a href="#resources">Resources</a></li>
   <% @help[:resources].each do |resource, info| %>
       <% render_resource_nav(resource, info) %>

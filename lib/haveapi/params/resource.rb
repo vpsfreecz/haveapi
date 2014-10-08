@@ -66,6 +66,10 @@ module HaveAPI::Parameters
       }
     end
 
+    def patch(attrs)
+      attrs.each { |k, v| instance_variable_set("@#{k}", v) }
+    end
+
     def clean(raw)
       @resource.model.find(raw) if (raw.is_a?(String) && !raw.empty?) || (!raw.is_a?(String) && raw)
     end

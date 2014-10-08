@@ -71,12 +71,12 @@ module HaveAPI::Parameters
 
       if @choices
         if @choices.is_a?(Array)
-          unless @choices.include?(val) || @choices.include?(val.to_sym)
+          unless @choices.include?(val) || @choices.include?(val.to_s.to_sym)
             raise HaveAPI::ValidationError.new("invalid choice '#{raw}'")
           end
 
         elsif @choices.is_a?(Hash)
-          unless @choices.has_key?(val) || @choices.has_key?(val.to_sym)
+          unless @choices.has_key?(val) || @choices.has_key?(val.to_s.to_sym)
             raise HaveAPI::ValidationError.new("invalid choice '#{raw}'")
           end
         end

@@ -72,7 +72,7 @@ class Token extends Base {
 		$ret = $this->rs->request(array(
 			'login' => $this->opts['username'],
 			'password' => $this->opts['password'],
-			'lifetime' => $this->translateLifetime(isSet($this->opts['lifetime']) ? $this->opts['lifetime'] : 'renewable_auto'),
+			'lifetime' => isSet($this->opts['lifetime']) ? $this->opts['lifetime'] : 'renewable_auto',
 			'interval' => isSet($this->opts['interval']) ? $this->opts['interval'] : 300
 		));
 		
@@ -106,10 +106,5 @@ class Token extends Base {
 	 */
 	public function getValidTo() {
 		return $this->validTo;
-	}
-	
-	private function translateLifetime($lifetime) {
-		$options = array('fixed', 'renewable_manual', 'renewable_auto', 'permanent');
-		return array_search($lifetime, $options);
 	}
 }

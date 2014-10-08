@@ -5,6 +5,7 @@ $_haveapi_client_classes = array(
 	'Client/Authentication/NoAuth',
 	'Client/Authentication/Basic',
 	'Client/Authentication/Token',
+	'Client/Exception/Base',
 	'Client/Exception/ActionFailed',
 	'Client/Exception/AuthenticationFailed',
 	'Client/Action',

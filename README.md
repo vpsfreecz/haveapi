@@ -48,9 +48,8 @@ Next time, authenticate with the previously received token:
 
 	$api->authenticate('token', ['token' => $token]);
 
-Resources and actions can be accessed using two methods.
 
-### Access as array indexes
+### Access resources and actions as array indexes
 
 	$api['vps']['index']->call();
 	$api['vps']['show']->call(101);
@@ -60,7 +59,7 @@ or
 	$api['vps.index']->call();
 	$api['vps.show']->call(101);
 
-### Access as properties/methods
+### Access resources and actions as properties/methods
 
 	$api->vps->list();
 
@@ -128,10 +127,17 @@ result in exception `\HaveAPI\Client\Exception\AuthenticationFailed`.
 	try {
 		$api->vps->create();
 		
-	} catch(\HaveAPI\ActionFailed $e) {
+	} catch(\HaveAPI\Client\Exception\ActionFailed $e) {
 		echo $e->getMessage();
 		print_r($e->getErrors());
 	}
+
+When trying to access a resource or an action that does not exist,
+`\HaveAPI\Client\Exception\ObjectNotFound` is thrown. Also, invoking an action
+without all necessary arguments (object IDs) result in
+`\HaveAPI\Client\Exception\UnresolvedArguments` exception.
+
+All exceptions thrown by the client are a subclass of `\HaveAPI\Client\Exception\Base`.
 
 Documentation
 -------------

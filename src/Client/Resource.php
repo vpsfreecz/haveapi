@@ -106,7 +106,7 @@ class Resource implements \ArrayAccess {
 			return $obj;
 		}
 		
-		throw new Exception\ActionFailed("'$name' is not an action nor a resource.");
+		throw new Exception\ObjectNotFound("'$name' is not an action nor a resource.");
 	}
 	
 	/**

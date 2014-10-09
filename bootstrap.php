@@ -8,6 +8,8 @@ $_haveapi_client_classes = array(
 	'Client/Exception/Base',
 	'Client/Exception/ActionFailed',
 	'Client/Exception/AuthenticationFailed',
+	'Client/Exception/ObjectNotFound',
+	'Client/Exception/UnresolvedArguments',
 	'Client/Action',
 	'Client/Resource',
 	'Client/ResourceInstance',
@@ -19,3 +21,5 @@ $_haveapi_client_classes = array(
 foreach($_haveapi_client_classes as $class) {
 	include "src/$class.php";
 }
+
+unset($_haveapi_client_classes);

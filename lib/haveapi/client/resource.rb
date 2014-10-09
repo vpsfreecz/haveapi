@@ -1,7 +1,7 @@
 module HaveAPI::Client
   # An API resource.
   class Resource
-    attr_reader :actions, :resources, :name
+    attr_reader :actions, :resources
     attr_accessor :prepared_args
 
     def initialize(client, api, name)
@@ -49,6 +49,13 @@ module HaveAPI::Client
     # is not persistent until ResourceInstance#save is called.
     def new
       ResourceInstance.new(@client, @api, self, action: @actions[:create], persistent: false)
+    end
+
+    # Return resource name.
+    # Method is prefixed with an underscore to prevent name collision
+    # with ResourceInstance attributes.
+    def _name
+      @name
     end
 
     protected
@@ -118,7 +125,7 @@ module HaveAPI::Client
     end
 
     def define_resource(resource)
-      define_singleton_method(resource.name) do |*args|
+      define_singleton_method(resource._name) do |*args|
         tmp = resource.dup
         tmp.prepared_args = @prepared_args + args
         tmp.setup_from_clone(resource)

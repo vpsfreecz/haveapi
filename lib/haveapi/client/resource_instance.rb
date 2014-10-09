@@ -9,7 +9,7 @@ module HaveAPI::Client
   class ResourceInstance < Resource
     def initialize(client, api, resource, action: nil, response: nil,
                    resolved: false, resolve_params: nil, persistent: true)
-      super(client, api, resource.name)
+      super(client, api, resource._name)
 
       @action = action
       @resource = resource
@@ -97,7 +97,7 @@ module HaveAPI::Client
     end
 
     def to_s
-      "<#{self.class.to_s}:#{object_id}:#{@resource.name}>"
+      "<#{self.class.to_s}:#{object_id}:#{@resource._name}>"
     end
 
     protected

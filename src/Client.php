@@ -13,6 +13,7 @@ class Client extends Client\Resource {
 	private $queryParams;
 	private $descCallback = null;
 	private static $authProviders = array();
+	private $spentTime = 0.0;
 	
 	/**
 	 * Register authentication provider with $name and implementation in $class.
@@ -117,13 +118,22 @@ class Client extends Client\Resource {
 	}
 	
 	/**
+	 * Return time spent communicating with the API.
+	 * @return float spent time
+	 */
+	public function getSpentTime() {
+		return $this->spentTime;
+	}
+	
+	/**
 	 * Invoke action $action with $params and interpret the response.
 	 * @param Action $action
 	 * @param array $params
 	 * @return mixed response
 	 */
 	public function call($action, $params = array()) {
-		$response = new Client\Response($action, $this->directCall($action, $params));
+		$time = 0.0;
+		$response = new Client\Response($action, $this->directCall($action, $params, $time), $time);
 		
 		if(!$response->isOk()) {
 			throw new Client\Exception\ActionFailed($response, "Action '".$action->name()."' failed: ".$response->getMessage());
@@ -145,9 +155,10 @@ class Client extends Client\Resource {
 	 * Invoke action $action with $params and do not interpret the response.
 	 * @param Action $action
 	 * @param array $params
+	 * @param float &$time set to time spent communicating with the API, if not null
 	 * @return \Httpful\Response response
 	 */
-	public function directCall($action, $params = array()) {
+	public function directCall($action, $params = array(), &$time = NULL) {
 		$fn = strtolower($action->httpMethod());
 		
 // 		echo "execute {$action->httpMethod()} {$action->url()}\n<br>\n";
@@ -158,8 +169,17 @@ class Client extends Client\Resource {
 			$request->body(empty($params) ? '{}' : json_encode(array($action->getNamespace('input') => $params)));
 		
 		$this->authProvider->authenticate($request);
+
+		$start = microtime(true);
+		$ret = $this->sendRequest($request, $action, $params);
+		$diff = microtime(true) - $start;
 		
-		return $this->sendRequest($request, $action, $params);
+		$this->accountTime($diff);
+		
+		if($time !== NULL)
+			$time = $diff;
+		
+		return $ret;
 	}
 	
 	/**
@@ -238,6 +258,14 @@ class Client extends Client\Resource {
 		$this->authProvider->authenticate($request);
 		
 		return $this->sendRequest($request)->body->response;
+	}
+	
+	/**
+	 * Account spent time.
+	 * @param float $t
+	 */
+	protected function accountTime($t) {
+		$this->spentTime += $t;
 	}
 	
 	protected function findObject($name, $description = null) {

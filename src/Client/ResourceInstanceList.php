@@ -33,7 +33,7 @@ class ResourceInstanceList implements \ArrayAccess, \Iterator {
 	/**
 	 * @return Response
 	 */
-	public function apiResponse() {
+	public function getApiResponse() {
 		return $this->response;
 	}
 	

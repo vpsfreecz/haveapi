@@ -8,17 +8,20 @@ namespace HaveAPI\Client;
 class Response implements \ArrayAccess {
 	private $action;
 	private $envelope;
+	private $time;
 	
 	/**
 	 * @param Action $action
-	 * @param \Httpful\Response envelope received response
+	 * @param \Httpful\Response $response envelope received response
+	 * @param float $time time spent communicating with the API
 	 */
-	public function __construct($action, $response) {
+	public function __construct($action, $response, $time) {
 		if($response->code == 401)
 			throw new Exception\AuthenticationFailed($response->body->message);
 		
 		$this->action = $action;
 		$this->envelope = $response->body;
+		$this->time = $time;
 	}
 	
 	/**
@@ -63,6 +66,14 @@ class Response implements \ArrayAccess {
 	
 	public function __toString() {
 		return json_encode($this->getResponse());
+	}
+	
+	/**
+	 * Return time spent communicating with the API to get this response.
+	 * @return float spent time
+	 */
+	public function getSpentTime() {
+		return $this->time;
 	}
 	
 	// ArrayAccess

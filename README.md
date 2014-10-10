@@ -134,7 +134,7 @@ result in exception `\HaveAPI\Client\Exception\AuthenticationFailed`.
 
 When trying to access a resource or an action that does not exist,
 `\HaveAPI\Client\Exception\ObjectNotFound` is thrown. Also, invoking an action
-without all necessary arguments (object IDs) result in
+without all necessary arguments (object IDs) results in
 `\HaveAPI\Client\Exception\UnresolvedArguments` exception.
 
 All exceptions thrown by the client are a subclass of `\HaveAPI\Client\Exception\Base`.

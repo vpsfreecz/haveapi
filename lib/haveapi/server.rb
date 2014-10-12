@@ -15,6 +15,17 @@ module HaveAPI
         @current_user
       end
 
+      def access_control
+        if request.env['HTTP_ORIGIN'] && request.env['HTTP_ACCESS_CONTROL_REQUEST_METHOD']
+          halt 200, {
+                'Access-Control-Allow-Origin' => '*',
+                'Access-Control-Allow-Methods' => 'GET,POST,OPTIONS,PATCH,PUT,DELETE',
+                'Access-Control-Allow-Credentials' => 'false',
+                'Access-Control-Allow-Headers' => settings.api_server.allowed_headers
+          }, ''
+        end
+      end
+
       def current_user
         @current_user
       end
@@ -55,6 +66,7 @@ module HaveAPI
 
     def initialize(module_name = HaveAPI.module_name)
       @module_name = module_name
+      @allowed_headers = ['Content-Type']
       @auth_chain = HaveAPI::Authentication::Chain.new(self)
       @hooks = {post_authenticated: []}
     end
@@ -107,6 +119,8 @@ module HaveAPI
           end
 
           content_type @formatter.content_type, charset: 'utf-8'
+          headers 'Access-Control-Allow-Origin' => '*',
+                  'Access-Control-Allow-Credentials' => 'false'
         end
 
         not_found do
@@ -135,6 +149,7 @@ module HaveAPI
       end
 
       @sinatra.options @root do
+        access_control
         authenticated?(settings.api_server.default_version)
         ret = nil
 
@@ -226,6 +241,7 @@ module HaveAPI
       end
 
       @sinatra.options prefix do
+        access_control
         authenticated?(v)
 
         @formatter.format(true, settings.api_server.describe_version(Context.new(settings.api_server, version: v,
@@ -306,6 +322,7 @@ module HaveAPI
       end
 
       @sinatra.options route.url do |*args|
+        access_control
         route_method = route.http_method.to_s.upcase
 
         pass if params[:method] && params[:method] != route_method
@@ -391,6 +408,16 @@ module HaveAPI
     # current user object or nil as an argument.
     def register_hook(name, &block)
       @hooks[name] << block
+    end
+
+    def allow_header(name)
+      @allowed_headers << name unless @allowed_headers.include?(name)
+      @allowed_headers_str = nil
+    end
+
+    def allowed_headers
+      return @allowed_headers_str if @allowed_headers_str
+      @allowed_headers_str = @allowed_headers.join(',')
     end
 
     def app

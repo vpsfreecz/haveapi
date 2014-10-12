@@ -82,6 +82,8 @@ module HaveAPI::Authentication
       def setup
         Resources::Token.token_instance ||= {}
         Resources::Token.token_instance[@version] = self
+
+        @server.allow_header(http_header)
       end
 
       def authenticate(request)

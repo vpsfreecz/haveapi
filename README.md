@@ -19,7 +19,7 @@ Create a client instance:
 api = new HaveAPI.Client("http://your.api.tld");
 ```
 
-Before the client can be used, it must be setup:
+Before the client can be used, it must be set up:
 
 ```js
 api.setup(function() {
@@ -107,3 +107,11 @@ api.vps.create(101, {
 	console.log("Created VPS?", reply.isOk());
 });
 ```
+
+Documentation
+-------------
+https://projects.vpsfree.cz/haveapi-client-js/ref/
+
+License
+-------
+haveapi-client-js is released under the MIT license.

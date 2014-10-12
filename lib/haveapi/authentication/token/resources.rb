@@ -25,7 +25,7 @@ permanent - the token will be valid forever, unless deleted
 END
           integer :interval, label: 'Interval',
                   desc: 'How long will requested token be valid, in seconds.',
-                  default: 60*5
+                  default: 60*5, fill: true
         end
 
         output(:hash) do

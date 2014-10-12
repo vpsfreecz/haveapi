@@ -1,9 +1,9 @@
 module HaveAPI::Parameters
   class Param
-    attr_reader :name, :label, :desc, :type
+    attr_reader :name, :label, :desc, :type, :default
 
     def initialize(name, required: nil, label: nil, desc: nil, type: nil,
-                   choices: nil, db_name: nil, default: :_nil)
+                   choices: nil, db_name: nil, default: :_nil, fill: false)
       @required = required
       @name = name
       @label = label || name.to_s.capitalize
@@ -12,6 +12,7 @@ module HaveAPI::Parameters
       @choices = choices
       @db_name = db_name
       @default = default
+      @fill = fill
       @layout = :custom
       @validators = {}
     end
@@ -26,6 +27,10 @@ module HaveAPI::Parameters
 
     def optional?
       !@required
+    end
+
+    def fill?
+      @fill
     end
 
     def add_validator(v)

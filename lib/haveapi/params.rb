@@ -177,7 +177,10 @@ module HaveAPI
             next
           end
 
-          next unless input.has_key?(p.name)
+          unless input.has_key?(p.name)
+            input[p.name] = p.default if p.fill?
+            next
+          end
 
           begin
             cleaned = p.clean(input[p.name])

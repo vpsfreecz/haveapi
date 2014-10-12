@@ -4,7 +4,7 @@ A framework for creating self-describing APIs in Ruby.
 
 Note: HaveAPI is under heavy development. It is not stable, its interface may change.
 
-## What is self-describing API?
+## What is a self-describing API?
 A self-describing API responds to HTTP method `OPTIONS` and returns description
 of available resources and their actions. The description contains
 full list of parameters, their labels, text notes, data types, validators
@@ -14,10 +14,10 @@ Clients use the self-description to learn how to communicate with the API,
 which they otherwise know nothing about.
 
 ## Main features
-- RESTful - divided into resources, which may be nested, and their actions
-- Handles network communication on both server and client, you need only to
-  define resources and actions
-- By writing the code you get the documentation for free
+- Creates RESTful APIs
+- Handles network communication, input/output formats and parameters
+  on both server and client, you need only to define resources and actions
+- By writing the code you get the documentation which is available to all clients
 - Auto-generated online HTML documentation
 - Generic interface for clients - one client can be used to access all APIs
   using this framework

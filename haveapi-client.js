@@ -34,7 +34,7 @@ c.Version = '0.4.0-dev';
 /**
  * Setup resources and actions as properties and functions.
  * @method HaveAPI.Client#setup
- * @param {Client~setupCallback} callback
+ * @param {HaveAPI.Client~doneCallback} callback
  */
 c.prototype.setup = function(callback) {
 	var that = this;
@@ -57,13 +57,20 @@ c.prototype.setup = function(callback) {
 			that[r] = new root.HaveAPI.Client.Resource(that, r, that.description.resources[r], []);
 		}
 		
-		callback(that);
+		callback(that, true);
 	});
 };
 
 /**
- * @callback HaveAPI.Client~setupCallback
- * @param {Client} client instance
+ * @callback HaveAPI.Client~doneCallback
+ * @param {HaveAPI.Client} client
+ * @param {Boolean} status true if the task was successful
+ */
+
+/**
+ * @callback HaveAPI.Client~replyCallback
+ * @param {HaveAPI.Client} client
+ * @param {HaveAPI.Client.Response} response
  */
 
 c.prototype.fetchDescription = function(callback) {
@@ -81,7 +88,7 @@ c.prototype.fetchDescription = function(callback) {
  * @method HaveAPI.Client#authenticate
  * @param {string} method name of authentication provider
  * @param {Object} opts a hash of options that is passed to the authentication provider
- * @param {Client~authCallback} callback called when the authentication is finished
+ * @param {HaveAPI.Client~doneCallback} callback called when the authentication is finished
  */
 c.prototype.authenticate = function(method, opts, callback) {
 	this.authProvider = new c.Authentication.providers[method](this, opts, this.description.authentication[method]);
@@ -99,6 +106,7 @@ c.prototype.authenticate = function(method, opts, callback) {
  * {@link HaveAPI.Client#setup} must be called if you want to use
  * the client again.
  * @method HaveAPI.Client#logout
+ * @param {HaveAPI.Client~doneCallback} callback
  */
 c.prototype.logout = function(callback) {
 	var that = this;
@@ -109,18 +117,21 @@ c.prototype.logout = function(callback) {
 		that.description = null;
 		
 		if (callback !== undefined)
-			callback();
+			callback(that, true);
 	});
 };
 
 /**
  * @method HaveAPI.Client#invoke
+ * @param {HaveAPI.Client~replyCallback} callback
  */
 c.prototype.invoke = function(action, params, callback) {
 	console.log("executing", action, "with params", params, "at", action.preparedUrl);
 	
 	var scopedParams = {};
 	scopedParams[ action.namespace('input') ] = params;
+	
+	var that = this;
 	
 	var opts = {
 		method: action.httpMethod(),
@@ -131,7 +142,7 @@ c.prototype.invoke = function(action, params, callback) {
 		params: scopedParams,
 		callback: function(status, response) {
 			if(callback !== undefined) {
-				callback(new root.HaveAPI.Client.Response(action, response));
+				callback(that, new root.HaveAPI.Client.Response(action, response));
 			}
 		}
 	}
@@ -261,6 +272,7 @@ token.prototype = new base();
 
 /**
  * @method Token#setup
+ * @param {HaveAPI.Client~doneCallback} callback
  */
 token.prototype.setup = function(callback) {
 	if (this.opts.hasOwnProperty('token')) {
@@ -268,7 +280,7 @@ token.prototype.setup = function(callback) {
 		this.configured = true;
 		
 		if(callback !== undefined)
-			callback(this.client);
+			callback(this.client, true);
 	
 	} else {
 		this.requestToken(callback);
@@ -277,6 +289,7 @@ token.prototype.setup = function(callback) {
 
 /**
  * @method HaveAPI.Client.Authentication.Token#requestToken
+ * @param {HaveAPI.Client~doneCallback} callback
  */
 token.prototype.requestToken = function(callback) {
 	this.resource = new root.HaveAPI.Client.Resource(this.client, 'token', this.description.resources.token, []);
@@ -292,10 +305,8 @@ token.prototype.requestToken = function(callback) {
 	
 	var that = this;
 	
-	this.resource.request(params, function(response) {
+	this.resource.request(params, function(c, response) {
 		if (response.isOk()) {
-			console.log("got token!", response.response().token);
-			
 			var t = response.response();
 			
 			that.token = t.token;
@@ -303,10 +314,11 @@ token.prototype.requestToken = function(callback) {
 			that.configured = true;
 			
 			if(callback !== undefined)
-				callback(that.client);
+				callback(that.client, true);
 			
 		} else {
-			console.log("Not ok :/", response.message());
+			if(callback !== undefined)
+				callback(that.client, false);
 		}
 	});
 };
@@ -326,9 +338,12 @@ token.prototype.headers = function(){
 
 /**
  * @method HaveAPI.Client.Authentication.Token#logout
+ * @param {HaveAPI.Client~doneCallback} callback
  */
 token.prototype.logout = function(callback) {
-	this.resource.revoke(null, callback);
+	this.resource.revoke(null, function(c, reply) {
+		callback(this.client, reply.isOk());
+	});
 };
 
 
@@ -438,11 +453,11 @@ a.prototype.invoke = function() {
 	
 	var that = this;
 	
-	this.client.invoke(this, args.length > 0 ? args[0] : null, function(response) {
+	this.client.invoke(this, args.length > 0 ? args[0] : null, function(c, response) {
 		that.preparedUrl = null;
 		
 		if (args.length > 1) {
-			args[1](response);
+			args[1](c, response);
 		}
 	});
 };

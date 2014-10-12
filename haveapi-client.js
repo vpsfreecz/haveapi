@@ -15,12 +15,17 @@ root.HaveAPI = {
 		this.http = new root.HaveAPI.Client.Http();
 		
 		/**
-		 * @member {Array} HaveAPI.Client#resources a list of top-level resources attached to the client
+		 * @member {Object} HaveAPI.Client#description Description received from the API.
+		 */
+		this.description = null;
+		
+		/**
+		 * @member {Array} HaveAPI.Client#resources A list of top-level resources attached to the client.
 		 */
 		this.resources = [];
 		
 		/**
-		 * @member {Object} HaveAPI.Client#authProvider selected authentication provider
+		 * @member {Object} HaveAPI.Client#authProvider Selected authentication provider.
 		 */
 		this.authProvider = new root.HaveAPI.Client.Authentication.Base();
 	}
@@ -30,6 +35,18 @@ var c = root.HaveAPI.Client;
 
 /** @constant HaveAPI.Client.Version */
 c.Version = '0.4.0-dev';
+
+/**
+ * @callback HaveAPI.Client~doneCallback
+ * @param {HaveAPI.Client} client
+ * @param {Boolean} status true if the task was successful
+ */
+
+/**
+ * @callback HaveAPI.Client~replyCallback
+ * @param {HaveAPI.Client} client
+ * @param {HaveAPI.Client.Response} response
+ */
 
 /**
  * Setup resources and actions as properties and functions.
@@ -62,20 +79,12 @@ c.prototype.setup = function(callback) {
 };
 
 /**
- * @callback HaveAPI.Client~doneCallback
- * @param {HaveAPI.Client} client
- * @param {Boolean} status true if the task was successful
+ * Fetch the description from the API.
+ * @method HaveAPI.Client#fetchDescription
+ * @private
+ * @param {HaveAPI.Client.Http~replyCallback} callback
  */
-
-/**
- * @callback HaveAPI.Client~replyCallback
- * @param {HaveAPI.Client} client
- * @param {HaveAPI.Client.Response} response
- */
-
 c.prototype.fetchDescription = function(callback) {
-	console.log("fetching description");
-	
 	this.http.request({
 		method: 'OPTIONS',
 		url: this.url + "/?describe=default",
@@ -85,15 +94,30 @@ c.prototype.fetchDescription = function(callback) {
 
 /**
  * Authenticate using selected authentication method.
+ * It is possible to avoid calling {@link HaveAPI.Client#setup} before authenticate completely,
+ * when it's certain that the client will be used only after it is authenticated. The client
+ * will be then setup more efficiently.
  * @method HaveAPI.Client#authenticate
  * @param {string} method name of authentication provider
  * @param {Object} opts a hash of options that is passed to the authentication provider
  * @param {HaveAPI.Client~doneCallback} callback called when the authentication is finished
  */
 c.prototype.authenticate = function(method, opts, callback) {
-	this.authProvider = new c.Authentication.providers[method](this, opts, this.description.authentication[method]);
-	
 	var that = this;
+	
+	if (!this.description) {
+		// The client has not yet been setup.
+		// Fetch the description, do NOT attach the resources, use it only to authenticate.
+		
+		this.fetchDescription(function(status, response) {
+			that.description = response.response;
+			that.authenticate(method, opts, callback);
+		});
+		
+		return;
+	}
+	
+	this.authProvider = new c.Authentication.providers[method](this, opts, this.description.authentication[method]);
 	
 	this.authProvider.setup(function() {
 		// Fetch new description, which may be different when authenticated
@@ -163,6 +187,12 @@ c.prototype.destroyResources = function() {
 var http = c.Http = function() {};
 
 /**
+ * @callback HaveAPI.Client.Http~replyCallback
+ * @param {Integer} received HTTP status code
+ * @param {Object} received response
+ */
+
+/**
  * @method HaveAPI.Client.Http#request
  */
 http.prototype.request = function(opts) {
@@ -227,12 +257,43 @@ c.Authentication = {
  * @memberof HaveAPI.Client.Authentication
  */
 var base = c.Authentication.Base = function(client, opts, description){};
+
+/**
+ * Setup the authentication provider and call the callback.
+ * @method HaveAPI.Client.Authentication.Base#setup
+ * @param {HaveAPI.Client~doneCallback} callback
+ */
 base.prototype.setup = function(callback){};
+
+/**
+ * Logout, destroy all resources and call the callback.
+ * @method HaveAPI.Client.Authentication.Base#logout
+ * @param {HaveAPI.Client~doneCallback} callback
+ */
 base.prototype.logout = function(callback) {
-	callback();
+	callback(this.client, true);
 };
+
+/**
+ * Returns an object with keys 'user' and 'password' that are used
+ * for HTTP basic auth.
+ * @method HaveAPI.Client.Authentication.Base#credentials
+ * @return {Object} credentials
+ */
 base.prototype.credentials = function(){};
+
+/**
+ * Returns an object with HTTP headers to be sent with the request.
+ * @method HaveAPI.Client.Authentication.Base#headers
+ * @return {Object} HTTP headers
+ */
 base.prototype.headers = function(){};
+
+/**
+ * Returns an object with query parameters to be sent with the request.
+ * @method HaveAPI.Client.Authentication.Base#queryParameters
+ * @return {Object} query parameters
+ */
 base.prototype.queryParameters = function(){};
 
 /**
@@ -248,11 +309,21 @@ var basic = c.Authentication.Basic = function(client, opts, description) {
 };
 basic.prototype = new base();
 
+/**
+ * @method HaveAPI.Client.Authentication.Basic#setup
+ * @param {HaveAPI.Client~doneCallback} callback
+ */
 basic.prototype.setup = function(callback) {
 	if(callback !== undefined)
-		callback();
+		callback(this.client, true);
 };
 
+/**
+ * Returns an object with keys 'user' and 'password' that are used
+ * for HTTP basic auth.
+ * @method HaveAPI.Client.Authentication.Basic#credentials
+ * @return {Object} credentials
+ */
 basic.prototype.credentials = function() {
 	return this.opts;
 };
@@ -267,11 +338,16 @@ var token = c.Authentication.Token = function(client, opts, description) {
 	this.opts = opts;
 	this.description = description;
 	this.configured = false;
+	
+	/**
+	 * @member {String} HaveAPI.Client.Authentication.Token#token The token received from the API.
+	 */
+	this.token = null;
 };
 token.prototype = new base();
 
 /**
- * @method Token#setup
+ * @method HaveAPI.Client.Authentication.Token#setup
  * @param {HaveAPI.Client~doneCallback} callback
  */
 token.prototype.setup = function(callback) {

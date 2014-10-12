@@ -95,7 +95,7 @@ or authenticated.
 
 ```js
 // Get a resource
-api.vps.show(101, null, function(c, reply) {
+api.vps.show(101, function(c, reply) {
 	console.log("Received VPS:", reply.response());
 });
 

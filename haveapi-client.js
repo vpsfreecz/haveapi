@@ -3,6 +3,13 @@
  * @namespace HaveAPI
  * @author Jakub Skokan <jakub.skokan@vpsfree.cz>
  */
+
+
+/********************************************************************************/
+/*******************************  HAVEAPI.CLIENT  *******************************/
+/********************************************************************************/
+
+
 root.HaveAPI = {
 	/**
 	 * Create a new client for the API.
@@ -180,6 +187,12 @@ c.prototype.destroyResources = function() {
 	}
 };
 
+
+/********************************************************************************/
+/*************************  HAVEAPI.HTTP.CLIENT  ********************************/
+/********************************************************************************/
+
+
 /**
  * @class Http
  * @memberof HaveAPI.Client
@@ -188,8 +201,8 @@ var http = c.Http = function() {};
 
 /**
  * @callback HaveAPI.Client.Http~replyCallback
- * @param {Integer} received HTTP status code
- * @param {Object} received response
+ * @param {Integer} status received HTTP status code
+ * @param {Object} response received response
  */
 
 /**
@@ -227,6 +240,12 @@ http.prototype.request = function(opts) {
 	}
 };
 
+
+/********************************************************************************/
+/*********************  HAVEAPI.CLIENT.AUTHENTICATION  **************************/
+/********************************************************************************/
+
+
 /**
  * @namespace Authentication
  * @memberof HaveAPI.Client
@@ -249,6 +268,12 @@ c.Authentication = {
 		c.Authentication.providers[name] = obj;
 	}
 };
+
+
+/********************************************************************************/
+/*******************  HAVEAPI.CLIENT.AUTHENTICATION.BASE  ***********************/
+/********************************************************************************/
+
 
 /**
  * @class Base
@@ -296,6 +321,12 @@ base.prototype.headers = function(){};
  */
 base.prototype.queryParameters = function(){};
 
+
+/********************************************************************************/
+/******************  HAVEAPI.CLIENT.AUTHENTICATION.BASIC  ***********************/
+/********************************************************************************/
+
+
 /**
  * @class Basic
  * @classdesc Authentication provider for HTTP basic auth.
@@ -327,6 +358,12 @@ basic.prototype.setup = function(callback) {
 basic.prototype.credentials = function() {
 	return this.opts;
 };
+
+
+/********************************************************************************/
+/*******************  HAVEAPI.CLIENT.AUTHENTICATION.TOKEN  **********************/
+/********************************************************************************/
+
 
 /**
  * @class Token
@@ -423,9 +460,19 @@ token.prototype.logout = function(callback) {
 };
 
 
+/********************************************************************************/
+/***************  HAVEAPI.CLIENT.AUTHENTICATION REGISTRATION  *******************/
+/********************************************************************************/
+
+
 // Register built-in providers
 c.Authentication.registerProvider('basic', basic);
 c.Authentication.registerProvider('token', token);
+
+
+/********************************************************************************/
+/************************  HAVEAPI.CLIENT.RESOURCE  *****************************/
+/********************************************************************************/
 
 
 /**
@@ -472,6 +519,12 @@ r.prototype.applyArguments = function(args) {
 	return this;
 }
 
+
+/********************************************************************************/
+/*************************  HAVEAPI.CLIENT.ACTION  ******************************/
+/********************************************************************************/
+
+
 /**
  * @class Action
  * @memberof HaveAPI.Client
@@ -495,18 +548,68 @@ var a = c.Action = function(client, resource, name, description, args) {
 	return fn;
 };
 
+/**
+ * Returns action's HTTP method.
+ * @method HaveAPI.Client.Action#httpMethod
+ * @return {String}
+ */
 a.prototype.httpMethod = function() {
 	return this.description.method;
 };
 
+/**
+ * Returns action's namespace.
+ * @method HaveAPI.Client.Action#namespace
+ * @param {String} direction input/output
+ * @return {String}
+ */
 a.prototype.namespace = function(direction) {
 	return this.description[direction].namespace;
 };
 
+/**
+ * Returns action's layout.
+ * @method HaveAPI.Client.Action#layout
+ * @param {String} direction input/output
+ * @return {String}
+ */
 a.prototype.layout = function(direction) {
 	return this.description[direction].layout;
 };
 
+/**
+ * Invoke the action.
+ * This method has a variable number of arguments. Arguments are first applied
+ * as object IDs in action URL. When there are no more URL parameters to fill,
+ * the second last argument is an Object containing parameters to be sent.
+ * The last argument is a {@link HaveAPI.Client~replyCallback} callback function.
+ * 
+ * The argument with parameters may be omitted, if the callback function
+ * is in its place.
+ * 
+ * Arguments do not have to be passed to this method specifically. They may
+ * be given to the resources above, the only thing that matters is their correct
+ * order.
+ * 
+ * @example
+ * // Call with parameters and a callback.
+ * // The first argument '1' is a VPS ID.
+ * api.vps.ip_address.list(1, {limit: 5}, function(c, reply) {
+ * 		console.log("Got", reply.response());
+ * });
+ * 
+ * @example
+ * // Call only with a callback. 
+ * api.vps.ip_address.list(1, function(c, reply) {
+ * 		console.log("Got", reply.response());
+ * });
+ * 
+ * @example
+ * // Give parameters to resources.
+ * api.vps(101).ip_address(33).delete();
+ * 
+ * @method HaveAPI.Client.Action#invoke
+ */
 a.prototype.invoke = function() {
 	var args = this.args.concat(Array.prototype.slice.call(arguments));
 	var rx = /(:[a-zA-Z\-_]+)/;
@@ -528,15 +631,26 @@ a.prototype.invoke = function() {
 	}
 	
 	var that = this;
+	var hasParams = args.length > 0;
+	var isFn = hasParams && args.length == 1 && typeof(args[0]) == "function";
 	
-	this.client.invoke(this, args.length > 0 ? args[0] : null, function(c, response) {
+	this.client.invoke(this, hasParams && !isFn ? args[0] : null, function(c, response) {
 		that.preparedUrl = null;
 		
 		if (args.length > 1) {
 			args[1](c, response);
+			
+		} else if(isFn) {
+			args[0](c, response);
 		}
 	});
 };
+
+
+/********************************************************************************/
+/************************  HAVEAPI.CLIENT.RESPONSE  *****************************/
+/********************************************************************************/
+
 
 /**
  * @class Response

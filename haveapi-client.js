@@ -64,26 +64,22 @@ c.prototype.setup = function(callback) {
 	var that = this;
 	
 	this.fetchDescription(function(status, response) {
-// 		console.log(status, response);
-// 		console.log(response.response);
-		
-		// Detach existing resources
-		if (that.resources.length > 0) {
-			that.destroyResources();
-		}
-		
 		that.description = response.response;
-		
-		for(var r in that.description.resources) {
-			console.log("Attach resource", r);
-			that.resources.push(r);
-			
-			that[r] = new root.HaveAPI.Client.Resource(that, r, that.description.resources[r], []);
-		}
+		that.attachResources();
 		
 		callback(that, true);
 	});
 };
+
+/**
+ * Provide the description and setup the client without asking the API.
+ * @method HaveAPI.Client#useDescription
+ * @param {Object} description
+ */
+c.prototype.useDescription = function(description) {
+	this.description = description;
+	this.attachResources();
+}
 
 /**
  * Fetch the description from the API.
@@ -97,6 +93,25 @@ c.prototype.fetchDescription = function(callback) {
 		url: this.url + "/?describe=default",
 		callback: callback
 	});
+};
+
+/**
+ * Attach API resources from the description to the client.
+ * @method HaveAPI.Client#attachResources
+ * @private
+ */
+c.prototype.attachResources = function() {
+	// Detach existing resources
+	if (this.resources.length > 0) {
+		this.destroyResources();
+	}
+	
+	for(var r in this.description.resources) {
+		console.log("Attach resource", r);
+		this.resources.push(r);
+		
+		this[r] = new root.HaveAPI.Client.Resource(this, r, this.description.resources[r], []);
+	}
 };
 
 /**
@@ -181,6 +196,11 @@ c.prototype.invoke = function(action, params, callback) {
 	this.http.request(opts);
 };
 
+/**
+ * Detach resources from the client.
+ * @method HaveAPI.Client#destroyResources
+ * @private
+ */
 c.prototype.destroyResources = function() {
 	while (this.resources.length < 0) {
 		delete this[ that.resources.shift() ];
@@ -494,12 +514,13 @@ var r = c.Resource = function(client, name, description, args){
 	}
 	
 	for(var a in description.actions) {
-		this.actions.push(a);
+		var names = [a].concat(description.actions[a].aliases);
+		var actionInstance = new root.HaveAPI.Client.Action(this.client, this, a, description.actions[a], this.args);
 		
-		this[a] = new root.HaveAPI.Client.Action(this.client, this, a, description.actions[a], this.args);
-// 		this[a] = function() {
-// 			// execute action
-// 		}
+		for(var i = 0; i < names.length; i++) {
+			this.actions.push(names[i]);
+			this[names[i]] = actionInstance;
+		}
 	}
 	
 	var that = this;

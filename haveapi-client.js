@@ -118,7 +118,7 @@ c.prototype.attachResources = function() {
  * Authenticate using selected authentication method.
  * It is possible to avoid calling {@link HaveAPI.Client#setup} before authenticate completely,
  * when it's certain that the client will be used only after it is authenticated. The client
- * will be then setup more efficiently.
+ * will be then set up more efficiently.
  * @method HaveAPI.Client#authenticate
  * @param {string} method name of authentication provider
  * @param {Object} opts a hash of options that is passed to the authentication provider
@@ -173,10 +173,6 @@ c.prototype.logout = function(callback) {
  */
 c.prototype.invoke = function(action, params, callback) {
 	console.log("executing", action, "with params", params, "at", action.preparedUrl);
-	
-	var scopedParams = {};
-	scopedParams[ action.namespace('input') ] = params;
-	
 	var that = this;
 	
 	var opts = {
@@ -185,12 +181,23 @@ c.prototype.invoke = function(action, params, callback) {
 		credentials: this.authProvider.credentials(),
 		headers: this.authProvider.headers(),
 		queryParameters: this.authProvider.queryParameters(),
-		params: scopedParams,
 		callback: function(status, response) {
 			if(callback !== undefined) {
 				callback(that, new root.HaveAPI.Client.Response(action, response));
 			}
 		}
+	}
+	
+	var paramsInQuery = this.sendAsQueryParams(opts.method);
+	
+	if (paramsInQuery) {
+		opts.url = this.addParamsToQuery(opts.url, action.namespace('input'), params);
+		
+	} else {
+		var scopedParams = {};
+		scopedParams[ action.namespace('input') ] = params;
+		
+		opts.params = scopedParams;
 	}
 	
 	this.http.request(opts);
@@ -206,6 +213,48 @@ c.prototype.destroyResources = function() {
 		delete this[ that.resources.shift() ];
 	}
 };
+
+/**
+ * Return true if the parameters should be sent as a query parameters,
+ * which is the case for GET and OPTIONS methods.
+ * @method HaveAPI.Client#sendAsQueryParams
+ * @param {String} method HTTP method
+ * @return {Boolean}
+ * @private
+ */
+c.prototype.sendAsQueryParams = function(method) {
+	return ['GET', 'OPTIONS'].indexOf(method) != -1;
+}
+
+/**
+ * Add URL encoded parameters to URL.
+ * Note that this method does not support object_list or hash_list layouts.
+ * @method HaveAPI.Client#addParamsToQuery
+ * @param {String} url
+ * @param {String} namespace
+ * @param {Object} params
+ * @private
+ */
+c.prototype.addParamsToQuery = function(url, namespace, params) {
+	var first = true;
+	
+	for (var key in params) {
+		if (first) {
+			if (url.indexOf('?') == -1)
+				url += '?';
+				
+			else if (url[ url.length - 1 ] != '&')
+				url += '&';
+			
+			first = false;
+			
+		} else url += '&';
+		
+		url += encodeURI(namespace) + '[' + encodeURI(key) + ']=' + encodeURI(params[key]);
+	}
+	
+	return url;
+}
 
 
 /********************************************************************************/
@@ -232,27 +281,28 @@ http.prototype.request = function(opts) {
 	console.log("request to " + opts.method + " " + opts.url);
 	var r = new XMLHttpRequest();
 	
-	if(opts.credentials === undefined)
+	if (opts.credentials === undefined)
 		r.open(opts.method, opts.url);
 	else
 		r.open(opts.method, opts.url, true, opts.credentials.username, opts.credentials.password);
 	
-	for(var h in opts.headers) {
+	for (var h in opts.headers) {
 		r.setRequestHeader(h, opts.headers[h]);
 	}
 	
-	r.setRequestHeader('Content-Type', 'application/json; charset=utf-8');
+	if (opts.params !== undefined)
+		r.setRequestHeader('Content-Type', 'application/json; charset=utf-8');
 	
 	r.onreadystatechange = function() {
 		var state = r.readyState;
 		console.log('state is ' + state);
 		
-		if(state == 4 && opts.callback !== undefined) {
+		if (state == 4 && opts.callback !== undefined) {
 			opts.callback(r.status, JSON.parse(r.responseText));
 		}
 	};
 	
-	if(opts.params !== undefined) {
+	if (opts.params !== undefined) {
 		r.send(JSON.stringify( opts.params ));
 		
 	} else {

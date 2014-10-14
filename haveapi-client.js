@@ -20,6 +20,14 @@ root.HaveAPI = {
 	 */
 	Client: function(url, opts) {
 		this.url = url;
+		
+		while (this.url.length > 0) {
+			if (this.url[ this.url.length - 1 ] == '/')
+				this.url = this.url.substr(0, this.url.length - 1);
+			
+			else break;
+		}
+		
 		this.http = new root.HaveAPI.Client.Http();
 		this.version = (opts !== undefined && opts.version !== undefined) ? opts.version : null;
 		

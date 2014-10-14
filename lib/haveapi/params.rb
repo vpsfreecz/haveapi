@@ -178,7 +178,7 @@ module HaveAPI
           end
 
           unless input.has_key?(p.name)
-            input[p.name] = p.default if p.fill?
+            input[p.name] = p.default if p.respond_to?(:fill?) && p.fill?
             next
           end
 

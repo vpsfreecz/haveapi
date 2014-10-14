@@ -16,10 +16,12 @@ root.HaveAPI = {
 	 * @class Client
 	 * @memberof HaveAPI
 	 * @param {string} url base URL to the API
+	 * @param {Object} opts
 	 */
-	Client: function(url) {
+	Client: function(url, opts) {
 		this.url = url;
 		this.http = new root.HaveAPI.Client.Http();
+		this.version = (opts !== undefined && opts.version !== undefined) ? opts.version : null;
 		
 		/**
 		 * @member {Object} HaveAPI.Client#description Description received from the API.
@@ -56,6 +58,13 @@ c.Version = '0.4.0-dev';
  */
 
 /**
+ * @callback HaveAPI.Client~versionsCallback
+ * @param {HaveAPI.Client} client
+ * @param {Boolean} status
+ * @param {Object} versions
+ */
+
+/**
  * Setup resources and actions as properties and functions.
  * @method HaveAPI.Client#setup
  * @param {HaveAPI.Client~doneCallback} callback
@@ -82,6 +91,27 @@ c.prototype.useDescription = function(description) {
 }
 
 /**
+ * Call a callback with an object with list of available versions
+ * and the default one.
+ * @method HaveAPI.Client#availableVersions
+ * @param {HaveAPI.Client~versionsCallback} callback
+ */
+c.prototype.availableVersions = function(callback) {
+	var that = this;
+	
+	this.http.request({
+		method: 'OPTIONS',
+		url: this.url + '/?describe=versions',
+		callback: function(status, response) {
+			var r = new root.HaveAPI.Client.Response(null, response);
+			var ok = r.isOk();
+			
+			callback(that, ok, ok ? r.response() : r.message());
+		}
+	});
+}
+
+/**
  * Fetch the description from the API.
  * @method HaveAPI.Client#fetchDescription
  * @private
@@ -90,7 +120,7 @@ c.prototype.useDescription = function(description) {
 c.prototype.fetchDescription = function(callback) {
 	this.http.request({
 		method: 'OPTIONS',
-		url: this.url + "/?describe=default",
+		url: this.url + (this.version ? "/v"+ this.version +"/" : "/?describe=default"),
 		callback: callback
 	});
 };
@@ -747,6 +777,9 @@ r.prototype.isOk = function() {
  * @return {Object} response
  */
 r.prototype.response = function() {
+	if(!this.action)
+		return this.envelope.response;
+	
 	switch (this.action.layout('output')) {
 		case 'object':
 		case 'object_list':

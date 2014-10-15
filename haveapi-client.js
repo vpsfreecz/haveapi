@@ -161,9 +161,12 @@ c.prototype.attachResources = function() {
  * @param {string} method name of authentication provider
  * @param {Object} opts a hash of options that is passed to the authentication provider
  * @param {HaveAPI.Client~doneCallback} callback called when the authentication is finished
+ * @param {Boolean} reset if false, the client will not be set up again, defaults to true
  */
-c.prototype.authenticate = function(method, opts, callback) {
+c.prototype.authenticate = function(method, opts, callback, reset) {
 	var that = this;
+	
+	if (reset === undefined) reset = true;
 	
 	if (!this.description) {
 		// The client has not yet been setup.
@@ -181,7 +184,10 @@ c.prototype.authenticate = function(method, opts, callback) {
 	
 	this.authProvider.setup(function() {
 		// Fetch new description, which may be different when authenticated
-		that.setup(callback);
+		if (reset)
+			that.setup(callback);
+		else
+			callback(that, true);
 	});
 };
 

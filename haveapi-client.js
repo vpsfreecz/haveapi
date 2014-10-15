@@ -1307,4 +1307,28 @@ l.prototype.itemAt = function(index) {
 	return this.items[ index ];
 };
 
+/**
+ * Return first item.
+ * @method HaveAPI.Client.ResourceInstanceList#first
+ * @return {HaveAPI.Client.ResourceInstance}
+ */
+l.prototype.first = function() {
+	if (this.length == 0)
+		return null;
+	
+	return this.items[0];
+};
+
+/**
+ * Return last item.
+ * @method HaveAPI.Client.ResourceInstanceList#last
+ * @return {HaveAPI.Client.ResourceInstance}
+ */
+l.prototype.last = function() {
+	if (this.length == 0)
+		return null;
+	
+	return this.items[ this.length - 1 ]
+};
+
 })(window);

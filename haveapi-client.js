@@ -262,7 +262,7 @@ c.prototype.invoke = function(action, params, callback) {
 				break;
 				
 			case 'object_list':
-				callback(that, response);
+				callback(that, new root.HaveAPI.Client.ResourceInstanceList(that, action, response));
 				break;
 			
 			default:
@@ -976,9 +976,12 @@ r.prototype.message = function() {
  *                                            it is to be fetched from the API. Used
  *                                            when accessed as an association from another
  *                                            resource instance.
+ * @param {Boolean}                 item      When true, this object was returned in a list,
+ *                                            therefore response is not a Response instance,
+ *                                            but just an object with parameters.
  * @memberof HaveAPI.Client
  */
-var i = c.ResourceInstance = function(client, action, response, shell) {
+var i = c.ResourceInstance = function(client, action, response, shell, item) {
 	this.client = client;
 	this.action = action;
 	this.response = response;
@@ -993,7 +996,7 @@ var i = c.ResourceInstance = function(client, action, response, shell) {
 			action.directInvoke(function(c, response) {
 				that.attachResources(that.action.resource.description, action.providedIdArgs);
 				that.attachActions(that.action.resource.description, action.providedIdArgs);
-				that.attachAttributes(response.response());
+				that.attachAttributes(item ? response : response.response());
 				
 				that.resolved = true;
 				
@@ -1014,13 +1017,13 @@ var i = c.ResourceInstance = function(client, action, response, shell) {
 			this.attachStubAttributes();
 		}
 		
-	} else if (response.isOk()) {
+	} else if (item || response.isOk()) {
 		this.resolved = true;
 		this.persistent = true;
 		
 		this.attachResources(this.action.resource.description, action.providedIdArgs);
 		this.attachActions(this.action.resource.description, action.providedIdArgs);
-		this.attachAttributes(response.response());
+		this.attachAttributes(item ? response : response.response());
 		
 	} else {
 		// FIXME
@@ -1229,5 +1232,79 @@ i.prototype.createAttribute = function(attr, desc) {
 			});
 	}
 }
+
+
+/********************************************************************************/
+/******************  HAVEAPI.CLIENT.RESOURCEINSTANCELIST  ***********************/
+/********************************************************************************/
+
+/**
+ * Arguments are the same as for {@link HaveAPI.Client.ResourceInstance}.
+ * @class ResourceInstanceList
+ * @classdesc Represents a list of {@link HaveAPI.Client.ResourceInstance} objects.
+ * @see {@link HaveAPI.Client.ResourceInstance}
+ * @memberof HaveAPI.Client
+ */
+var l = c.ResourceInstanceList = function(client, action, response) {
+	this.response = response;
+	
+	/**
+	 * @member {Array} HaveAPI.Client.ResourceInstanceList#items An array containg all items.
+	 */
+	this.items = [];
+	
+	var ret = response.response();
+	
+	/**
+	 * @member {integer} HaveAPI.Client.ResourceInstanceList#length Number of items in the list.
+	 */
+	this.length = ret.length;
+	
+	for (var i = 0; i < this.length; i++)
+		this.items.push(new root.HaveAPI.Client.ResourceInstance(client, action, ret[i], false, true));
+};
+
+/**
+ * @callback HaveAPI.Client.ResourceInstanceList~iteratorCallback
+ * @param {HaveAPI.Client.ResourceInstance} object
+ */
+
+/**
+ * A shortcut to {@link HaveAPI.Client.Response#isOk}.
+ * @method HaveAPI.Client.ResourceInstanceList#isOk
+ * @return {Boolean}
+ */
+l.prototype.isOk = function() {
+	return this.response.isOk();
+};
+
+/**
+ * Return the response that this instance is created from.
+ * @method HaveAPI.Client.ResourceInstanceList#apiResponse
+ * @return {HaveAPI.Client.Response}
+ */
+l.prototype.apiResponse = function() {
+	return this.response;
+};
+
+/**
+ * Call fn for every item in the list.
+ * @param {HaveAPI.Client.ResourceInstanceList~iteratorCallback} fn
+ * @method HaveAPI.Client.ResourceInstanceList#each
+ */
+l.prototype.each = function(fn) {
+	for (var i = 0; i < this.length; i++)
+		fn( this.items[ i ] );
+};
+
+/**
+ * Return item at index.
+ * @method HaveAPI.Client.ResourceInstanceList#itemAt
+ * @param {Integer} index
+ * @return {HaveAPI.Client.ResourceInstance}
+ */
+l.prototype.itemAt = function(index) {
+	return this.items[ index ];
+};
 
 })(window);

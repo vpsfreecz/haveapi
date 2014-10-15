@@ -4,7 +4,7 @@ A client library for HaveAPI based APIs in JavaScript.
 
 Installation
 ------------
-Copy to your project and include it:
+Copy `haveapi-client.js` to your project and include it:
 
 ```html
 <script src="haveapi-client.js"></script>
@@ -95,17 +95,34 @@ or authenticated.
 
 ```js
 // Get a resource
-api.vps.show(101, function(c, reply) {
-	console.log("Received VPS:", reply.response());
+api.vps.show(101, function(c, vps) {
+	console.log("Received VPS:", vps.id, vps.hostname);
 });
 
 // Create a resource
 api.vps.create(101, {
-		some: 'param',
+		hostname: 'something',
 		and: 'others'
 	}, function(c, reply) {
-	console.log("Created VPS?", reply.isOk());
+	console.log('Created VPS?', reply.isOk());
 });
+
+// It's also possible to create it with an empty instance
+var myvps = api.vps.new();
+myvps.hostname = 'something_different';
+myvps.save(function(c, vps) {
+	console.log('created a vps?', vps.isOk(), vps.id);
+});
+
+// Lists of objects
+api.vps.list({limit: 10}, function(c, vpses) {
+	console.list('received a list of vpses', vpses.isOk(), vpses.length);
+	
+	vpses.each(function(vps) {
+		console.log('containing', vps.id, vps.hostname);
+	});
+});
+
 ```
 
 Documentation

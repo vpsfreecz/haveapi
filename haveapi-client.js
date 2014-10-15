@@ -96,7 +96,7 @@ c.prototype.setup = function(callback) {
 c.prototype.useDescription = function(description) {
 	this.description = description;
 	this.attachResources();
-}
+};
 
 /**
  * Call a callback with an object with list of available versions
@@ -117,7 +117,7 @@ c.prototype.availableVersions = function(callback) {
 			callback(that, ok, ok ? r.response() : r.message());
 		}
 	});
-}
+};
 
 /**
  * Fetch the description from the API.
@@ -241,7 +241,7 @@ c.prototype.directInvoke = function(action, params, callback) {
 	}
 	
 	this.http.request(opts);
-}
+};
 
 /**
  * The response is interpreted and if the layout is object or object_list, ResourceInstance
@@ -292,7 +292,7 @@ c.prototype.destroyResources = function() {
  */
 c.prototype.sendAsQueryParams = function(method) {
 	return ['GET', 'OPTIONS'].indexOf(method) != -1;
-}
+};
 
 /**
  * Add URL encoded parameters to URL.
@@ -322,7 +322,7 @@ c.prototype.addParamsToQuery = function(url, namespace, params) {
 	}
 	
 	return url;
-}
+};
 
 
 /********************************************************************************/
@@ -636,7 +636,7 @@ br.prototype.attachResources = function(description, args) {
 		
 		this[r] = new root.HaveAPI.Client.Resource(this.client, r, description.resources[r], args);
 	}
-}
+};
 
 /**
  * Attach child actions as properties.
@@ -660,7 +660,7 @@ br.prototype.attachActions = function(description, args) {
 			this[names[i]] = actionInstance;
 		}
 	}
-}
+};
 
 /**
  * Return default parameters that are to be sent to the API.
@@ -671,7 +671,7 @@ br.prototype.attachActions = function(description, args) {
  */
 br.prototype.defaultParams = function(action) {
 	return {};
-}
+};
 
 
 /********************************************************************************/
@@ -710,7 +710,7 @@ r.prototype.applyArguments = function(args) {
 	}
 	
 	return this;
-}
+};
 
 /**
  * Return a new, empty resource instance.
@@ -719,7 +719,7 @@ r.prototype.applyArguments = function(args) {
  */
 r.prototype.new = function() {
 	return new root.HaveAPI.Client.ResourceInstance(this.client, this.create, null, false);
-}
+};
 
 
 /********************************************************************************/
@@ -839,7 +839,7 @@ a.prototype.directInvoke = function() {
 	var prep = this.prepareInvoke(arguments);
 	
 	this.client.directInvoke(this, prep.params, prep.callback);
-}
+};
 
 /**
  * Prepare action invocation.
@@ -902,7 +902,7 @@ a.prototype.prepareInvoke = function(arguments) {
 			}
 		}
 	}
-}
+};
 
 
 /********************************************************************************/
@@ -1028,7 +1028,7 @@ var i = c.ResourceInstance = function(client, action, response, shell, item) {
 	} else {
 		// FIXME
 	}
-}
+};
 
 i.prototype = new c.BaseResource();
 
@@ -1045,7 +1045,7 @@ i.prototype = new c.BaseResource();
  */
 i.prototype.isOk = function() {
 	return this.response.isOk();
-}
+};
 
 /**
  * Return the response that this instance is created from.
@@ -1054,7 +1054,7 @@ i.prototype.isOk = function() {
  */
 i.prototype.apiResponse = function() {
 	return this.response;
-}
+};
 
 /**
  * Save the instance. It calls either an update or a create action,
@@ -1090,7 +1090,7 @@ i.prototype.save = function(callback) {
 			replyCallback(c, reply);
 		});
 	}
-}
+};
 
 i.prototype.defaultParams = function(action) {
 	ret = {}
@@ -1112,7 +1112,7 @@ i.prototype.defaultParams = function(action) {
 	}
 	
 	return ret;
-}
+};
 
 /**
  * Resolve an associated resource.
@@ -1133,7 +1133,7 @@ i.prototype.resolveAssociation = function(path, url) {
 	action.provideUrl(url);
 	
 	return new root.HaveAPI.Client.ResourceInstance(this.client, action, null, true);
-}
+};
 
 /**
  * Register a callback that will be called then this instance will
@@ -1166,7 +1166,7 @@ i.prototype.attachAttributes = function(attrs) {
 	for (var attr in attrs) {
 		this.createAttribute(attr, this.action.description.output.parameters[ attr ]);
 	}
-}
+};
 
 /**
  * Attach all attributes as null properties. Used when creating a new, empty instance.
@@ -1191,7 +1191,7 @@ i.prototype.attachStubAttributes = function() {
 	}
 	
 	this.attachAttributes(attrs);
-}
+};
 
 /**
  * Define getters and setters for an attribute.
@@ -1231,7 +1231,7 @@ i.prototype.createAttribute = function(attr, desc) {
 				set: function(v) { that.attributes[ attr ] = v;     }
 			});
 	}
-}
+};
 
 
 /********************************************************************************/

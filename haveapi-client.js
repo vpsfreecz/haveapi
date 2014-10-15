@@ -206,10 +206,12 @@ c.prototype.logout = function(callback) {
 };
 
 /**
- * @method HaveAPI.Client#invoke
+ * Always calls the callback with {@link HaveAPI.Client.Response} object. It does
+ * not interpret the response.
+ * @method HaveAPI.Client#directInvoke
  * @param {HaveAPI.Client~replyCallback} callback
  */
-c.prototype.invoke = function(action, params, callback) {
+c.prototype.directInvoke = function(action, params, callback) {
 	console.log("executing", action, "with params", params, "at", action.preparedUrl);
 	var that = this;
 	
@@ -239,6 +241,34 @@ c.prototype.invoke = function(action, params, callback) {
 	}
 	
 	this.http.request(opts);
+}
+
+/**
+ * The response is interpreted and if the layout is object or object_list, ResourceInstance
+ * or ResourceInstanceList is returned with the callback.
+ * @method HaveAPI.Client#invoke
+ * @param {HaveAPI.Client~replyCallback} callback
+ */
+c.prototype.invoke = function(action, params, callback) {
+	var that = this;
+	
+	this.directInvoke(action, params, function(status, response) {
+		if (callback === undefined)
+			return;
+		
+		switch (action.layout('output')) {
+			case 'object':
+				callback(that, new root.HaveAPI.Client.ResourceInstance(that, action, response));
+				break;
+				
+			case 'object_list':
+				callback(that, response);
+				break;
+			
+			default:
+				callback(that, response);
+		}
+	});
 };
 
 /**
@@ -579,6 +609,68 @@ c.Authentication.registerProvider('token', token);
 
 
 /********************************************************************************/
+/**********************  HAVEAPI.CLIENT.BASERESOURCE  ***************************/
+/********************************************************************************/
+
+
+/**
+ * @class BaseResource
+ * @classdesc Base class for {@link HaveAPI.Client.Resource}
+ * and {@link HaveAPI.Client.ResourceInstance}. Implements shared methods.
+ * @memberof HaveAPI.Client
+ */
+var br = c.BaseResource = function(){};
+
+/**
+ * Attach child resources as properties.
+ * @method HaveAPI.Client.BaseResource#attachResources
+ * @protected
+ * @param {Object} description
+ * @param {Array} args
+ */
+br.prototype.attachResources = function(description, args) {
+	this.resources = [];
+	
+	for(var r in description.resources) {
+		this.resources.push(r);
+		
+		this[r] = new root.HaveAPI.Client.Resource(this.client, r, description.resources[r], args);
+	}
+}
+
+/**
+ * Attach child actions as properties.
+ * @method HaveAPI.Client.BaseResource#attachActions
+ * @protected
+ * @param {Object} description
+ * @param {Array} args
+ */
+br.prototype.attachActions = function(description, args) {
+	this.actions = [];
+	
+	for(var a in description.actions) {
+		var names = [a].concat(description.actions[a].aliases);
+		var actionInstance = new root.HaveAPI.Client.Action(this.client, this, a, description.actions[a], args);
+		
+		for(var i = 0; i < names.length; i++) {
+			this.actions.push(names[i]);
+			this[names[i]] = actionInstance;
+		}
+	}
+}
+
+/**
+ * Return default parameters that are to be sent to the API.
+ * Default parameters are overriden by supplied parameters.
+ * @method HaveAPI.Client.BaseResource#defaultParams
+ * @protected
+ */
+br.prototype.defaultParams = function() {
+	return {};
+}
+
+
+/********************************************************************************/
 /************************  HAVEAPI.CLIENT.RESOURCE  *****************************/
 /********************************************************************************/
 
@@ -592,24 +684,9 @@ var r = c.Resource = function(client, name, description, args){
 	this.name = name;
 	this.description = description;
 	this.args = args;
-	this.resources = [];
-	this.actions = [];
 	
-	for(var r in description.resources) {
-		this.resources.push(r);
-		
-		this[r] = new root.HaveAPI.Client.Resource(this.client, r, description.resources[r], this.args);
-	}
-	
-	for(var a in description.actions) {
-		var names = [a].concat(description.actions[a].aliases);
-		var actionInstance = new root.HaveAPI.Client.Action(this.client, this, a, description.actions[a], this.args);
-		
-		for(var i = 0; i < names.length; i++) {
-			this.actions.push(names[i]);
-			this[names[i]] = actionInstance;
-		}
-	}
+	this.attachResources(description, args);
+	this.attachActions(description, args);
 	
 	var that = this;
 	var fn = function() {
@@ -620,6 +697,9 @@ var r = c.Resource = function(client, name, description, args){
 	return fn;
 };
 
+r.prototype = new c.BaseResource();
+
+// Unused
 r.prototype.applyArguments = function(args) {
 	for(var i = 0; i < args.length; i++) {
 		this.args.push(args[i]);
@@ -646,6 +726,8 @@ var a = c.Action = function(client, resource, name, description, args) {
 	this.name = name;
 	this.description = description;
 	this.args = args;
+	this.providedIdArgs = [];
+	this.preparedUrl = null;
 	
 	var that = this;
 	var fn = function() {
@@ -687,6 +769,15 @@ a.prototype.layout = function(direction) {
 };
 
 /**
+ * Set action URL. This method should be used to set fully resolved
+ * URL.
+ * @method HaveAPI.Client.Action#provideUrl
+ */
+a.prototype.provideUrl = function(url) {
+	this.preparedUrl = url;
+};
+
+/**
  * Invoke the action.
  * This method has a variable number of arguments. Arguments are first applied
  * as object IDs in action URL. When there are no more URL parameters to fill,
@@ -720,16 +811,44 @@ a.prototype.layout = function(direction) {
  * @method HaveAPI.Client.Action#invoke
  */
 a.prototype.invoke = function() {
+	var prep = this.prepareInvoke(arguments);
+	
+	this.client.invoke(this, prep.params, prep.callback);
+};
+
+/**
+ * Same use as {@link HaveAPI.Client.Action#invoke}, except that the callback
+ * is always given a {@link HaveAPI.Client.Response} object.
+ * @see HaveAPI.Client#directInvoke
+ * @method HaveAPI.Client.Action#directInvoke
+ */
+a.prototype.directInvoke = function() {
+	var prep = this.prepareInvoke(arguments);
+	
+	this.client.directInvoke(this, prep.params, prep.callback);
+}
+
+/**
+ * Prepare action invocation.
+ * @method HaveAPI.Client.Action#prepareInvoke
+ * @private
+ * @return {Object}
+ */
+a.prototype.prepareInvoke = function(arguments) {
 	var args = this.args.concat(Array.prototype.slice.call(arguments));
 	var rx = /(:[a-zA-Z\-_]+)/;
 	
-	this.preparedUrl = this.description.url;
+	if (!this.preparedUrl)
+		this.preparedUrl = this.description.url;
 	
 	while (args.length > 0) {
 		if (this.preparedUrl.search(rx) == -1)
 			break;
 		
-		this.preparedUrl = this.preparedUrl.replace(rx, args.shift());
+		var arg = args.shift();
+		this.providedIdArgs.push(arg);
+	
+		this.preparedUrl = this.preparedUrl.replace(rx, arg);
 	}
 	
 	if (args.length == 0 && this.preparedUrl.search(rx) != -1) {
@@ -742,18 +861,35 @@ a.prototype.invoke = function() {
 	var that = this;
 	var hasParams = args.length > 0;
 	var isFn = hasParams && args.length == 1 && typeof(args[0]) == "function";
+	var params = hasParams && !isFn ? args[0] : null;
 	
-	this.client.invoke(this, hasParams && !isFn ? args[0] : null, function(c, response) {
-		that.preparedUrl = null;
+	if (this.layout('input') == 'object') {
+		var defaults = this.resource.defaultParams();
 		
-		if (args.length > 1) {
-			args[1](c, response);
-			
-		} else if(isFn) {
-			args[0](c, response);
+		for (var param in this.description.input.parameters) {
+			if ( defaults.hasOwnProperty(param) && (!params || (params && !params.hasOwnProperty(param))) ) {
+				if (!params)
+					params = {};
+				
+				params[ param ] = defaults[ param ];
+			}
 		}
-	});
-};
+	}
+	
+	return {
+		params: params,
+		callback: function(c, response) {
+			that.preparedUrl = null;
+			
+			if (args.length > 1) {
+				args[1](c, response);
+				
+			} else if(isFn) {
+				args[0](c, response);
+			}
+		}
+	}
+}
 
 
 /********************************************************************************/
@@ -808,5 +944,190 @@ r.prototype.response = function() {
 r.prototype.message = function() {
 	return this.envelope.message;
 };
+
+
+/********************************************************************************/
+/********************  HAVEAPI.CLIENT.RESOURCEINSTANCE  *************************/
+/********************************************************************************/
+
+
+/**
+ * @class ResourceInstance
+ * @classdesc Represents an instance of a resource from the API. Attributes
+ *            are accessible as properties. Associations are directly accessible.
+ * @param {HaveAPI.Client}          client
+ * @param {HaveAPI.Client.Action}   action    Action that created this instance.
+ * @param {HaveAPI.Client.Response} response  If not provided, the instance is either
+ *                                            not resoved or not persistent.
+ * @param {Boolean}                 shell     If true, the resource is just a shell,
+ *                                            it is to be fetched from the API. Used
+ *                                            when accessed as an association from another
+ *                                            resource instance.
+ * @memberof HaveAPI.Client
+ */
+var i = c.ResourceInstance = function(client, action, response, shell) {
+	this.client = client;
+	this.action = action;
+	this.response = response;
+	
+	if (!response) {
+		if (shell !== undefined && shell) { // association that is to be fetched
+			this.resolved = false;
+			this.persistent = true;
+			
+			var that = this;
+			
+			action.directInvoke(function(c, response) {
+				that.attachResources(that.action.resource.description, action.providedIdArgs);
+				that.attachActions(that.action.resource.description, action.providedIdArgs);
+				that.attachAttributes(response.response());
+				
+				that.resolved = true;
+				
+				if (that.resolveCallbacks !== undefined) {
+					for (var i = 0; i < that.resolveCallbacks.length; i++)
+						that.resolveCallbacks[i](that.client, that);
+					
+					delete that.resolveCallbacks;
+				}
+			});
+			
+		} else { // a new, empty instance
+			this.resolved = true;
+			this.persistent = false;
+		}
+		
+	} else if (response.isOk()) {
+		this.resolved = true;
+		this.persistent = true;
+		
+		this.attachResources(this.action.resource.description, action.providedIdArgs);
+		this.attachActions(this.action.resource.description, action.providedIdArgs);
+		this.attachAttributes(response.response());
+		
+	} else {
+		// FIXME
+	}
+}
+
+i.prototype = new c.BaseResource();
+
+/**
+ * @callback HaveAPI.Client.ResourceInstance~resolveCallback
+ * @param {HaveAPI.Client} client
+ * @param {HaveAPI.Client.ResourceInstance} resource
+ */
+
+/**
+ * A shortcut to {@link HaveAPI.Client.Response#isOk}.
+ * @method HaveAPI.Client.ResourceInstance#isOk
+ * @return {Boolean}
+ */
+i.prototype.isOk = function() {
+	return this.response.isOk();
+}
+
+/**
+ * Return the response that this instance is created from.
+ * @method HaveAPI.Client.ResourceInstance#apiResponse
+ * @return {HaveAPI.Client.Response}
+ */
+i.prototype.apiResponse = function() {
+	return this.response;
+}
+
+/**
+ * Resolve an associated resource.
+ * A shell {@link HaveAPI.Client.ResourceInstance} instance is created
+ * and is fetched asynchronously.
+ * @method HaveAPI.Client.ResourceInstance#resolveAssociation
+ * @private
+ * @return {HaveAPI.Client.ResourceInstance}
+ */
+i.prototype.resolveAssociation = function(path, url) {
+	var tmp = this.client;
+	
+	for(var i = 0; i < path.length; i++) {
+		tmp = tmp[ path[i] ];
+	}
+	
+	var action = tmp.show;
+	action.provideUrl(url);
+	
+	return new root.HaveAPI.Client.ResourceInstance(this.client, action, null, true);
+}
+
+/**
+ * Register a callback that will be called then this instance will
+ * be fully resolved (fetched from the API).
+ * @method HaveAPI.Client.ResourceInstance#whenResolved
+ * @param {HaveAPI.Client.ResourceInstance~resolveCallback} callback
+ */
+i.prototype.whenResolved = function(callback) {
+	if (this.resolved)
+		callback(this.client, this);
+	
+	else {
+		if (this.resolveCallbacks === undefined)
+			this.resolveCallbacks = [];
+		
+		this.resolveCallbacks.push(callback);
+	}
+};
+
+/**
+ * Attach all attributes as properties.
+ * @method HaveAPI.Client.ResourceInstance#attachAttributes
+ * @private
+ * @param {Object} attrs
+ */
+i.prototype.attachAttributes = function(attrs) {
+	this.attributes = attrs;
+	this.associations = {};
+	
+	for (var attr in attrs) {
+		this.createAttribute(attr, this.action.description.output.parameters[ attr ]);
+	}
+}
+
+/**
+ * Define getters and setters for an attribute.
+ * @method HaveAPI.Client.ResourceInstance#createhAttribute
+ * @private
+ * @param {String} attr
+ * @param {Object} desc
+ */
+i.prototype.createAttribute = function(attr, desc) {
+	var that = this;
+	
+	switch (desc.type) {
+		case 'Resource':
+			Object.defineProperty(this, attr, {
+				get: function() {
+						if (that.associations.hasOwnProperty(attr))
+							return that.associations[ attr ];
+						
+						return this.associations[ attr ] = that.resolveAssociation(desc.resource, that.attributes[ attr ].url);
+					},
+				set: function(v) {
+						that.attributes[ attr ][ desc.value_id ]    = v.id;
+						that.attributes[ attr ][ desc.value_label ] = v[ desc.value_label ];
+					}
+			});
+			
+			Object.defineProperty(this, attr + '_id', {
+				get: function()  { return that.attributes[ attr ][ desc.value_id ];  },
+				set: function(v) { that.attributes[ attr ][ desc.value_id ] = v;     }
+			});
+			
+			break;
+		
+		default:
+			Object.defineProperty(this, attr, {
+				get: function()  { return that.attributes[ attr ];  },
+				set: function(v) { that.attributes[ attr ] = v;     }
+			});
+	}
+}
 
 })(window);

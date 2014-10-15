@@ -653,6 +653,9 @@ br.prototype.attachActions = function(description, args) {
 		var actionInstance = new root.HaveAPI.Client.Action(this.client, this, a, description.actions[a], args);
 		
 		for(var i = 0; i < names.length; i++) {
+			if (names[i] == 'new')
+				continue;
+			
 			this.actions.push(names[i]);
 			this[names[i]] = actionInstance;
 		}
@@ -664,8 +667,9 @@ br.prototype.attachActions = function(description, args) {
  * Default parameters are overriden by supplied parameters.
  * @method HaveAPI.Client.BaseResource#defaultParams
  * @protected
+ * @param {HaveAPI.Client.Action} action
  */
-br.prototype.defaultParams = function() {
+br.prototype.defaultParams = function(action) {
 	return {};
 }
 
@@ -706,6 +710,15 @@ r.prototype.applyArguments = function(args) {
 	}
 	
 	return this;
+}
+
+/**
+ * Return a new, empty resource instance.
+ * @method HaveAPI.Client.Resource#new
+ * @return {HaveAPI.Client.ResourceInstance} resource instance
+ */
+r.prototype.new = function() {
+	return new root.HaveAPI.Client.ResourceInstance(this.client, this.create, null, false);
 }
 
 
@@ -864,7 +877,7 @@ a.prototype.prepareInvoke = function(arguments) {
 	var params = hasParams && !isFn ? args[0] : null;
 	
 	if (this.layout('input') == 'object') {
-		var defaults = this.resource.defaultParams();
+		var defaults = this.resource.defaultParams(this);
 		
 		for (var param in this.description.input.parameters) {
 			if ( defaults.hasOwnProperty(param) && (!params || (params && !params.hasOwnProperty(param))) ) {
@@ -995,6 +1008,10 @@ var i = c.ResourceInstance = function(client, action, response, shell) {
 		} else { // a new, empty instance
 			this.resolved = true;
 			this.persistent = false;
+			
+			this.attachResources(this.action.resource.description, action.providedIdArgs);
+			this.attachActions(this.action.resource.description, action.providedIdArgs);
+			this.attachStubAttributes();
 		}
 		
 	} else if (response.isOk()) {
@@ -1034,6 +1051,64 @@ i.prototype.isOk = function() {
  */
 i.prototype.apiResponse = function() {
 	return this.response;
+}
+
+/**
+ * Save the instance. It calls either an update or a create action,
+ * depending on whether the object is persistent or not.
+ * @method HaveAPI.Client.ResourceInstance#save
+ * @param {HaveAPI.Client~replyCallback} callback
+ */
+i.prototype.save = function(callback) {
+	var that = this;
+	
+	function updateAttrs(attrs) {
+		for (var attr in attrs) {
+			that.attributes[ attr ] = attrs[ attr ];
+		}
+	};
+	
+	function replyCallback(c, reply) {
+		that.response = reply;
+		updateAttrs(reply);
+		
+		if (callback !== undefined)
+			callback(c, that);
+	}
+	
+	if (this.persistent) {
+		this.update.directInvoke(replyCallback);
+		
+	} else {
+		this.create.directInvoke(function(c, reply) {
+			if (reply.isOk())
+				that.persistent = true;
+			
+			replyCallback(c, reply);
+		});
+	}
+}
+
+i.prototype.defaultParams = function(action) {
+	ret = {}
+	
+	for (var attr in this.attributes) {
+		var desc = action.description.input.parameters[ attr ];
+		
+		if (desc === undefined)
+			continue;
+		
+		switch (desc.type) {
+			case 'Resource':
+				ret[ attr ] = this.attributes[ attr ][ desc.value_id ];
+				break;
+			
+			default:
+				ret[ attr ] = this.attributes[ attr ];
+		}
+	}
+	
+	return ret;
 }
 
 /**
@@ -1088,6 +1163,31 @@ i.prototype.attachAttributes = function(attrs) {
 	for (var attr in attrs) {
 		this.createAttribute(attr, this.action.description.output.parameters[ attr ]);
 	}
+}
+
+/**
+ * Attach all attributes as null properties. Used when creating a new, empty instance.
+ * @method HaveAPI.Client.ResourceInstance#attachStubAttributes
+ * @private
+ */
+i.prototype.attachStubAttributes = function() {
+	var attrs = {};
+	var params = this.action.description.input.parameters;
+	
+	for (var attr in params) {
+		switch (params[ attr ].type) {
+			case 'Resource':
+				attrs[ attr ] = {};
+				attrs[ attr ][ params[attr].value_id ] = null;
+				attrs[ attr ][ params[attr].value_label ] = null;
+				break;
+			
+			default:
+				attrs[ attr ] = null;
+		}
+	}
+	
+	this.attachAttributes(attrs);
 }
 
 /**

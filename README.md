@@ -116,7 +116,7 @@ myvps.save(function(c, vps) {
 
 // Lists of objects
 api.vps.list({limit: 10}, function(c, vpses) {
-	console.list('received a list of vpses', vpses.isOk(), vpses.length);
+	console.log('received a list of vpses', vpses.isOk(), vpses.length);
 	
 	vpses.each(function(vps) {
 		console.log('containing', vps.id, vps.hostname);

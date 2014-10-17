@@ -17,12 +17,12 @@ module HaveAPI
         ModelAdapter.adapters << Kernel.const_get(self.to_s)
       end
 
-      # Returns an adapter suitable for +obj+.
+      # Returns an adapter suitable for +layout+ and +obj+.
       # Adapters are iterated over and the first to return true to handle?()
       # is returned.
-      def for(obj)
-        return ModelAdapters::Hash unless obj
-        adapter = @adapters.detect { |adapter| adapter.handle?(obj) }
+      def for(layout, obj)
+        return ModelAdapters::Hash if !obj || %i(hash hash_list).include?(layout)
+        adapter = @adapters.detect { |adapter| adapter.handle?(layout, obj) }
         adapter || ModelAdapters::Hash
       end
 

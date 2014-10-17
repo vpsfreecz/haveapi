@@ -71,7 +71,7 @@ module HaveAPI::Parameters
     end
 
     def clean(raw)
-      ::HaveAPI::ModelAdapter.for(@resource.model).input_clean(@resource.model, raw)
+      ::HaveAPI::ModelAdapter.for(show_action.input.layout, @resource.model).input_clean(@resource.model, raw)
     end
 
     private

@@ -11,8 +11,7 @@ module HaveAPI
 
     attr_reader :message, :errors
     class << self
-      attr_reader :resource, :authorization, :input, :output, :model_adapter,
-                  :examples
+      attr_reader :resource, :authorization, :input, :output, :examples
 
       def inherited(subclass)
         # puts "Action.inherited called #{subclass} from #{to_s}"
@@ -36,10 +35,13 @@ module HaveAPI
         begin
           subclass.instance_variable_set(:@resource, resource)
           subclass.instance_variable_set(:@model, resource.model)
-          subclass.instance_variable_set(:@model_adapter, ModelAdapter.for(resource.model))
         rescue NoMethodError
           return
         end
+      end
+
+      def model_adapter(layout)
+        ModelAdapter.for(layout, resource.model)
       end
 
       def input(layout = nil, namespace: nil, &block)
@@ -48,7 +50,7 @@ module HaveAPI
           @input.layout = layout
           @input.namespace = namespace
           @input.instance_eval(&block)
-          @model_adapter.load_validators(model, @input) if model
+          model_adapter(@input.layout).load_validators(model, @input) if model
         else
           @input
         end
@@ -222,7 +224,7 @@ module HaveAPI
             when :object
               safe_ret = @authorization.filter_output(
                           self.class.output.params,
-                          self.class.model_adapter.output(@context, ret))
+                          self.class.model_adapter(output.layout).output(@context, ret))
 
             when :object_list
               safe_ret = []
@@ -230,20 +232,20 @@ module HaveAPI
               ret.each do |obj|
                 safe_ret << @authorization.filter_output(
                               self.class.output.params,
-                              self.class.model_adapter.output(@context, obj))
+                              self.class.model_adapter(output.layout).output(@context, obj))
               end
 
             when :hash
               safe_ret = @authorization.filter_output(
                           self.class.output.params,
-                          self.class.model_adapter.output(@context, ret))
+                          self.class.model_adapter(output.layout).output(@context, ret))
 
             when :hash_list
               safe_ret = ret
               safe_ret.map! do |hash|
                 @authorization.filter_output(
                     self.class.output.params,
-                    self.class.model_adapter.output(@context, hash))
+                    self.class.model_adapter(output.layout).output(@context, hash))
               end
 
             else
@@ -351,7 +353,7 @@ module HaveAPI
         # Then filter allowed params
         @safe_params[input.namespace] = @authorization.filter_input(
                                           self.class.input.params,
-                                          self.class.model_adapter.input(@safe_params[input.namespace]))
+                                          self.class.model_adapter(self.class.input.layout).input(@safe_params[input.namespace]))
 
         # Remove duplicit key
         @safe_params.delete(input.namespace.to_s)

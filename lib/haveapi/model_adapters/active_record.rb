@@ -3,8 +3,8 @@ module HaveAPI::ModelAdapters
   class ActiveRecord < ::HaveAPI::ModelAdapter
     register
 
-    def self.handle?(klass)
-      klass < ::ActiveRecord::Base
+    def self.handle?(layout, klass)
+      klass < ::ActiveRecord::Base && %i(object object_list).include?(layout)
     end
 
     def self.load_validators(model, params)

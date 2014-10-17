@@ -4,7 +4,7 @@ module HaveAPI::ModelAdapters
   class Hash < ::HaveAPI::ModelAdapter
     register
 
-    def self.handle?(klass)
+    def self.handle?(layout, klass)
       klass.is_a?(::Hash)
     end
 

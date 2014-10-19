@@ -199,7 +199,7 @@ module HaveAPI
             halt 404
           end
 
-          @sidebar = erb :protocol_sidebar
+          @sidebar = erb :"doc_sidebars/#{f}"
         end
       end
 

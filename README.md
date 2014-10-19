@@ -252,16 +252,11 @@ APIs that are using HaveAPI.
 - Ruby client library and CLI: https://github.com/vpsfreecz/haveapi-client
 - PHP client: https://github.com/vpsfreecz/haveapi-client-php
 
-## How to create a client
-A client for HaveAPI must completely depend on the API description. There
-mustn't be any assumptions and specific code. It does not know any
-resources, actions, parameters, nothing. Everything the client knows he must find out
-from the API description.
-That way, the client can be used for all APIs using this framework, not
-just for your instance.
+or [create your own client](doc/create-client.md).
 
 ## Read more
  - [Protocol definition](doc/protocol.md)
+ - [How to create a client](doc/create-client.md)
 
 ## Contributing
 

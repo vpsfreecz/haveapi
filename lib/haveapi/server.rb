@@ -119,8 +119,11 @@ module HaveAPI
           end
 
           content_type @formatter.content_type, charset: 'utf-8'
-          headers 'Access-Control-Allow-Origin' => '*',
-                  'Access-Control-Allow-Credentials' => 'false'
+
+          if request.env['HTTP_ORIGIN']
+            headers 'Access-Control-Allow-Origin' => '*',
+                    'Access-Control-Allow-Credentials' => 'false'
+          end
         end
 
         not_found do

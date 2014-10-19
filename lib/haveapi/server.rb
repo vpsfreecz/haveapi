@@ -21,7 +21,8 @@ module HaveAPI
                 'Access-Control-Allow-Origin' => '*',
                 'Access-Control-Allow-Methods' => 'GET,POST,OPTIONS,PATCH,PUT,DELETE',
                 'Access-Control-Allow-Credentials' => 'false',
-                'Access-Control-Allow-Headers' => settings.api_server.allowed_headers
+                'Access-Control-Allow-Headers' => settings.api_server.allowed_headers,
+                'Access-Control-Max-Age' => (60*60).to_s
           }, ''
         end
       end

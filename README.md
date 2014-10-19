@@ -251,6 +251,7 @@ APIs that are using HaveAPI.
 
 - Ruby client library and CLI: https://github.com/vpsfreecz/haveapi-client
 - PHP client: https://github.com/vpsfreecz/haveapi-client-php
+- JavaScript client: https://github.com/vpsfreecz/haveapi-client-js
 
 or [create your own client](doc/create-client.md).
 

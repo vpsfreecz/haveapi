@@ -8,13 +8,13 @@ module HaveAPI::Client
   # - not persistent - created by Resource.new, the object was not yet sent to the API.
   class ResourceInstance < Resource
     def initialize(client, api, resource, action: nil, response: nil,
-                   resolved: false, resolve_params: nil, persistent: true)
+                   resolved: false, meta: nil, persistent: true)
       super(client, api, resource._name)
 
       @action = action
       @resource = resource
       @resolved = resolved
-      @resolve_params = resolve_params
+      @meta = meta
       @persistent = persistent
       @resource_instances = {}
 
@@ -75,7 +75,7 @@ module HaveAPI::Client
     def resolve
       return self if @resolved
 
-      @action.provide_url(@resolve_params[:url], @resolve_params[:help])
+      @action.provide_args(*@meta[:url_params])
       @response = Response.new(@action, @action.execute({}))
       @params = @response.response
 
@@ -116,7 +116,7 @@ module HaveAPI::Client
 
             # value reader
             ensure_method(name) do
-              @resource_instances[name].resolve
+              @resource_instances[name] && @resource_instances[name].resolve
             end
 
             # value writer
@@ -173,13 +173,16 @@ module HaveAPI::Client
 
     # Find associated resource and create its unresolved instance.
     def find_association(res_desc, res_val)
+      return nil unless res_val
+
       tmp = @client
 
       res_desc[:resource].each do |r|
         tmp = tmp.method(r).call
       end
 
-      ResourceInstance.new(@client, @api, tmp, action: tmp.actions[:show], resolved: false, resolve_params: res_val)
+      # FIXME: read _meta namespace from description
+      ResourceInstance.new(@client, @api, tmp, action: tmp.actions[:show], resolved: false, meta: res_val[:_meta])
     end
 
     # Override Resource.default_action_input_params.

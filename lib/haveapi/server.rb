@@ -371,6 +371,7 @@ module HaveAPI
       ret = {
           authentication: @auth_chain.describe(context),
           resources: {},
+          meta: Metadata.describe,
           help: version_prefix(context.version)
       }
 

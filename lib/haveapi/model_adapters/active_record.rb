@@ -38,20 +38,25 @@ module HaveAPI::ModelAdapters
         end
       end
 
+      def meta
+        params = @context.action.resolve.call(@object)
+
+        {
+            url_params: params.is_a?(Array) ? params : [params]
+        }
+      end
+
       protected
       def resourcify(param, val)
         res_show = param.show_action
         res_output = res_show.output
 
-        val_url = @context.url_with_params(res_show, val)
-        val_method = res_show.http_method.to_s.upcase
-
         {
             param.value_id => val.send(res_output[param.value_id].db_name),
             param.value_label => val.send(res_output[param.value_label].db_name),
-            :url => val_url,
-            :method => val_method,
-            :help => "#{val_url}?method=#{val_method}"
+            _meta: {
+              :url_params => res_show.resolve.call(val)
+            }
         }
       end
     end

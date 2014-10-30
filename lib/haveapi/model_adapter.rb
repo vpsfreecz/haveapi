@@ -90,6 +90,10 @@ module HaveAPI
       def [](name)
 
       end
+
+      def meta
+        {}
+      end
     end
   end
 end

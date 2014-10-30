@@ -216,43 +216,52 @@ module HaveAPI
 
       if ret
         output = self.class.output
+        meta = {}
 
         if output
           safe_ret = nil
+          adapter = self.class.model_adapter(output.layout)
 
           case output.layout
             when :object
+              out = adapter.output(@context, ret)
               safe_ret = @authorization.filter_output(
-                          self.class.output.params,
-                          self.class.model_adapter(output.layout).output(@context, ret))
+                  self.class.output.params,
+                  out
+              )
+              meta.update(out.meta)
 
             when :object_list
               safe_ret = []
 
               ret.each do |obj|
+                out = adapter.output(@context, obj)
+
                 safe_ret << @authorization.filter_output(
-                              self.class.output.params,
-                              self.class.model_adapter(output.layout).output(@context, obj))
+                    self.class.output.params,
+                    out
+                )
+                safe_ret.last.update({Metadata.namespace => out.meta})
               end
 
             when :hash
               safe_ret = @authorization.filter_output(
                           self.class.output.params,
-                          self.class.model_adapter(output.layout).output(@context, ret))
+                          adapter.output(@context, ret))
 
             when :hash_list
               safe_ret = ret
               safe_ret.map! do |hash|
                 @authorization.filter_output(
                     self.class.output.params,
-                    self.class.model_adapter(output.layout).output(@context, hash))
+                    adapter.output(@context, hash))
               end
 
             else
               safe_ret = ret
           end
 
-          [true, {output.namespace => safe_ret}]
+          [true, {output.namespace => safe_ret, Metadata.namespace => meta}]
 
         else
           [true, {}]

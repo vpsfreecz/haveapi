@@ -17,22 +17,22 @@ module HaveAPI
         @action = action
       end
 
-      def input(layout = :hash, namespace: nil, &block)
+      def input(layout = :hash, &block)
         if block
           @input ||= Params.new(:input, @action)
           @input.layout = layout
-          @input.namespace = namespace
+          @input.namespace = false
           @input.instance_eval(&block)
         else
           @input
         end
       end
 
-      def output(layout = :hash, namespace: nil, &block)
+      def output(layout = :hash, &block)
         if block
           @output ||= Params.new(:output, @action)
           @output.layout = layout
-          @output.namespace = namespace
+          @output.namespace = false
           @output.instance_eval(&block)
         else
           @output

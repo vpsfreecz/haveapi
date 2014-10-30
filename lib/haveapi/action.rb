@@ -270,7 +270,7 @@ module HaveAPI
                     self.class.output.params,
                     out
                 )
-                safe_ret.last.update({Metadata.namespace => out.meta})
+                safe_ret.last.update({Metadata.namespace => out.meta}) unless meta[:no]
               end
 
             when :hash
@@ -290,7 +290,10 @@ module HaveAPI
               safe_ret = ret
           end
 
-          [true, {output.namespace => safe_ret, Metadata.namespace => @reply_meta[:global]}]
+          ns = {output.namespace => safe_ret}
+          ns[Metadata.namespace] = @reply_meta[:global] unless meta[:no]
+
+          [true, ns]
 
         else
           [true, {}]
@@ -408,20 +411,29 @@ module HaveAPI
 
       # Validate metadata input
       meta = self.class.meta
+      auth = Authorization.new { allow }
       @metadata = {}
 
       meta.each do |k,v|
         next unless v
 
-        raw_meta = k == :object ? @params[input.namespace][Metadata.namespace] : @params[Metadata.namespace]
+        raw_meta = nil
+
+        [Metadata.namespace, Metadata.namespace.to_s].each do |ns|
+          params = k == :object ? @params[input.namespace][ns] : @params[ns]
+          next unless params
+
+          raw_meta = auth.filter_input(
+              v.input.params,
+              self.class.model_adapter(v.input.layout).input(params)
+          )
+
+          break if raw_meta
+        end
 
         next unless raw_meta
 
-        v.input.params.each do |p|
-          @metadata[p.name] = raw_meta[p] if raw_meta[p]
-        end
-
-        k.input.validate(@metadata)
+        @metadata.update(v.input.validate(raw_meta))
       end
     end
   end

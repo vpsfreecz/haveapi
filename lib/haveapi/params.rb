@@ -52,8 +52,8 @@ module HaveAPI
     end
 
     def namespace
-      return @cache[:namespace] if @cache[:namespace]
-      return @cache[:namespace] = @namespace if @namespace
+      return @cache[:namespace] unless @cache[:namespace].nil?
+      return @cache[:namespace] = @namespace unless @namespace.nil?
 
       n = @action.resource.to_s.demodulize.underscore
       n = n.pluralize if %i(object_list hash_list).include?(layout)
@@ -61,6 +61,7 @@ module HaveAPI
     end
 
     def namespace=(n)
+      @namespace = false if n === false
       @namespace = n.to_sym if n
     end
 
@@ -235,12 +236,14 @@ module HaveAPI
     end
 
     def layout_aware(params)
+      ns = namespace
+
       case layout
         when :object, :hash
-          yield(params[namespace])
+          yield(ns ? params[namespace] : params)
 
         when :object_list, :hash_list
-          params[namespace].each do |object|
+          (ns ? params[namespace] : params).each do |object|
             yield(object)
           end
 

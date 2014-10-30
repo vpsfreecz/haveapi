@@ -19,7 +19,7 @@ module HaveAPI
         include HaveAPI::Actions::Paginable
 
         def pre_exec
-          set_meta(count: count) if meta[:count]
+          set_meta(total_count: count) if meta[:count]
         end
 
         # Return the total count of items.

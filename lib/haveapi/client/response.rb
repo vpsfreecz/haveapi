@@ -26,6 +26,10 @@ class HaveAPI::Client::Response
     end
   end
 
+  def meta
+    @response[:response][:_meta] # FIXME: read _meta from API description
+  end
+
   def to_hash
     response
   end

@@ -13,5 +13,9 @@ module HaveAPI::Client
     def api_response
       @response
     end
+
+    def meta
+      @response.meta
+    end
   end
 end

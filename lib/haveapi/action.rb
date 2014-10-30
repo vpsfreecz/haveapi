@@ -10,8 +10,9 @@ module HaveAPI
     has_attr :aliases, []
 
     attr_reader :message, :errors
+
     class << self
-      attr_reader :resource, :authorization, :input, :output, :examples
+      attr_reader :resource, :authorization, :examples
 
       def inherited(subclass)
         # puts "Action.inherited called #{subclass} from #{to_s}"
@@ -29,8 +30,12 @@ module HaveAPI
         o = @output.clone
         o.action = subclass
 
+        m = @meta.clone
+        m.each_value { |v| v && v.action = subclass }
+
         subclass.instance_variable_set(:@input, i)
         subclass.instance_variable_set(:@output, o)
+        subclass.instance_variable_set(:@meta, m)
 
         begin
           subclass.instance_variable_set(:@resource, resource)
@@ -64,6 +69,16 @@ module HaveAPI
           @output.instance_eval(&block)
         else
           @output
+        end
+      end
+
+      def meta(type = :object, &block)
+        if block
+          @meta ||= {object: nil, global: nil}
+          @meta[type] ||= Metadata::ActionMetadata.new(self)
+          @meta[type].instance_exec(&block)
+        else
+          @meta
         end
       end
 
@@ -101,6 +116,7 @@ module HaveAPI
             aliases: @aliases,
             input: @input ? @input.describe(context) : {parameters: {}},
             output: @output ? @output.describe(context) : {parameters: {}},
+            meta: @meta ? @meta.merge(@meta) { |_, v| v && v.describe(context) } : nil,
             examples: @examples ? @examples.map { |e| e.describe } : [],
             url: context.resolved_url,
             method: route_method,
@@ -140,6 +156,7 @@ module HaveAPI
       @params.update(body) if body
       @context = context
       @context.action_instance = self
+      @reply_meta = {object: {}, global: {}}
 
       class_auth = self.class.authorization
 
@@ -179,6 +196,14 @@ module HaveAPI
       @request
     end
 
+    def meta
+      @metadata
+    end
+
+    def set_meta(hash)
+      @reply_meta[:global].update(hash)
+    end
+
     # Prepare object, set instance variables from URL parameters.
     # This method should return queried object. If the method is
     # not implemented or returns nil, action description will not
@@ -187,6 +212,10 @@ module HaveAPI
     # FIXME: is this correct behaviour?
     # ++
     def prepare
+
+    end
+
+    def pre_exec
 
     end
 
@@ -204,6 +233,7 @@ module HaveAPI
         begin
           validate!
           prepare
+          pre_exec
           exec
         rescue ActiveRecord::RecordNotFound => e
           if /find ([^\s]+)[^=]+=(\d+)/ =~ e.message
@@ -216,7 +246,6 @@ module HaveAPI
 
       if ret
         output = self.class.output
-        meta = {}
 
         if output
           safe_ret = nil
@@ -229,7 +258,7 @@ module HaveAPI
                   self.class.output.params,
                   out
               )
-              meta.update(out.meta)
+              @reply_meta[:global].update(out.meta)
 
             when :object_list
               safe_ret = []
@@ -261,7 +290,7 @@ module HaveAPI
               safe_ret = ret
           end
 
-          [true, {output.namespace => safe_ret, Metadata.namespace => meta}]
+          [true, {output.namespace => safe_ret, Metadata.namespace => @reply_meta[:global]}]
 
         else
           [true, {}]
@@ -278,6 +307,11 @@ module HaveAPI
 
     input {}
     output {}
+    meta(:global) do
+      input do
+        bool :no, label: 'Disable metadata'
+      end
+    end
 
     protected
     def with_restricted(*args)
@@ -352,6 +386,7 @@ module HaveAPI
 
     private
     def validate
+      # Validate standard input
       @safe_params = @params.dup
       input = self.class.input
 
@@ -369,6 +404,24 @@ module HaveAPI
 
         # Now check required params, convert types and set defaults
         input.validate(@safe_params)
+      end
+
+      # Validate metadata input
+      meta = self.class.meta
+      @metadata = {}
+
+      meta.each do |k,v|
+        next unless v
+
+        raw_meta = k == :object ? @params[input.namespace][Metadata.namespace] : @params[Metadata.namespace]
+
+        next unless raw_meta
+
+        v.input.params.each do |p|
+          @metadata[p.name] = raw_meta[p] if raw_meta[p]
+        end
+
+        k.input.validate(@metadata)
       end
     end
   end

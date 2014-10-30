@@ -10,8 +10,9 @@ module HaveAPI
   end
 end
 
+require_relative 'haveapi/params'
+require_rel 'haveapi/params/'
 require_rel 'haveapi/*.rb'
-require_rel 'haveapi/params'
 require_rel 'haveapi/model_adapters/'
 require_rel 'haveapi/authentication'
 require_rel 'haveapi/actions/*.rb'

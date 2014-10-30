@@ -91,9 +91,19 @@ module HaveAPI
       def call(action, params, raw: false)
         args = []
         input_namespace = action.namespace(:input)
+        meta = nil
+
+        if params[:meta]
+          meta = params[:meta]
+          params.delete(:meta)
+        end
 
         if %w(POST PUT).include?(action.http_method)
-          args << {input_namespace => params}.update(@auth.request_payload).to_json
+          ns = {input_namespace => params}
+          ns[:_meta] = meta if meta
+          ns.update(@auth.request_payload)
+
+          args << ns.to_json
           args << {content_type: :json, accept: :json, user_agent: @identity}.update(@auth.request_headers)
 
         elsif %w(GET DELETE).include?(action.http_method)
@@ -102,6 +112,11 @@ module HaveAPI
           params.each do |k, v|
             get_params["#{input_namespace}[#{k}]"] = v
           end
+
+          meta.each do |k, v|
+            get_params["_meta[#{k}]"] = v # FIXME: read _meta namespace from the description
+
+          end if meta
 
           args << {params: get_params.update(@auth.request_url_params), accept: :json, user_agent: @identity}.update(@auth.request_headers)
         end

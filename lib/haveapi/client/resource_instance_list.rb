@@ -17,5 +17,13 @@ module HaveAPI::Client
     def meta
       @response.meta
     end
+
+    # Return the total count of items.
+    # Note that for this method to work, the action that returns this
+    # object list must be invoked with +meta: {count: true}+, otherwise
+    # the object count is not sent.
+    def total_count
+      meta[:total_count]
+    end
   end
 end

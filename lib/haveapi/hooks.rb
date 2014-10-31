@@ -24,20 +24,25 @@ module HaveAPI
       @hooks[klass][name] << block
     end
 
-    def self.call_for(klass, name, where = nil, args: [])
+    def self.call_for(klass, name, where = nil, args: [], initial: {})
+      classified = hook_classify(klass)
+
       catch(:stop) do
-        hooks = @hooks[hook_classify(klass)][name]
-        return unless hooks
+        return initial unless @hooks[classified]
+        hooks = @hooks[classified][name]
+        return initial unless hooks
 
         hooks.each do |hook|
           if where
-            where.instance_exec(*args, &hook)
+            ret = where.instance_exec(initial, *args, &hook)
           else
-            hook.call(*args)
+            ret = hook.call(initial, *args)
           end
+
+          initial.update(ret) if ret
         end
 
-        false
+        initial
       end
     end
 
@@ -67,19 +72,28 @@ module HaveAPI
 
     module InstanceMethods
       def call_hooks_for(*args)
-        call_instance_hooks_for(*args)
-        call_class_hooks_for(*args)
+        ret = call_instance_hooks_for(*args)
+        call_class_hooks_for(*args, initial: ret)
       end
 
-      def call_instance_hooks_for(name, where = nil, args: [])
-        Hooks.call_for(self, name, where, args: args)
+      def call_instance_hooks_for(name, where = nil, args: [], initial: {})
+        Hooks.call_for(self, name, where, args: args, initial: initial)
       end
 
-      def call_class_hooks_for(name, where  = nil, args: [])
-        Hooks.call_for(self.class, name, where, args: args)
+      def call_class_hooks_for(name, where  = nil, args: [], initial: {})
+        Hooks.call_for(self.class, name, where, args: args, initial: initial)
       end
 
       def call_hooks_as_for(klass, *args)
+        ret = call_instance_hooks_as_for(klass, *args)
+        call_class_hooks_as_for(klass.class, *args, initial: ret)
+      end
+
+      def call_instance_hooks_as_for(klass, *args)
+        Hooks.call_for(klass, *args)
+      end
+
+      def call_class_hooks_as_for(klass, *args)
         Hooks.call_for(klass, *args)
       end
 

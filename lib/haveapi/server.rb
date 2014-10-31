@@ -2,6 +2,12 @@ module HaveAPI
   class Server
     attr_reader :root, :routes, :module_name, :auth_chain, :versions, :default_version
 
+    include Hookable
+
+    # Called after the user was authenticated (or not). The block is passed
+    # current user object or nil as an argument.
+    has_hook :post_authenticated
+
     module ServerHelpers
       def authenticate!(v)
         require_auth! unless authenticated?(v)
@@ -11,7 +17,7 @@ module HaveAPI
         return @current_user if @current_user
 
         @current_user = settings.api_server.send(:do_authenticate, v, request)
-        settings.api_server.send(:invoke_hook, :post_authenticated, @current_user)
+        settings.api_server.call_hooks_for(:post_authenticated, args: @current_user)
         @current_user
       end
 
@@ -69,7 +75,6 @@ module HaveAPI
       @module_name = module_name
       @allowed_headers = ['Content-Type']
       @auth_chain = HaveAPI::Authentication::Chain.new(self)
-      @hooks = {post_authenticated: []}
     end
 
     # Include specific version +v+ of API.
@@ -405,16 +410,6 @@ module HaveAPI
       end
     end
 
-    # Register a block that will be called for hook +name+.
-    # The block is passed arguments depending on hook type.
-    # === Hook types
-    # ==== :post_authenticated
-    # Called after the user was authenticated (or not). The block is passed
-    # current user object or nil as an argument.
-    def register_hook(name, &block)
-      @hooks[name] << block
-    end
-
     def allow_header(name)
       @allowed_headers << name unless @allowed_headers.include?(name)
       @allowed_headers_str = nil
@@ -436,12 +431,6 @@ module HaveAPI
     private
     def do_authenticate(v, request)
       @auth_chain.authenticate(v, request)
-    end
-
-    def invoke_hook(name, *args)
-      @hooks[name].each do |block|
-        block.call(*args)
-      end
     end
   end
 end

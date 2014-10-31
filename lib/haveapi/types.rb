@@ -14,3 +14,7 @@ end
 module Datetime
 
 end
+
+module Custom
+  
+end

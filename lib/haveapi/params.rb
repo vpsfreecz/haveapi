@@ -119,10 +119,8 @@ module HaveAPI
     end
 
     # Action returns custom data.
-    def custom_structure(name, s)
-      @namespace = name
-      @layout = :custom
-      @structure = s
+    def custom(*args)
+      add_param(*apply(args, type: Custom))
     end
 
     def describe(context)

@@ -1,6 +1,7 @@
 module HaveAPI
   class Server
-    attr_reader :root, :routes, :module_name, :auth_chain, :versions, :default_version
+    attr_reader :root, :routes, :module_name, :auth_chain, :versions, :default_version,
+                :extensions
 
     include Hookable
 
@@ -75,6 +76,7 @@ module HaveAPI
       @module_name = module_name
       @allowed_headers = ['Content-Type']
       @auth_chain = HaveAPI::Authentication::Chain.new(self)
+      @extensions = []
     end
 
     # Include specific version +v+ of API.
@@ -223,6 +225,8 @@ module HaveAPI
 
       @auth_chain << HaveAPI.default_authenticate if @auth_chain.empty?
       @auth_chain.setup(@versions)
+
+      @extensions.each { |e| e.enabled }
 
       # Mount default version first
       mount_version(@root, @default_version)

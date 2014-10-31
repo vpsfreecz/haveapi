@@ -18,4 +18,5 @@ require_rel 'haveapi/authentication'
 require_rel 'haveapi/actions/*.rb'
 require_rel 'haveapi/output_formatters/base.rb'
 require_rel 'haveapi/output_formatters/'
+require_rel 'haveapi/extensions'
 

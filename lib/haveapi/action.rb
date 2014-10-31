@@ -9,6 +9,10 @@ module HaveAPI
     has_attr :auth, true
     has_attr :aliases, []
 
+    include Hookable
+
+    has_hook :exec_exception
+
     attr_reader :message, :errors
 
     class << self
@@ -236,12 +240,16 @@ module HaveAPI
           prepare
           pre_exec
           exec
-        rescue ActiveRecord::RecordNotFound => e
-          if /find ([^\s]+)[^=]+=(\d+)/ =~ e.message
-            error("object #{$~[1]} = #{$~[2]} not found")
-          else
-            error("object not found: #{e.to_s}")
+        rescue Exception => e
+          tmp = call_class_hooks_as_for(Action, :exec_exception, args: [self, e])
+
+          if tmp.empty?
+            p e.message
+            puts e.backtrace
+            error('Server error occurred')
           end
+
+          error(tmp[:message]) unless tmp[:status]
         end
       end
 
@@ -421,7 +429,7 @@ module HaveAPI
         raw_meta = nil
 
         [Metadata.namespace, Metadata.namespace.to_s].each do |ns|
-          params = v == :object ? @params[input.namespace][ns] : @params[ns]
+          params = v == :object ? (@params[input.namespace] && @params[input.namespace][ns]) : @params[ns]
           next unless params
 
           raw_meta = auth.filter_input(

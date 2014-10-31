@@ -66,7 +66,12 @@ module HaveAPI
     end
 
     module InstanceMethods
-      def call_hooks_for(name, where = nil, args: [])
+      def call_hooks_for(*args)
+        call_instance_hooks_for(*args)
+        call_class_hooks_for(*args)
+      end
+
+      def call_instance_hooks_for(name, where = nil, args: [])
         Hooks.call_for(self, name, where, args: args)
       end
 

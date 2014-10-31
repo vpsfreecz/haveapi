@@ -411,22 +411,22 @@ module HaveAPI
       end
 
       # Validate metadata input
-      meta = self.class.meta
       auth = Authorization.new { allow }
       @metadata = {}
 
-      meta.each do |k,v|
-        next unless v
+      [:object, :global].each do |v|
+        meta = self.class.meta(v)
+        next unless meta
 
         raw_meta = nil
 
         [Metadata.namespace, Metadata.namespace.to_s].each do |ns|
-          params = k == :object ? @params[input.namespace][ns] : @params[ns]
+          params = v == :object ? @params[input.namespace][ns] : @params[ns]
           next unless params
 
           raw_meta = auth.filter_input(
-              v.input.params,
-              self.class.model_adapter(v.input.layout).input(params)
+              meta.input.params,
+              self.class.model_adapter(meta.input.layout).input(params)
           )
 
           break if raw_meta
@@ -434,7 +434,7 @@ module HaveAPI
 
         next unless raw_meta
 
-        @metadata.update(v.input.validate(raw_meta))
+        @metadata.update(meta.input.validate(raw_meta))
       end
     end
   end

@@ -55,6 +55,11 @@ module HaveAPI
       prefix = "#{prefix}#{@route || to_s.demodulize.tableize}/"
 
       actions do |a|
+        # Call used_by for selected model adapters. It is safe to do
+        # only when all classes are loaded.
+        a.model_adapter(a.input.layout).used_by(:input, a)
+        a.model_adapter(a.output.layout).used_by(:output, a)
+
         ret << Route.new(a.build_route(prefix).chomp('/'), a)
       end
 

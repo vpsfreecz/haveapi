@@ -46,11 +46,27 @@ module HaveAPI
       def load_validators(model, params)
 
       end
+
+      # Called when mounting the API. Model adapters may use this method
+      # to add custom meta parameters to +action+. +direction+ is one of
+      # +:input+ and +:output+.
+      def used_by(direction, action)
+        case direction
+          when :input
+            self::Input.used_by(action)
+          when :output
+            self::Output.used_by(action)
+        end
+      end
     end
 
     # Subclass this class in your adapter and reimplement
     # necessary methods.
     class Input
+      def self.used_by(action)
+
+      end
+
       def initialize(input)
         @input = input
       end
@@ -75,6 +91,10 @@ module HaveAPI
     # Subclass this class in your adapter and reimplement
     # necessary methods.
     class Output
+      def self.used_by(action)
+
+      end
+
       def initialize(context, obj)
         @context = context
         @object = obj

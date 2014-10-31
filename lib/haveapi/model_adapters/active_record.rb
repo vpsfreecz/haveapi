@@ -22,6 +22,15 @@ module HaveAPI::ModelAdapters
     end
 
     class Output < ::HaveAPI::ModelAdapter::Output
+      def self.used_by(action)
+        action.meta(:object) do
+          output do
+            custom :url_params, label: 'URL parameters',
+                   desc: 'An array of parameters needed to resolve URL to this object'
+          end
+        end
+      end
+
       def has_param?(name)
         param = @context.action.output[name]
         @object.respond_to?(param.db_name)

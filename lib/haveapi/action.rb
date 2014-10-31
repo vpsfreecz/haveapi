@@ -55,6 +55,7 @@ module HaveAPI
           @input.layout = layout
           @input.namespace = namespace
           @input.instance_eval(&block)
+
           model_adapter(@input.layout).load_validators(model, @input) if model
         else
           @input
@@ -78,7 +79,7 @@ module HaveAPI
           @meta[type] ||= Metadata::ActionMetadata.new(self)
           @meta[type].instance_exec(&block)
         else
-          @meta
+          @meta[type]
         end
       end
 

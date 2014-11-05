@@ -126,6 +126,20 @@ class Client extends Client\Resource {
 	}
 	
 	/**
+	 * @return array settings
+	 */
+	public function getSettings($key = null) {
+		$s = array(
+			'meta' => $this->description->meta
+		);
+		
+		if ($key)
+			return $s[$key];
+		
+		return $s;
+	}
+	
+	/**
 	 * Invoke action $action with $params and interpret the response.
 	 * @param Action $action
 	 * @param array $params
@@ -164,14 +178,23 @@ class Client extends Client\Resource {
 // 		echo "execute {$action->httpMethod()} {$action->url()}\n<br>\n";
 		
 		$request = $this->getRequest($fn, $this->uri . $action->url());
+		$res = array();
+		
+		if (isset($params['meta'])) {
+			$s = $this->getSettings();
+			$res[ $s['meta']->{'namespace'} ] = $params['meta'];
+			unset($params['meta']);
+		}
+		
+		$res[ $action->getNamespace('input') ] = $params;
 		
 		if(!$this->sendAsQueryParams($fn))
-			$request->body(empty($params) ? '{}' : json_encode(array($action->getNamespace('input') => $params)));
+			$request->body(empty($params) ? '{}' : json_encode($res));
 		
 		$this->authProvider->authenticate($request);
 
 		$start = microtime(true);
-		$ret = $this->sendRequest($request, $action, $params);
+		$ret = $this->sendRequest($request, $action, $res);
 		$diff = microtime(true) - $start;
 		
 		$this->accountTime($diff);
@@ -208,8 +231,10 @@ class Client extends Client\Resource {
 		$this->queryParams += $this->authProvider->queryParameters();
 		
 		if($action && $this->sendAsQueryParams($action->httpMethod())) {
-			foreach($params as $k => $v) {
-				$this->queryParams[ $action->getNamespace('input')."[$k]" ] = $v;
+			foreach ($params as $ns => $arr) {
+				foreach ($arr as $k => $v) {
+					$this->queryParams[ $ns."[$k]" ] = $v;
+				}
 			}
 		}
 		

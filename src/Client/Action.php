@@ -147,6 +147,10 @@ class Action {
 		return $this->m_name;
 	}
 	
+	public function getClient() {
+		return $this->client;
+	}
+	
 	/**
 	 * @return Resource parent
 	 */
@@ -159,6 +163,10 @@ class Action {
 	 */
 	public function getLastArgs() {
 		return $this->lastArgs;
+	}
+	
+	public function applyArgs($args) {
+		$this->args = array_merge($this->args, $args);
 	}
 	
 	public function __toString() {

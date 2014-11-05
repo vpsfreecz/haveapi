@@ -22,7 +22,7 @@ class ResourceInstance extends Resource {
 	public function __construct($client, $action, $response) {
 		$r = $action->getResource();
 		
-		parent::__construct($client, $r->getName(), $r->getDescription(), $action->getLastArgs());
+		parent::__construct($client, $r->getName(), $r->getDescription(), array());
 		
 		$this->action = $action;
 		$this->response = $response;
@@ -32,10 +32,15 @@ class ResourceInstance extends Resource {
 			
 			if($response instanceof Response) {
 				$this->attrs = (array) $response->getResponse();
+				$this->args = $response->getMeta()->url_params;
 				
 			} else {
+				$ns = $client->getSettings('meta')->{'namespace'};
+				
+				$this->args = $response->{$ns};
+				unset($response->{$ns});
+				
 				$this->attrs = (array) $response;
-				$this->args[] = $this->id;
 			}
 			
 		} else {
@@ -91,7 +96,7 @@ class ResourceInstance extends Resource {
 						return $this->associations[$name];
 					
 					$action = $this->client[ implode('.', $param->resource) ]->show;
-					$action->prepareUrl($this->attrs[$name]->url);
+					$action->applyArgs($this->attrs[$name]->{$this->client->getSettings('meta')->{'namespace'}}->url_params);
 					
 					return $this->associations[$name] = $action->call();
 					

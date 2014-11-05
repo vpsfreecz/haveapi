@@ -57,6 +57,13 @@ class Response implements \ArrayAccess {
 		}
 	}
 	
+	public function getMeta() {
+		$s = $this->action->getClient()->getSettings();
+		$ns = $s['meta']->{'namespace'};
+		
+		return $this->envelope->response->{$ns};
+	}
+	
 	/**
 	 * @return \stdClass
 	 */

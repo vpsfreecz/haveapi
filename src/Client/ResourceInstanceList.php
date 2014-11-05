@@ -59,6 +59,19 @@ class ResourceInstanceList implements \ArrayAccess, \Iterator {
 		return $this->items;
 	}
 	
+	public function getMeta() {
+		return $this->response->getMeta();
+	}
+	
+	public function getTotalCount() {
+		$m = $this->getMeta();
+		
+		if (!$m || !isset($m->total_count))
+			return false;
+		
+		return $m->total_count;
+	}
+	
 	// ArrayAccess
 	public function offsetExists($offset) {
 		return isSet($this->items[$offset]);

@@ -66,7 +66,7 @@ module HaveAPI
         @hooks[klass] = {}
 
         @hooks[klass.class].each do |k, v|
-          @hooks[klass][k] = v
+          @hooks[klass][k] = []
         end
       end
 

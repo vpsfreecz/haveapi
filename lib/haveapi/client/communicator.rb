@@ -93,7 +93,7 @@ module HaveAPI
         input_namespace = action.namespace(:input)
         meta = nil
 
-        if params[:meta]
+        if params.is_a?(Hash) && params[:meta]
           meta = params[:meta]
           params.delete(:meta)
         end

@@ -83,7 +83,7 @@ module HaveAPI::Client
           if all_args.empty?
             all_args << default_action_input_params(action)
 
-          else
+          elsif all_args.last.is_a?(Hash)
             last = all_args.pop
 
             all_args << default_action_input_params(action).update(last)

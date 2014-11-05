@@ -407,9 +407,19 @@ module HaveAPI
         input.check_layout(@safe_params)
 
         # Then filter allowed params
-        @safe_params[input.namespace] = @authorization.filter_input(
-                                          self.class.input.params,
-                                          self.class.model_adapter(self.class.input.layout).input(@safe_params[input.namespace]))
+        case input.layout
+          when :object_list, :hash_list
+            @safe_params[input.namespace].map! do |obj|
+              @authorization.filter_input(
+                  self.class.input.params,
+                  self.class.model_adapter(self.class.input.layout).input(obj))
+            end
+
+          else
+            @safe_params[input.namespace] = @authorization.filter_input(
+                self.class.input.params,
+                self.class.model_adapter(self.class.input.layout).input(@safe_params[input.namespace]))
+        end
 
         # Remove duplicit key
         @safe_params.delete(input.namespace.to_s)
@@ -421,6 +431,8 @@ module HaveAPI
       # Validate metadata input
       auth = Authorization.new { allow }
       @metadata = {}
+
+      return if input && %i(object_list hash_list).include?(input.layout)
 
       [:object, :global].each do |v|
         meta = self.class.meta(v)

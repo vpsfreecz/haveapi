@@ -33,7 +33,7 @@ module HaveAPI::ModelAdapters
 
       def has_param?(name)
         param = @context.action.output[name]
-        @object.respond_to?(param.db_name)
+        param && @object.respond_to?(param.db_name)
       end
 
       def [](name)

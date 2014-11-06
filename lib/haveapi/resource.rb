@@ -92,5 +92,14 @@ module HaveAPI
 
       ret
     end
+
+    def self.define_action(name, superclass: Action, &block)
+      return false if const_defined?(name)
+
+      cls = Class.new(superclass)
+      const_set(name, cls)
+      superclass.delayed_inherited(cls)
+      superclass.class_exec(&block)
+    end
   end
 end

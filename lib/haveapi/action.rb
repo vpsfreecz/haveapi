@@ -23,6 +23,13 @@ module HaveAPI
 
         subclass.instance_variable_set(:@obj_type, obj_type)
 
+        if subclass.name
+          # not an anonymouse class
+          delayed_inherited(subclass)
+        end
+      end
+
+      def delayed_inherited(subclass)
         resource = Kernel.const_get(subclass.to_s.deconstantize)
 
         inherit_attrs(subclass)

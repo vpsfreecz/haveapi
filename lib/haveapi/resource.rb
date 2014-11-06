@@ -6,6 +6,7 @@ module HaveAPI
     has_attr :model
     has_attr :route
     has_attr :auth, true
+    has_attr :singular, false
 
     def self.inherited(subclass)
       subclass.instance_variable_set(:@obj_type, obj_type)
@@ -50,9 +51,15 @@ module HaveAPI
       end
     end
 
+    def self.resource_name
+      ret = self.to_s.demodulize
+
+      singular ? ret.singularize.underscore : ret.tableize
+    end
+
     def self.routes(prefix='/')
       ret = []
-      prefix = "#{prefix}#{@route || to_s.demodulize.tableize}/"
+      prefix = "#{prefix}#{@route || resource_name}/"
 
       actions do |a|
         # Call used_by for selected model adapters. It is safe to do

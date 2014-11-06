@@ -189,6 +189,7 @@ The type can be one of:
  - String
  - Boolean
  - Integer
+ - Float
  - Datetime
 
         "<parameter_name>": {

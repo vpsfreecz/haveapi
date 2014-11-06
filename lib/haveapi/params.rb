@@ -93,6 +93,10 @@ module HaveAPI
       add_param(*apply(args, type: Integer))
     end
 
+    def float(*args)
+      add_param(*apply(args, type: Float))
+    end
+
     def datetime(*args)
       add_param(*apply(args, type: Datetime))
     end

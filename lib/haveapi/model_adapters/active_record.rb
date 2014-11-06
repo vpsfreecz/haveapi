@@ -60,11 +60,13 @@ module HaveAPI::ModelAdapters
         res_show = param.show_action
         res_output = res_show.output
 
+        args = res_show.resolve.call(val)
+
         {
             param.value_id => val.send(res_output[param.value_id].db_name),
             param.value_label => val.send(res_output[param.value_label].db_name),
             _meta: {
-              :url_params => res_show.resolve.call(val)
+              :url_params => args.is_a?(Array) ? args : [args]
             }
         }
       end

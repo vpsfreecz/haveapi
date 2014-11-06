@@ -99,7 +99,7 @@ module HaveAPI
       cls = Class.new(superclass)
       const_set(name, cls)
       superclass.delayed_inherited(cls)
-      superclass.class_exec(&block)
+      cls.class_exec(&block)
     end
   end
 end

@@ -106,7 +106,13 @@ module HaveAPI
       end
 
       def build_route(prefix)
-        prefix + (@route || to_s.demodulize.underscore) % {resource: self.resource.to_s.demodulize.underscore}
+        route = @route || to_s.demodulize.underscore
+
+        if !route.is_a?(String) && route.respond_to?(:call)
+          route = route.call(self.resource)
+        end
+
+        prefix + route % {resource: self.resource.to_s.demodulize.underscore}
       end
 
       def describe(context)

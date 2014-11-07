@@ -79,6 +79,15 @@ module HaveAPI
 
         a = tmp[:actions][action]
 
+        unless a # search in aliases
+           tmp[:actions].each do |_, v|
+            if v[:aliases].include?(action.to_s)
+              a = v
+              break
+            end
+          end
+        end
+
         if a
           obj = Action.new(self, action, a, args)
           obj.resource_path = resources

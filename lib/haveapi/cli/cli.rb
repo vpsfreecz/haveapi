@@ -46,10 +46,7 @@ module HaveAPI
           exit(true)
         end
 
-        action = translate_action(args[1].to_sym)
-
-        action = @api.get_action(resources, action, args[2..-1])
-
+        action = @api.get_action(resources, args[1].to_sym, args[2..-1])
         action.update_description(@api.describe_action(action)) if authenticate(action)
 
         @input_params = parameters(action)
@@ -67,7 +64,7 @@ module HaveAPI
           else
             warn "Action failed: #{ret[:message]}"
 
-            if ret[:errors].any?
+            if ret[:errors] && ret[:errors].any?
               puts 'Errors:'
               ret[:errors].each do |param, e|
                 puts "\t#{param}: #{e.join('; ')}"
@@ -216,20 +213,6 @@ module HaveAPI
         end
 
         ret
-      end
-
-      def translate_action(action)
-        tr = {
-            list: :index,
-            new: :create,
-            change: :update
-        }
-
-        if tr.has_key?(action)
-          return tr[action]
-        end
-
-        action
       end
 
       def list_versions

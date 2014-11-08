@@ -13,7 +13,7 @@ module HaveAPI
 
     has_hook :exec_exception
 
-    attr_reader :message, :errors
+    attr_reader :message, :errors, :version
 
     class << self
       attr_reader :resource, :authorization, :examples
@@ -41,8 +41,13 @@ module HaveAPI
         o = @output.clone
         o.action = subclass
 
-        m = @meta.clone
-        m.each_value { |v| v && v.action = subclass }
+        m = {}
+
+        @meta.each do |k,v|
+          m[k] = v && v.clone
+          next unless v
+          m[k].action = subclass
+        end
 
         subclass.instance_variable_set(:@input, i)
         subclass.instance_variable_set(:@output, o)
@@ -87,7 +92,8 @@ module HaveAPI
       def meta(type = :object, &block)
         if block
           @meta ||= {object: nil, global: nil}
-          @meta[type] ||= Metadata::ActionMetadata.new(self)
+          @meta[type] ||= Metadata::ActionMetadata.new
+          @meta[type].action = self
           @meta[type].instance_exec(&block)
         else
           @meta[type]
@@ -173,6 +179,7 @@ module HaveAPI
       @params = params
       @params.update(body) if body
       @context = context
+      @context.action = self.class
       @context.action_instance = self
       @reply_meta = {object: {}, global: {}}
 

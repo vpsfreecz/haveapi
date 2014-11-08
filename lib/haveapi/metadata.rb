@@ -13,13 +13,18 @@ module HaveAPI
     class ActionMetadata
       attr_writer :action
 
-      def initialize(action)
-        @action = action
+      def clone
+        m = self.class.new
+        m.action = @action
+        m.instance_variable_set(:@input, @input && @input.clone)
+        m.instance_variable_set(:@output, @output && @output.clone)
+        m
       end
 
       def input(layout = :hash, &block)
         if block
           @input ||= Params.new(:input, @action)
+          @input.action = @action
           @input.layout = layout
           @input.namespace = false
           @input.instance_eval(&block)
@@ -31,6 +36,7 @@ module HaveAPI
       def output(layout = :hash, &block)
         if block
           @output ||= Params.new(:output, @action)
+          @output.action = @action
           @output.layout = layout
           @output.namespace = false
           @output.instance_eval(&block)

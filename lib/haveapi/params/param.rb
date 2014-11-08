@@ -3,7 +3,8 @@ module HaveAPI::Parameters
     attr_reader :name, :label, :desc, :type, :default
 
     def initialize(name, required: nil, label: nil, desc: nil, type: nil,
-                   choices: nil, db_name: nil, default: :_nil, fill: false)
+                   choices: nil, db_name: nil, default: :_nil, fill: false,
+                   clean: nil)
       @required = required
       @name = name
       @label = label || name.to_s.capitalize
@@ -15,6 +16,7 @@ module HaveAPI::Parameters
       @fill = fill
       @layout = :custom
       @validators = {}
+      @clean = clean
     end
 
     def db_name
@@ -58,6 +60,8 @@ module HaveAPI::Parameters
     end
 
     def clean(raw)
+      return instance_exec(raw, &@clean) if @clean
+
       if raw.nil?
         val = @default
 

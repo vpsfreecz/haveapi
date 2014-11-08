@@ -123,8 +123,8 @@ module HaveAPI
     end
 
     # Action returns custom data.
-    def custom(*args)
-      add_param(*apply(args, type: Custom))
+    def custom(*args, &block)
+      add_param(*apply(args, type: Custom, clean: block))
     end
 
     def describe(context)

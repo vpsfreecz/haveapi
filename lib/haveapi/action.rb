@@ -61,6 +61,14 @@ module HaveAPI
         end
       end
 
+      def initialized?
+        @initialize
+      end
+
+      def initialized
+        @initialize = true
+      end
+
       def model_adapter(layout)
         ModelAdapter.for(layout, resource.model)
       end

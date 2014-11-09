@@ -182,7 +182,15 @@ module HaveAPI::Client
       end
 
       # FIXME: read _meta namespace from description
-      ResourceInstance.new(@client, @api, tmp, action: tmp.actions[:show], resolved: false, meta: res_val[:_meta])
+      ResourceInstance.new(
+          @client,
+          @api,
+          tmp,
+          action: tmp.actions[:show],
+          resolved: res_val[:_meta][:resolved],
+          response: res_val[:_meta][:resolved] ? res_val : nil,
+          meta: res_val[:_meta]
+      )
     end
 
     # Override Resource.default_action_input_params.

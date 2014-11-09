@@ -37,8 +37,8 @@ class ResourceInstance extends Resource {
 			} else {
 				$ns = $client->getSettings('meta')->{'namespace'};
 				
-				$this->args = $response->{$ns};
-				unset($response->{$ns});
+				$this->args = $response->{$ns}->url_params;
+// 				unset($response->{$ns});
 				
 				$this->attrs = (array) $response;
 			}
@@ -95,10 +95,24 @@ class ResourceInstance extends Resource {
 					if(isSet($this->associations[$name]))
 						return $this->associations[$name];
 					
-					$action = $this->client[ implode('.', $param->resource) ]->show;
-					$action->applyArgs($this->attrs[$name]->{$this->client->getSettings('meta')->{'namespace'}}->url_params);
+					// Return resolved ResourceInstance or resolve one
+					$ns = $this->client->getSettings('meta')->{'namespace'};
 					
-					return $this->associations[$name] = $action->call();
+					if ($this->attrs[$name]->{$ns}->resolved) {
+						$this->associations[$name] = new ResourceInstance(
+							$this->client,
+							$this->client[ implode('.', $param->resource) ]->show,
+							$this->attrs[$name]
+						);
+					
+					} else {
+						$action = $this->client[ implode('.', $param->resource) ]->show;
+						$action->applyArgs($this->attrs[$name]->{$ns}->url_params);
+						
+						$this->associations[$name] = $action->call();
+					}
+					
+					return $this->associations[$name];
 					
 				default:
 					return $this->attrs[$name];

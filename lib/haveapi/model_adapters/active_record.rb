@@ -15,6 +15,48 @@ module HaveAPI::ModelAdapters
       end
     end
 
+    module Action
+      module InstanceMethods
+        # Helper method that sets correct ActiveRecord includes
+        # according to the meta includes sent by the user.
+        # +q+ is the model or partial AR query. If not set,
+        # action's model class is used instead.
+        def with_includes(q = nil)
+          q ||= self.class.model
+          includes = meta && meta[:includes]
+          return q if includes.nil? || includes.empty?
+
+          q.includes( * ar_parse_includes(includes))
+        end
+
+        # Parse includes sent by the user and return them
+        # in an array of symbols and hashes.
+        def ar_parse_includes(raw)
+          return @ar_parsed_includes if @ar_parsed_includes
+          @ar_parsed_includes = ar_inner_includes(raw)
+        end
+
+        # Called by ar_parse_includes for recursion purposes.
+        def ar_inner_includes(includes)
+          args = []
+
+          includes.each do |assoc|
+            if assoc.index('__')
+              tmp = {}
+              parts = assoc.split('__')
+              tmp[parts.first.to_sym] = ar_inner_includes(parts[1..-1])
+
+              args << tmp
+            else
+              args << assoc.to_sym
+            end
+          end
+
+          args
+        end
+      end
+    end
+
     class Input < ::HaveAPI::ModelAdapter::Input
       def self.clean(model, raw)
         model.find(raw) if (raw.is_a?(String) && !raw.empty?) || (!raw.is_a?(String) && raw)
@@ -27,7 +69,37 @@ module HaveAPI::ModelAdapters
           output do
             custom :url_params, label: 'URL parameters',
                    desc: 'An array of parameters needed to resolve URL to this object'
+            bool :resolved, label: 'Resolved', desc: 'True if the association is resolved'
           end
+        end
+
+        if %i(object object_list).include?(action.input.layout)
+          clean = Proc.new do |raw|
+            if raw.is_a?(String)
+              raw.strip.split(',')
+            elsif raw.is_a?(Array)
+              raw
+            else
+              nil
+            end
+          end
+
+          desc = <<END
+A list of names of associated resources separated by a comma.
+Nested associations are declared with '__' between resource names.
+For example, 'user,node' will resolve the two associations.
+To resolve further associations of node, use e.g. 'user,node__location',
+to go even deeper, use e.g. 'user,node__location__environment'.
+END
+
+          action.meta(:global) do
+            input do
+              custom :includes, label: 'Included associations',
+                     desc: desc, &clean
+            end
+          end
+
+          action.send(:include, Action::InstanceMethods)
         end
       end
 
@@ -51,24 +123,124 @@ module HaveAPI::ModelAdapters
         params = @context.action.resolve.call(@object)
 
         {
-            url_params: params.is_a?(Array) ? params : [params]
+            url_params: params.is_a?(Array) ? params : [params],
+            resolved: true
         }
       end
 
       protected
+      # Return representation of an associated resource +param+
+      # with its instance in +val+.
+      #
+      # By default, it returns an unresolved resource, which contains
+      # only object id and label. Resource will be resolved
+      # if it is set in meta includes field.
       def resourcify(param, val)
         res_show = param.show_action
         res_output = res_show.output
 
         args = res_show.resolve.call(val)
 
-        {
-            param.value_id => val.send(res_output[param.value_id].db_name),
-            param.value_label => val.send(res_output[param.value_label].db_name),
-            _meta: {
-              :url_params => args.is_a?(Array) ? args : [args]
-            }
-        }
+        if includes_include?(param.name)
+          push_cls = @context.action
+          push_ins = @context.action_instance
+
+          pass_includes = includes_pass_on_to(param.name)
+
+          show = res_show.new(
+              push_ins.request,
+              push_ins.version,
+              {},
+              nil,
+              @context
+          )
+          show.meta[:includes] = pass_includes
+
+          # This flag is used to tell the action that it is being used
+          # as a nested association, that it wasn't called directly by the user.
+          show.flags[:inner_assoc] = true
+
+          show.authorized?(push_ins.current_user) # FIXME: handle false
+
+          ret = show.safe_output(val)
+
+          @context.action_instance = push_ins
+          @context.action = push_cls
+
+          fail "#{res_show.to_s} resolve failed" unless ret[0]
+
+          ret[1][res_show.output.namespace].update({
+              _meta: ret[1][:_meta].update(resolved: true)
+          })
+
+        else
+          {
+              param.value_id => val.send(res_output[param.value_id].db_name),
+              param.value_label => val.send(res_output[param.value_label].db_name),
+              _meta: {
+                :url_params => args.is_a?(Array) ? args : [args],
+                :resolved => false
+              }
+          }
+        end
+      end
+
+      # Should an association with +name+ be resolved?
+      def includes_include?(name)
+        includes = @context.action_instance.meta[:includes]
+        return unless includes
+
+        name = name.to_sym
+
+        if @context.action_instance.flags[:inner_assoc]
+          # This action is called as an association of parent resource.
+          # Meta includes are already parsed and can be accessed directly.
+          includes.each do |v|
+            if v.is_a?(::Hash)
+              return true if v.has_key?(name)
+            else
+              return true if v == name
+            end
+          end
+
+          false
+
+        else
+          # This action is the one that was called by the user.
+          # Meta includes contains an array of strings as was sent
+          # by the user. The parsed includes must be fetched from
+          # the action itself.
+          includes = @context.action_instance.ar_parse_includes([])
+
+          includes.each do |v|
+            if v.is_a?(::Hash)
+              return true if v.has_key?(name)
+            else
+              return true if v == name
+            end
+          end
+
+          false
+        end
+      end
+
+      # Create an array of includes that is passed to child association.
+      def includes_pass_on_to(assoc)
+        parsed = if @context.action_instance.flags[:inner_assoc]
+          @context.action_instance.meta[:includes]
+        else
+          @context.action_instance.ar_parse_includes([])
+        end
+
+        ret = []
+
+        parsed.each do |v|
+          if v.is_a?(::Hash)
+            v.each { |k, v| ret << v if k == assoc }
+          end
+        end
+
+        ret.flatten(1)
       end
     end
 

@@ -14,6 +14,7 @@ module HaveAPI
     has_hook :exec_exception
 
     attr_reader :message, :errors, :version
+    attr_accessor :flags
 
     class << self
       attr_reader :resource, :authorization, :examples
@@ -189,7 +190,9 @@ module HaveAPI
       @context = context
       @context.action = self.class
       @context.action_instance = self
+      @metadata = {}
       @reply_meta = {object: {}, global: {}}
+      @flags = {}
 
       class_auth = self.class.authorization
 
@@ -281,6 +284,14 @@ module HaveAPI
         end
       end
 
+      safe_output(ret)
+    end
+
+    def v?(v)
+      @version == v
+    end
+
+    def safe_output(ret)
       if ret
         output = self.class.output
 
@@ -312,8 +323,8 @@ module HaveAPI
 
             when :hash
               safe_ret = @authorization.filter_output(
-                          self.class.output.params,
-                          adapter.output(@context, ret))
+                  self.class.output.params,
+                  adapter.output(@context, ret))
 
             when :hash_list
               safe_ret = ret
@@ -339,10 +350,6 @@ module HaveAPI
       else
         [false, @message, @errors]
       end
-    end
-
-    def v?(v)
-      @version == v
     end
 
     input {}

@@ -26,7 +26,11 @@ module HaveAPI::ModelAdapters
           includes = meta && meta[:includes]
           return q if includes.nil? || includes.empty?
 
-          q.includes( * ar_parse_includes(includes))
+          # Resulting includes may still contain duplicities in form of nested
+          # includes. ar_default_includes returns a flat array where as
+          # ar_parse_includes may contain hashes. But since ActiveRecord is taking
+          # it well, it is not necessary to fix.
+          q.includes( * (ar_parse_includes(includes) + ar_default_includes).uniq! )
         end
 
         # Parse includes sent by the user and return them
@@ -53,6 +57,21 @@ module HaveAPI::ModelAdapters
           end
 
           args
+        end
+
+        # Default includes contain all associated resources specified
+        # inaction  output parameters. They are fetched from the database
+        # anyway, to return the label for even unresolved association.
+        def ar_default_includes
+          ret = []
+
+          self.class.output.params.each do |p|
+            if p.is_a?(HaveAPI::Parameters::Resource)
+              ret << p.name.to_sym
+            end
+          end
+
+          ret
         end
       end
     end

@@ -4,7 +4,8 @@ module HaveAPI::Parameters
                 :choices, :value_params
 
     def initialize(resource, name: nil, label: nil, desc: nil,
-        choices: nil, value_id: :id, value_label: :label, required: nil)
+        choices: nil, value_id: :id, value_label: :label, required: nil,
+        db_name: nil)
       @resource = resource
       @resource_path = build_resource_path(resource)
       @name = name || resource.to_s.demodulize.underscore.to_sym
@@ -14,10 +15,11 @@ module HaveAPI::Parameters
       @value_id = value_id
       @value_label = value_label
       @required = required
+      @db_name = db_name
     end
 
     def db_name
-      @name
+      @db_name || @name
     end
 
     def required?

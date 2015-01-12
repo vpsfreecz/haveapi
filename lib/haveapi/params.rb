@@ -211,11 +211,17 @@ module HaveAPI
 
     private
     def add_param(*args)
-      @params << Parameters::Param.new(*args)
+      p = Parameters::Param.new(*args)
+      @params << p unless param_exists?(p.name)
     end
 
     def add_resource(*args)
-      @params << Parameters::Resource.new(*args)
+      r = Parameters::Resource.new(*args)
+      @params << r unless param_exists?(r.name)
+    end
+
+    def param_exists?(name)
+      !@params.detect { |p| p.name == name }.nil?
     end
 
     def apply(args, default)

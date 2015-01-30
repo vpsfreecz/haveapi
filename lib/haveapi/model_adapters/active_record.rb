@@ -30,7 +30,13 @@ module HaveAPI::ModelAdapters
           # includes. ar_default_includes returns a flat array where as
           # ar_parse_includes may contain hashes. But since ActiveRecord is taking
           # it well, it is not necessary to fix.
-          q.includes( * (ar_parse_includes(includes) + ar_default_includes).uniq! )
+          args = (ar_parse_includes(includes) + ar_default_includes).uniq!
+
+          if args.empty?
+            q.includes(*args)
+          else
+            q
+          end
         end
 
         # Parse includes sent by the user and return them
@@ -66,7 +72,7 @@ module HaveAPI::ModelAdapters
           ret = []
 
           self.class.output.params.each do |p|
-            if p.is_a?(HaveAPI::Parameters::Resource)
+            if p.is_a?(HaveAPI::Parameters::Resource) && self.class.model.reflections[p.name.to_sym]
               ret << p.name.to_sym
             end
           end

@@ -141,6 +141,13 @@ class Action {
 	}
 	
 	/**
+	 * @return \stdClass parameters
+	 */
+	public function getParameters($direction) {
+		return $this->description->{$direction}->parameters;
+	}
+	
+	/**
 	 * @return string action name
 	 */
 	public function name() {

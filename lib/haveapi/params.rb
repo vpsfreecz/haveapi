@@ -22,20 +22,33 @@ module HaveAPI
     attr_reader :params
     attr_accessor :action
 
-    def initialize(direction, action = nil)
+    def initialize(direction, action)
       @direction = direction
       @params = []
       @action = action
       @cache = {}
+      @blocks = []
+    end
+
+    def add_block(b)
+      @blocks << b
+    end
+
+    def exec
+      @blocks.each do |b|
+        instance_exec(&b)
+      end
     end
 
     def clone
       obj = super
       params = @params
+      blocks = @blocks
 
       obj.instance_eval do
         @params = params.dup
         @cache = {}
+        @blocks = blocks.dup
       end
 
       obj

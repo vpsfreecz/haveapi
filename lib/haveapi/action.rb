@@ -62,12 +62,26 @@ module HaveAPI
         end
       end
 
-      def initialized?
-        @initialize
-      end
+      def initialize
+        return if @initialized
 
-      def initialized
-        @initialize = true
+        input.exec
+        model_adapter(input.layout).load_validators(model, input) if model
+
+        output.exec
+
+        model_adapter(input.layout).used_by(:input, self)
+        model_adapter(output.layout).used_by(:output, self)
+
+        if @meta
+          @meta.each_value do |m|
+            next unless m
+            m.input && m.input.exec
+            m.output && m.output.exec
+          end
+        end
+
+        @initialized = true
       end
 
       def model_adapter(layout)
@@ -79,9 +93,7 @@ module HaveAPI
           @input ||= Params.new(:input, self)
           @input.layout = layout
           @input.namespace = namespace
-          @input.instance_eval(&block)
-
-          model_adapter(@input.layout).load_validators(model, @input) if model
+          @input.add_block(block)
         else
           @input
         end
@@ -92,7 +104,7 @@ module HaveAPI
           @output ||= Params.new(:output, self)
           @output.layout = layout
           @output.namespace = namespace
-          @output.instance_eval(&block)
+          @output.add_block(block)
         else
           @output
         end

@@ -27,7 +27,7 @@ module HaveAPI
           @input.action = @action
           @input.layout = layout
           @input.namespace = false
-          @input.instance_eval(&block)
+          @input.add_block(block)
         else
           @input
         end
@@ -39,7 +39,7 @@ module HaveAPI
           @output.action = @action
           @output.layout = layout
           @output.namespace = false
-          @output.instance_eval(&block)
+          @output.add_block(block)
         else
           @output
         end

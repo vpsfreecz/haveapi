@@ -24,15 +24,15 @@ module HaveAPI::ModelAdapters
         def with_includes(q = nil)
           q ||= self.class.model
           includes = meta && meta[:includes]
-          return q if includes.nil? || includes.empty?
+          args = includes.nil? ? [] : ar_parse_includes(includes)
 
           # Resulting includes may still contain duplicities in form of nested
           # includes. ar_default_includes returns a flat array where as
           # ar_parse_includes may contain hashes. But since ActiveRecord is taking
           # it well, it is not necessary to fix.
-          args = (ar_parse_includes(includes) + ar_default_includes).uniq
+          args.concat(ar_default_includes).uniq
 
-          if args.empty?
+          if !args.empty?
             q.includes(*args)
           else
             q

@@ -90,6 +90,10 @@ module HaveAPI
       add_param(*apply(args, type: String))
     end
 
+    def text(*args)
+      add_param(*apply(args, type: Text))
+    end
+
     def id(*args)
       integer(*args)
     end

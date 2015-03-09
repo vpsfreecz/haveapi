@@ -18,3 +18,7 @@ end
 module Custom
   
 end
+
+class Text < String
+
+end

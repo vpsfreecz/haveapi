@@ -76,6 +76,10 @@ module HaveAPI::Parameters
       ::HaveAPI::ModelAdapter.for(show_action.input.layout, @resource.model).input_clean(@resource.model, raw)
     end
 
+    def format_output(v)
+      v
+    end
+
     private
     def build_resource_path(r)
       path = []

@@ -60,23 +60,23 @@ module HaveAPI
     end
 
     def filter_input(input, params)
-      filter_inner(input, @input, params)
+      filter_inner(input, @input, params, false)
     end
 
-    def filter_output(output, params)
-      filter_inner(output, @output, params)
+    def filter_output(output, params, format = false)
+      filter_inner(output, @output, params, format)
     end
 
     private
-    def filter_inner(allowed_params, direction, params)
+    def filter_inner(allowed_params, direction, params, format)
       allowed = {}
 
       allowed_params.each do |p|
         if params.has_param?(p.name)
-          allowed[p.name] = params[p.name]
+          allowed[p.name] = format ? p.format_output(params[p.name]) : params[p.name]
 
         elsif params.has_param?(p.name.to_s) # FIXME: remove double checking
-          allowed[p.name] = params[p.name.to_s]
+          allowed[p.name] = format ? p.format_output(params[p.name.to_s]) : params[p.name.to_s]
         end
       end
 

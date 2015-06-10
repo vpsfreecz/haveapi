@@ -310,13 +310,15 @@ module HaveAPI
         if output
           safe_ret = nil
           adapter = self.class.model_adapter(output.layout)
+          out_params = self.class.output.params
 
           case output.layout
             when :object
               out = adapter.output(@context, ret)
               safe_ret = @authorization.filter_output(
-                  self.class.output.params,
-                  out
+                  out_params,
+                  out,
+                  true
               )
               @reply_meta[:global].update(out.meta)
 
@@ -327,23 +329,28 @@ module HaveAPI
                 out = adapter.output(@context, obj)
 
                 safe_ret << @authorization.filter_output(
-                    self.class.output.params,
-                    out
+                    out_params,
+                    out,
+                    true
                 )
                 safe_ret.last.update({Metadata.namespace => out.meta}) unless meta[:no]
               end
 
             when :hash
               safe_ret = @authorization.filter_output(
-                  self.class.output.params,
-                  adapter.output(@context, ret))
+                  out_params,
+                  adapter.output(@context, ret),
+                  true
+              )
 
             when :hash_list
               safe_ret = ret
               safe_ret.map! do |hash|
                 @authorization.filter_output(
-                    self.class.output.params,
-                    adapter.output(@context, hash))
+                    out_params,
+                    adapter.output(@context, hash),
+                    true
+                )
               end
 
             else

@@ -101,5 +101,14 @@ module HaveAPI::Parameters
 
       val
     end
+
+    def format_output(v)
+      if @type == ::Datetime && v.is_a?(Time)
+        v.iso8601
+
+      else
+        v
+      end
+    end
   end
 end

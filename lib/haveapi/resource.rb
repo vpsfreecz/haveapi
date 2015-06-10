@@ -99,6 +99,15 @@ module HaveAPI
       ret
     end
 
+    def self.define_resource(name, superclass: Resource, &block)
+      return false if const_defined?(name)
+
+      cls = Class.new(superclass)
+      const_set(name, cls)
+      cls.class_exec(&block) if block
+      cls
+    end
+
     def self.define_action(name, superclass: Action, &block)
       return false if const_defined?(name)
 

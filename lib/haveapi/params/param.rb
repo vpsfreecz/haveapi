@@ -62,20 +62,28 @@ module HaveAPI::Parameters
     def clean(raw)
       return instance_exec(raw, &@clean) if @clean
 
-      if raw.nil?
-        val = @default
+      val = if raw.nil?
+        @default
 
       elsif @type.nil?
-        val = nil
+        nil
 
       elsif @type == Integer
-        val = raw.to_i
+        raw.to_i
 
       elsif @type == Boolean
-        val = Boolean.to_b(raw)
+        Boolean.to_b(raw)
+
+      elsif @type == ::Datetime
+        begin
+          Time.iso8601(raw)
+
+        rescue ArgumentError
+          raise HaveAPI::ValidationError.new("not in ISO 8601 format '#{raw}'")
+        end
 
       else
-        val = raw
+        raw
       end
 
       if @choices

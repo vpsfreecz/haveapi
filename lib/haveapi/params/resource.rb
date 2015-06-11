@@ -5,7 +5,7 @@ module HaveAPI::Parameters
 
     def initialize(resource, name: nil, label: nil, desc: nil,
         choices: nil, value_id: :id, value_label: :label, required: nil,
-        db_name: nil)
+        db_name: nil, fetch: nil)
       @resource = resource
       @resource_path = build_resource_path(resource)
       @name = name || resource.to_s.demodulize.underscore.to_sym
@@ -16,6 +16,9 @@ module HaveAPI::Parameters
       @value_label = value_label
       @required = required
       @db_name = db_name
+      @extra = {
+          fetch: fetch
+      }
     end
 
     def db_name
@@ -73,7 +76,9 @@ module HaveAPI::Parameters
     end
 
     def clean(raw)
-      ::HaveAPI::ModelAdapter.for(show_action.input.layout, @resource.model).input_clean(@resource.model, raw)
+      ::HaveAPI::ModelAdapter.for(
+          show_action.input.layout, @resource.model
+      ).input_clean(@resource.model, raw, @extra)
     end
 
     def format_output(v)

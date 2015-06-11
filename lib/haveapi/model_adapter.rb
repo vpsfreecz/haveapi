@@ -83,7 +83,7 @@ module HaveAPI
       end
 
       # Return model instance from a raw input resource parameter.
-      def self.clean(raw)
+      def self.clean(model, raw, extra)
 
       end
     end

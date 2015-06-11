@@ -83,8 +83,14 @@ module HaveAPI::ModelAdapters
     end
 
     class Input < ::HaveAPI::ModelAdapter::Input
-      def self.clean(model, raw)
-        model.find(raw) if (raw.is_a?(String) && !raw.empty?) || (!raw.is_a?(String) && raw)
+      def self.clean(model, raw, extra)
+        return if (raw.is_a?(String) && raw.empty?) || (!raw.is_a?(String) && !raw)
+
+        if extra[:fetch]
+          model.instance_exec(raw, &extra[:fetch])
+        else
+          model.find(raw)
+        end
       end
     end
 

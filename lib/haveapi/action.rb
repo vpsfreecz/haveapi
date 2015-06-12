@@ -152,7 +152,12 @@ module HaveAPI
 
         if context.endpoint
           context.action_instance = context.action.from_context(context)
-          context.action_prepare = context.action_instance.prepare
+
+          ret = catch(:return) do
+            context.action_prepare = context.action_instance.prepare
+          end
+
+          return false if ret == false
         end
 
         {

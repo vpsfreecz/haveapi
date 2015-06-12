@@ -193,6 +193,7 @@ module HaveAPI
         ret.instance_exec do
           @safe_params = @params.dup
           @authorization = c.authorization
+          @current_user = c.current_user
         end
 
         ret

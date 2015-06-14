@@ -122,10 +122,18 @@ module HaveAPI
       add_param(*args)
     end
 
-    def use(name)
+    def use(name, include: nil, exclude: nil)
       block = @action.resource.params(name)
 
-      instance_eval(&block) if block
+      if block
+        @include = include
+        @exclude = exclude
+
+        instance_eval(&block)
+
+        @include = nil
+        @exclude = nil
+      end
     end
 
     def resource(*args)
@@ -229,11 +237,19 @@ module HaveAPI
     private
     def add_param(*args)
       p = Parameters::Param.new(*args)
+
+      return if @include && !@include.include?(p.name)
+      return if @exclude && @exclude.include?(p.name)
+
       @params << p unless param_exists?(p.name)
     end
 
     def add_resource(*args)
       r = Parameters::Resource.new(*args)
+
+      return if @include && !@include.include?(r.name)
+      return if @exclude && @exclude.include?(r.name)
+
       @params << r unless param_exists?(r.name)
     end
 

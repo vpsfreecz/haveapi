@@ -125,6 +125,48 @@ api.vps.list({limit: 10}, function(c, vpses) {
 
 ```
 
+### Metadata
+Metadata may be used to prefetch associated resources or get total item count.
+
+```js
+api.vps.list({
+		limit: 10,
+		meta: {count: true, includes: 'user,node__location'}
+	}, function(c, vpses) {
+	console.log('received a list of vpses', vpses.isOk());
+	console.log('number of received vpses', vpses.length);
+	console.log('total count of vpses', vpses.tocalCount)
+	
+	vpses.each(function(vps) {
+		// Associations user, node and node__location are prefetched.
+		// They can be accessed immediately without any additional
+		// HTTP request.
+		console.log('VPS', vps.id, vps.hostname, vps.user.login, vps.node.name, vps.node.location.label);
+	});
+});
+```
+
+### Hooks
+Sometimes it is needed to use the client independently on multiple places, but
+to only have one instance and setup/authenticate just once.
+
+There are two hooks available: `setup` and `authenticated`. They are both called
+after the event occurs. A hook may be registered multiple times and it does not matter
+if it is registered before (the callback is queued) or after (it is called right away)
+the event actually happens.
+
+```js
+// The client is initialized, set up and authenticated somewhere else in the
+// code. Something just needs to be done when it is ready.
+api.after('setup', function() {
+	console.log("The client is set up");
+});
+
+api.after('authenticated', function() {
+	console.log("The client is authenticated");
+})
+```
+
 Documentation
 -------------
 https://projects.vpsfree.cz/haveapi-client-js/ref/

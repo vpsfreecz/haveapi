@@ -106,6 +106,7 @@ c.prototype.setup = function(callback) {
  */
 c.prototype.useDescription = function(description) {
 	this._private.description = description;
+	this.createSettings();
 	this.attachResources();
 };
 

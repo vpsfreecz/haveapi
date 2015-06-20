@@ -32,10 +32,12 @@ root.HaveAPI = {
 		 */
 		this._private = {
 			url: url,
-			http: new root.HaveAPI.Client.Http(),
 			version: (opts !== undefined && opts.version !== undefined) ? opts.version : null,
-			description: null
+			description: null,
+			debug: (opts !== undefined && opts.debug !== undefined) ? opts.debug : 0
 		};
+		
+		this._private.http = new root.HaveAPI.Client.Http(this._private.debug);
 		
 		/**
 		 * @member {Object} HaveAPI.Client#apiSettings An object containg API settings.
@@ -152,7 +154,9 @@ c.prototype.attachResources = function() {
 	}
 	
 	for(var r in this._private.description.resources) {
-		console.log("Attach resource", r);
+		if (this._private.debug > 10)
+			console.log("Attach resource", r);
+		
 		this.resources.push(r);
 		
 		this[r] = new root.HaveAPI.Client.Resource(this, r, this._private.description.resources[r], []);
@@ -226,7 +230,9 @@ c.prototype.logout = function(callback) {
  * @param {HaveAPI.Client~replyCallback} callback
  */
 c.prototype.directInvoke = function(action, params, callback) {
-	console.log("executing", action, "with params", params, "at", action.preparedUrl);
+	if (this._private.debug > 5)
+		console.log("Executing", action, "with params", params, "at", action.preparedUrl);
+	
 	var that = this;
 	
 	var opts = {
@@ -372,7 +378,9 @@ c.prototype.addParamsToQuery = function(url, namespace, params) {
  * @class Http
  * @memberof HaveAPI.Client
  */
-var http = c.Http = function() {};
+var http = c.Http = function(debug) {
+	this.debug = debug;
+};
 
 /**
  * @callback HaveAPI.Client.Http~replyCallback
@@ -384,7 +392,9 @@ var http = c.Http = function() {};
  * @method HaveAPI.Client.Http#request
  */
 http.prototype.request = function(opts) {
-	console.log("request to " + opts.method + " " + opts.url);
+	if (this.debug > 5)
+		console.log("Request to " + opts.method + " " + opts.url);
+	
 	var r = new XMLHttpRequest();
 	
 	if (opts.credentials === undefined)
@@ -401,7 +411,9 @@ http.prototype.request = function(opts) {
 	
 	r.onreadystatechange = function() {
 		var state = r.readyState;
-		console.log('state is ' + state);
+		
+		if (this.debug > 6)
+			console.log('Request state is ' + state);
 		
 		if (state == 4 && opts.callback !== undefined) {
 			opts.callback(r.status, JSON.parse(r.responseText));
@@ -763,7 +775,7 @@ r.prototype.applyArguments = function(args) {
  * @return {HaveAPI.Client.ResourceInstance} resource instance
  */
 r.prototype.new = function() {
-	return new root.HaveAPI.Client.ResourceInstance(this.client, this.create, null, false); // FIXME this.create???
+	return new root.HaveAPI.Client.ResourceInstance(this.client, this.create, null, false);
 };
 
 
@@ -777,7 +789,8 @@ r.prototype.new = function() {
  * @memberof HaveAPI.Client
  */
 var a = c.Action = function(client, resource, name, description, args) {
-	console.log("Attach action", name, "to", resource._private.name);
+	if (client._private.debug > 10)
+		console.log("Attach action", name, "to", resource._private.name);
 	
 	this.client = client;
 	this.resource = resource;

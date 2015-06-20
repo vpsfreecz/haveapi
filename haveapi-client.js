@@ -1042,6 +1042,13 @@ a.prototype.prepareInvoke = function(arguments) {
 	
 	if (!this.preparedUrl)
 		this.preparedUrl = this.description.url;
+
+	for (var i = 0; i < this.providedIdArgs.length; i++) {
+		if (this.preparedUrl.search(rx) == -1)
+			break;
+		
+		this.preparedUrl = this.preparedUrl.replace(rx, this.providedIdArgs[i]);
+	}
 	
 	while (args.length > 0) {
 		if (this.preparedUrl.search(rx) == -1)
@@ -1054,6 +1061,8 @@ a.prototype.prepareInvoke = function(arguments) {
 	}
 	
 	if (args.length == 0 && this.preparedUrl.search(rx) != -1) {
+		console.log("UnresolvedArguments", "Unable to execute action '"+ this.name +"': unresolved arguments");
+		
 		throw {
 			name:    'UnresolvedArguments',
 			message: "Unable to execute action '"+ this.name +"': unresolved arguments"
@@ -1193,8 +1202,6 @@ var i = c.ResourceInstance = function(client, action, response, shell, item) {
 		description: action.resource._private.description
 	};
 	
-	var responseObj = item ? response : response.response();
-	
 	if (!response) {
 		if (shell !== undefined && shell) { // association that is to be fetched
 			this._private.resolved = false;
@@ -1205,12 +1212,12 @@ var i = c.ResourceInstance = function(client, action, response, shell, item) {
 			action.directInvoke(function(c, response) {
 				that.attachResources(that._private.action.resource._private.description, response.meta().url_params);
 				that.attachActions(that._private.action.resource._private.description, response.meta().url_params);
-				that.attachAttributes(responseObj);
+				that.attachAttributes(response.response());
 				
 				that._private.resolved = true;
 				
 				if (that._private.resolveCallbacks !== undefined) {
-					for (var i = 0; i < that.resolveCallbacks.length; i++)
+					for (var i = 0; i < that._private.resolveCallbacks.length; i++)
 						that._private.resolveCallbacks[i](that._private.client, that);
 					
 					delete that._private.resolveCallbacks;
@@ -1235,7 +1242,7 @@ var i = c.ResourceInstance = function(client, action, response, shell, item) {
 		
 		this.attachResources(this._private.action.resource._private.description, idArgs);
 		this.attachActions(this._private.action.resource._private.description, idArgs);
-		this.attachAttributes(responseObj);
+		this.attachAttributes(item ? response : response.response());
 		
 	} else {
 		// FIXME
@@ -1366,7 +1373,7 @@ i.prototype.whenResolved = function(callback) {
 		if (this._private.resolveCallbacks === undefined)
 			this._private.resolveCallbacks = [];
 		
-		this.resolveCallbacks.push(callback);
+		this._private.resolveCallbacks.push(callback);
 	}
 };
 

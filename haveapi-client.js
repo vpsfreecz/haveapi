@@ -19,22 +19,23 @@ root.HaveAPI = {
 	 * @param {Object} opts
 	 */
 	Client: function(url, opts) {
-		this.url = url;
-		
-		while (this.url.length > 0) {
-			if (this.url[ this.url.length - 1 ] == '/')
-				this.url = this.url.substr(0, this.url.length - 1);
+		while (url.length > 0) {
+			if (url[ url.length - 1 ] == '/')
+				url = url.substr(0, url.length - 1);
 			
 			else break;
 		}
 		
-		this.http = new root.HaveAPI.Client.Http();
-		this.version = (opts !== undefined && opts.version !== undefined) ? opts.version : null;
-		
 		/**
-		 * @member {Object} HaveAPI.Client#description Description received from the API.
+		 * @member {Object} HaveAPI.Client#_private
+		 * @protected
 		 */
-		this.description = null;
+		this._private = {
+			url: url,
+			http: new root.HaveAPI.Client.Http(),
+			version: (opts !== undefined && opts.version !== undefined) ? opts.version : null,
+			description: null
+		};
 		
 		/**
 		 * @member {Object} HaveAPI.Client#apiSettings An object containg API settings.
@@ -86,7 +87,7 @@ c.prototype.setup = function(callback) {
 	var that = this;
 	
 	this.fetchDescription(function(status, response) {
-		that.description = response.response;
+		that._private.description = response.response;
 		that.createSettings();
 		that.attachResources();
 		
@@ -100,7 +101,7 @@ c.prototype.setup = function(callback) {
  * @param {Object} description
  */
 c.prototype.useDescription = function(description) {
-	this.description = description;
+	this._private.description = description;
 	this.attachResources();
 };
 
@@ -132,9 +133,9 @@ c.prototype.availableVersions = function(callback) {
  * @param {HaveAPI.Client.Http~replyCallback} callback
  */
 c.prototype.fetchDescription = function(callback) {
-	this.http.request({
+	this._private.http.request({
 		method: 'OPTIONS',
-		url: this.url + (this.version ? "/v"+ this.version +"/" : "/?describe=default"),
+		url: this._private.url + (this._private.version ? "/v"+ this._private.version +"/" : "/?describe=default"),
 		callback: callback
 	});
 };
@@ -150,11 +151,11 @@ c.prototype.attachResources = function() {
 		this.destroyResources();
 	}
 	
-	for(var r in this.description.resources) {
+	for(var r in this._private.description.resources) {
 		console.log("Attach resource", r);
 		this.resources.push(r);
 		
-		this[r] = new root.HaveAPI.Client.Resource(this, r, this.description.resources[r], []);
+		this[r] = new root.HaveAPI.Client.Resource(this, r, this._private.description.resources[r], []);
 	}
 };
 
@@ -174,12 +175,12 @@ c.prototype.authenticate = function(method, opts, callback, reset) {
 	
 	if (reset === undefined) reset = true;
 	
-	if (!this.description) {
+	if (!this._private.description) {
 		// The client has not yet been setup.
 		// Fetch the description, do NOT attach the resources, use it only to authenticate.
 		
 		this.fetchDescription(function(status, response) {
-			that.description = response.response;
+			that._private.description = response.response;
 			that.createSettings();
 			that.authenticate(method, opts, callback);
 		});
@@ -187,7 +188,7 @@ c.prototype.authenticate = function(method, opts, callback, reset) {
 		return;
 	}
 	
-	this.authProvider = new c.Authentication.providers[method](this, opts, this.description.authentication[method]);
+	this.authProvider = new c.Authentication.providers[method](this, opts, this._private.description.authentication[method]);
 	
 	this.authProvider.setup(function() {
 		// Fetch new description, which may be different when authenticated
@@ -211,7 +212,7 @@ c.prototype.logout = function(callback) {
 	this.authProvider.logout(function() {
 		that.authProvider = new root.HaveAPI.Client.Authentication.Base();
 		that.destroyResources();
-		that.description = null;
+		that._private.description = null;
 		
 		if (callback !== undefined)
 			callback(that, true);
@@ -230,7 +231,7 @@ c.prototype.directInvoke = function(action, params, callback) {
 	
 	var opts = {
 		method: action.httpMethod(),
-		url: this.url + action.preparedUrl,
+		url: this._private.url + action.preparedUrl,
 		credentials: this.authProvider.credentials(),
 		headers: this.authProvider.headers(),
 		queryParameters: this.authProvider.queryParameters(),
@@ -266,7 +267,7 @@ c.prototype.directInvoke = function(action, params, callback) {
 		opts.params = scopedParams;
 	}
 	
-	this.http.request(opts);
+	this._private.http.request(opts);
 };
 
 /**
@@ -304,7 +305,7 @@ c.prototype.invoke = function(action, params, callback) {
  */
 c.prototype.createSettings = function() {
 	this.apiSettings = {
-		meta: this.description.meta
+		meta: this._private.description.meta
 	};
 }
 
@@ -668,15 +669,10 @@ var br = c.BaseResource = function(){};
 br.prototype.attachResources = function(description, args) {
 	this.resources = [];
 	
-	if (!description) {
-		console.log("SHIT");
-		return;
-	}
-	
 	for(var r in description.resources) {
 		this.resources.push(r);
 		
-		this[r] = new root.HaveAPI.Client.Resource(this.client, r, description.resources[r], args);
+		this[r] = new root.HaveAPI.Client.Resource(this._private.client, r, description.resources[r], args);
 	}
 };
 
@@ -690,12 +686,9 @@ br.prototype.attachResources = function(description, args) {
 br.prototype.attachActions = function(description, args) {
 	this.actions = [];
 	
-	if (!description)
-		console.log("SHIT");
-	
 	for(var a in description.actions) {
 		var names = [a].concat(description.actions[a].aliases);
-		var actionInstance = new root.HaveAPI.Client.Action(this.client, this, a, description.actions[a], args);
+		var actionInstance = new root.HaveAPI.Client.Action(this._private.client, this, a, description.actions[a], args);
 		
 		for(var i = 0; i < names.length; i++) {
 			if (names[i] == 'new')
@@ -728,18 +721,25 @@ br.prototype.defaultParams = function(action) {
  * @class Resource
  * @memberof HaveAPI.Client
  */
-var r = c.Resource = function(client, name, description, args){
-	this.client = client;
-	this.name = name;
-	this.description = description;
-	this.args = args;
+var r = c.Resource = function(client, name, description, args) {
+	this._private = {
+		client: client,
+		name: name,
+		description: description,
+		args: args
+	};
 	
 	this.attachResources(description, args);
 	this.attachActions(description, args);
 	
 	var that = this;
 	var fn = function() {
-		return new c.Resource(that.client, that.name, that.description, that.args.concat(Array.prototype.slice.call(arguments)));
+		return new c.Resource(
+			that.client,
+			that._private.name,
+			that._private.description,
+			that._private.args.concat(Array.prototype.slice.call(arguments))
+		);
 	};
 	fn.__proto__ = this;
 	
@@ -751,7 +751,7 @@ r.prototype = new c.BaseResource();
 // Unused
 r.prototype.applyArguments = function(args) {
 	for(var i = 0; i < args.length; i++) {
-		this.args.push(args[i]);
+		this._private.args.push(args[i]);
 	}
 	
 	return this;
@@ -763,7 +763,7 @@ r.prototype.applyArguments = function(args) {
  * @return {HaveAPI.Client.ResourceInstance} resource instance
  */
 r.prototype.new = function() {
-	return new root.HaveAPI.Client.ResourceInstance(this.client, this.create, null, false);
+	return new root.HaveAPI.Client.ResourceInstance(this.client, this.create, null, false); // FIXME this.create???
 };
 
 
@@ -777,7 +777,7 @@ r.prototype.new = function() {
  * @memberof HaveAPI.Client
  */
 var a = c.Action = function(client, resource, name, description, args) {
-	console.log("Attach action", name, "to", resource.name);
+	console.log("Attach action", name, "to", resource._private.name);
 	
 	this.client = client;
 	this.resource = resource;
@@ -789,7 +789,13 @@ var a = c.Action = function(client, resource, name, description, args) {
 	
 	var that = this;
 	var fn = function() {
-		var new_a = new c.Action(that.client, that.resource, that.name, that.description, that.args.concat(Array.prototype.slice.call(arguments)));
+		var new_a = new c.Action(
+			that.client,
+			that.resource,
+			that.name,
+			that.description,
+			that.args.concat(Array.prototype.slice.call(arguments))
+		);
 		return new_a.invoke();
 	};
 	fn.__proto__ = this;
@@ -1050,54 +1056,56 @@ r.prototype.meta = function() {
  * @memberof HaveAPI.Client
  */
 var i = c.ResourceInstance = function(client, action, response, shell, item) {
-	this.client = client;
-	this.action = action;
-	this.response = response;
-	this.name = this.action.resource.name;
-	this.description = this.action.resource.description;
+	this._private = {
+		client: client,
+		action: action,
+		response: response,
+		name: action.resource._private.name,
+		description: action.resource._private.description
+	};
 	
 	var responseObj = item ? response : response.response();
 	
 	if (!response) {
 		if (shell !== undefined && shell) { // association that is to be fetched
-			this.resolved = false;
-			this.persistent = true;
+			this._private.resolved = false;
+			this._private.persistent = true;
 			
 			var that = this;
 			
 			action.directInvoke(function(c, response) {
-				that.attachResources(that.action.resource.description, response.meta().url_params);
-				that.attachActions(that.action.resource.description, response.meta().url_params);
+				that.attachResources(that._private.action.resource._private.description, response.meta().url_params);
+				that.attachActions(that._private.action.resource._private.description, response.meta().url_params);
 				that.attachAttributes(responseObj);
 				
-				that.resolved = true;
+				that._private.resolved = true;
 				
-				if (that.resolveCallbacks !== undefined) {
+				if (that._private.resolveCallbacks !== undefined) {
 					for (var i = 0; i < that.resolveCallbacks.length; i++)
-						that.resolveCallbacks[i](that.client, that);
+						that._private.resolveCallbacks[i](that._private.client, that);
 					
-					delete that.resolveCallbacks;
+					delete that._private.resolveCallbacks;
 				}
 			});
 			
 		} else { // a new, empty instance
-			this.resolved = true;
-			this.persistent = false;
+			this._private.resolved = true;
+			this._private.persistent = false;
 			
-			this.attachResources(this.action.resource.description, action.providedIdArgs);
-			this.attachActions(this.action.resource.description, action.providedIdArgs);
+			this.attachResources(this._private.action.resource._private.description, action.providedIdArgs);
+			this.attachActions(this._private.action.resource._private.description, action.providedIdArgs);
 			this.attachStubAttributes();
 		}
 		
 	} else if (item || response.isOk()) {
-		this.resolved = true;
-		this.persistent = true;
+		this._private.resolved = true;
+		this._private.persistent = true;
 		
 		var metaNs = client.apiSettings.meta.namespace;
 		var idArgs = item ? response[metaNs].url_params : response.meta().url_params;
 		
-		this.attachResources(this.action.resource.description, idArgs);
-		this.attachActions(this.action.resource.description, idArgs);
+		this.attachResources(this._private.action.resource._private.description, idArgs);
+		this.attachActions(this._private.action.resource._private.description, idArgs);
 		this.attachAttributes(responseObj);
 		
 	} else {
@@ -1119,7 +1127,7 @@ i.prototype = new c.BaseResource();
  * @return {Boolean}
  */
 i.prototype.isOk = function() {
-	return this.response.isOk();
+	return this._private.response.isOk();
 };
 
 /**
@@ -1128,7 +1136,7 @@ i.prototype.isOk = function() {
  * @return {HaveAPI.Client.Response}
  */
 i.prototype.apiResponse = function() {
-	return this.response;
+	return this._private.response;
 };
 
 /**
@@ -1142,25 +1150,25 @@ i.prototype.save = function(callback) {
 	
 	function updateAttrs(attrs) {
 		for (var attr in attrs) {
-			that.attributes[ attr ] = attrs[ attr ];
+			that._private.attributes[ attr ] = attrs[ attr ];
 		}
 	};
 	
 	function replyCallback(c, reply) {
-		that.response = reply;
+		that._private.response = reply;
 		updateAttrs(reply);
 		
 		if (callback !== undefined)
 			callback(c, that);
 	}
 	
-	if (this.persistent) {
+	if (this._private.persistent) {
 		this.update.directInvoke(replyCallback);
 		
 	} else {
 		this.create.directInvoke(function(c, reply) {
 			if (reply.isOk())
-				that.persistent = true;
+				that._private.persistent = true;
 			
 			replyCallback(c, reply);
 		});
@@ -1170,7 +1178,7 @@ i.prototype.save = function(callback) {
 i.prototype.defaultParams = function(action) {
 	ret = {}
 	
-	for (var attr in this.attributes) {
+	for (var attr in this._private.attributes) {
 		var desc = action.description.input.parameters[ attr ];
 		
 		if (desc === undefined)
@@ -1178,11 +1186,11 @@ i.prototype.defaultParams = function(action) {
 		
 		switch (desc.type) {
 			case 'Resource':
-				ret[ attr ] = this.attributes[ attr ][ desc.value_id ];
+				ret[ attr ] = this._private.attributes[ attr ][ desc.value_id ];
 				break;
 			
 			default:
-				ret[ attr ] = this.attributes[ attr ];
+				ret[ attr ] = this._private.attributes[ attr ];
 		}
 	}
 	
@@ -1198,21 +1206,21 @@ i.prototype.defaultParams = function(action) {
  * @return {HaveAPI.Client.ResourceInstance}
  */
 i.prototype.resolveAssociation = function(attr, path, url) {
-	var tmp = this.client;
+	var tmp = this._private.client;
 	
 	for(var i = 0; i < path.length; i++) {
 		tmp = tmp[ path[i] ];
 	}
 	
-	var obj = this.attributes[ attr ];
-	var metaNs = this.client.apiSettings.meta.namespace;
+	var obj = this._private.attributes[ attr ];
+	var metaNs = this._private.client.apiSettings.meta.namespace;
 	var action = tmp.show;
 	action.provideIdArgs(obj[metaNs].url_params);
 	
 	if (obj[metaNs].resolved)
-		return new root.HaveAPI.Client.ResourceInstance(this.client, action, obj, false, true);
+		return new root.HaveAPI.Client.ResourceInstance(this._private.client, action, obj, false, true);
 	
-	return new root.HaveAPI.Client.ResourceInstance(this.client, action, null, true);
+	return new root.HaveAPI.Client.ResourceInstance(this._private.client, action, null, true);
 };
 
 /**
@@ -1222,12 +1230,12 @@ i.prototype.resolveAssociation = function(attr, path, url) {
  * @param {HaveAPI.Client.ResourceInstance~resolveCallback} callback
  */
 i.prototype.whenResolved = function(callback) {
-	if (this.resolved)
-		callback(this.client, this);
+	if (this._private.resolved)
+		callback(this._private.client, this);
 	
 	else {
-		if (this.resolveCallbacks === undefined)
-			this.resolveCallbacks = [];
+		if (this._private.resolveCallbacks === undefined)
+			this._private.resolveCallbacks = [];
 		
 		this.resolveCallbacks.push(callback);
 	}
@@ -1240,16 +1248,16 @@ i.prototype.whenResolved = function(callback) {
  * @param {Object} attrs
  */
 i.prototype.attachAttributes = function(attrs) {
-	this.attributes = attrs;
-	this.associations = {};
+	this._private.attributes = attrs;
+	this._private.associations = {};
 	
-	var metaNs = this.client.apiSettings.meta.namespace;
+	var metaNs = this._private.client.apiSettings.meta.namespace;
 	
 	for (var attr in attrs) {
 		if (attr === metaNs)
 			continue;
 		
-		this.createAttribute(attr, this.action.description.output.parameters[ attr ]);
+		this.createAttribute(attr, this._private.action.description.output.parameters[ attr ]);
 	}
 };
 
@@ -1260,7 +1268,7 @@ i.prototype.attachAttributes = function(attrs) {
  */
 i.prototype.attachStubAttributes = function() {
 	var attrs = {};
-	var params = this.action.description.input.parameters;
+	var params = this._private.action.description.input.parameters;
 	
 	for (var attr in params) {
 		switch (params[ attr ].type) {
@@ -1292,28 +1300,32 @@ i.prototype.createAttribute = function(attr, desc) {
 		case 'Resource':
 			Object.defineProperty(this, attr, {
 				get: function() {
-						if (that.associations.hasOwnProperty(attr))
-							return that.associations[ attr ];
+						if (that._private.associations.hasOwnProperty(attr))
+							return that._private.associations[ attr ];
 						
-						return that.associations[ attr ] = that.resolveAssociation(attr, desc.resource, that.attributes[ attr ].url);
+						return that._private.associations[ attr ] = that.resolveAssociation(
+							attr,
+							desc.resource,
+							that._private.attributes[ attr ].url
+						);
 					},
 				set: function(v) {
-						that.attributes[ attr ][ desc.value_id ]    = v.id;
-						that.attributes[ attr ][ desc.value_label ] = v[ desc.value_label ];
+						that._private.attributes[ attr ][ desc.value_id ]    = v.id;
+						that._private.attributes[ attr ][ desc.value_label ] = v[ desc.value_label ];
 					}
 			});
 			
 			Object.defineProperty(this, attr + '_id', {
-				get: function()  { return that.attributes[ attr ][ desc.value_id ];  },
-				set: function(v) { that.attributes[ attr ][ desc.value_id ] = v;     }
+				get: function()  { return that._private.attributes[ attr ][ desc.value_id ];  },
+				set: function(v) { that._private.attributes[ attr ][ desc.value_id ] = v;     }
 			});
 			
 			break;
 		
 		default:
 			Object.defineProperty(this, attr, {
-				get: function()  { return that.attributes[ attr ];  },
-				set: function(v) { that.attributes[ attr ] = v;     }
+				get: function()  { return that._private.attributes[ attr ];  },
+				set: function(v) { that._private.attributes[ attr ] = v;     }
 			});
 	}
 };

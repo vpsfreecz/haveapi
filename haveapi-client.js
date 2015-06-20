@@ -415,7 +415,7 @@ hooks.prototype.register = function(type, event, callback) {
 	if (this.debug > 9)
 		console.log("Register callback", type, event);
 	
-	if (this,hooks[type] === undefined)
+	if (this.hooks[type] === undefined)
 		this.hooks[type] = {};
 	
 	if (this.hooks[type][event] === undefined) {

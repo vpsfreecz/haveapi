@@ -141,7 +141,13 @@ module HaveAPI
       # Call all instance and class hooks.
       def call_hooks_for(*args)
         ret = call_instance_hooks_for(*args)
-        call_class_hooks_for(*args, initial: ret)
+
+        if args.last.is_a?(::Hash)
+          args.last.update(initial: ret)
+          call_class_hooks_for(*args)
+        else
+          call_class_hooks_for(*args, initial: ret)
+        end
       end
 
       # Call only instance hooks.

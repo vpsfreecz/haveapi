@@ -126,13 +126,23 @@ module HaveAPI
       block = @action.resource.params(name)
 
       if block
-        @include = include
-        @exclude = exclude
+        @include_back = @include.clone if @include
+        @exclude_back = @exclude.clone if @exclude
+
+        if include
+          @include ||= []
+          @include.concat(include)
+        end
+
+        if exclude
+          @exclude ||= []
+          @exclude.concat(exclude)
+        end
 
         instance_eval(&block)
 
-        @include = nil
-        @exclude = nil
+        @include = @include_back if include
+        @exclude = @exclude_back if exclude
       end
     end
 

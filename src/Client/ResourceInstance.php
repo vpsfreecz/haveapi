@@ -79,47 +79,46 @@ class ResourceInstance extends Resource {
 	public function __get($name) {
 		$id = false;
 		
-		if($this->endsWith($name, '_id')) {
+		if(!array_key_exists($name, $this->attrs) && $this->endsWith($name, '_id')) {
 			$name = substr($name, 0, -3);
 			$id = true;
 		}
 		
-		if(array_key_exists($name, $this->attrs)) {
-			$param = $this->description->actions->{$this->action->name()}->output->parameters->{$name};
-			
-			switch($param->type) {
-				case 'Resource':
-					if($id)
-						return $this->attrs[$name]->{ $param->value_id };
-					
-					if(isSet($this->associations[$name]))
-						return $this->associations[$name];
-					
-					// Return resolved ResourceInstance or resolve one
-					$ns = $this->client->getSettings('meta')->{'namespace'};
-					
-					if ($this->attrs[$name]->{$ns}->resolved) {
-						$this->associations[$name] = new ResourceInstance(
-							$this->client,
-							$this->client[ implode('.', $param->resource) ]->show,
-							$this->attrs[$name]
-						);
-					
-					} else {
-						$action = $this->client[ implode('.', $param->resource) ]->show;
-						$action->applyArgs($this->attrs[$name]->{$ns}->url_params);
-						
-						$this->associations[$name] = $action->call();
-					}
-					
-					return $this->associations[$name];
-					
-				default:
-					return $this->attrs[$name];
-			}
-		}
+		if (!array_key_exists($name, $this->attrs))
+			return parent::__get($name);
 		
-		return parent::__get($name);
+		$param = $this->description->actions->{$this->action->name()}->output->parameters->{$name};
+		
+		switch($param->type) {
+			case 'Resource':
+				if($id)
+					return $this->attrs[$name]->{ $param->value_id };
+				
+				if(isSet($this->associations[$name]))
+					return $this->associations[$name];
+				
+				// Return resolved ResourceInstance or resolve one
+				$ns = $this->client->getSettings('meta')->{'namespace'};
+				
+				if ($this->attrs[$name]->{$ns}->resolved) {
+					$this->associations[$name] = new ResourceInstance(
+						$this->client,
+						$this->client[ implode('.', $param->resource) ]->show,
+						$this->attrs[$name]
+					);
+				
+				} else {
+					$action = $this->client[ implode('.', $param->resource) ]->show;
+					$action->applyArgs($this->attrs[$name]->{$ns}->url_params);
+					
+					$this->associations[$name] = $action->call();
+				}
+				
+				return $this->associations[$name];
+				
+			default:
+				return $this->attrs[$name];
+		}
 	}
 	
 	/**

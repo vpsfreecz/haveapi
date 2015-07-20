@@ -40,7 +40,12 @@ END
         def exec
           klass = self.class.resource.token_instance[@version]
 
-          user = klass.send(:find_user_by_credentials, params[:token][:login], params[:token][:password])
+          user = klass.send(
+              :find_user_by_credentials,
+              request,
+              input[:login],
+              input[:password]
+          )
           error('bad login or password') unless user
 
           token = expiration = nil
@@ -76,7 +81,7 @@ END
 
         def exec
           klass = self.class.resource.token_instance[@version]
-          klass.send(:revoke_token, current_user, klass.token(request))
+          klass.send(:revoke_token, request, current_user, klass.token(request))
         end
       end
 
@@ -94,7 +99,7 @@ END
 
         def exec
           klass = self.class.resource.token_instance[@version]
-          klass.send(:renew_token, current_user, klass.token(request))
+          klass.send(:renew_token, request, current_user, klass.token(request))
         end
       end
     end

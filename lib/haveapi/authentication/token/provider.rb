@@ -41,11 +41,11 @@ module HaveAPI::Authentication
     #                                  interval: interval, label: request.user_agent)
     #     end
     #
-    #     def revoke_token(user, token)
+    #     def revoke_token(request, user, token)
     #       user.tokens.delete(token: token)
     #     end
     #
-    #     def renew_token(user, token)
+    #     def renew_token(request, user, token)
     #       t = ::Token.find_by(user: user, token: token)
     #
     #       if t.lifetime.start_with('renewable')
@@ -55,11 +55,11 @@ module HaveAPI::Authentication
     #       end
     #     end
     #
-    #     def find_user_by_credentials(username, password)
+    #     def find_user_by_credentials(request, username, password)
     #       ::User.find_by(login: username, password: password)
     #     end
     #
-    #     def find_user_by_token(token)
+    #     def find_user_by_token(request, token)
     #       t = ::Token.find_by(token: token)
     #
     #       if t
@@ -89,7 +89,7 @@ module HaveAPI::Authentication
       def authenticate(request)
         t = token(request)
 
-        t && find_user_by_token(t)
+        t && find_user_by_token(request, t)
       end
 
       def token(request)
@@ -131,21 +131,21 @@ module HaveAPI::Authentication
 
       # Revoke existing +token+ for +user+.
       # Must be implemented.
-      def revoke_token(user, token)
+      def revoke_token(request, user, token)
 
       end
 
       # Renew existing +token+ for +user+.
       # Returns a date time which is token expiration.
       # Must be implemented.
-      def renew_token(user, token)
+      def renew_token(request, user, token)
 
       end
 
       # Used by action Resources::Token::Request when the user is requesting
       # a token. This method returns user object or nil.
       # Must be implemented.
-      def find_user_by_credentials(username, password)
+      def find_user_by_credentials(request, username, password)
 
       end
 
@@ -153,7 +153,7 @@ module HaveAPI::Authentication
       # If the token was created as auto-renewable, this method
       # is responsible for its renewal.
       # Must be implemented.
-      def find_user_by_token(token)
+      def find_user_by_token(request, token)
 
       end
 

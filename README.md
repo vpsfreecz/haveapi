@@ -21,7 +21,7 @@ which they otherwise know nothing about.
 - Auto-generated online HTML documentation
 - Generic interface for clients - one client can be used to access all APIs
   using this framework
-- Ruby and PHP clients already available
+- Ruby, PHP and JavaScript clients already available
 - A change in the API is immediately reflected in all clients
 - Supports API versioning
 - Ready for ActiveRecord - validators from models are included in the
@@ -106,8 +106,7 @@ module MyAPI
       # There are no input parameters
       
       # Output parameters
-      # :users means, that the list of users will be in hash with key :users
-      output(:list) do
+      output(:object_list) do
         use :id
         use :common
       end
@@ -117,7 +116,7 @@ module MyAPI
       # Default rule is deny.
       authorize do |u|
         allow if u.role == 'admin'
-        deny
+        deny  # deny is implicit, so it may be omitted
       end
       
       # Provide example usage
@@ -134,10 +133,20 @@ module MyAPI
         })
         comment 'Get a list of all users like this'
       end
+
+      # Helper method returning a query for all users
+      def query
+	::User.all
+      end
+
+      # This method is called if the request has meta[:count] = true
+      def count
+        query.count
+      end
       
       # Execute action, return the list
       def exec
-        ::User.all
+        query.limit(input[:limit]).offset(input[:offset])
       end
     end
     
@@ -174,7 +183,7 @@ module MyAPI
       end
       
       def exec
-        user = ::User.new(params[:user])
+        user = ::User.new(input)
         
         if user.save
           ok(user)
@@ -200,7 +209,7 @@ api = HaveAPI::Server.new(MyAPI)
 
 # Use HTTP basic auth
 class BasicAuth < HaveAPI::Authentication::Basic::Provider
-  def find_user(username, password)
+  def find_user(request, username, password)
       User.authenticate(username, password)
   end
 end

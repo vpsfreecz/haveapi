@@ -60,7 +60,7 @@ root.HaveAPI = {
 var c = root.HaveAPI.Client;
 
 /** @constant HaveAPI.Client.Version */
-c.Version = '0.4.0-dev';
+c.Version = '0.3.0';
 
 /**
  * @callback HaveAPI.Client~doneCallback

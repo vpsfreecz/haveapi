@@ -50,6 +50,9 @@ Version is described as:
         "resources": {
             ... resources ...
         },
+	"meta": {
+	    "namespace": "_meta"
+	},
         "help": "/<version>/"
     }
 
@@ -148,6 +151,7 @@ Every action is described as:
         "examples": [
             ... list of examples ...
         ],
+	"meta": ... metadata ...,
         "url": "URL for this action",
         "method": "HTTP method to be used",
         "help": "URL to get this very description of the action"
@@ -187,6 +191,7 @@ There are two parameter types.
 The type can be one of:
 
  - String
+ - Text
  - Boolean
  - Integer
  - Float
@@ -251,6 +256,23 @@ render them according to its syntax.
             ... a hash of response parameters ...
         },
         "comment": "Description of the example"
+    }
+
+### Metadata
+Metadata can be global and per-object. Global metadata are sent once for each
+response, where as per-object are sent with each object that is a part of the
+response.
+
+    {
+        "global": {
+	    "input": ... parameters or null ...,
+	    "output: ... parameters or null ...
+	} or null,
+        
+	"object": {
+	    "input": ... parameters or null ...,
+	    "output: ... parameters or null ...
+	} or null,
     }
 
 ### List API versions
@@ -319,10 +341,15 @@ Example response to the request above:
     Content-Type: application/json
     
     {
-        "user": {
-            "id": 1,
-            "login": "mylogin",
-            "name": "Very Name",
-            "role": "admin"
-        }
+        "status": true,
+        "response": {
+            "user": {
+                "id": 1,
+                "login": "mylogin",
+                "name": "Very Name",
+                "role": "admin"
+            }
+	},
+        "message": null,
+        "errors: null
     }

@@ -90,3 +90,9 @@ sending it to the API, to lessen the API load and make it more user-friendly.
 
 However, as the input is validated on the server anyway, it does not have
 to be implemented.
+
+## Metadata channel
+Metadata channel is currently used to specify what associated resources should
+be prefetched and whether an object list should contain total number of items.
+
+Metadata is nothing more than a hash in input parameters under key `_meta`.

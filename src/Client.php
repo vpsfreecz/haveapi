@@ -180,7 +180,7 @@ class Client extends Client\Resource {
 		$request = $this->getRequest($fn, $this->uri . $action->url());
 		$res = array();
 		
-		if (isset($params['meta'])) {
+		if (array_key_exists('meta', $params)) {
 			$s = $this->getSettings();
 			$res[ $s['meta']->{'namespace'} ] = $params['meta'];
 			unset($params['meta']);

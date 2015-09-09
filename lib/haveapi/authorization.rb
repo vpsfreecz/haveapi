@@ -86,7 +86,7 @@ module HaveAPI
         ret = {}
 
         direction[:whitelist].each do |p|
-          ret[p] = allowed[p] if allowed && allowed[p]
+          ret[p] = allowed[p] if allowed.has_key?(p)
         end
 
         ret

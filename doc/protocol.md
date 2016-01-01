@@ -50,9 +50,9 @@ Version is described as:
         "resources": {
             ... resources ...
         },
-	"meta": {
-	    "namespace": "_meta"
-	},
+        "meta": {
+            "namespace": "_meta"
+        },
         "help": "/<version>/"
     }
 
@@ -265,14 +265,14 @@ response.
 
     {
         "global": {
-	    "input": ... parameters or null ...,
-	    "output: ... parameters or null ...
-	} or null,
+            "input": ... parameters or null ...,
+            "output: ... parameters or null ...
+        } or null,
         
-	"object": {
-	    "input": ... parameters or null ...,
-	    "output: ... parameters or null ...
-	} or null,
+        "object": {
+            "input": ... parameters or null ...,
+            "output: ... parameters or null ...
+        } or null,
     }
 
 ### List API versions
@@ -349,7 +349,7 @@ Example response to the request above:
                 "name": "Very Name",
                 "role": "admin"
             }
-	},
+        },
         "message": null,
         "errors: null
     }

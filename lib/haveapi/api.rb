@@ -38,7 +38,7 @@ module HaveAPI
   end
 
   # Return a list of all API versions.
-  def self.get_versions(module_name)
+  def self.versions(module_name)
     ret = []
 
     resources(module_name) do |r|
@@ -48,7 +48,7 @@ module HaveAPI
     ret
   end
 
-  def self.set_module_name(name)
+  def self.module_name=(name)
     @module_name = name
   end
 
@@ -56,7 +56,7 @@ module HaveAPI
     @module_name
   end
 
-  def self.set_default_authenticate(chain)
+  def self.default_authenticate=(chain)
     @default_auth = chain
   end
 

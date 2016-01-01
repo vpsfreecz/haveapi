@@ -90,7 +90,7 @@ module HaveAPI
       @versions ||= []
 
       if v == :all
-        @versions = HaveAPI.get_versions(@module_name)
+        @versions = HaveAPI.versions(@module_name)
       elsif v.is_a?(Array)
         @versions += v
         @versions.uniq!
@@ -101,7 +101,7 @@ module HaveAPI
     end
 
     # Set default version of API.
-    def set_default_version(v)
+    def default_version=(v)
       @default_version = v
     end
 

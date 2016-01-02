@@ -1,0 +1,35 @@
+<%
+	def render_hash(hash)
+		return 'none' unless hash
+		'<dl>' + hash.map { |k,v| "<dt>#{k}</dt><dd>#{v}</dd>" }.join('') + '</dl>'
+	end
+%>
+# Hooks
+<% HaveAPI::Hooks.hooks.each do |klass, hooks| %>
+##<%= klass %>
+	<% hooks.each do |name, hook| %>
+### <%= name %>
+<table>
+	<tr>
+		<td style="vertical-align: top;">Description:</td>
+		<td><%= hook[:desc] %></td>
+	</tr>
+	<tr>
+		<td style="vertical-align: top;">Context:</td>
+		<td><%= hook[:context] || 'current' %></td>
+	</tr>
+	<tr>
+		<td style="vertical-align: top;">Arguments:</td>
+		<td><%= render_hash(hook[:args]) %></td>
+	</tr>
+	<tr>
+		<td style="vertical-align: top;">Initial value:</td>
+		<td><%= render_hash(hook[:initial]) %></td>
+	</tr>
+	<tr>
+		<td style="vertical-align: top;">Return value:</td>
+		<td><%= render_hash(hook[:ret]) %></td>
+	</tr>
+</table>
+	<% end %>
+<% end %>

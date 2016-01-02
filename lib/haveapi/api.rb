@@ -45,7 +45,7 @@ module HaveAPI
       ret << r.version unless ret.include?(r.version)
     end
 
-    ret
+    ret.compact!
   end
 
   def self.module_name=(name)

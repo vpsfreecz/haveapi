@@ -33,7 +33,14 @@ module HaveAPI
   # Return list of resources for version +v+.
   def self.get_version_resources(module_name, v)
     filter_resources(module_name) do |r|
-      r.version.is_a?(Array) ? r.version.include?(v) : (r.version == v || r.version == :all)
+      r_v = r.version || implicit_version
+
+      if r_v.is_a?(Array)
+        r_v.include?(v)
+
+      else
+        r_v == v || r_v == :all
+      end
     end
   end
 
@@ -46,6 +53,8 @@ module HaveAPI
     end
 
     ret.compact!
+    ret << implicit_version if ret.empty? && implicit_version
+    ret
   end
 
   def self.module_name=(name)
@@ -54,6 +63,14 @@ module HaveAPI
 
   def self.module_name
     @module_name
+  end
+
+  def self.implicit_version=(v)
+    @implicit_version = v
+  end
+
+  def self.implicit_version
+    @implicit_version
   end
 
   def self.default_authenticate=(chain)

@@ -7,7 +7,11 @@ module HaveAPI
 
     # Called after the user was authenticated (or not). The block is passed
     # current user object or nil as an argument.
-    has_hook :post_authenticated
+    has_hook :post_authenticated,
+        desc: 'Called after the user was authenticated',
+        args: {
+            current_user: 'object returned by the authentication backend',
+        }
 
     module ServerHelpers
       def authenticate!(v)

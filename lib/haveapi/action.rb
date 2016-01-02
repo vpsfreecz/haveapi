@@ -11,7 +11,16 @@ module HaveAPI
 
     include Hookable
 
-    has_hook :exec_exception
+    has_hook :exec_exception,
+        desc: 'Called when unhandled exceptions occurs during Action.exec',
+        args: {
+            action: 'HaveAPI::Action instance',
+            exception: 'exception instance',
+        },
+        ret: {
+            status: 'true or false, indicating whether error should be reported',
+            message: 'error message sent to the user',
+        }
 
     attr_reader :message, :errors, :version
     attr_accessor :flags

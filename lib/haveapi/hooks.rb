@@ -46,18 +46,29 @@ module HaveAPI
   module Hooks
     # Register a hook defined by +klass+ with +name+.
     # +klass+ is an instance of Class, that is class name, not it's instance.
-    def self.register_hook(klass, name)
+    # +opts+ is a hash and can have following keys:
+    #   - desc - why this hook exists, when it's called
+    #   - context - the context in which given blocks are called
+    #   - args - hash of block arguments
+    #   - initial - hash of initial values
+    #   - ret - hash of return values
+    def self.register_hook(klass, name, opts = {})
       classified = hook_classify(klass)
+      opts[:listeners] = []
 
       @hooks ||= {}
       @hooks[classified] ||= {}
-      @hooks[classified][name] = []
+      @hooks[classified][name] = opts
+    end
+
+    def self.hooks
+      @hooks
     end
 
     # Connect class hook defined in +klass+ with +name+ to +block+.
     # +klass+ is a class name.
     def self.connect_hook(klass, name, &block)
-      @hooks[hook_classify(klass)][name] << block
+      @hooks[hook_classify(klass)][name][:listeners] << block
     end
 
     # Connect instance hook from instance +klass+ with +name+ to +block+.
@@ -66,11 +77,11 @@ module HaveAPI
         @hooks[klass] = {}
 
         @hooks[klass.class].each do |k, v|
-          @hooks[klass][k] = []
+          @hooks[klass][k] = {listeners: []}
         end
       end
 
-      @hooks[klass][name] << block
+      @hooks[klass][name][:listeners] << block
     end
 
     # Call all blocks that are connected to hook in +klass+ with +name+.
@@ -92,7 +103,7 @@ module HaveAPI
 
       catch(:stop) do
         return initial unless @hooks[classified]
-        hooks = @hooks[classified][name]
+        hooks = @hooks[classified][name][:listeners]
         return initial unless hooks
 
         hooks.each do |hook|
@@ -122,8 +133,8 @@ module HaveAPI
   module Hookable
     module ClassMethods
       # Register a hook named +name+.
-      def has_hook(name)
-        Hooks.register_hook(self.to_s, name)
+      def has_hook(name, opts = {})
+        Hooks.register_hook(self.to_s, name, opts)
       end
 
       # Connect +block+ to registered hook with +name+.

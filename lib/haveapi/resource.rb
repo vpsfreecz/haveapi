@@ -25,13 +25,8 @@ module HaveAPI
       constants.select do |c|
         obj = const_get(c)
 
-        begin
-          if obj.obj_type == :action
-            yield obj
-          end
-
-        rescue NoMethodError
-          next
+        if obj.respond_to?(:obj_type) && obj.obj_type == :action
+          yield obj
         end
       end
     end

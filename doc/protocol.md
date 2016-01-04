@@ -2,7 +2,7 @@
 HaveAPI defines the format for the self-description and URLs where the self-description
 can be found.
 
-## Self-description
+# Self-description
 The API is self-describing. It documents itself. Clients use the self-description
 to work with the API. The Self-description contains access URLs, HTTP methods,
 input and output parameters and their validators.
@@ -20,7 +20,7 @@ Thanks to this ability, API changes immediately reflects in all clients without
 changing a single line of code. A client can also be used on all APIs with compatible
 self-describing format, without any changes at all.
 
-## Envelope
+# Envelope
 In addition to output format specified below, every API response
 is wrapped in an envelope.
 The envelope reports if action succeeded or failed, provides return value or error
@@ -36,11 +36,11 @@ messages.
           }
       }
 
-## Description format
+# Description format
 In this document, the self-description is encoded in JSON. However, it can
 be encoded in any of the supported output formats.
 
-### Version
+## Version
 Version is described as:
 
     {
@@ -58,7 +58,7 @@ Version is described as:
 
 See appropriate section for detailed description of each section.
 
-### Authentication
+## Authentication
 HaveAPI defines an interface for implementing custom authentication methods.
 HTTP basic and token authentication is built-in.
 
@@ -66,12 +66,12 @@ Authentication methods can be set per API version. They are a part of
 the self-description, but must be understood by the client.
 The client can choose whichever available authentication method he prefers.
 
-#### HTTP basic authentication
+### HTTP basic authentication
 HTTP basic authentication needs no other configuration, only informs about its presence.
 
     "basic": {}
 
-#### Token authentication
+### Token authentication
 Token authentication contains a resource ``token``, that is used
 to acquire and revoke token.
 
@@ -114,7 +114,7 @@ Token can be revoked by calling the ``revoke`` action.
 
 The format for ``resources`` section is the same as for any other resource.
 
-### Resources
+## Resources
 Each resource is described as:
 
     "<resource_name>": {
@@ -127,7 +127,7 @@ Each resource is described as:
         }
     }
 
-### Actions
+## Actions
 Every action is described as:
 
     "<action_name>": {
@@ -157,7 +157,7 @@ Every action is described as:
         "help": "URL to get this very description of the action"
     }
 
-#### Layouts
+### Layouts
 Layout type is specified for input/output parameters. Thanks to the layout type,
 clients know how to send the request and how to interpret the response.
 
@@ -172,7 +172,7 @@ In client libraries, the ``object`` layout output usually results in returning
 an object that represents the instance of the resource. The parameters are defined
 as object properties and the like.
 
-#### Namespace
+### Namespace
 All input/output parameters are put in a namespace, which is usually
 the name of the resource.
 
@@ -184,10 +184,10 @@ For example:
         }
     }
 
-### Parameters
+## Parameters
 There are two parameter types.
 
-#### Data types
+### Data types
 The type can be one of:
 
  - String
@@ -202,16 +202,133 @@ The type can be one of:
             "label": "Label for this parameter",
             "description": "Describe it's meaning",
             "type": "<one of the data types>",
-            "choices": a list or a hash of accepted values
             "validators": ... validators ...,
             "default": "default value that is used if the parameter is omitted"
         }
 
-If the choices are in a list, than it is a list of accepted values.
-If the choices are in a hash, the keys of that hash are accepted values,
+
+#### Validators
+Every parameter has its own validators. Any of the following validators
+may be present. Input value must pass through all validators in order
+to be considered valid.
+
+##### Acceptance
+Used when a parameter must have one specific value.
+
+    "accept": {
+        "value": <value to accept>,
+        "message": "has to be <value>"
+    }
+
+##### Presence
+The parameter must be present. If `empty` is `false`, leading and trailing
+whitespace is stripped before the check.
+
+    "present": {
+        empty: true/false,
+        message: "must be present"
+    }
+
+##### Confirmation
+Used to confirm that two parameters have either the same value or not have the
+same value. The former can be used e.g. to verify that passwords are same
+and the latter to give two different e-mail addresses.
+
+    "confirm": {
+        "equal": true/false,
+        "parameter": <parameter_name>,
+        "message": "must (or must not) be the same as <parameter_name>"
+    }
+
+##### Inclusion
+The parameter can contain only one of given options.
+
+    "include": {
+        "values": ["list", "of", "allowed", "values"],
+        "message": "%{value} cannot be used"
+    }
+
+If the `values` are a list, than it is a list of accepted values.
+If the `values` are a hash, the keys of that hash are accepted values,
 values in that hash are to be shown in UI.
 
-#### Resource association
+    "include": {
+        "values": {
+            "one": "Fancy one",
+            "two": "Fancy two"
+        },
+        "message": "%{value} cannot be used"
+    }
+
+##### Exclusion
+The parameter can be set to anything except values listed here.
+
+    "exclude": {
+        "values": ["list", "of", "excluded", "values"],
+        "message": "%{value} cannot be used"
+    }
+
+##### Specific format
+If `match` is true, the parameter must pass given regular expression.
+Otherwise it must not pass the regular expression.
+
+    "format": {
+        "rx": "regular expression",
+        "match": true/false,
+	"description": "human-readable description of the regular expression",
+        "message": "%{value} is not in a valid format"
+    }
+
+##### Length
+Useful only for `String` and `Text` parameters. Checks the length of given string.
+It may check either
+
+ - minimum
+ - maximum
+ - minimum and maximum
+ - constant length
+
+The length validator must therefore contain one or more checks, but cannot
+contain both min/max and equality.
+
+Length range:
+
+    "length": {
+        "min": 0,
+        "max": 99,
+        "message": "length has to be in range <0,99>"
+    }
+
+Constant length:
+
+    "length": {
+        "equals": 10,
+        "message": "length has to be 10"
+    }
+
+##### Numericality
+Numericality implies that the parameter must be a number, i.e. `Integer`, `Float`
+or `String` containing only digits. It can check that the number is in a specified
+range and can provide a step. The validator can contain one or more of these conditions.
+
+    "number": {
+        "min": 0,
+        "max": 99,
+        "step": 3,
+	"mod": 3,
+	"even": true/false,
+	"odd": true/false
+    }
+
+##### Custom validation
+Custom validation cannot be documented by the API. The developer may or may not
+provide information that some non-documented validation takes place. The documentation
+contains only the description of the validations that may be shown to the user,
+but is not evaluated client-side, only server-side.
+
+    "custom": "description of custom validation"
+
+### Resource association
 This is used for associations between resources, e.g. car has a wheel.
 
     "<parameter_name>": {
@@ -243,7 +360,7 @@ can show the human-friendly label instead of just an ID.
         "<value of value_label from description>": "<label>"
     }
 
-### Examples
+## Examples
 Examples are described in a generic way, so that every client can
 render them according to its syntax.
 
@@ -258,7 +375,7 @@ render them according to its syntax.
         "comment": "Description of the example"
     }
 
-### Metadata
+## Metadata
 Metadata can be global and per-object. Global metadata are sent once for each
 response, where as per-object are sent with each object that is a part of the
 response.
@@ -275,7 +392,7 @@ response.
         } or null,
     }
 
-### List API versions
+## List API versions
 Send request ``OPTIONS /?describe=versions``. The description format:
 
     {
@@ -283,11 +400,11 @@ Send request ``OPTIONS /?describe=versions``. The description format:
         "default": <which version is default>
     }
 
-### Describe default version
+## Describe default version
 Send request ``OPTIONS /?describe=default`` the get the description
 of the default version.
 
-### Describe the whole API
+## Describe the whole API
 It is possible to get self-description of all versions at once.
 
 Send request ``OPTIONS /``. The description format:
@@ -301,20 +418,20 @@ Send request ``OPTIONS /``. The description format:
         }
     }
 
-## Authorization
+# Authorization
 Actions may require different levels of authorization. HaveAPI provides means for
 implementing authorization, but it is not self-described.
 
 If the user is authenticated when requesting self-description, only allowed
 resources/actions/parameters will be returned.
 
-## Input/output formats
+# Input/output formats
 For now, the only supported input format is JSON.
 
 Output format can be chosen by a client. However, no other format than JSON is built-in.
 The output format can be chosen with HTTP header ``Accept``.
 
-## Request
+# Request
 Action URL and HTTP method the client learns from the self-description.
 
 Example request:
@@ -332,7 +449,7 @@ Example request:
         }
     }
 
-## Response
+# Response
 Clients know how to interpret the response thanks to the layout type they learn
 from the self-description.
 

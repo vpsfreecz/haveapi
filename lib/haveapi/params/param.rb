@@ -2,21 +2,19 @@ module HaveAPI::Parameters
   class Param
     attr_reader :name, :label, :desc, :type, :default
 
-    def initialize(name, required: nil, label: nil, desc: nil, type: nil,
-                   choices: nil, db_name: nil, default: :_nil, fill: false,
-                   clean: nil)
-      @required = required
+    def initialize(name, args = {})
       @name = name
-      @label = label || name.to_s.capitalize
-      @desc = desc
-      @type = type
-      @choices = choices
-      @db_name = db_name
-      @default = default
-      @fill = fill
+      @label = args.delete(:label) || name.to_s.capitalize
       @layout = :custom
-      @validators = {}
-      @clean = clean
+
+      %i(label desc type db_name default fill clean).each do |attr|
+        instance_variable_set("@#{attr}", args.delete(attr))
+      end
+
+      @type ||= String
+
+      @validators = HaveAPI::ValidatorChain.new(args) unless args.empty?
+      fail "unused arguments #{args}" unless args.empty?
     end
 
     def db_name
@@ -24,7 +22,7 @@ module HaveAPI::Parameters
     end
 
     def required?
-      @required
+      @validators ? @validators.required? : false
     end
 
     def optional?
@@ -35,24 +33,19 @@ module HaveAPI::Parameters
       @fill
     end
 
-    def add_validator(v)
-      @validators.update(v)
-    end
-
-    def validators
-      @validators
-    end
-
     def describe(context)
       {
           required: required?,
           label: @label,
           description: @desc,
           type: @type ? @type.to_s : String.to_s,
-          choices: @choices,
-          validators: @validators,
+          validators: @validators ? @validators.describe : {},
           default: @default
       }
+    end
+
+    def add_validator(*args)
+
     end
 
     def patch(attrs)
@@ -61,7 +54,7 @@ module HaveAPI::Parameters
 
     def clean(raw)
       return instance_exec(raw, &@clean) if @clean
-
+      
       val = if raw.nil?
         @default
 
@@ -86,20 +79,11 @@ module HaveAPI::Parameters
         raw
       end
 
-      if @choices
-        if @choices.is_a?(Array)
-          unless @choices.include?(val) || @choices.include?(val.to_s.to_sym)
-            raise HaveAPI::ValidationError.new("invalid choice '#{raw}'")
-          end
-
-        elsif @choices.is_a?(Hash)
-          unless @choices.has_key?(val) || @choices.has_key?(val.to_s.to_sym)
-            raise HaveAPI::ValidationError.new("invalid choice '#{raw}'")
-          end
-        end
-      end
-
       val
+    end
+
+    def validate(v, params)
+      @validators ? @validators.validate(v, params) : true
     end
 
     def format_output(v)

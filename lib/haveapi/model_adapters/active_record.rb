@@ -286,54 +286,88 @@ END
       end
 
       handle ::ActiveRecord::Validations::PresenceValidator do |v|
-        validator({present: true})
-      end
+        opts = { empty: false }
+        opts[:message] = v.options[:message] if v.options[:message]
 
-      handle ::ActiveModel::Validations::AbsenceValidator do |v|
-        validator({absent: true})
+        validator(HaveAPI::Validators::Presence, :present, opts)
       end
 
       handle ::ActiveModel::Validations::ExclusionValidator do |v|
-        validator(v.options)
+        opts = {
+            values: v.options[:in].map { |v| v }
+        }
+        opts[:message] = v.options[:message] if v.options[:message]
+
+        validator(HaveAPI::Validators::Exclusion, :exclude, opts)
       end
 
       handle ::ActiveModel::Validations::FormatValidator do |v|
-        validator({format: {with_source: v.options[:with].source}.update(v.options)})
+        opts = {
+            rx: v.options[:with]
+        }
+        opts[:message] = v.options[:message] if v.options[:message]
+
+        validator(HaveAPI::Validators::Format, :format, opts)
       end
 
       handle ::ActiveModel::Validations::InclusionValidator do |v|
-        validator(v.options)
+        opts = {
+            values: v.options[:in].map { |v| v }
+        }
+        opts[:message] = v.options[:message] if v.options[:message]
+
+        validator(HaveAPI::Validators::Inclusion, :include, opts)
       end
 
       handle ::ActiveModel::Validations::LengthValidator do |v|
-        validator(v.options)
+        opts = {}
+        opts[:min] = v.options[:minimum] if v.options[:minimum]
+        opts[:max] = v.options[:maximum] if v.options[:maximum]
+        opts[:equals] = v.options[:is] if v.options[:is]
+        opts[:message] = v.options[:message] if v.options[:message]
+
+        validator(HaveAPI::Validators::Length, :length, opts) unless opts.empty?
       end
 
       handle ::ActiveModel::Validations::NumericalityValidator do |v|
-        validator(v.options)
-      end
+        opts = {}
+        
+        opts[:min] = v.options[:greater_than] + 1 if v.options[:greater_than]
+        opts[:min] = v.options[:greater_than_or_equal_to] if v.options[:greater_than_or_equal_to]
+        
+        if v.options[:equal_to]
+          validator(accept: v.options[:equal_to])
+          next
+        end
+        
+        opts[:max] = v.options[:less_than] - 1 if v.options[:less_than]
+        opts[:max] = v.options[:less_than_or_equal_to] if v.options[:less_than_or_equal_to]
 
-      handle ::ActiveRecord::Validations::UniquenessValidator do |v|
-        validator(v.options)
+        opts[:odd] = true if v.options[:odd]
+        opts[:even] = true if v.options[:even]
+
+        opts[:message] = v.options[:message] if v.options[:message]
+
+        validator(HaveAPI::Validators::Numericality, :number, opts) unless opts.empty?
       end
 
       def initialize(params)
         @params = params
       end
 
-      def validator_for(param, v)
+      def validator_for(param, validator)
         @params.each do |p|
           next unless p.is_a?(::HaveAPI::Parameters::Param)
 
           if p.db_name == param
-            p.add_validator(v)
+            p.add_validator(validator)
             break
           end
         end
       end
 
-      def validator(v)
-        validator_for(@attr, v)
+      def validator(klass, key, opts)
+        validator_for(@attr, klass.use({ key => opts }))
       end
 
       def translate(v)

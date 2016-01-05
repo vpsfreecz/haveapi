@@ -1,6 +1,7 @@
 module HaveAPI::Client::Authentication
   class Token < Base
     register :token
+    attr_reader :token, :valid_to
 
     def setup
       @via = @opts[:via] || :header

@@ -16,7 +16,7 @@ module HaveAPI
         end
       end
 
-      attr_reader :url
+      attr_reader :url, :auth
       attr_accessor :identity
 
       def initialize(url, v = nil)

@@ -36,6 +36,13 @@ class HaveAPI::Client::Client
     @api.authenticate(*args)
   end
 
+  # Get uthentication provider
+  # @return [HaveAPI::Client::Authentication::Base] if authenticated
+  # @return [nil] if not authenticated
+  def auth
+    @api.auth
+  end
+
   # Initialize the client if it is not yet initialized and call the resource
   # if it exists.
   def method_missing(symbol, *args)

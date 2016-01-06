@@ -6,7 +6,7 @@ module HaveAPI
   #
   # All validators can have a short and a full form. The short form is used
   # when default configuration is sufficient. Custom settings can be set using
-  # the short form.
+  # the full form.
   #
   # The short form means the validator is configured as +<option> => <single value>+.
   # The full form is +<option> => { hash with configuration options }+.

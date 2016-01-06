@@ -10,9 +10,14 @@ module HaveAPI::Client
       apply_args(args)
     end
 
-    def execute(*args)
-      validate(*args)
-      ret = @api.call(self, *args)
+    def execute(data, *_)
+      params = Params.new(self, data)
+      
+      unless params.valid?
+        raise ValidationError.new(self, params.errors)
+      end
+
+      ret = @api.call(self, params.to_api)
       @prepared_url = nil
       @prepared_help = nil
       ret

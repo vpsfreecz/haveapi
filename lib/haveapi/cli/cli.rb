@@ -51,26 +51,20 @@ module HaveAPI::CLI
       @input_params = parameters(action)
 
       if action
-        unless params_valid?(action)
-          warn 'Missing required parameters'
-        end
+        begin
+          ret = action.execute(@input_params, raw: @opts[:raw])
 
-        ret = action.execute(@input_params, raw: @opts[:raw])
+        rescue HaveAPI::Client::ValidationError => e
+          format_errors(action, 'input parameters not valid', e.errors)
+          exit(false)
+        end
 
         if ret[:status]
           format_output(action, ret[:response])
 
         else
-          warn "Action failed: #{ret[:message]}"
-
-          if ret[:errors] && ret[:errors].any?
-            puts 'Errors:'
-            ret[:errors].each do |param, e|
-              puts "\t#{param}: #{e.join('; ')}"
-            end
-          end
-
-          print_examples(action)
+          format_errors(action, ret[:message], ret[:errors])
+          exit(false)
         end
 
       else
@@ -386,10 +380,6 @@ module HaveAPI::CLI
       false
     end
 
-    def params_valid?(action)
-      true # FIXME
-    end
-
     protected
     def default_url
       'http://localhost:4567'
@@ -421,6 +411,19 @@ module HaveAPI::CLI
 
       @config[:servers] << {url: url, auth: {}}
       @config[:servers].last
+    end
+
+    def format_errors(action, msg, errors)
+      warn "Action failed: #{msg}"
+
+      if errors.any?
+        puts 'Errors:'
+        errors.each do |param, e|
+          puts "\t#{param}: #{e.join('; ')}"
+        end
+      end
+
+      print_examples(action)
     end
   end
 end

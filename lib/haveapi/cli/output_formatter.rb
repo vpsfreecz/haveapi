@@ -10,9 +10,10 @@ module HaveAPI::CLI
       f.print
     end
 
-    def initialize(objects, cols = nil, header: true)
+    def initialize(objects, cols = nil, header: true, sort: nil)
       @objects = objects
       @header = header
+      @sort = sort
 
       if cols
         @cols = parse_cols(cols)
@@ -116,6 +117,15 @@ module HaveAPI::CLI
         end
 
         @str_objects << arr
+      end
+
+      if @sort
+        col_i = @cols.index { |c| c[:name] == @sort }
+        fail "unknown column '#{@sort}'" unless col_i
+
+        @str_objects.sort! do |a, b|
+          a[col_i] <=> b[col_i]
+        end
       end
 
       @str_objects

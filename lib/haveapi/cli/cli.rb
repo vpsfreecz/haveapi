@@ -137,7 +137,11 @@ module HaveAPI::CLI
           options[:raw] = true
         end
 
-        opts.on('-s', '--save', 'Save credentials to config file for later use') do
+        opts.on('-s', '--sort PARAMETER', 'Sort output by parameter') do |p|
+          options[:sort] = p
+        end
+
+        opts.on('--save', 'Save credentials to config file for later use') do
           options[:save] = true
         end
 
@@ -412,7 +416,8 @@ module HaveAPI::CLI
       OutputFormatter.print(
           response[namespace],
           cols,
-          header: @opts[:header].nil?
+          header: @opts[:header].nil?,
+          sort: @opts[:sort] && @opts[:sort].to_sym
       )
     end
 

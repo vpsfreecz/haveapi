@@ -72,20 +72,25 @@ module HaveAPI::CLI
     def generate
       prepare
 
+      i = 0
+
       formatters = @cols.map do |c|
-        case c[:align].to_sym
+        ret = case c[:align].to_sym
         when :right
-          "%#{col_width(c)}s"
+          "%#{col_width(i, c)}s"
 
         else
-          "%-#{col_width(c)}s"
+          "%-#{col_width(i, c)}s"
         end
+
+        i += 1
+        ret
       end.join('  ')
       
       line sprintf(formatters, * @cols.map { |c| c[:label] }) if @header
 
       @str_objects.each do |o|
-        line sprintf(formatters, *o.values)
+        line sprintf(formatters, *o)
       end
     end
 
@@ -102,25 +107,25 @@ module HaveAPI::CLI
       @str_objects = []
       
       each_object do |o|
-        hash = {}
+        arr = []
         
         @cols.each do |c|
           v = o[ c[:name] ]
 
-          hash[ c[:name] ] = c[:display] ? c[:display].call(v) : v
+          arr << (c[:display] ? c[:display].call(v) : v)
         end
 
-        @str_objects << hash
+        @str_objects << arr
       end
 
       @str_objects
     end
 
-    def col_width(c)
+    def col_width(i, c)
       w = c[:label].to_s.length
       
       @str_objects.each do |o|
-        len = o[ c[:name] ].to_s.length
+        len = o[i].to_s.length
         w = len if len > w
       end
 

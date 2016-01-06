@@ -10,6 +10,7 @@ module HaveAPI
   #     message: 'the error message'
   #   }
   class Validators::Acceptance < Validator
+    name :accept
     takes :accept
 
     def setup

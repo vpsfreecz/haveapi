@@ -125,6 +125,10 @@ module HaveAPI::CLI
           options[:header] = false
         end
 
+        opts.on('-L', '--list-parameters', 'List output parameters') do |l|
+          options[:list_output] = true
+        end
+
         opts.on('-o', '--output PARAMETERS', 'Parameters to display, separated by a comma') do |o|
           options[:output] = o
         end
@@ -194,9 +198,21 @@ module HaveAPI::CLI
         puts ''
         puts 'Action description:'
         puts action.description, "\n"
-        print 'Action parameters:'
+        print 'Input parameters:'
         puts @action_opt.help
+        puts
+        puts 'Output parameters:'
+
+        action.params.each do |name, param|
+          puts sprintf("    %-30s %s", name, param[:description])
+        end
+
         print_examples(action)
+        exit
+      end
+
+      if @opts[:list_output]
+        action.params.each_key { |name| puts name }
         exit
       end
 

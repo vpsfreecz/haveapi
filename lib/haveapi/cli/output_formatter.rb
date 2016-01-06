@@ -85,7 +85,7 @@ module HaveAPI::CLI
       line sprintf(formatters, * @cols.map { |c| c[:label] }) if @header
 
       @str_objects.each do |o|
-        line sprintf(formatters, * o.map { |_, v| v.to_s })
+        line sprintf(formatters, *o.values)
       end
     end
 

@@ -1,7 +1,6 @@
 require 'optparse'
 require 'pp'
 require 'highline/import'
-require 'table_print'
 require 'yaml'
 
 module HaveAPI::CLI
@@ -114,6 +113,14 @@ module HaveAPI::CLI
 
         opts.on('--version VERSION', 'Use specified API version') do |v|
           options[:version] = v
+        end
+
+        opts.on('-H', '--no-header', 'Hide header row') do |h|
+          options[:header] = false
+        end
+
+        opts.on('-o', '--output PARAMETERS', 'Parameters to display, separated by a comma') do |o|
+          options[:output] = o
         end
 
         opts.on('-r', '--raw', 'Print raw response as is') do
@@ -304,41 +311,42 @@ module HaveAPI::CLI
 
       return if response.empty?
 
-      tp.set :io, out
-
       namespace = action.namespace(:output).to_sym
 
       case action.output_layout.to_sym
-        when :object_list, :hash_list
+        when :object_list, :hash_list, :object, :hash
           cols = []
+          selected = @opts[:output] ? @opts[:output].split(',').map! { |v| v.to_sym } : nil
 
-          action.params.each do |name, p|
+          (selected || action.params.keys).each do |name|
+            p = action.params[name]
+            fail "parameter '#{name}' does not exist" if p.nil?
+            
+            col = {
+                name: name,
+                label: p[:label] && !p[:label].empty? ? p[:label] : name.upcase,
+                align: %w(Integer Float).include?(p[:type]) ? 'right' : 'left'
+            }
+
             if p[:type] == 'Resource'
-              cols << {
-                  name => {
-                    display_method: ->(r) {
-                     r[name] && "#{r[name][p[:value_label].to_sym]} (##{r[name][p[:value_id].to_sym]})"
-                    }
-                  }
-              }
-            else
-              cols << name
+              col[:display] = Proc.new do |r|
+                if r
+                  "#{r[ p[:value_label].to_sym ]} (##{r[ p[:value_id].to_sym ]})"
+
+                else
+                  ''
+                end
+              end
             end
+
+            cols << col
           end
 
-          tp response[namespace], *cols
-
-
-        when :object, :hash
-          response[namespace].each do |k, v|
-
-            if action.params[k][:type] == 'Resource'
-              out << "#{k}: #{v[action.params[k][:value_label].to_sym]}\n"
-            else
-              out << "#{k}: #{v}\n"
-            end
-          end
-
+          OutputFormatter.print(
+              response[namespace],
+              cols,
+              header: @opts[:header].nil?
+          )
 
         when :custom
           PP.pp(response[namespace], out)

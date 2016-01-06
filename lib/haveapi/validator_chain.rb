@@ -21,7 +21,7 @@ module HaveAPI
       exists = @validators.detect { |v| v.is_a?(new_v.class) }
 
       fail "validator #{new_v.class} already exists" if exists
-      @validators << v
+      @validators << new_v
     end
 
     # Returns true if validator Validators::Presence is used.

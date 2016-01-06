@@ -44,8 +44,9 @@ module HaveAPI::Parameters
       }
     end
 
-    def add_validator(*args)
-
+    def add_validator(validator)
+      @validators = HaveAPI::ValidatorChain.new({}) unless @validators
+      @validators << validator
     end
 
     def patch(attrs)

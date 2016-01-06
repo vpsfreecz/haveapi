@@ -47,7 +47,13 @@ module HaveAPI::CLI
       action = @api.get_action(resources, args[1].to_sym, args[2..-1])
       action.update_description(@api.describe_action(action)) if authenticate(action)
 
-      @input_params = parameters(action)
+      @selected_params = @opts[:output] ? @opts[:output].split(',').uniq
+                                        : nil
+
+      @input_params = parameters(action)      
+
+      includes = build_includes(action) if @selected_params
+      @input_params[:meta] = { includes: includes } if includes
 
       if action
         begin
@@ -313,45 +319,85 @@ module HaveAPI::CLI
 
       namespace = action.namespace(:output).to_sym
 
-      case action.output_layout.to_sym
-        when :object_list, :hash_list, :object, :hash
-          cols = []
-          selected = @opts[:output] ? @opts[:output].split(',').uniq.map! { |v| v.to_sym } : nil
+      if action.output_layout.to_sym == :custom
+          return PP.pp(response[namespace], out)
+      end
 
-          (selected || action.params.keys).each do |name|
-            p = action.params[name]
-            fail "parameter '#{name}' does not exist" if p.nil?
-            
-            col = {
-                name: name,
-                label: p[:label] && !p[:label].empty? ? p[:label] : name.upcase,
-                align: %w(Integer Float).include?(p[:type]) ? 'right' : 'left'
-            }
+      cols = []
+      
+      (@selected_params || action.params.keys).each do |raw_name|
+        col = {}
+        name = nil
+        param = nil
 
-            if p[:type] == 'Resource'
-              col[:display] = Proc.new do |r|
-                if r
-                  "#{r[ p[:value_label].to_sym ]} (##{r[ p[:value_id].to_sym ]})"
+        # Fetching an associated attribute
+        if raw_name.to_s.index('.')
+          parts = raw_name.to_s.split('.').map! { |v| v.to_sym }
+          name = parts.first.to_sym
 
-                else
-                  ''
-                end
-              end
+          top = action.params
+
+          parts.each do |part|
+            fail "'#{part}' not found" unless top.has_key?(part)
+          
+            if top[part][:type] == 'Resource'
+              param = top[part]
+              top = @api.get_action(top[part][:resource], :show, []).params
+
+            else
+              param = top[part]
+              break
             end
-
-            cols << col
           end
 
-          OutputFormatter.print(
-              response[namespace],
-              cols,
-              header: @opts[:header].nil?
-          )
+          col[:display] = Proc.new do |r|
+            next '' unless r
 
-        when :custom
-          PP.pp(response[namespace], out)
+            top = r
+            parts[1..-1].each do |part|
+              fail "'#{part}' not found" unless top.has_key?(part)
+              break if top[part].nil?
+              top = top[part]
+            end
+          
+            if param[:type] == 'Resource'
+              "#{top[ param[:value_label].to_sym ]} (##{top[ param[:value_id].to_sym ]})"
 
+            else
+              top
+            end
+          end
+
+          col[:label] = raw_name
+          
+        else # directly accessible parameter
+          name = raw_name.to_sym
+          param = action.params[name]
+          fail "parameter '#{name}' does not exist" if param.nil?
+          
+          if param[:type] == 'Resource'
+            col[:display] = Proc.new do |r|
+              next '' unless r
+              "#{r[ param[:value_label].to_sym ]} (##{r[ param[:value_id].to_sym ]})"
+            end
+          end
+        end
+
+        col.update({
+            name: name,
+            align: %w(Integer Float).include?(param[:type]) ? 'right' : 'left',
+        })
+        
+        col[:label] ||= param[:label] && !param[:label].empty? ? param[:label] : name.upcase
+        
+        cols << col
       end
+
+      OutputFormatter.print(
+          response[namespace],
+          cols,
+          header: @opts[:header].nil?
+      )
     end
 
     def header_for(action, param)
@@ -432,6 +478,37 @@ module HaveAPI::CLI
       end
 
       print_examples(action)
+    end
+
+    # Translate requested parameters into meta[includes] that is sent
+    # to the API.
+    #
+    # When using haveapi-cli vps list -o
+    #   node.location => node__location
+    #   node.location.domain => node_location
+    #   node.name => node
+    def build_includes(action)
+      ret = []
+      
+      @selected_params.each do |param|
+        next unless param.index('.')
+
+        includes = []
+        top = action.params
+
+        param.split('.').map! { |v| v.to_sym }.each do |part|
+          next unless top.has_key?(part)
+          next if top[part][:type] != 'Resource' 
+         
+          includes << part
+          top = @api.get_action(top[part][:resource], :show, []).params
+        end
+
+        ret << includes.join('__')
+      end
+
+      ret.uniq!
+      ret.empty? ? nil : ret.join(',')
     end
   end
 end

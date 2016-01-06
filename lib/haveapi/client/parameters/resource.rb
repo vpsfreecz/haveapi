@@ -2,7 +2,7 @@ module HaveAPI::Client
   class Parameters::Resource
     attr_reader :errors
 
-    def initialize(desc, value)
+    def initialize(params, desc, value)
       @errors = []
       @value = coerce(value)
     end

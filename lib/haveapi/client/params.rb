@@ -27,6 +27,8 @@ module HaveAPI::Client
 
     def valid?
       @action.input_params.each do |name, p|
+        next if p[:validators].nil?
+
         if p[:validators][:presence] && @params[name].nil?
           error(name, 'required parameter missing')
 

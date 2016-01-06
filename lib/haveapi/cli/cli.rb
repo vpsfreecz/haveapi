@@ -208,7 +208,7 @@ module HaveAPI::CLI
         puts 'Output parameters:'
 
         action.params.each do |name, param|
-          puts sprintf("    %-30s %s", name, param[:description])
+          puts sprintf("    %-32s %s", name, param[:description])
         end
 
         print_examples(action)

@@ -316,7 +316,7 @@ module HaveAPI::CLI
       case action.output_layout.to_sym
         when :object_list, :hash_list, :object, :hash
           cols = []
-          selected = @opts[:output] ? @opts[:output].split(',').map! { |v| v.to_sym } : nil
+          selected = @opts[:output] ? @opts[:output].split(',').uniq.map! { |v| v.to_sym } : nil
 
           (selected || action.params.keys).each do |name|
             p = action.params[name]

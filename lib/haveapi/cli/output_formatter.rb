@@ -10,10 +10,11 @@ module HaveAPI::CLI
       f.print
     end
 
-    def initialize(objects, cols = nil, header: true, sort: nil)
+    def initialize(objects, cols = nil, header: true, sort: nil, layout: :columns)
       @objects = objects
       @header = header
       @sort = sort
+      @layout = layout
 
       if cols
         @cols = parse_cols(cols)
@@ -72,7 +73,21 @@ module HaveAPI::CLI
 
     def generate
       prepare
+      
+      case @layout
+      when :columns
+        columns
 
+      when :rows
+        rows
+
+      else
+        fail "unsupported layout '#{@layout}'"
+      end
+    end
+
+    # Each object is printed on one line, it's parameters aligned into columns.
+    def columns
       i = 0
 
       formatters = @cols.map do |c|
@@ -95,7 +110,22 @@ module HaveAPI::CLI
       end
     end
 
-    def line(str)
+    # Each object is printed on multiple lines, one parameter per line.
+    def rows
+      w = heading_width
+
+      @str_objects.each do |o|
+        @cols.each_index do |i|
+          c = @cols[i]
+
+          line sprintf("%#{w}s:  %s", c[:label], o[i])
+        end
+        
+        line
+      end
+    end
+
+    def line(str = '')
       if @out
         @out += str + "\n"
 
@@ -136,6 +166,18 @@ module HaveAPI::CLI
       
       @str_objects.each do |o|
         len = o[i].to_s.length
+        w = len if len > w
+      end
+
+      w + 1
+    end
+
+    def heading_width
+      w = @cols.first[:label].to_s.length
+
+      @cols.each do |c|
+        len = c[:label].to_s.length
+
         w = len if len > w
       end
 

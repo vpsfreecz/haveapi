@@ -121,6 +121,10 @@ module HaveAPI::CLI
           options[:version] = v
         end
 
+        opts.on('-c', '--columns', 'Print output in columns') do
+          options[:layout] = :columns
+        end
+
         opts.on('-H', '--no-header', 'Hide header row') do |h|
           options[:header] = false
         end
@@ -133,16 +137,20 @@ module HaveAPI::CLI
           options[:output] = o
         end
 
-        opts.on('-r', '--raw', 'Print raw response as is') do
-          options[:raw] = true
+        opts.on('-r', '--rows', 'Print output in rows') do
+          options[:layout] = :rows
         end
-
+        
         opts.on('-s', '--sort PARAMETER', 'Sort output by parameter') do |p|
           options[:sort] = p
         end
 
         opts.on('--save', 'Save credentials to config file for later use') do
           options[:save] = true
+        end
+        
+        opts.on('--raw', 'Print raw response as is') do
+          options[:raw] = true
         end
 
         opts.on('-v', '--[no-]verbose', 'Run verbosely') do |v|
@@ -417,7 +425,8 @@ module HaveAPI::CLI
           response[namespace],
           cols,
           header: @opts[:header].nil?,
-          sort: @opts[:sort] && @opts[:sort].to_sym
+          sort: @opts[:sort] && @opts[:sort].to_sym,
+          layout: @opts[:layout]
       )
     end
 

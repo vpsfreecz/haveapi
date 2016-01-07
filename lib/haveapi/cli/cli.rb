@@ -2,6 +2,7 @@ require 'optparse'
 require 'pp'
 require 'highline/import'
 require 'yaml'
+require 'time'
 
 module HaveAPI::CLI
   class Cli
@@ -151,6 +152,22 @@ module HaveAPI::CLI
         
         opts.on('--raw', 'Print raw response as is') do
           options[:raw] = true
+        end
+
+        opts.on('--timestamp', 'Display Datetime parameters as timestamp') do
+          options[:datetime] = :timestamp
+        end
+
+        opts.on('--utc', 'Display Datetime parameters in UTC') do
+          options[:datetime] = :utc
+        end
+
+        opts.on('--localtime', 'Display Datetime parameters in local timezone') do
+          options[:datetime] = :local
+        end
+
+        opts.on('--date-format FORMAT', 'Display Datetime in custom format') do |f|
+          options[:date_format] = f
         end
 
         opts.on('-v', '--[no-]verbose', 'Run verbosely') do |v|
@@ -388,8 +405,12 @@ module HaveAPI::CLI
               top = top[part]
             end
           
-            if param[:type] == 'Resource'
+            case param[:type]
+            when 'Resource'
               "#{top[ param[:value_label].to_sym ]} (##{top[ param[:value_id].to_sym ]})"
+
+            when 'Datetime'
+              format_date(top)
 
             else
               top
@@ -408,6 +429,9 @@ module HaveAPI::CLI
               next '' unless r
               "#{r[ param[:value_label].to_sym ]} (##{r[ param[:value_id].to_sym ]})"
             end
+
+          elsif param[:type] == 'Datetime'
+            col[:display] = ->(date) { format_date(date) }
           end
         end
 
@@ -539,6 +563,27 @@ module HaveAPI::CLI
 
       ret.uniq!
       ret.empty? ? nil : ret.join(',')
+    end
+
+    def format_date(date)
+      return '' unless date
+
+      t = Time.iso8601(date)
+      ret = case @opts[:datetime]
+      when :timestamp
+        t.to_i
+
+      when :utc
+        t.utc
+
+      when :local
+        t.localtime
+
+      else
+        t.localtime
+      end
+
+      @opts[:date_format] ? ret.strftime(@opts[:date_format]) : ret
     end
   end
 end

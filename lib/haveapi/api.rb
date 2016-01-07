@@ -78,6 +78,6 @@ module HaveAPI
   end
 
   def self.default_authenticate
-    @default_auth
+    @default_auth || []
   end
 end

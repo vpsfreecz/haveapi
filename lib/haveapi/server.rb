@@ -156,8 +156,11 @@ module HaveAPI
       @sinatra.get @root do
         authenticated?(settings.api_server.default_version)
 
-        @api = settings.api_server.describe(Context.new(settings.api_server, user: current_user,
-                                            params: params))
+        @api = settings.api_server.describe(Context.new(
+            settings.api_server,
+            user: current_user,
+            params: params
+        ))
 
         content_type 'text/html'
         erb :index, layout: :main_layout
@@ -170,16 +173,24 @@ module HaveAPI
 
         case params[:describe]
           when 'versions'
-            ret = {versions: settings.api_server.versions,
-                   default: settings.api_server.default_version}
+            ret = {
+                versions: settings.api_server.versions,
+                default: settings.api_server.default_version
+            }
 
           when 'default'
-            ret = settings.api_server.describe_version(Context.new(settings.api_server, version: settings.api_server.default_version,
-                                                                  user: current_user, params: params))
+            ret = settings.api_server.describe_version(Context.new(
+                settings.api_server,
+                version: settings.api_server.default_version,
+                user: current_user, params: params
+            ))
 
           else
-            ret = settings.api_server.describe(Context.new(settings.api_server, user: current_user,
-                                                           params: params))
+            ret = settings.api_server.describe(Context.new(
+                settings.api_server,
+                user: current_user,
+                params: params
+            ))
         end
 
         @formatter.format(true, ret)
@@ -248,8 +259,12 @@ module HaveAPI
         authenticated?(v)
 
         @v = v
-        @help = settings.api_server.describe_version(Context.new(settings.api_server, version: v,
-                                                                 user: current_user, params: params))
+        @help = settings.api_server.describe_version(Context.new(
+            settings.api_server,
+            version: v,
+            user: current_user,
+            params: params
+        ))
         content_type 'text/html'
         erb :doc_layout, layout: :main_layout do
           @content = erb :version_page
@@ -261,8 +276,12 @@ module HaveAPI
         access_control
         authenticated?(v)
 
-        @formatter.format(true, settings.api_server.describe_version(Context.new(settings.api_server, version: v,
-                                                                              user: current_user, params: params)))
+        @formatter.format(true, settings.api_server.describe_version(Context.new(
+            settings.api_server,
+            version: v,
+            user: current_user,
+            params: params
+        )))
       end
 
       HaveAPI.get_version_resources(@module_name, v).each do |resource|
@@ -275,7 +294,10 @@ module HaveAPI
 
       resource.routes(prefix).each do |route|
         if route.is_a?(Hash)
-          hash[resource][:resources][route.keys.first] = mount_nested_resource(v, route.values.first)
+          hash[resource][:resources][route.keys.first] = mount_nested_resource(
+              v,
+              route.values.first
+          )
 
         else
           hash[resource][:actions][route.action] = route.url
@@ -319,10 +341,15 @@ module HaveAPI
           report_error(400, {}, 'Bad JSON syntax')
         end
 
-        action = route.action.new(request, v, params, body, Context.new(settings.api_server, version: v,
-                                                                        action: route.action, url: route.url,
-                                                                        params: params,
-                                                                        user: current_user, endpoint: true))
+        action = route.action.new(request, v, params, body, Context.new(
+            settings.api_server,
+            version: v,
+            action: route.action,
+            url: route.url,
+            params: params,
+            user: current_user,
+            endpoint: true
+        ))
 
         unless action.authorized?(current_user)
           report_error(403, {}, 'Access denied. Insufficient permissions.')
@@ -347,10 +374,16 @@ module HaveAPI
         authenticate!(v) if route.action.auth
 
         begin
-          desc = route.action.describe(Context.new(settings.api_server, version: v,
-                                                   action: route.action, url: route.url,
-                                                   args: args, params: params,
-                                                   user: current_user, endpoint: true))
+          desc = route.action.describe(Context.new(
+              settings.api_server,
+              version: v,
+              action: route.action,
+              url: route.url,
+              args: args,
+              params: params,
+              user: current_user,
+              endpoint: true
+          ))
 
           unless desc
             report_error(403, {}, 'Access denied. Insufficient permissions.')

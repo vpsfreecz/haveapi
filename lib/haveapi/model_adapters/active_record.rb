@@ -285,12 +285,17 @@ END
         end
       end
 
-      handle ::ActiveRecord::Validations::PresenceValidator do |v|
-        opts = { empty: false }
-        opts[:message] = v.options[:message] if v.options[:message]
-
-        validator(HaveAPI::Validators::Presence, :present, opts)
-      end
+      # Presence validator may have different meaning for model and controller.
+      # The attribute may be filled by other means than by controller and it is
+      # wrong to assume that the parameter must ALWAYS be sent by the client.
+      # Usually it would be needed only for Create and perhaps Update actions.
+      #
+      # handle ::ActiveRecord::Validations::PresenceValidator do |v|
+      #   opts = { empty: false }
+      #   opts[:message] = v.options[:message] if v.options[:message]
+      # 
+      #   validator(HaveAPI::Validators::Presence, :present, opts)
+      # end
 
       handle ::ActiveModel::Validations::ExclusionValidator do |v|
         opts = {

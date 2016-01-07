@@ -10,11 +10,12 @@ module HaveAPI::CLI
       f.print
     end
 
-    def initialize(objects, cols = nil, header: true, sort: nil, layout: nil)
+    def initialize(objects, cols = nil, header: true, sort: nil, layout: nil, empty: '-')
       @objects = objects
       @header = header
       @sort = sort
       @layout = layout
+      @empty = empty
 
       if @layout.nil?
         if many?
@@ -159,8 +160,10 @@ module HaveAPI::CLI
         
         @cols.each do |c|
           v = o[ c[:name] ]
+          str = (c[:display] ? c[:display].call(v) : v)
+          str = @empty if !str || (str.is_a?(::String) && str.empty?)
 
-          arr << (c[:display] ? c[:display].call(v) : v)
+          arr << str
         end
 
         @str_objects << arr

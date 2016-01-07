@@ -10,11 +10,20 @@ module HaveAPI::CLI
       f.print
     end
 
-    def initialize(objects, cols = nil, header: true, sort: nil, layout: :columns)
+    def initialize(objects, cols = nil, header: true, sort: nil, layout: nil)
       @objects = objects
       @header = header
       @sort = sort
       @layout = layout
+
+      if @layout.nil?
+        if many?
+          @layout = :columns
+
+        else
+          @layout = :rows
+        end
+      end
 
       if cols
         @cols = parse_cols(cols)
@@ -199,6 +208,10 @@ module HaveAPI::CLI
       else
         yield(@objects)
       end
+    end
+
+    def many?
+      @objects.is_a?(::Array) && @objects.size > 1
     end
   end
 end

@@ -3,7 +3,12 @@ module HaveAPI::OutputFormatters
     handle 'application/json'
 
     def format(response)
-      JSON.pretty_generate(response)
+      if ENV['RACK_ENV'] == 'development'
+        JSON.pretty_generate(response)
+
+      else
+        JSON.generate(response)
+      end
     end
   end
 end

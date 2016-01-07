@@ -117,8 +117,16 @@ module HaveAPI::CLI
       @str_objects.each do |o|
         @cols.each_index do |i|
           c = @cols[i]
+        
+          if o[i].is_a?(::String) && o[i].index("\n")
+            lines = o[i].split("\n")
+            v = ([lines.first] + lines[1..-1].map { |l| (' ' * (w+3)) + l }).join("\n")
 
-          line sprintf("%#{w}s:  %s", c[:label], o[i])
+          else
+            v = o[i]
+          end
+
+          line sprintf("%#{w}s:  %s", c[:label], v)
         end
         
         line

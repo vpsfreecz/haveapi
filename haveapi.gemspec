@@ -15,16 +15,9 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = '~> 2.0'
 
-  s.add_runtime_dependency 'activerecord', '~> 4.1.6'
   s.add_runtime_dependency 'require_all'
   s.add_runtime_dependency 'json'
-  s.add_runtime_dependency 'sinatra'
-  s.add_runtime_dependency 'mysql'
-  s.add_runtime_dependency 'sinatra-activerecord'
+  s.add_runtime_dependency 'sinatra', '~> 1.4.6'
   s.add_runtime_dependency 'rake'
-  s.add_runtime_dependency 'github-markdown', '~> 0.6.6'
-
-  s.add_development_dependency 'rspec'
-  s.add_development_dependency 'railties'
-  s.add_development_dependency 'rack-test'
+  s.add_runtime_dependency 'github-markdown', '~> 0.6.9'
 end

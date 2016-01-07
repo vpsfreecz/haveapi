@@ -1,11 +1,12 @@
 source 'https://rubygems.org'
+gemspec
 
-gem 'activerecord'
-gem 'require_all'
-gem 'json'
-gem 'sinatra'
-gem 'sinatra-activerecord'
-gem 'rake'
-gem 'rspec'
-gem 'rack-test'
-gem 'railties'
+group :test do
+  gem 'rspec'
+  gem 'rack-test'
+end
+
+group :activerecord do
+  gem 'activerecord', '~> 4.1.14'
+  gem 'sinatra-activerecord', '~> 2.0.9'
+end

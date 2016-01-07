@@ -2,7 +2,7 @@ HaveAPI
 =======
 A framework for creating self-describing APIs in Ruby.
 
-Note: HaveAPI is under heavy development. It is not stable, its interface may change.
+Note: HaveAPI is in heavy development. It is not stable, its interface may change.
 
 ## What is a self-describing API?
 A self-describing API responds to HTTP method `OPTIONS` and returns description
@@ -14,29 +14,32 @@ Clients use the self-description to learn how to communicate with the API,
 which they otherwise know nothing about.
 
 ## Main features
-- Creates RESTful APIs
+- Creates RESTful APIs usable even with simple HTTP client, should it be needed
 - Handles network communication, input/output formats and parameters
   on both server and client, you need only to define resources and actions
-- By writing the code you get the documentation which is available to all clients
+- By writing the code you get the documentation for free, it is available to all clients
 - Auto-generated online HTML documentation
 - Generic interface for clients - one client can be used to access all APIs
   using this framework
 - Ruby, PHP and JavaScript clients already available
 - A change in the API is immediately reflected in all clients
 - Supports API versioning
-- Ready for ActiveRecord - validators from models are included in the
-  self-description
+- ORM integration
+  - ActiveRecord
+    - integrated with controller
+    - loads and documents validators from models
+    - eager loading
+  - easy to support other ORM frameworks
 
 ## Usage
 This text might not be complete or up-to-date, as things still often change.
 Full use of HaveAPI may be seen
-in [vpsadminapi](https://github.com/vpsfreecz/vpsadminapi), which may serve
+in [vpsadmin-api](https://github.com/vpsfreecz/vpsadmin-api), which may serve
 as an example of how are things meant to be used.
 
 All resources and actions are represented by classes. They all must be stored
-in a module, whose name is later given to HaveAPI.
-
-HaveAPI then searches all classes in that module and constructs your API.
+in a module, whose name is later given to HaveAPI. HaveAPI then searches all
+classes in this module and builds your API.
 
 For the purposes of this document, all resources will be in module `MyAPI`.
 
@@ -215,7 +218,6 @@ class BasicAuth < HaveAPI::Authentication::Basic::Provider
 end
 
 api.use_version(:all)
-api.set_default_version(1)
 api.auth_chain << BasicAuth
 api.mount('/')
 
@@ -253,6 +255,10 @@ is not self-described.
 
 If the user is authenticated when requesting self-description, only allowed
 resources, actions and parameters will be returned.
+
+## Validation of input data
+Because validators are a part of the API's documentation, the clients can
+perform client-side validation before the data is sent to the API server.
 
 ## Available clients
 These clients completely rely on the API description and can be used for all

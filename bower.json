@@ -1,0 +1,23 @@
+{
+  "name": "haveapi-client",
+  "description": "Client for HaveAPI based APIs",
+  "main": "dist/haveapi-client.js",
+  "authors": [
+	  {"name": "Jakub Skokan", "email": "jakub.skokan@vpsfree.cz"}
+  ],
+  "license": "MIT",
+  "moduleType": [
+    "globals"
+  ],
+  "repository": {
+    "type": "git",
+	"url": "https://github.com/vpsfreecz/haveapi-client-js"
+  },
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}

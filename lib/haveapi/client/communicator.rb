@@ -170,10 +170,28 @@ module HaveAPI::Client
     end
 
     def description_for(path, query_params={})
-      parse(@rest[path].get_options({
+      ret = parse(@rest[path].get_options({
           params: @auth.request_payload.update(@auth.request_url_params).update(query_params),
           user_agent: @identity
-      }.update(@auth.request_headers)))[:response]
+      }.update(@auth.request_headers)))
+
+      p_v = HaveAPI::Client::PROTOCOL_VERSION
+
+      if ret[:version] != p_v
+        major1, minor1 = ret[:version].split('.')
+        major2, minor2 = p_v.split('.')
+
+        if major1 != major2
+          raise ProtocolError,
+              "Incompatible protocol version: the client uses v#{p_v} "+
+              "while the API server uses v#{ret[:version]}"
+
+        else
+          warn "The client uses protocol v#{p_v} while the API server uses v#{ret[:version]}"
+        end
+      end
+
+      ret[:response]
     end
 
     def parse(str)

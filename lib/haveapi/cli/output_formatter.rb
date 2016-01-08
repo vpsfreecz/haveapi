@@ -82,6 +82,7 @@ module HaveAPI::CLI
     end
 
     def generate
+      return if @cols.empty?
       prepare
       
       case @layout

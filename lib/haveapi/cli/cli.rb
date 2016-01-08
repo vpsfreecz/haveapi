@@ -177,6 +177,10 @@ module HaveAPI::CLI
         opts.on('--client-version', 'Show client version') do
           @action = [:show_version]
         end
+        
+        opts.on('--protocol-version', 'Show protocol version') do
+          @action = [:protocol_version]
+        end
 
         opts.on('-h', '--help', 'Show this message') do
           options[:help] = true
@@ -304,6 +308,10 @@ module HaveAPI::CLI
 
     def show_version
       puts HaveAPI::Client::VERSION
+    end
+
+    def protocol_version
+      puts HaveAPI::Client::PROTOCOL_VERSION
     end
 
     def describe_resource(path)

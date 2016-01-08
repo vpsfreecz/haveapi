@@ -9,6 +9,7 @@ $_haveapi_client_classes = array(
 	'Client/Exception/ActionFailed',
 	'Client/Exception/AuthenticationFailed',
 	'Client/Exception/ObjectNotFound',
+	'Client/Exception/ProtocolError',
 	'Client/Exception/UnresolvedArguments',
 	'Client/Action',
 	'Client/Resource',

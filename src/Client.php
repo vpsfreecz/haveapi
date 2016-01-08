@@ -6,6 +6,8 @@ namespace HaveAPI;
  * A client for a HaveAPI based API.
  */
 class Client extends Client\Resource {
+	const PROTOCOL_VERSION = '1.0';
+
 	private $uri;
 	private $version;
 	private $identity;
@@ -14,6 +16,7 @@ class Client extends Client\Resource {
 	private $descCallback = null;
 	private static $authProviders = array();
 	private $spentTime = 0.0;
+	private $protocol_version;
 	
 	/**
 	 * Register authentication provider with $name and implementation in $class.
@@ -81,6 +84,25 @@ class Client extends Client\Resource {
 	 */
 	public function registerDescriptionChangeFunc($fn) {
 		$this->descCallback = $fn;
+	}
+
+	/**
+	 * @return "compatible" if the client is compatible with the API server
+	 * @return "imperfect" if the minor version differs
+	 * @return false if the client is not compatible with the API server
+	 */
+	public function isCompatible() {
+		try {
+			$this->setup();
+
+			if ($this->protocol_version == self::PROTOCOL_VERSION)
+				return 'compatible';
+
+			return 'imperfect';
+
+		} catch (Client\Exception\ProtocolError $e) {
+			return false;
+		}
 	}
 	
 	/**
@@ -282,7 +304,33 @@ class Client extends Client\Resource {
 		
 		$this->authProvider->authenticate($request);
 		
-		return $this->sendRequest($request)->body->response;
+		$ret = $this->sendRequest($request)->body;
+
+		if (!isset($ret->version)) {
+			throw new Client\Exception\ProtocolError(
+				"Incompatible protocol version: the client uses v".self::PROTOCOL_VERSION.
+				" while the API server uses an unspecified version (pre 1.0)"
+			);
+		}
+
+		$this->protocol_version = $ret->version;
+
+		if ($ret->version == self::PROTOCOL_VERSION)
+			return $ret->response;
+
+		list($major1, $minor1) = explode('.', $ret->version);
+		list($major2, $minor2) = explode('.', self::PROTOCOL_VERSION);
+
+		if ($major1 != $major2) {
+			throw new Client\Exception\ProtocolError(
+				"Incompatible protocol version: the client uses v".self::PROTOCOL_VERSION.
+				" while the API server uses v".$ret->version
+			);
+		}
+		
+		// $minor1 != $minor2 - imperfect compatibility
+		
+		return $ret->response;
 	}
 	
 	/**

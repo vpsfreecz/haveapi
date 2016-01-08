@@ -27,6 +27,18 @@ module HaveAPI::Client
       @desc = {}
     end
 
+    # @return [:compatible] if perfectly compatible
+    # @return [:imperfect] if minor version differs
+    # @return [false] if not compatible
+    def compatible?
+      description_for(path_for, {describe: :versions})
+      @proto_version == HaveAPI::Client::PROTOCOL_VERSION ? :compatible
+                                                          : :imperfect
+
+    rescue ProtocolError
+      false
+    end
+
     # Authenticate user with selected +auth_method+.
     # +auth_method+ is a name of registered authentication provider.
     # +options+ are specific for each authentication provider.
@@ -174,7 +186,8 @@ module HaveAPI::Client
           params: @auth.request_payload.update(@auth.request_url_params).update(query_params),
           user_agent: @identity
       }.update(@auth.request_headers)))
-
+      
+      @proto_version = ret[:version]
       p_v = HaveAPI::Client::PROTOCOL_VERSION
       return ret[:response] if ret[:version] == p_v
       

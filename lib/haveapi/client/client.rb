@@ -43,6 +43,11 @@ class HaveAPI::Client::Client
     @api.auth
   end
 
+  # @see Communicator#compatible?
+  def compatible?
+    @api.compatible?
+  end
+
   # Initialize the client if it is not yet initialized and call the resource
   # if it exists.
   def method_missing(symbol, *args)

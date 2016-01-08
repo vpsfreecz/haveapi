@@ -1,4 +1,9 @@
 <%
+def format_param_type(param)
+  return param[:type] if param[:type] != 'Resource'
+  "<a href=\"#root-#{param[:resource].join('-')}-show\">#{param[:type]}</a>"
+end
+
 def format_validators(validators)
   ret = ''
   return ret if validators.nil?
@@ -64,7 +69,7 @@ end
                     <td><%= info[:label] %></td>
                     <td><%= param %></td>
                     <td><%= info[:required] ? 'yes' : 'no' %></td>
-                    <td><%= info[:type] %></td>
+                    <td><%= format_param_type(info) %></td>
                     <td><%= format_validators(info[:validators]) %></td>
                     <td><%= info[:default] == :_nil ? '' : info[:default] %></td>
                     <td><%= info[:description] %></td>
@@ -97,7 +102,7 @@ end
                   <tr>
                     <td><%= info[:label] %></td>
                     <td><%= param %></td>
-                    <td><%= info[:type] %></td>
+                    <td><%= format_param_type(info) %></td>
                     <td><%= info[:description] %></td>
                   </tr>
                 <% end %>

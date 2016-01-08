@@ -1,7 +1,7 @@
 module HaveAPI::Client
   class ProtocolError < StandardError ; end
 
-  class ActionFailed < Exception
+  class ActionFailed < StandardError
     def initialize(response)
       @response = response
     end

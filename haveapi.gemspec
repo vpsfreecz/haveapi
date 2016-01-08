@@ -18,6 +18,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'require_all'
   s.add_runtime_dependency 'json'
   s.add_runtime_dependency 'sinatra', '~> 1.4.6'
+  s.add_runtime_dependency 'tilt', '~> 1.4.1'
   s.add_runtime_dependency 'rake'
   s.add_runtime_dependency 'github-markdown', '~> 0.6.9'
 end

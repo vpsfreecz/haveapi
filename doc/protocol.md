@@ -331,9 +331,9 @@ range and can provide a step. The validator can contain one or more of these con
         "min": 0,
         "max": 99,
         "step": 3,
-	"mod": 3,
-	"even": true/false,
-	"odd": true/false
+        "mod": 3,
+        "even": true/false,
+        "odd": true/false
     }
 
 ##### Custom validation

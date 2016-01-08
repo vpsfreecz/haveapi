@@ -7,7 +7,7 @@
 Authentication.registerProvider('basic', Authentication.Basic);
 Authentication.registerProvider('token', Authentication.Token);
 
-classes = [
+var classes = [
 	'Action',
 	'Authentication',
 	'BaseResource',
@@ -17,7 +17,7 @@ classes = [
 	'ResourceInstance',
 	'ResourceInstanceList',
 	'Response',
-]
+];
 
 for (var i = 0; i < classes.length; i++)
 	Client[ classes[i] ] = eval(classes[i]);

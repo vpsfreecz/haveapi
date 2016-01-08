@@ -181,6 +181,10 @@ module HaveAPI::CLI
         opts.on('--protocol-version', 'Show protocol version') do
           @action = [:protocol_version]
         end
+        
+        opts.on('--check-compatibility', 'Check compatibility with API server') do
+          @action = [:check_compat]
+        end
 
         opts.on('-h', '--help', 'Show this message') do
           options[:help] = true
@@ -312,6 +316,22 @@ module HaveAPI::CLI
 
     def protocol_version
       puts HaveAPI::Client::PROTOCOL_VERSION
+    end
+
+    def check_compat
+      case @api.compatible?
+      when :compatible
+        puts 'compatible'
+        exit
+
+      when :imperfect
+        puts 'imperfect'
+        exit(1)
+
+      else
+        puts 'incompatible'
+        exit(2)
+      end
     end
 
     def describe_resource(path)

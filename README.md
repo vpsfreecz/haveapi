@@ -34,8 +34,9 @@ which they otherwise know nothing about.
 ## Usage
 This text might not be complete or up-to-date, as things still often change.
 Full use of HaveAPI may be seen
-in [vpsadmin-api](https://github.com/vpsfreecz/vpsadmin-api), which may serve
-as an example of how are things meant to be used.
+in [vpsadmin-api](https://github.com/vpsfreecz/vpsadmin-api)
+([online doc](https://api.vpsfree.cz)), which may serve as an example of how
+are things meant to be used.
 
 All resources and actions are represented by classes. They all must be stored
 in a module, whose name is later given to HaveAPI. HaveAPI then searches all

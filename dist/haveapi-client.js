@@ -1,66 +1,62 @@
-(function(root){
+;(function(root, factory) {
+  if (typeof define === 'function' && define.amd) {
+    define([], factory);
+  } else if (typeof exports === 'object') {
+    module.exports = factory();
+  } else {
+    root.HaveAPI = factory();
+  }
+}(this, function() {
 /**
- * @namespace HaveAPI
- * @author Jakub Skokan <jakub.skokan@vpsfree.cz>
+ * Create a new client for the API.
+ * @class Client
+ * @memberof HaveAPI
+ * @param {string} url base URL to the API
+ * @param {Object} opts
  */
-
-
-/********************************************************************************/
-/*******************************  HAVEAPI.CLIENT  *******************************/
-/********************************************************************************/
-
-
-root.HaveAPI = {
-	/**
-	 * Create a new client for the API.
-	 * @class Client
-	 * @memberof HaveAPI
-	 * @param {string} url base URL to the API
-	 * @param {Object} opts
-	 */
-	Client: function(url, opts) {
-		while (url.length > 0) {
-			if (url[ url.length - 1 ] == '/')
-				url = url.substr(0, url.length - 1);
-			
-			else break;
-		}
+function Client(url, opts) {
+	while (url.length > 0) {
+		if (url[ url.length - 1 ] == '/')
+			url = url.substr(0, url.length - 1);
 		
-		/**
-		 * @member {Object} HaveAPI.Client#_private
-		 * @protected
-		 */
-		this._private = {
-			url: url,
-			version: (opts !== undefined && opts.version !== undefined) ? opts.version : null,
-			description: null,
-			debug: (opts !== undefined && opts.debug !== undefined) ? opts.debug : 0,
-		};
-		
-		this._private.hooks = new root.HaveAPI.Client.Hooks(this._private.debug);
-		this._private.http = new root.HaveAPI.Client.Http(this._private.debug);
-		
-		/**
-		 * @member {Object} HaveAPI.Client#apiSettings An object containg API settings.
-		 */
-		this.apiSettings = null;
-		
-		/**
-		 * @member {Array} HaveAPI.Client#resources A list of top-level resources attached to the client.
-		 */
-		this.resources = [];
-		
-		/**
-		 * @member {Object} HaveAPI.Client#authProvider Selected authentication provider.
-		 */
-		this.authProvider = new root.HaveAPI.Client.Authentication.Base();
+		else break;
 	}
-};
+	
+	/**
+	 * @member {Object} HaveAPI.Client#_private
+	 * @protected
+	 */
+	this._private = {
+		url: url,
+		version: (opts !== undefined && opts.version !== undefined) ? opts.version : null,
+		description: null,
+		debug: (opts !== undefined && opts.debug !== undefined) ? opts.debug : 0,
+	};
+	
+	this._private.hooks = new Client.Hooks(this._private.debug);
+	this._private.http = new Client.Http(this._private.debug);
+	
+	/**
+	 * @member {Object} HaveAPI.Client#apiSettings An object containg API settings.
+	 */
+	this.apiSettings = null;
+	
+	/**
+	 * @member {Array} HaveAPI.Client#resources A list of top-level resources attached to the client.
+	 */
+	this.resources = [];
+	
+	/**
+	 * @member {Object} HaveAPI.Client#authProvider Selected authentication provider.
+	 */
+	this.authProvider = new Client.Authentication.Base();
+}
 
-var c = root.HaveAPI.Client;
+var c = Client;
 
 /** @constant HaveAPI.Client.Version */
 c.Version = '0.4.0';
+c.ProtocolVersion = '1.0';
 
 /**
  * @callback HaveAPI.Client~doneCallback
@@ -123,7 +119,7 @@ c.prototype.availableVersions = function(callback) {
 		method: 'OPTIONS',
 		url: this.url + '/?describe=versions',
 		callback: function(status, response) {
-			var r = new root.HaveAPI.Client.Response(null, response);
+			var r = new Client.Response(null, response);
 			var ok = r.isOk();
 			
 			callback(that, ok, ok ? r.response() : r.message());
@@ -162,7 +158,7 @@ c.prototype.attachResources = function() {
 		
 		this.resources.push(r);
 		
-		this[r] = new root.HaveAPI.Client.Resource(this, r, this._private.description.resources[r], []);
+		this[r] = new Client.Resource(this, r, this._private.description.resources[r], []);
 	}
 };
 
@@ -223,7 +219,7 @@ c.prototype.logout = function(callback) {
 	var that = this;
 	
 	this.authProvider.logout(function() {
-		that.authProvider = new root.HaveAPI.Client.Authentication.Base();
+		that.authProvider = new Client.Authentication.Base();
 		that.destroyResources();
 		that._private.description = null;
 		
@@ -252,7 +248,7 @@ c.prototype.directInvoke = function(action, params, callback) {
 		queryParameters: this.authProvider.queryParameters(),
 		callback: function(status, response) {
 			if(callback !== undefined) {
-				callback(that, new root.HaveAPI.Client.Response(action, response));
+				callback(that, new Client.Response(action, response));
 			}
 		}
 	};
@@ -300,11 +296,11 @@ c.prototype.invoke = function(action, params, callback) {
 		
 		switch (action.layout('output')) {
 			case 'object':
-				callback(that, new root.HaveAPI.Client.ResourceInstance(that, action, response));
+				callback(that, new Client.ResourceInstance(that, action, response));
 				break;
 				
 			case 'object_list':
-				callback(that, new root.HaveAPI.Client.ResourceInstanceList(that, action, response));
+				callback(that, new Client.ResourceInstanceList(that, action, response));
 				break;
 			
 			default:
@@ -387,13 +383,6 @@ c.prototype.addParamsToQuery = function(url, namespace, params) {
 	
 	return url;
 };
-
-
-
-/********************************************************************************/
-/*************************  HAVEAPI.CLIENT.HOOKS  *******************************/
-/********************************************************************************/
-
 
 /**
  * @class Hooks
@@ -484,13 +473,6 @@ hooks.prototype.invoke = function(type, event) {
 	}
 };
 
-
-
-/********************************************************************************/
-/*************************  HAVEAPI.HTTP.CLIENT  ********************************/
-/********************************************************************************/
-
-
 /**
  * @class Http
  * @memberof HaveAPI.Client
@@ -545,12 +527,6 @@ http.prototype.request = function(opts) {
 	}
 };
 
-
-/********************************************************************************/
-/*********************  HAVEAPI.CLIENT.AUTHENTICATION  **************************/
-/********************************************************************************/
-
-
 /**
  * @namespace Authentication
  * @memberof HaveAPI.Client
@@ -573,12 +549,6 @@ c.Authentication = {
 		c.Authentication.providers[name] = obj;
 	}
 };
-
-
-/********************************************************************************/
-/*******************  HAVEAPI.CLIENT.AUTHENTICATION.BASE  ***********************/
-/********************************************************************************/
-
 
 /**
  * @class Base
@@ -626,12 +596,6 @@ base.prototype.headers = function(){};
  */
 base.prototype.queryParameters = function(){};
 
-
-/********************************************************************************/
-/******************  HAVEAPI.CLIENT.AUTHENTICATION.BASIC  ***********************/
-/********************************************************************************/
-
-
 /**
  * @class Basic
  * @classdesc Authentication provider for HTTP basic auth.
@@ -664,12 +628,6 @@ basic.prototype.credentials = function() {
 	return this.opts;
 };
 
-
-/********************************************************************************/
-/*******************  HAVEAPI.CLIENT.AUTHENTICATION.TOKEN  **********************/
-/********************************************************************************/
-
-
 /**
  * @class Token
  * @classdesc Token authentication provider.
@@ -693,7 +651,7 @@ token.prototype = new base();
  * @param {HaveAPI.Client~doneCallback} callback
  */
 token.prototype.setup = function(callback) {
-	this.resource = new root.HaveAPI.Client.Resource(this.client, 'token', this.description.resources.token, []);
+	this.resource = new Client.Resource(this.client, 'token', this.description.resources.token, []);
 	
 	if (this.opts.hasOwnProperty('token')) {
 		this.token = this.opts.token;
@@ -764,22 +722,6 @@ token.prototype.logout = function(callback) {
 	});
 };
 
-
-/********************************************************************************/
-/***************  HAVEAPI.CLIENT.AUTHENTICATION REGISTRATION  *******************/
-/********************************************************************************/
-
-
-// Register built-in providers
-c.Authentication.registerProvider('basic', basic);
-c.Authentication.registerProvider('token', token);
-
-
-/********************************************************************************/
-/**********************  HAVEAPI.CLIENT.BASERESOURCE  ***************************/
-/********************************************************************************/
-
-
 /**
  * @class BaseResource
  * @classdesc Base class for {@link HaveAPI.Client.Resource}
@@ -801,7 +743,7 @@ br.prototype.attachResources = function(description, args) {
 	for(var r in description.resources) {
 		this.resources.push(r);
 		
-		this[r] = new root.HaveAPI.Client.Resource(this._private.client, r, description.resources[r], args);
+		this[r] = new Client.Resource(this._private.client, r, description.resources[r], args);
 	}
 };
 
@@ -817,7 +759,7 @@ br.prototype.attachActions = function(description, args) {
 	
 	for(var a in description.actions) {
 		var names = [a].concat(description.actions[a].aliases);
-		var actionInstance = new root.HaveAPI.Client.Action(this._private.client, this, a, description.actions[a], args);
+		var actionInstance = new Client.Action(this._private.client, this, a, description.actions[a], args);
 		
 		for(var i = 0; i < names.length; i++) {
 			if (names[i] == 'new')
@@ -839,12 +781,6 @@ br.prototype.attachActions = function(description, args) {
 br.prototype.defaultParams = function(action) {
 	return {};
 };
-
-
-/********************************************************************************/
-/************************  HAVEAPI.CLIENT.RESOURCE  *****************************/
-/********************************************************************************/
-
 
 /**
  * @class Resource
@@ -892,14 +828,8 @@ r.prototype.applyArguments = function(args) {
  * @return {HaveAPI.Client.ResourceInstance} resource instance
  */
 r.prototype.new = function() {
-	return new root.HaveAPI.Client.ResourceInstance(this.client, this.create, null, false);
+	return new Client.ResourceInstance(this.client, this.create, null, false);
 };
-
-
-/********************************************************************************/
-/*************************  HAVEAPI.CLIENT.ACTION  ******************************/
-/********************************************************************************/
-
 
 /**
  * @class Action
@@ -1103,12 +1033,6 @@ a.prototype.prepareInvoke = function(arguments) {
 	}
 };
 
-
-/********************************************************************************/
-/************************  HAVEAPI.CLIENT.RESPONSE  *****************************/
-/********************************************************************************/
-
-
 /**
  * @class Response
  * @memberof HaveAPI.Client
@@ -1170,11 +1094,6 @@ r.prototype.meta = function() {
 	
 	return {};
 };
-
-
-/********************************************************************************/
-/********************  HAVEAPI.CLIENT.RESOURCEINSTANCE  *************************/
-/********************************************************************************/
 
 
 /**
@@ -1355,9 +1274,9 @@ i.prototype.resolveAssociation = function(attr, path, url) {
 	action.provideIdArgs(obj[metaNs].url_params);
 	
 	if (obj[metaNs].resolved)
-		return new root.HaveAPI.Client.ResourceInstance(this._private.client, action, obj, false, true);
+		return new Client.ResourceInstance(this._private.client, action, obj, false, true);
 	
-	return new root.HaveAPI.Client.ResourceInstance(this._private.client, action, null, true);
+	return new Client.ResourceInstance(this._private.client, action, null, true);
 };
 
 /**
@@ -1467,11 +1386,6 @@ i.prototype.createAttribute = function(attr, desc) {
 	}
 };
 
-
-/********************************************************************************/
-/******************  HAVEAPI.CLIENT.RESOURCEINSTANCELIST  ***********************/
-/********************************************************************************/
-
 /**
  * Arguments are the same as for {@link HaveAPI.Client.ResourceInstance}.
  * @class ResourceInstanceList
@@ -1500,7 +1414,7 @@ var l = c.ResourceInstanceList = function(client, action, response) {
 	this.totalCount = response.meta().total_count;
 	
 	for (var i = 0; i < this.length; i++)
-		this.items.push(new root.HaveAPI.Client.ResourceInstance(client, action, ret[i], false, true));
+		this.items.push(new Client.ResourceInstance(client, action, ret[i], false, true));
 };
 
 /**
@@ -1570,4 +1484,13 @@ l.prototype.last = function() {
 	return this.items[ this.length - 1 ]
 };
 
-})(window);
+// Register built-in providers
+c.Authentication.registerProvider('basic', basic);
+c.Authentication.registerProvider('token', token);
+
+var HaveAPI = {
+	Client: Client
+};
+
+return HaveAPI;
+}));

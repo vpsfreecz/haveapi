@@ -16,7 +16,7 @@ function Action (client, resource, name, description, args) {
 	
 	var that = this;
 	var fn = function() {
-		var new_a = new c.Action(
+		var new_a = new Action(
 			that.client,
 			that.resource,
 			that.name,

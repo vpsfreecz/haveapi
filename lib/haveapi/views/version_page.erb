@@ -1,3 +1,21 @@
+<%
+def format_validators(validators)
+  ret = ''
+  return ret if validators.nil?
+
+  validators.each do |name, opts|
+    ret += "<h5>#{name.to_s.capitalize}</h5>"
+    ret += '<dl>'
+    opts.each do |k, v|
+      ret += "<dt>#{k}</dt><dd>#{v}</dd>"
+    end
+    ret += '</dl>'
+  end
+
+  ret
+end
+%>
+
 <% def render_resource_body(resource, info, prefix='root', name=nil) %>
   <% name ||= resource.humanize %>
   <h2 class="resource" id="<%= "#{prefix}-#{resource}" %>"><%= resource.humanize %></h2>
@@ -47,7 +65,7 @@
                     <td><%= param %></td>
                     <td><%= info[:required] ? 'yes' : 'no' %></td>
                     <td><%= info[:type] %></td>
-                    <td><%= info[:validators] %></td>
+                    <td><%= format_validators(info[:validators]) %></td>
                     <td><%= info[:default] == :_nil ? '' : info[:default] %></td>
                     <td><%= info[:description] %></td>
                   </tr>

@@ -176,21 +176,24 @@ module HaveAPI::Client
       }.update(@auth.request_headers)))
 
       p_v = HaveAPI::Client::PROTOCOL_VERSION
-
-      if ret[:version] != p_v
-        major1, minor1 = ret[:version].split('.')
-        major2, minor2 = p_v.split('.')
-
-        if major1 != major2
-          raise ProtocolError,
-              "Incompatible protocol version: the client uses v#{p_v} "+
-              "while the API server uses v#{ret[:version]}"
-
-        else
-          warn "The client uses protocol v#{p_v} while the API server uses v#{ret[:version]}"
-        end
+      return ret[:response] if ret[:version] == p_v
+      
+      unless ret[:version]
+        raise ProtocolError,
+            "Incompatible protocol version: the client uses v#{p_v} "+
+            "while the API server uses an unspecified version (pre 1.0)"
       end
 
+      major1, minor1 = ret[:version].split('.')
+      major2, minor2 = p_v.split('.')
+
+      if major1 != major2
+        raise ProtocolError,
+            "Incompatible protocol version: the client uses v#{p_v} "+
+            "while the API server uses v#{ret[:version]}"
+      end
+
+      warn "The client uses protocol v#{p_v} while the API server uses v#{ret[:version]}"
       ret[:response]
     end
 

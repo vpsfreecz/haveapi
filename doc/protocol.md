@@ -20,6 +20,18 @@ Thanks to this ability, API changes immediately reflects in all clients without
 changing a single line of code. A client can also be used on all APIs with compatible
 self-describing format, without any changes at all.
 
+# Protocol versioning
+Protocol version defines the form and contents of
+
+ - the envelope,
+ - API description,
+ - data transfers.
+
+Protocol version is in the form `<major>.<minor>`. `major` is incremented
+whenever a change is made to the protocol that breaks backward compatibility.
+When backward compatibility is kept and only some new features are added to the
+protocol, `major` stays and `minor` is incremented.
+
 # Envelope
 In addition to output format specified below, every API response
 is wrapped in an envelope.
@@ -36,12 +48,16 @@ messages.
           }
       }
 
+Responses for `OPTIONS` requests also send a protocol version in the envelope:
+
+    "version": <version>
+
 # Description format
 In this document, the self-description is encoded in JSON. However, it can
 be encoded in any of the supported output formats.
 
-## Version
-Version is described as:
+## API version
+API version is described as:
 
     {
         "authentication": {

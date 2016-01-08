@@ -55,7 +55,7 @@ module HaveAPI
       def report_error(code, headers, msg)
         @halted = true
         content_type @formatter.content_type, charset: 'utf-8'
-        halt code, headers, @formatter.format(false, nil, msg)
+        halt code, headers, @formatter.format(false, nil, msg, version: false)
       end
 
       def root
@@ -361,7 +361,8 @@ module HaveAPI
             status,
             status  ? reply : nil,
             !status ? reply : nil,
-            errors
+            errors,
+            version: false
         )
       end
 

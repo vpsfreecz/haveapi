@@ -32,8 +32,8 @@ module HaveAPI
       @formatter.nil? ? false : true
     end
 
-    def format(status, response, message = nil, errors = nil)
-      @formatter.format(header(status, response, message, errors))
+    def format(status, response, message = nil, errors = nil, version: true)
+      @formatter.format(header(status, response, message, errors, version))
     end
 
     def error(msg)
@@ -45,13 +45,16 @@ module HaveAPI
     end
 
     protected
-    def header(status, response, message = nil, errors = nil)
-      {
+    def header(status, response, message = nil, errors = nil, version)
+      ret = {}
+      ret[:version] = HaveAPI::PROTOCOL_VERSION if version
+      ret.update({
           status: status,
           response: response,
           message: message,
           errors: errors
-      }
+      })
+      ret
     end
   end
 end

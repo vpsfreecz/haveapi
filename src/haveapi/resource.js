@@ -2,7 +2,7 @@
  * @class Resource
  * @memberof HaveAPI.Client
  */
-var r = c.Resource = function(client, name, description, args) {
+function Resource (client, name, description, args) {
 	this._private = {
 		client: client,
 		name: name,
@@ -27,10 +27,10 @@ var r = c.Resource = function(client, name, description, args) {
 	return fn;
 };
 
-r.prototype = new c.BaseResource();
+Resource.prototype = new BaseResource();
 
 // Unused
-r.prototype.applyArguments = function(args) {
+Resource.prototype.applyArguments = function(args) {
 	for(var i = 0; i < args.length; i++) {
 		this._private.args.push(args[i]);
 	}
@@ -43,6 +43,6 @@ r.prototype.applyArguments = function(args) {
  * @method HaveAPI.Client.Resource#new
  * @return {HaveAPI.Client.ResourceInstance} resource instance
  */
-r.prototype.new = function() {
+Resource.prototype.new = function() {
 	return new Client.ResourceInstance(this.client, this.create, null, false);
 };

@@ -2,7 +2,7 @@
  * @namespace Authentication
  * @memberof HaveAPI.Client
  */
-c.Authentication = {
+Authentication = {
 	/**
 	 * @member {Array} providers An array of registered authentication providers.
 	 * @memberof HaveAPI.Client.Authentication
@@ -17,6 +17,6 @@ c.Authentication = {
 	 * @param {Object} provider class
 	 */
 	registerProvider: function(name, obj) {
-		c.Authentication.providers[name] = obj;
+		Authentication.providers[name] = obj;
 	}
 };

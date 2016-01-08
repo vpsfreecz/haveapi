@@ -43,11 +43,9 @@ function Client(url, opts) {
 	this.authProvider = new Client.Authentication.Base();
 }
 
-var c = Client;
-
 /** @constant HaveAPI.Client.Version */
-c.Version = '0.4.0';
-c.ProtocolVersion = '1.0';
+Client.Version = '0.4.0';
+Client.ProtocolVersion = '1.0';
 
 /**
  * @callback HaveAPI.Client~doneCallback
@@ -73,7 +71,7 @@ c.ProtocolVersion = '1.0';
  * @method HaveAPI.Client#setup
  * @param {HaveAPI.Client~doneCallback} callback
  */
-c.prototype.setup = function(callback) {
+Client.prototype.setup = function(callback) {
 	var that = this;
 	
 	this.fetchDescription(function(status, response) {
@@ -91,7 +89,7 @@ c.prototype.setup = function(callback) {
  * @method HaveAPI.Client#useDescription
  * @param {Object} description
  */
-c.prototype.useDescription = function(description) {
+Client.prototype.useDescription = function(description) {
 	this._private.description = description;
 	this.createSettings();
 	this.attachResources();
@@ -103,7 +101,7 @@ c.prototype.useDescription = function(description) {
  * @method HaveAPI.Client#availableVersions
  * @param {HaveAPI.Client~versionsCallback} callback
  */
-c.prototype.availableVersions = function(callback) {
+Client.prototype.availableVersions = function(callback) {
 	var that = this;
 	
 	this.http.request({
@@ -124,7 +122,7 @@ c.prototype.availableVersions = function(callback) {
  * @private
  * @param {HaveAPI.Client.Http~replyCallback} callback
  */
-c.prototype.fetchDescription = function(callback) {
+Client.prototype.fetchDescription = function(callback) {
 	this._private.http.request({
 		method: 'OPTIONS',
 		url: this._private.url + (this._private.version ? "/v"+ this._private.version +"/" : "/?describe=default"),
@@ -137,7 +135,7 @@ c.prototype.fetchDescription = function(callback) {
  * @method HaveAPI.Client#attachResources
  * @private
  */
-c.prototype.attachResources = function() {
+Client.prototype.attachResources = function() {
 	// Detach existing resources
 	if (this.resources.length > 0) {
 		this.destroyResources();
@@ -164,7 +162,7 @@ c.prototype.attachResources = function() {
  * @param {HaveAPI.Client~doneCallback} callback called when the authentication is finished
  * @param {Boolean} reset if false, the client will not be set up again, defaults to true
  */
-c.prototype.authenticate = function(method, opts, callback, reset) {
+Client.prototype.authenticate = function(method, opts, callback, reset) {
 	var that = this;
 	
 	if (reset === undefined) reset = true;
@@ -182,7 +180,7 @@ c.prototype.authenticate = function(method, opts, callback, reset) {
 		return;
 	}
 	
-	this.authProvider = new c.Authentication.providers[method](this, opts, this._private.description.authentication[method]);
+	this.authProvider = new Authentication.providers[method](this, opts, this._private.description.authentication[method]);
 	
 	this.authProvider.setup(function() {
 		// Fetch new description, which may be different when authenticated
@@ -206,7 +204,7 @@ c.prototype.authenticate = function(method, opts, callback, reset) {
  * @method HaveAPI.Client#logout
  * @param {HaveAPI.Client~doneCallback} callback
  */
-c.prototype.logout = function(callback) {
+Client.prototype.logout = function(callback) {
 	var that = this;
 	
 	this.authProvider.logout(function() {
@@ -225,7 +223,7 @@ c.prototype.logout = function(callback) {
  * @method HaveAPI.Client#directInvoke
  * @param {HaveAPI.Client~replyCallback} callback
  */
-c.prototype.directInvoke = function(action, params, callback) {
+Client.prototype.directInvoke = function(action, params, callback) {
 	if (this._private.debug > 5)
 		console.log("Executing", action, "with params", params, "at", action.preparedUrl);
 	
@@ -278,7 +276,7 @@ c.prototype.directInvoke = function(action, params, callback) {
  * @method HaveAPI.Client#invoke
  * @param {HaveAPI.Client~replyCallback} callback
  */
-c.prototype.invoke = function(action, params, callback) {
+Client.prototype.invoke = function(action, params, callback) {
 	var that = this;
 	
 	this.directInvoke(action, params, function(status, response) {
@@ -307,7 +305,7 @@ c.prototype.invoke = function(action, params, callback) {
  * @param {String} event setup or authenticated
  * @param {HaveAPI.Client~doneCallback} callback
  */
-c.prototype.after = function(event, callback) {
+Client.prototype.after = function(event, callback) {
 	this._private.hooks.register('after', event, callback);
 }
 
@@ -316,7 +314,7 @@ c.prototype.after = function(event, callback) {
  * @method HaveAPI.Client#createSettings
  * @private
  */
-c.prototype.createSettings = function() {
+Client.prototype.createSettings = function() {
 	this.apiSettings = {
 		meta: this._private.description.meta
 	};
@@ -327,7 +325,7 @@ c.prototype.createSettings = function() {
  * @method HaveAPI.Client#destroyResources
  * @private
  */
-c.prototype.destroyResources = function() {
+Client.prototype.destroyResources = function() {
 	while (this.resources.length < 0) {
 		delete this[ that.resources.shift() ];
 	}
@@ -341,7 +339,7 @@ c.prototype.destroyResources = function() {
  * @return {Boolean}
  * @private
  */
-c.prototype.sendAsQueryParams = function(method) {
+Client.prototype.sendAsQueryParams = function(method) {
 	return ['GET', 'OPTIONS'].indexOf(method) != -1;
 };
 
@@ -354,7 +352,7 @@ c.prototype.sendAsQueryParams = function(method) {
  * @param {Object} params
  * @private
  */
-c.prototype.addParamsToQuery = function(url, namespace, params) {
+Client.prototype.addParamsToQuery = function(url, namespace, params) {
 	var first = true;
 	
 	for (var key in params) {

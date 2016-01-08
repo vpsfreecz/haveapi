@@ -4,7 +4,7 @@
  * and {@link HaveAPI.Client.ResourceInstance}. Implements shared methods.
  * @memberof HaveAPI.Client
  */
-var br = c.BaseResource = function(){};
+function BaseResource (){};
 
 /**
  * Attach child resources as properties.
@@ -13,7 +13,7 @@ var br = c.BaseResource = function(){};
  * @param {Object} description
  * @param {Array} args
  */
-br.prototype.attachResources = function(description, args) {
+BaseResource.prototype.attachResources = function(description, args) {
 	this.resources = [];
 	
 	for(var r in description.resources) {
@@ -30,7 +30,7 @@ br.prototype.attachResources = function(description, args) {
  * @param {Object} description
  * @param {Array} args
  */
-br.prototype.attachActions = function(description, args) {
+BaseResource.prototype.attachActions = function(description, args) {
 	this.actions = [];
 	
 	for(var a in description.actions) {
@@ -54,6 +54,6 @@ br.prototype.attachActions = function(description, args) {
  * @protected
  * @param {HaveAPI.Client.Action} action
  */
-br.prototype.defaultParams = function(action) {
+BaseResource.prototype.defaultParams = function(action) {
 	return {};
 };

@@ -2,7 +2,7 @@
  * @class Http
  * @memberof HaveAPI.Client
  */
-var http = c.Http = function(debug) {
+function Http (debug) {
 	this.debug = debug;
 };
 
@@ -15,7 +15,7 @@ var http = c.Http = function(debug) {
 /**
  * @method HaveAPI.Client.Http#request
  */
-http.prototype.request = function(opts) {
+Http.prototype.request = function(opts) {
 	if (this.debug > 5)
 		console.log("Request to " + opts.method + " " + opts.url);
 	

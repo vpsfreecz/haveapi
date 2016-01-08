@@ -15,7 +15,7 @@
  *                                            but just an object with parameters.
  * @memberof HaveAPI.Client
  */
-var i = c.ResourceInstance = function(client, action, response, shell, item) {
+function ResourceInstance (client, action, response, shell, item) {
 	this._private = {
 		client: client,
 		action: action,
@@ -71,7 +71,7 @@ var i = c.ResourceInstance = function(client, action, response, shell, item) {
 	}
 };
 
-i.prototype = new c.BaseResource();
+ResourceInstance.prototype = new BaseResource();
 
 /**
  * @callback HaveAPI.Client.ResourceInstance~resolveCallback
@@ -84,7 +84,7 @@ i.prototype = new c.BaseResource();
  * @method HaveAPI.Client.ResourceInstance#isOk
  * @return {Boolean}
  */
-i.prototype.isOk = function() {
+ResourceInstance.prototype.isOk = function() {
 	return this._private.response.isOk();
 };
 
@@ -93,7 +93,7 @@ i.prototype.isOk = function() {
  * @method HaveAPI.Client.ResourceInstance#apiResponse
  * @return {HaveAPI.Client.Response}
  */
-i.prototype.apiResponse = function() {
+ResourceInstance.prototype.apiResponse = function() {
 	return this._private.response;
 };
 
@@ -103,7 +103,7 @@ i.prototype.apiResponse = function() {
  * @method HaveAPI.Client.ResourceInstance#save
  * @param {HaveAPI.Client~replyCallback} callback
  */
-i.prototype.save = function(callback) {
+ResourceInstance.prototype.save = function(callback) {
 	var that = this;
 	
 	function updateAttrs(attrs) {
@@ -133,7 +133,7 @@ i.prototype.save = function(callback) {
 	}
 };
 
-i.prototype.defaultParams = function(action) {
+ResourceInstance.prototype.defaultParams = function(action) {
 	ret = {}
 	
 	for (var attr in this._private.attributes) {
@@ -163,7 +163,7 @@ i.prototype.defaultParams = function(action) {
  * @private
  * @return {HaveAPI.Client.ResourceInstance}
  */
-i.prototype.resolveAssociation = function(attr, path, url) {
+ResourceInstance.prototype.resolveAssociation = function(attr, path, url) {
 	var tmp = this._private.client;
 	
 	for(var i = 0; i < path.length; i++) {
@@ -187,7 +187,7 @@ i.prototype.resolveAssociation = function(attr, path, url) {
  * @method HaveAPI.Client.ResourceInstance#whenResolved
  * @param {HaveAPI.Client.ResourceInstance~resolveCallback} callback
  */
-i.prototype.whenResolved = function(callback) {
+ResourceInstance.prototype.whenResolved = function(callback) {
 	if (this._private.resolved)
 		callback(this._private.client, this);
 	
@@ -205,7 +205,7 @@ i.prototype.whenResolved = function(callback) {
  * @private
  * @param {Object} attrs
  */
-i.prototype.attachAttributes = function(attrs) {
+ResourceInstance.prototype.attachAttributes = function(attrs) {
 	this._private.attributes = attrs;
 	this._private.associations = {};
 	
@@ -224,7 +224,7 @@ i.prototype.attachAttributes = function(attrs) {
  * @method HaveAPI.Client.ResourceInstance#attachStubAttributes
  * @private
  */
-i.prototype.attachStubAttributes = function() {
+ResourceInstance.prototype.attachStubAttributes = function() {
 	var attrs = {};
 	var params = this._private.action.description.input.parameters;
 	
@@ -251,7 +251,7 @@ i.prototype.attachStubAttributes = function() {
  * @param {String} attr
  * @param {Object} desc
  */
-i.prototype.createAttribute = function(attr, desc) {
+ResourceInstance.prototype.createAttribute = function(attr, desc) {
 	var that = this;
 	
 	switch (desc.type) {

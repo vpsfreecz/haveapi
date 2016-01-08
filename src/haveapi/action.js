@@ -2,7 +2,7 @@
  * @class Action
  * @memberof HaveAPI.Client
  */
-var a = c.Action = function(client, resource, name, description, args) {
+function Action (client, resource, name, description, args) {
 	if (client._private.debug > 10)
 		console.log("Attach action", name, "to", resource._private.name);
 	
@@ -35,7 +35,7 @@ var a = c.Action = function(client, resource, name, description, args) {
  * @method HaveAPI.Client.Action#httpMethod
  * @return {String}
  */
-a.prototype.httpMethod = function() {
+Action.prototype.httpMethod = function() {
 	return this.description.method;
 };
 
@@ -45,7 +45,7 @@ a.prototype.httpMethod = function() {
  * @param {String} direction input/output
  * @return {String}
  */
-a.prototype.namespace = function(direction) {
+Action.prototype.namespace = function(direction) {
 	return this.description[direction].namespace;
 };
 
@@ -55,7 +55,7 @@ a.prototype.namespace = function(direction) {
  * @param {String} direction input/output
  * @return {String}
  */
-a.prototype.layout = function(direction) {
+Action.prototype.layout = function(direction) {
 	return this.description[direction].layout;
 };
 
@@ -64,7 +64,7 @@ a.prototype.layout = function(direction) {
  * URL.
  * @method HaveAPI.Client.Action#provideIdArgs
  */
-a.prototype.provideIdArgs = function(args) {
+Action.prototype.provideIdArgs = function(args) {
 	this.providedIdArgs = args;
 };
 
@@ -73,7 +73,7 @@ a.prototype.provideIdArgs = function(args) {
  * URL.
  * @method HaveAPI.Client.Action#provideUrl
  */
-a.prototype.provideUrl = function(url) {
+Action.prototype.provideUrl = function(url) {
 	this.preparedUrl = url;
 };
 
@@ -110,7 +110,7 @@ a.prototype.provideUrl = function(url) {
  * 
  * @method HaveAPI.Client.Action#invoke
  */
-a.prototype.invoke = function() {
+Action.prototype.invoke = function() {
 	var prep = this.prepareInvoke(arguments);
 	
 	this.client.invoke(this, prep.params, prep.callback);
@@ -122,7 +122,7 @@ a.prototype.invoke = function() {
  * @see HaveAPI.Client#directInvoke
  * @method HaveAPI.Client.Action#directInvoke
  */
-a.prototype.directInvoke = function() {
+Action.prototype.directInvoke = function() {
 	var prep = this.prepareInvoke(arguments);
 	
 	this.client.directInvoke(this, prep.params, prep.callback);
@@ -134,7 +134,7 @@ a.prototype.directInvoke = function() {
  * @private
  * @return {Object}
  */
-a.prototype.prepareInvoke = function(arguments) {
+Action.prototype.prepareInvoke = function(arguments) {
 	var args = this.args.concat(Array.prototype.slice.call(arguments));
 	var rx = /(:[a-zA-Z\-_]+)/;
 	

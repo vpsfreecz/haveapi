@@ -5,7 +5,7 @@
  * @see {@link HaveAPI.Client.ResourceInstance}
  * @memberof HaveAPI.Client
  */
-var l = c.ResourceInstanceList = function(client, action, response) {
+function ResourceInstanceList (client, action, response) {
 	this.response = response;
 	
 	/**
@@ -39,7 +39,7 @@ var l = c.ResourceInstanceList = function(client, action, response) {
  * @method HaveAPI.Client.ResourceInstanceList#isOk
  * @return {Boolean}
  */
-l.prototype.isOk = function() {
+ResourceInstanceList.prototype.isOk = function() {
 	return this.response.isOk();
 };
 
@@ -48,7 +48,7 @@ l.prototype.isOk = function() {
  * @method HaveAPI.Client.ResourceInstanceList#apiResponse
  * @return {HaveAPI.Client.Response}
  */
-l.prototype.apiResponse = function() {
+ResourceInstanceList.prototype.apiResponse = function() {
 	return this.response;
 };
 
@@ -57,7 +57,7 @@ l.prototype.apiResponse = function() {
  * @param {HaveAPI.Client.ResourceInstanceList~iteratorCallback} fn
  * @method HaveAPI.Client.ResourceInstanceList#each
  */
-l.prototype.each = function(fn) {
+ResourceInstanceList.prototype.each = function(fn) {
 	for (var i = 0; i < this.length; i++)
 		fn( this.items[ i ] );
 };
@@ -68,7 +68,7 @@ l.prototype.each = function(fn) {
  * @param {Integer} index
  * @return {HaveAPI.Client.ResourceInstance}
  */
-l.prototype.itemAt = function(index) {
+ResourceInstanceList.prototype.itemAt = function(index) {
 	return this.items[ index ];
 };
 
@@ -77,7 +77,7 @@ l.prototype.itemAt = function(index) {
  * @method HaveAPI.Client.ResourceInstanceList#first
  * @return {HaveAPI.Client.ResourceInstance}
  */
-l.prototype.first = function() {
+ResourceInstanceList.prototype.first = function() {
 	if (this.length == 0)
 		return null;
 	
@@ -89,7 +89,7 @@ l.prototype.first = function() {
  * @method HaveAPI.Client.ResourceInstanceList#last
  * @return {HaveAPI.Client.ResourceInstance}
  */
-l.prototype.last = function() {
+ResourceInstanceList.prototype.last = function() {
 	if (this.length == 0)
 		return null;
 	

@@ -2,7 +2,7 @@
  * @class Hooks
  * @memberof HaveAPI.Client
  */
-var hooks = c.Hooks = function(debug) {
+function Hooks (debug) {
 	this.debug = debug;
 	this.hooks = {};
 };
@@ -14,7 +14,7 @@ var hooks = c.Hooks = function(debug) {
  * @param {String} event
  * @param {HaveAPI.Client~doneCallback} callback
  */
-hooks.prototype.register = function(type, event, callback) {
+Hooks.prototype.register = function(type, event, callback) {
 	if (this.debug > 9)
 		console.log("Register callback", type, event);
 	
@@ -55,7 +55,7 @@ hooks.prototype.register = function(type, event, callback) {
  * @param {String} type
  * @param {String} event
  */
-hooks.prototype.invoke = function(type, event) {
+Hooks.prototype.invoke = function(type, event) {
 	var callbackArgs = [];
 	
 	if (arguments.length > 2) {

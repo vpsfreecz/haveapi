@@ -2,7 +2,7 @@
  * @class Response
  * @memberof HaveAPI.Client
  */
-var r = c.Response = function(action, response) {
+function Response (action, response) {
 	this.action = action;
 	this.envelope = response;
 };
@@ -12,7 +12,7 @@ var r = c.Response = function(action, response) {
  * @method HaveAPI.Client.Response#isOk
  * @return {Boolean}
  */
-r.prototype.isOk = function() {
+Response.prototype.isOk = function() {
 	return this.envelope.status;
 };
 
@@ -21,7 +21,7 @@ r.prototype.isOk = function() {
  * @method HaveAPI.Client.Response#response
  * @return {Object} response
  */
-r.prototype.response = function() {
+Response.prototype.response = function() {
 	if(!this.action)
 		return this.envelope.response;
 	
@@ -42,7 +42,7 @@ r.prototype.response = function() {
  * @method HaveAPI.Client.Response#message
  * @return {String}
  */
-r.prototype.message = function() {
+Response.prototype.message = function() {
 	return this.envelope.message;
 };
 
@@ -51,7 +51,7 @@ r.prototype.message = function() {
  * @method HaveAPI.Client.Response#meta
  * @return {Object}
  */
-r.prototype.meta = function() {
+Response.prototype.meta = function() {
 	var metaNs = this.action.client.apiSettings.meta.namespace;
 	
 	if (this.envelope.response.hasOwnProperty(metaNs))

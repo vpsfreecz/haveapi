@@ -1,10 +1,10 @@
 {
-	"name": "haveapi-client-js",
+	"name": "haveapi-client",
 	"version": "0.4.0",
 	"description": "Client for HaveAPI based APIs",
 	"license": "MIT",
 	"author": {"name": "Jakub Skokan", "email": "jakub.skokan@vpsfree.cz"},
-	"files": ["src"],
+	"files": ["dist"],
 	"main": "dist/haveapi-client.js",
 	"repository": {
 		"type": "git",

@@ -1,3 +1,6 @@
+require 'erb'
+require 'redcarpet'
+
 module HaveAPI
   class Server
     attr_reader :root, :routes, :module_name, :auth_chain, :versions, :default_version,

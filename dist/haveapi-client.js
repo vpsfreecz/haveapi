@@ -1487,6 +1487,10 @@ ResourceInstanceList.prototype.last = function() {
  * @author Jakub Skokan <jakub.skokan@vpsfree.cz>
  **/
 
+if (typeof exports === 'object') {
+	XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
+}
+
 // Register built-in providers
 Authentication.registerProvider('basic', Authentication.Basic);
 Authentication.registerProvider('token', Authentication.Token);

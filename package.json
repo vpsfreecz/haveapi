@@ -10,6 +10,9 @@
 		"type": "git",
 		"url": "https://github.com/vpsfree.cz/haveapi-client-js"
 	},
+	"dependencies": {
+		"xmlhttprequest": "latest"
+	},
 	"devDependencies": {
 		"gulp": "latest",
 		"gulp-concat": "latest",

@@ -56,7 +56,10 @@ function Client(url, opts) {
 Client.Version = '0.4.0';
 Client.ProtocolVersion = '1.0';
 
-/** @namespace HaveAPI.Client.Exception */
+/**
+ * @namespace Exceptions
+ * @memberof HaveAPI.Client
+ */
 Client.Exceptions = {};
 
 /**
@@ -86,8 +89,8 @@ Client.Exceptions = {};
 Client.prototype.setup = function(callback) {
 	var that = this;
 	
-	this.fetchDescription(function(status, response) {
-		that._private.description = response.response;
+	this.fetchDescription(function(status, extract) {
+		that._private.description = extract.call();
 		that.createSettings();
 		that.attachResources();
 		
@@ -129,16 +132,52 @@ Client.prototype.availableVersions = function(callback) {
 };
 
 /**
+ * @callback HaveAPI.Client~descriptionCallback
+ * @param {Boolean} status true if the description was successfuly fetched
+ * @param {function} extract function that attempts to return the description
+ */
+
+/**
  * Fetch the description from the API.
  * @method HaveAPI.Client#fetchDescription
  * @private
- * @param {HaveAPI.Client.Http~replyCallback} callback
+ * @param {HaveAPI.Client.Http~descriptionCallback} callback
  */
 Client.prototype.fetchDescription = function(callback) {
 	this._private.http.request({
 		method: 'OPTIONS',
 		url: this._private.url + (this._private.version ? "/v"+ this._private.version +"/" : "/?describe=default"),
-		callback: callback
+		callback: function (status, response) {
+			callback(status == 200, function () {
+				if (response.version === undefined) {
+					throw new Client.Exceptions.ProtocolError(
+						'Incompatible protocol version: the client uses v'+ Client.ProtocolVersion +
+						' while the API server uses an unspecified version (pre 1.0)'
+					);
+				}
+				
+				if (response.version == Client.ProtocolVersion) {
+					return response.response;
+				}
+
+				v1 = response.version.split('.');
+				v2 = Client.ProtocolVersion.split('.');
+
+				if (v1[0] != v2[0]) {
+					throw new Client.Exceptions.ProtocolError(
+						'Incompatible protocol version: the client uses v'+ Client.ProtocolVersion +
+						' while the API server uses v'+ response.version
+					);
+				}
+
+				console.log(
+					'WARNING: The client uses protocol v'+ Client.ProtocolVersion +
+					' while the API server uses v'+ response.version
+				);
+				
+				return response.response;
+			});
+		}
 	});
 };
 
@@ -183,8 +222,8 @@ Client.prototype.authenticate = function(method, opts, callback, reset) {
 		// The client has not yet been setup.
 		// Fetch the description, do NOT attach the resources, use it only to authenticate.
 		
-		this.fetchDescription(function(status, response) {
-			that._private.description = response.response;
+		this.fetchDescription(function(status, extract) {
+			that._private.description = extract.call();
 			that.createSettings();
 			that.authenticate(method, opts, callback);
 		});
@@ -1482,6 +1521,21 @@ ResourceInstanceList.prototype.last = function() {
 	return this.items[ this.length - 1 ]
 };
 
+/**
+ * Thrown when protocol error/incompatibility occurs.
+ * @class ProtocolError
+ * @memberof HaveAPI.Client.Exceptions
+ */
+Client.Exceptions.ProtocolError = function (msg) {
+	this.name = 'ProtocolError';
+	this.message = msg;
+}
+
+/**
+ * Thrown when calling an action and some arguments are left unresolved.
+ * @class UnresolvedArguments
+ * @memberof HaveAPI.Client.Exceptions
+ */
 Client.Exceptions.UnresolvedArguments = function (action) {
 	this.name = 'UnresolvedArguments';
 	this.message = "Unable to execute action '"+ this.name +"': unresolved arguments";

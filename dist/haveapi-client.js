@@ -117,18 +117,10 @@ Client.prototype.useDescription = function(description) {
  * @param {HaveAPI.Client~versionsCallback} callback
  */
 Client.prototype.availableVersions = function(callback) {
-	var that = this;
-	
-	this.http.request({
-		method: 'OPTIONS',
-		url: this.url + '/?describe=versions',
-		callback: function(status, response) {
-			var r = new Client.Response(null, response);
-			var ok = r.isOk();
-			
-			callback(that, ok, ok ? r.response() : r.message());
-		}
-	});
+	this.fetchDescription(function (status, extract) {
+		callback(status, extract.call());
+
+	}, '/?describe=versions');
 };
 
 /**
@@ -142,11 +134,19 @@ Client.prototype.availableVersions = function(callback) {
  * @method HaveAPI.Client#fetchDescription
  * @private
  * @param {HaveAPI.Client.Http~descriptionCallback} callback
+ * @param {String} path server path to query for
  */
-Client.prototype.fetchDescription = function(callback) {
+Client.prototype.fetchDescription = function(callback, path) {
+	var url = this._private.url;
+
+	if (path === undefined)
+		url += (this._private.version ? "/v"+ this._private.version +"/" : "/?describe=default");
+	else
+		url += path;
+
 	this._private.http.request({
 		method: 'OPTIONS',
-		url: this._private.url + (this._private.version ? "/v"+ this._private.version +"/" : "/?describe=default"),
+		url: url,
 		callback: function (status, response) {
 			callback(status == 200, function () {
 				if (response.version === undefined) {

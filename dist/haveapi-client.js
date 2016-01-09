@@ -124,6 +124,40 @@ Client.prototype.availableVersions = function(callback) {
 };
 
 /**
+ * @callback HaveAPI.Client~isCompatibleCallback
+ * @param {mixed} compatible 'compatible', 'imperfect' or false
+ */
+
+/**
+ * @method HaveAPI.Client#isCompatible
+ * @param {HaveAPI.Client~isCompatibleCallback}
+ */
+Client.prototype.isCompatible = function(callback) {
+	var that = this;
+
+	this.fetchDescription(function (status, extract) {
+		
+		try {
+			extract.call();
+
+			if (that._private.protocolVersion == Client.ProtocolVersion)
+				callback('compatible');
+
+			else
+				callback('imperfect');
+
+		} catch (e) {
+			if (e instanceof Client.Exceptions.ProtocolError)
+				callback('incompatible');
+
+			else
+				throw e;
+		}
+
+	}, '/?describe=versions');
+}
+
+/**
  * @callback HaveAPI.Client~descriptionCallback
  * @param {Boolean} status true if the description was successfuly fetched
  * @param {function} extract function that attempts to return the description
@@ -137,6 +171,7 @@ Client.prototype.availableVersions = function(callback) {
  * @param {String} path server path to query for
  */
 Client.prototype.fetchDescription = function(callback, path) {
+	var that = this;
 	var url = this._private.url;
 
 	if (path === undefined)
@@ -155,6 +190,8 @@ Client.prototype.fetchDescription = function(callback, path) {
 						' while the API server uses an unspecified version (pre 1.0)'
 					);
 				}
+
+				that._private.protocolVersion = response.version;
 				
 				if (response.version == Client.ProtocolVersion) {
 					return response.response;

@@ -139,7 +139,7 @@ Client.prototype.isCompatible = function(callback) {
 
 		} catch (e) {
 			if (e instanceof Client.Exceptions.ProtocolError)
-				callback('incompatible');
+				callback(false);
 
 			else
 				throw e;

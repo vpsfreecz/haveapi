@@ -56,6 +56,9 @@ function Client(url, opts) {
 Client.Version = '0.4.0';
 Client.ProtocolVersion = '1.0';
 
+/** @namespace HaveAPI.Client.Exception */
+Client.Exceptions = {};
+
 /**
  * @callback HaveAPI.Client~doneCallback
  * @param {HaveAPI.Client} client
@@ -992,10 +995,7 @@ Action.prototype.prepareInvoke = function(arguments) {
 	if (args.length == 0 && this.preparedUrl.search(rx) != -1) {
 		console.log("UnresolvedArguments", "Unable to execute action '"+ this.name +"': unresolved arguments");
 		
-		throw {
-			name:    'UnresolvedArguments',
-			message: "Unable to execute action '"+ this.name +"': unresolved arguments"
-		}
+		throw new Client.Exceptions.UnresolvedArguments(this);
 	}
 	
 	var that = this;
@@ -1481,6 +1481,11 @@ ResourceInstanceList.prototype.last = function() {
 	
 	return this.items[ this.length - 1 ]
 };
+
+Client.Exceptions.UnresolvedArguments = function (action) {
+	this.name = 'UnresolvedArguments';
+	this.message = "Unable to execute action '"+ this.name +"': unresolved arguments";
+}
 
 /**
  * @namespace HaveAPI

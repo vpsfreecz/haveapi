@@ -48,6 +48,12 @@ Client.Version = '0.4.0';
 Client.ProtocolVersion = '1.0';
 
 /**
+ * @namespace Exceptions
+ * @memberof HaveAPI.Client
+ */
+Client.Exceptions = {};
+
+/**
  * @callback HaveAPI.Client~doneCallback
  * @param {HaveAPI.Client} client
  * @param {Boolean} status true if the task was successful

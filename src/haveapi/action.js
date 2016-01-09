@@ -161,10 +161,7 @@ Action.prototype.prepareInvoke = function(arguments) {
 	if (args.length == 0 && this.preparedUrl.search(rx) != -1) {
 		console.log("UnresolvedArguments", "Unable to execute action '"+ this.name +"': unresolved arguments");
 		
-		throw {
-			name:    'UnresolvedArguments',
-			message: "Unable to execute action '"+ this.name +"': unresolved arguments"
-		}
+		throw new Client.Exceptions.UnresolvedArguments(this);
 	}
 	
 	var that = this;

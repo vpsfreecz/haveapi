@@ -17,6 +17,7 @@ gulp.task('scripts', function() {
 			'src/haveapi/response.js',
 			'src/haveapi/resource_instance.js',
 			'src/haveapi/resource_instance_list.js',
+			'src/haveapi/exceptions.js',
 			'src/*.js',
 		])
 		.pipe(concat('haveapi-client.js'))

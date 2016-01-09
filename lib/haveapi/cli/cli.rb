@@ -384,7 +384,7 @@ module HaveAPI::CLI
 
     def format_output(action, response, out = $>)
       if @opts[:raw]
-        puts response
+        puts JSON.generate(response)
         return
       end
 

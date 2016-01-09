@@ -148,7 +148,7 @@ Client.prototype.isCompatible = function(callback) {
 
 		} catch (e) {
 			if (e instanceof Client.Exceptions.ProtocolError)
-				callback('incompatible');
+				callback(false);
 
 			else
 				throw e;
@@ -1044,8 +1044,8 @@ Action.prototype.directInvoke = function() {
  * @private
  * @return {Object}
  */
-Action.prototype.prepareInvoke = function(arguments) {
-	var args = this.args.concat(Array.prototype.slice.call(arguments));
+Action.prototype.prepareInvoke = function(new_args) {
+	var args = this.args.concat(Array.prototype.slice.call(new_args));
 	var rx = /(:[a-zA-Z\-_]+)/;
 	
 	if (!this.preparedUrl)

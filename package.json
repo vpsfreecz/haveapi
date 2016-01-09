@@ -16,6 +16,7 @@
 	"devDependencies": {
 		"gulp": "latest",
 		"gulp-concat": "latest",
-		"gulp-umd": "latest"
+		"gulp-umd": "latest",
+		"gulp-jsdoc3": "latest"
 	}
 }

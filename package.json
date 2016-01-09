@@ -18,5 +18,11 @@
 		"gulp-concat": "latest",
 		"gulp-umd": "latest",
 		"gulp-jsdoc3": "latest"
-	}
+	},
+	"keywords": [
+		"rest",
+		"api",
+		"client",
+		"http"
+	]
 }

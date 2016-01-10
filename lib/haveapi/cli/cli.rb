@@ -81,6 +81,13 @@ module HaveAPI::CLI
       end
 
       action = @api.get_action(resources, args[1].to_sym, args[2..-1])
+
+      unless action
+        warn "Resource or action '#{args[0]} #{args[1]}' not found"
+        puts
+        show_help(false)
+      end
+
       action.update_description(@api.describe_action(action)) if authenticate(action)
 
       @selected_params = @opts[:output] ? @opts[:output].split(',').uniq
@@ -91,25 +98,19 @@ module HaveAPI::CLI
       includes = build_includes(action) if @selected_params
       @input_params[:meta] = { includes: includes } if includes
 
-      if action
-        begin
-          ret = action.execute(@input_params, raw: @opts[:raw])
+      begin
+        ret = action.execute(@input_params, raw: @opts[:raw])
 
-        rescue HaveAPI::Client::ValidationError => e
-          format_errors(action, 'input parameters not valid', e.errors)
-          exit(false)
-        end
+      rescue HaveAPI::Client::ValidationError => e
+        format_errors(action, 'input parameters not valid', e.errors)
+        exit(false)
+      end
 
-        if ret[:status]
-          format_output(action, ret[:response])
-
-        else
-          format_errors(action, ret[:message], ret[:errors])
-          exit(false)
-        end
+      if ret[:status]
+        format_output(action, ret[:response])
 
       else
-        warn "Action #{ARGV[0]}##{ARGV[1]} not valid"
+        format_errors(action, ret[:message], ret[:errors])
         exit(false)
       end
     end
@@ -409,7 +410,7 @@ module HaveAPI::CLI
       end
     end
 
-    def show_help
+    def show_help(exit_code = true)
       puts @global_opt.help
 
       if Cli.commands
@@ -424,8 +425,8 @@ module HaveAPI::CLI
         end
       end
 
-      yield
-      exit
+      yield if block_given?
+      exit(exit_code)
     end
 
     def print_examples(action)

@@ -8,11 +8,17 @@ class HaveAPI::Client::Client
   # The client by default uses the default version of the API.
   # API is asked for description only when needed or by calling #setup.
   # +identity+ is sent in each request to the API in User-Agent header.
-  def initialize(url, v = nil, identity: 'haveapi-client')
+  def initialize(url, v = nil, identity: 'haveapi-client', communicator: nil)
     @setup = false
     @version = v
-    @api = HaveAPI::Client::Communicator.new(url, v)
-    @api.identity = identity
+
+    if communicator
+      @api = communicator
+
+    else
+      @api = HaveAPI::Client::Communicator.new(url, v)
+      @api.identity = identity
+    end
   end
 
   # Get the description from the API now.

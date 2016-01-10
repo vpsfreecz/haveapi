@@ -7,7 +7,7 @@ require 'time'
 module HaveAPI::CLI
   class Cli
     class << self
-      attr_accessor :auth_methods
+      attr_accessor :auth_methods, :commands
 
       def run
         c = new
@@ -16,6 +16,11 @@ module HaveAPI::CLI
       def register_auth_method(name, klass)
         @auth_methods ||= {}
         @auth_methods[name] = klass
+      end
+
+      def register_command(cmd)
+        @commands ||= []
+        @commands << cmd
       end
     end
 
@@ -32,13 +37,43 @@ module HaveAPI::CLI
       end
 
       if (@opts[:help] && args.empty?) || args.empty?
-        puts @global_opt.help
-        puts "\nAvailable resources:"
-        list_resources
-        exit(true)
+        show_help do
+          puts "\nAvailable resources:"
+          list_resources
+        end
       end
 
       resources = args[0].split('.')
+
+      if cmd = find_command(resources, args[1])
+        authenticate if @auth
+        c = cmd.new(@opts, HaveAPI::Client::Client.new(nil, communicator: @api))
+          
+        cmd_opt = OptionParser.new do |opts|
+          opts.banner = "\nCommand options:"
+          c.options(opts)
+
+          opts.on('-h', '--help', 'Show this message') do
+            show_help do
+              puts cmd_opt.help
+            end
+          end
+        end
+        
+        if @opts[:help]
+          show_help do
+            puts cmd_opt.help
+          end
+        end
+        
+        if sep = ARGV.index('--')
+          cmd_opt.parse!(ARGV[sep+1..-1])
+        end
+
+        c.exec(args[2..-1] || [])
+
+        exit
+      end
 
       if args.count == 1
         describe_resource(resources)
@@ -231,21 +266,20 @@ module HaveAPI::CLI
       end
 
       if @opts[:help]
-        puts @global_opt.help
-        puts ''
-        puts 'Action description:'
-        puts action.description, "\n"
-        print 'Input parameters:'
-        puts @action_opt.help
-        puts
-        puts 'Output parameters:'
+        show_help do
+          puts 'Action description:'
+          puts action.description, "\n"
+          print 'Input parameters:'
+          puts @action_opt.help
+          puts
+          puts 'Output parameters:'
 
-        action.params.each do |name, param|
-          puts sprintf("    %-32s %s", name, param[:description])
+          action.params.each do |name, param|
+            puts sprintf("    %-32s %s", name, param[:description])
+          end
+
+          print_examples(action)
         end
-
-        print_examples(action)
-        exit
       end
 
       if @opts[:list_output]
@@ -375,6 +409,25 @@ module HaveAPI::CLI
       end
     end
 
+    def show_help
+      puts @global_opt.help
+
+      if Cli.commands
+        puts
+        puts 'Commands:'
+        Cli.commands.each do |cmd|
+          puts sprintf(
+              '%-36s %s',
+              "#{cmd.resource.join('.')} #{cmd.action} #{cmd.args}",
+              cmd.desc
+          )
+        end
+      end
+
+      yield
+      exit
+    end
+
     def print_examples(action)
       unless action.examples.empty?
         puts "\nExamples:\n"
@@ -492,28 +545,26 @@ module HaveAPI::CLI
       end
     end
 
-    def authenticate(action)
-      if action.auth?
-        if @auth
-          @auth.communicator = @api
-          @auth.validate
-          @auth.authenticate
+    def authenticate(action = nil)
+      return false if !action.nil? && !action.auth?
 
-          if @opts[:save]
-            cfg = server_config(api_url)
-            cfg[:auth][@opts[:auth]] = @auth.save
-            cfg[:last_auth] = @opts[:auth]
-            write_config
-          end
+      if @auth
+        @auth.communicator = @api
+        @auth.validate
+        @auth.authenticate
 
-        else
-          # FIXME: exit as auth is needed and has not been selected
+        if @opts[:save]
+          cfg = server_config(api_url)
+          cfg[:auth][@opts[:auth]] = @auth.save
+          cfg[:last_auth] = @opts[:auth]
+          write_config
         end
 
-        return true
+      else
+        # FIXME: exit as auth is needed and has not been selected
       end
 
-      false
+      return true
     end
 
     protected
@@ -560,6 +611,16 @@ module HaveAPI::CLI
       end
 
       print_examples(action)
+    end
+
+    def find_command(resource, action)
+      return false unless Cli.commands
+
+      Cli.commands.each do |cmd|
+        return cmd if cmd.handle?(resource, action)
+      end
+
+      false
     end
 
     # Translate requested parameters into meta[includes] that is sent

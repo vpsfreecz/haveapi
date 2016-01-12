@@ -28,10 +28,22 @@ Or install it yourself as:
             --list-resources [VERSION]   List all resource in API version
             --list-actions [VERSION]     List all resources and actions in API version
             --version VERSION            Use specified API version
-        -r, --raw                        Print raw response as is
-        -s, --save                       Save credentials to config file for later use
+        -c, --columns                    Print output in columns
+        -H, --no-header                  Hide header row
+        -L, --list-parameters            List output parameters
+        -o, --output PARAMETERS          Parameters to display, separated by a comma
+        -r, --rows                       Print output in rows
+        -s, --sort PARAMETER             Sort output by parameter
+            --save                       Save credentials to config file for later use
+            --raw                        Print raw response as is
+            --timestamp                  Display Datetime parameters as timestamp
+            --utc                        Display Datetime parameters in UTC
+            --localtime                  Display Datetime parameters in local timezone
+            --date-format FORMAT         Display Datetime in custom format
         -v, --[no-]verbose               Run verbosely
             --client-version             Show client version
+            --protocol-version           Show protocol version
+            --check-compatibility        Check compatibility with API server
         -h, --help                       Show this message
   
 Using the API example from

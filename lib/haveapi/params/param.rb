@@ -1,5 +1,7 @@
 module HaveAPI::Parameters
   class Param
+    ATTRIBUTES = %i(label desc type db_name default fill clean)
+
     attr_reader :name, :label, :desc, :type, :default
 
     def initialize(name, args = {})
@@ -7,7 +9,7 @@ module HaveAPI::Parameters
       @label = args.delete(:label) || name.to_s.capitalize
       @layout = :custom
 
-      %i(label desc type db_name default fill clean).each do |attr|
+      ATTRIBUTES.each do |attr|
         instance_variable_set("@#{attr}", args.delete(attr))
       end
 
@@ -45,12 +47,20 @@ module HaveAPI::Parameters
     end
 
     def add_validator(validator)
-      @validators = HaveAPI::ValidatorChain.new({}) unless @validators
+      @validators ||= HaveAPI::ValidatorChain.new({})
       @validators << validator
     end
 
     def patch(attrs)
-      attrs.each { |k, v| instance_variable_set("@#{k}", v) }
+      attrs.each do |k, v|
+        if ATTRIBUTES.include?(k)
+          instance_variable_set("@#{k}", v)
+
+        else
+          @validators ||= HaveAPI::ValidatorChain.new({})
+          @validators.add_or_replace(k, v)
+        end
+      end
     end
 
     def clean(raw)

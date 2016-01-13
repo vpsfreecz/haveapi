@@ -53,12 +53,18 @@ module HaveAPI
     attr_accessor :message, :params
 
     def initialize(key, opts)
+      reconfigure(key, opts)
+    end
+
+    def reconfigure(key, opts)
       @key = key
       @opts = opts
       setup
     end
 
-    # Validators should be configured by the given options.
+    # Validators should be configured by the given options. This method may be
+    # called multiple times, if the validator is reconfigured after it was
+    # created.
     def setup
       raise NotImplementedError
     end

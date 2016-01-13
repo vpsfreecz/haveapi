@@ -12,14 +12,6 @@ module HaveAPI
       end
     end
 
-    # Add validator if it does not exist yet.
-    def <<(new_v)
-      exists = @validators.detect { |v| v.is_a?(new_v.class) }
-
-      fail "validator #{new_v.class} already exists" if exists
-      @validators << new_v
-    end
-
     # Adds validator that takes option +name+ with configuration in +opt+.
     # If such validator already exists, it is reconfigured with newly provided
     # +opt+.

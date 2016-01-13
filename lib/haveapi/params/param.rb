@@ -46,9 +46,9 @@ module HaveAPI::Parameters
       }
     end
 
-    def add_validator(validator)
+    def add_validator(k, v)
       @validators ||= HaveAPI::ValidatorChain.new({})
-      @validators << validator
+      @validators.add_or_replace(k, v)
     end
 
     def patch(attrs)
@@ -57,8 +57,7 @@ module HaveAPI::Parameters
           instance_variable_set("@#{k}", v)
 
         else
-          @validators ||= HaveAPI::ValidatorChain.new({})
-          @validators.add_or_replace(k, v)
+          add_validator(k, v)
         end
       end
     end

@@ -303,7 +303,7 @@ END
         }
         opts[:message] = v.options[:message] if v.options[:message]
 
-        validator(HaveAPI::Validators::Exclusion, :exclude, opts)
+        validator(:exclude, opts)
       end
 
       handle ::ActiveModel::Validations::FormatValidator do |v|
@@ -312,7 +312,7 @@ END
         }
         opts[:message] = v.options[:message] if v.options[:message]
 
-        validator(HaveAPI::Validators::Format, :format, opts)
+        validator(:format, opts)
       end
 
       handle ::ActiveModel::Validations::InclusionValidator do |v|
@@ -321,7 +321,7 @@ END
         }
         opts[:message] = v.options[:message] if v.options[:message]
 
-        validator(HaveAPI::Validators::Inclusion, :include, opts)
+        validator(:include, opts)
       end
 
       handle ::ActiveModel::Validations::LengthValidator do |v|
@@ -331,7 +331,7 @@ END
         opts[:equals] = v.options[:is] if v.options[:is]
         opts[:message] = v.options[:message] if v.options[:message]
 
-        validator(HaveAPI::Validators::Length, :length, opts) unless opts.empty?
+        validator(:length, opts) unless opts.empty?
       end
 
       handle ::ActiveModel::Validations::NumericalityValidator do |v|
@@ -353,26 +353,26 @@ END
 
         opts[:message] = v.options[:message] if v.options[:message]
 
-        validator(HaveAPI::Validators::Numericality, :number, opts) unless opts.empty?
+        validator(:number, opts) unless opts.empty?
       end
 
       def initialize(params)
         @params = params
       end
 
-      def validator_for(param, validator)
+      def validator_for(param, key, opts)
         @params.each do |p|
           next unless p.is_a?(::HaveAPI::Parameters::Param)
 
           if p.db_name == param
-            p.add_validator(validator)
+            p.add_validator(key, opts)
             break
           end
         end
       end
 
-      def validator(klass, key, opts)
-        validator_for(@attr, klass.use({ key => opts }))
+      def validator(key, opts)
+        validator_for(@attr, key, opts)
       end
 
       def translate(v)

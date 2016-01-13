@@ -60,17 +60,17 @@ module HaveAPI
 
     # Validators should be configured by the given options.
     def setup
-      fail 'setup not implemented'
+      raise NotImplementedError
     end
 
     # Return a hash documenting this validator.
     def describe
-      fail 'describe not implemented'
+      raise NotImplementedError
     end
 
     # Return true if the value is valid.
     def valid?(v)
-      fail 'valid? not implemented'
+      raise NotImplementedError
     end
 
     # Calls method valid?, but before calling it sets instance variable

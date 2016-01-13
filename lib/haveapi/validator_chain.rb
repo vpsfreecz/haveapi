@@ -21,7 +21,7 @@ module HaveAPI
       args = { name => opt }
 
       unless v_class = find_validator(args)
-        fail "validator for '#{opt}' not found"
+        fail "validator for '#{name}' not found"
       end
 
       if v_class == Validators::Presence

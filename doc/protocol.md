@@ -57,6 +57,13 @@ In this document, the self-description is encoded in JSON. However, it can
 be encoded in any of the supported output formats.
 
 ## API version
+
+<a href="/doc/protocol.png">
+<img src="/doc/protocol.png"
+     alt="Diagram representing the structure of an API version"
+	 width="600">
+</a>
+
 API version is described as:
 
     {

@@ -79,6 +79,8 @@ module HaveAPI
       ret[:max] = @max if @max
       ret[:step] = @step if @step
       ret[:mod] = @mod if @mod
+      ret[:odd] = @odd if @odd
+      ret[:even] = @even if @even
 
       ret
     end

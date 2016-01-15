@@ -213,6 +213,14 @@ module HaveAPI
           GitHub::Markdown.render(File.new(settings.views + '/../../../README.md').read)
         end
       end
+      
+      @sinatra.get "#{@root}doc/json-schema" do
+        content_type 'text/html'
+        erb :doc_layout, layout: :main_layout do
+          @content = erb :'../../../doc/json-schema'
+          @sidebar = erb :'doc_sidebars/json-schema'
+        end
+      end
 
       @sinatra.get %r{#{@root}doc/([^\.]+)[\.md]?} do |f|
         content_type 'text/html'

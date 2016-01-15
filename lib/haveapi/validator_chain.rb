@@ -7,6 +7,7 @@ module HaveAPI
 
       find_validators(args) do |validator|
         obj = validator.use(args)
+        next unless obj.useful?
         @required = true if obj.is_a?(Validators::Presence)
         @validators << obj
       end
@@ -24,11 +25,8 @@ module HaveAPI
         fail "validator for '#{name}' not found"
       end
 
-      if v_class == Validators::Presence
-        @required = opt.nil? ? false : true
-      end
-
       exists = @validators.detect { |v| v.is_a?(v_class) }
+      obj = exists
 
       if exists
         if opt.nil?
@@ -36,10 +34,16 @@ module HaveAPI
 
         else
           exists.reconfigure(name, opt)
+          @validators.delete(exists) unless exists.useful?
         end
 
       else
-        @validators << v_class.use(args)
+        obj = v_class.use(args)
+        @validators << obj if obj.useful?
+      end
+
+      if v_class == Validators::Presence
+        @required = !opt.nil? && obj.useful? ? true : false
       end
     end
 

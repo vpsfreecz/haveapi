@@ -62,6 +62,10 @@ module HaveAPI
       setup
     end
 
+    def useful?
+      @useful.nil? ? true : @useful
+    end
+
     # Validators should be configured by the given options. This method may be
     # called multiple times, if the validator is reconfigured after it was
     # created.
@@ -107,6 +111,13 @@ module HaveAPI
         return @opts[v] unless @opts[v].nil?
         default
       end
+    end
+
+    # Declare validator as useless. Such validator does not do anything and can
+    # be removed from validator chain. Validator can become useless when it's configuration
+    # makes it so.
+    def useless
+      @useful = false
     end
 
     # Returns true if +@opts+ is not a hash.

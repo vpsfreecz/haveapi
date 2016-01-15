@@ -14,6 +14,8 @@ module HaveAPI
     takes :required, :present
 
     def setup
+      return useless if simple? && !take
+
       @empty = take(:empty, false)
       @message = take(
           :message,

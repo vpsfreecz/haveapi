@@ -45,7 +45,6 @@ module HaveAPI
 
     def describe
       ret = {
-          values: @values,
           message: @message,
       }
 

@@ -3,7 +3,7 @@ require 'rspec/core'
 require 'rspec/core/rake_task'
 require 'active_support/core_ext/string/inflections'
 require 'haveapi'
-require 'haveapi/tasks/hooks'
+require 'haveapi/tasks/yard'
 
 RSpec::Core::RakeTask.new(:spec) do |spec|
   spec.pattern = FileList['spec/**/*_spec.rb']
@@ -14,8 +14,16 @@ begin
 
   YARD::Rake::YardocTask.new do |t|
     t.files   = ['lib/**/*.rb']
-    t.options = ['--protected', '--output-dir=html_doc', '--files=doc/*.md']
-    t.before = document_hooks
+    t.options = [
+        '--protected',
+        '--output-dir=html_doc',
+        '--files=doc/*.md',
+        '--files=doc/*.html'
+    ]
+    t.before = Proc.new do
+      document_hooks.call
+      render_doc_file('doc/json-schema.erb', 'doc/JSON-Schema.html').call
+    end
   end
 
 rescue LoadError

@@ -31,7 +31,12 @@ module HaveAPI
     end
 
     def valid?(v)
-      @values.include?(v)
+      if @values.is_a?(::Hash)
+        @values.has_key?(v)
+
+      else
+        @values.include?(v)
+      end
     end
   end
 end

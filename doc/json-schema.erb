@@ -83,7 +83,7 @@ DEFINITIONS = {
                     },
                     input: { '$ref' => '#/definitions/input_parameters' },
                     output: { '$ref' => '#/definitions/output_parameters' },
-                    meta: { type: :object },
+					meta: { '$ref' => '#/definitions/action_meta' },
                     examples: {
                         type: :object,
                         properties: {

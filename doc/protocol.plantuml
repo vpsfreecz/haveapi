@@ -142,9 +142,9 @@ class RangeLengthValidator {
 }
 
 class NumericalityValidator {
-	min : Integer
-	max : Integer
-	step : Integer
+	min : Number
+	max : Number
+	step : Number
 	mod : Integer
 	odd : Bool
 	even : Bool

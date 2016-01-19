@@ -42,18 +42,16 @@ module HaveAPI::Parameters
     end
 
     def describe(context)
-      #val_url = context.url_for(
-      #    @resource::Show,
-      #    context.endpoint && context.action_prepare && context.layout == :object && context.call_url_params(context.action, context.action_prepare)
-      #)
-      val_url = nil
+      val_url = context.url_for(
+          @resource::Show,
+          context.endpoint && context.action_prepare && context.layout == :object && context.call_url_params(context.action, context.action_prepare)
+      )
       val_method = @resource::Index.http_method.to_s.upcase
 
-      #choices_url = context.url_for(
-      #    @choices,
-      #    context.endpoint && context.layout == :object && context.call_url_params(context.action, context.action_prepare)
-      #)
-      choices_url = nil
+      choices_url = context.url_for(
+          @choices,
+          context.endpoint && context.layout == :object && context.call_url_params(context.action, context.action_prepare)
+      )
       choices_method = @choices.http_method.to_s.upcase
 
       {

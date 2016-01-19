@@ -37,6 +37,10 @@ module HaveAPI::Parameters
       @resource::Show
     end
 
+    def show_index
+      @resource::Index
+    end
+
     def describe(context)
       #val_url = context.url_for(
       #    @resource::Show,
@@ -71,6 +75,18 @@ module HaveAPI::Parameters
               help: "#{choices_url}?method=#{choices_method}"
           }
       }
+    end
+
+    def validate_build_output
+      %i(value_id value_label).each do |name|
+        v = instance_variable_get("@#{name}")
+
+        [show_action, show_index].each do |klass|
+          next unless klass.instance_variable_get('@output')[v].nil?
+
+          fail "association to '#{@resource}': value_label '#{v}' is not an output parameter of '#{klass}'"
+        end
+      end
     end
 
     def patch(attrs)

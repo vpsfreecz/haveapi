@@ -103,6 +103,16 @@ module HaveAPI
         @initialized = true
       end
 
+      def validate_build
+        check_build("#{self}.input") do
+          input.validate_build
+        end
+
+        check_build("#{self}.output") do
+          output.validate_build
+        end
+      end
+
       def model_adapter(layout)
         ModelAdapter.for(layout, resource.model)
       end

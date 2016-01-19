@@ -298,6 +298,18 @@ module HaveAPI
       HaveAPI.get_version_resources(@module_name, v).each do |resource|
         mount_resource(prefix, v, resource, @routes[v][:resources])
       end
+
+      validate_resources(@routes[v][:resources])
+    end
+
+    def validate_resources(resources)
+      resources.each_value do |r|
+        r[:actions].each_key do |a|
+          a.validate_build
+        end
+
+        validate_resources(r[:resources])
+      end
     end
 
     def mount_resource(prefix, v, resource, hash)

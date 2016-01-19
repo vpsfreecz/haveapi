@@ -187,6 +187,14 @@ module HaveAPI
       ret
     end
 
+    def validate_build
+      m = :"validate_build_#{@direction}"
+
+      @params.each do |p|
+        p.send(m) if p.respond_to?(m)
+      end
+    end
+
     # First step of validation. Check if input is in correct namespace
     # and has a correct layout.
     def check_layout(params)

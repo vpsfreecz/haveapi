@@ -31,6 +31,13 @@ module HaveAPI
           subclass.custom_attrs << attr
         end
       end
+
+      def check_build(msg)
+        yield
+      
+      rescue => e
+        raise BuildError.new(msg, e)
+      end
     end
 
     has_attr :obj_type

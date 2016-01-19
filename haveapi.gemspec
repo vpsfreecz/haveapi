@@ -22,4 +22,5 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'redcarpet', '~> 3.3.4'
   s.add_runtime_dependency 'rake'
   s.add_runtime_dependency 'github-markdown', '~> 0.6.9'
+  s.add_runtime_dependency 'nesty', '~> 1.0.2'
 end

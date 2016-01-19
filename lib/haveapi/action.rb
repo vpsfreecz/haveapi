@@ -74,10 +74,14 @@ module HaveAPI
       def initialize
         return if @initialized
 
-        input.exec
-        model_adapter(input.layout).load_validators(model, input) if model
+        check_build("#{self}.input") do
+          input.exec
+          model_adapter(input.layout).load_validators(model, input) if model
+        end
 
-        output.exec
+        check_build("#{self}.output") do
+          output.exec
+        end
 
         model_adapter(input.layout).used_by(:input, self)
         model_adapter(output.layout).used_by(:output, self)
@@ -85,8 +89,14 @@ module HaveAPI
         if @meta
           @meta.each_value do |m|
             next unless m
-            m.input && m.input.exec
-            m.output && m.output.exec
+
+            check_build("#{self}.meta.input") do
+              m.input && m.input.exec
+            end
+
+            check_build("#{self}.meta.output") do
+              m.output && m.output.exec
+            end
           end
         end
 

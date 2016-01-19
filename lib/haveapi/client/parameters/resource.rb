@@ -17,8 +17,8 @@ module HaveAPI::Client
 
     protected
     def coerce(v)
-      if /\A\d+\z/ !~ v
-        error(p, 'not a valid resource id')
+      if !v.is_a?(::Integer) && /\A\d+\z/ !~ v
+        @errors << 'not a valid resource id'
         nil
 
       else

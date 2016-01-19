@@ -878,8 +878,8 @@ function Resource (client, name, description, args) {
 	
 	var that = this;
 	var fn = function() {
-		return new c.Resource(
-			that.client,
+		return new Resource(
+			that._private.client,
 			that._private.name,
 			that._private.description,
 			that._private.args.concat(Array.prototype.slice.call(arguments))

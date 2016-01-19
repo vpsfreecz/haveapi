@@ -140,7 +140,7 @@ module MyAPI
 
       # Helper method returning a query for all users
       def query
-	::User.all
+        ::User.all
       end
 
       # This method is called if the request has meta[:count] = true

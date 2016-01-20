@@ -1,0 +1,4 @@
+* Wed Jan 20 2016 - version 0.4.0
+- Check protocol version
+- Source code split to multiple files and compiled into one using gulp
+- package.json for npm, bower.json for bower

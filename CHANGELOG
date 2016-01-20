@@ -1,0 +1,17 @@
+* Web Jan 20 2016 - version 0.4.0
+- API for accessing authentication token
+- Client-side input parameter validators
+- Drop table_print in favor of custom output formatter
+- CLI
+  - switches -c, --columns, -r, --rows to select output mode
+  - option -o, --output to select parameters to print
+  - option -s, --sort to sort by specific parameter (on client-side)
+  - switch --timestamp, --utc and --localtime to select how to print Datetime
+    parameters
+  - switch --check-compatibility to determine whether the client is compatible
+    with given API server
+  - switch --protocol-version to print protocl version that this clients
+    implements
+- Check protocol version
+- Fixed check of invalid action
+- ResourceInstance passes on prepared_args correctly

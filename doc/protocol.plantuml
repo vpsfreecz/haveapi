@@ -22,10 +22,12 @@ class Token {
 }
 
 class Resource {
+	name : String
 	description : String
 }
 
 class Action {
+	name : String
 	auth : Bool
 	description : String
 	aliases : list

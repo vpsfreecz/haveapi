@@ -4,14 +4,23 @@ A client library for HaveAPI based APIs in JavaScript.
 
 Installation
 ------------
-Copy `haveapi-client.js` to your project and include it:
+ - Manual - Copy `dist/haveapi-client.js` to your project
+ - Node.js - `npm install haveapi-client`
+ - bower - `bower install haveapi-client`
+
+Usage
+-----
+On the web:
 
 ```html
 <script src="haveapi-client.js"></script>
 ```
 
-Usage
------
+With NodeJS:
+
+```js
+var HaveAPI = require('haveapi-client');
+```
 
 Create a client instance:
 

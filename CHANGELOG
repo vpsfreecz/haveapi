@@ -1,0 +1,12 @@
+* Wed Jan 20 2016 - version 0.4.0
+- Introduced protocol version, currently 1.0
+- Renamed certain API configuration methods
+- Document defined hooks in yardoc
+- Implicit API version
+- Include input parameter validators in the protocol
+- Present validator from ActiveRecord is not imported to controller
+- Clean-up dependencies
+- Cross-link resources in online API documentation
+- JSON schema of the documentation protocol
+- UML diagram representing the documentation protocol
+- Improved error reporting in action definition

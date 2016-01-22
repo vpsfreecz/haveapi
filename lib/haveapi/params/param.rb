@@ -9,7 +9,7 @@ module HaveAPI::Parameters
       @label = args.delete(:label) || name.to_s.capitalize
       @layout = :custom
 
-      ATTRIBUTES.each do |attr|
+      (ATTRIBUTES - %i(label)).each do |attr|
         instance_variable_set("@#{attr}", args.delete(attr))
       end
 

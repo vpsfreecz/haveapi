@@ -5,18 +5,21 @@ module HaveAPI::Parameters
     attr_reader :name, :label, :desc, :type, :default
 
     def initialize(name, args = {})
+      # The hash values are deleted and it shouldn't affect the received hash
+      myargs = args.clone
+
       @name = name
-      @label = args.delete(:label) || name.to_s.capitalize
+      @label = myargs.delete(:label) || name.to_s.capitalize
       @layout = :custom
 
       (ATTRIBUTES - %i(label)).each do |attr|
-        instance_variable_set("@#{attr}", args.delete(attr))
+        instance_variable_set("@#{attr}", myargs.delete(attr))
       end
 
       @type ||= String
 
-      @validators = HaveAPI::ValidatorChain.new(args) unless args.empty?
-      fail "unused arguments #{args}" unless args.empty?
+      @validators = HaveAPI::ValidatorChain.new(myargs) unless myargs.empty?
+      fail "unused arguments #{myargs}" unless myargs.empty?
     end
 
     def db_name

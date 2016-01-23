@@ -1,3 +1,7 @@
+* Sat Jan 23 2016 - version 0.4.1
+- Fix parameter label setting
+- Don't change hash arguments given to parameters
+
 * Wed Jan 20 2016 - version 0.4.0
 - Introduced protocol version, currently 1.0
 - Renamed certain API configuration methods

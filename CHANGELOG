@@ -1,3 +1,6 @@
+* Sun Jan 24 2016 - version 0.4.2
+- Inclusion validator: handle hash correctly, don't overwrite given values
+
 * Sat Jan 23 2016 - version 0.4.1
 - Fix parameter label setting
 - Don't change hash arguments given to parameters

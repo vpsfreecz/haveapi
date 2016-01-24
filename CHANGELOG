@@ -1,3 +1,6 @@
+* Sat Jan 23 2016 - version 0.4.1
+- No changes
+
 * Wed Jan 20 2016 - version 0.4.0
 - Check protocol version
 - Source code split to multiple files and compiled into one using gulp

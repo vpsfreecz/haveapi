@@ -16,8 +16,17 @@ module HaveAPI
     takes :choices, :include
 
     def setup
-      @values = (simple? ? take : take(:values)).map! do |v|
-        v.is_a?(::Symbol) ? v.to_s : v
+      values = simple? ? take : take(:values)
+
+      if values.is_a?(::Hash)
+        @values = {}
+
+        values.each do |k, v|
+          @values[k.is_a?(::Symbol) ? k.to_s : k] = v
+        end
+
+      else
+        @values = values.map { |v| v.is_a?(::Symbol) ? v.to_s : v }
       end
 
       @message = take(:message, '%{value} cannot be used')

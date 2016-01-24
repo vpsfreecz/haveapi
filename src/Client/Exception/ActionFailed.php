@@ -22,7 +22,7 @@ class ActionFailed extends Base {
 	 * @return array
 	 */
 	public function getErrors() {
-		return $this->response->errors();
+		return $this->response->getErrors();
 	}
 	
 	/**

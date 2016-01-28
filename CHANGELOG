@@ -1,3 +1,5 @@
+- Helper methods for testing APIs
+
 * Sun Jan 24 2016 - version 0.4.2
 - Inclusion validator: handle hash correctly, don't overwrite given values
 

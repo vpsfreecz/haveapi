@@ -7,6 +7,7 @@ require 'haveapi/tasks/yard'
 
 RSpec::Core::RakeTask.new(:spec) do |spec|
   spec.pattern = FileList['spec/**/*_spec.rb']
+  spec.rspec_opts = '--require spec_helper'
 end
 
 begin

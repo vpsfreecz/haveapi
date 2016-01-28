@@ -37,6 +37,8 @@ module HaveAPI::Authentication
     # Authentication provider can deny the user access by calling Base#deny.
     def authenticate(v, *args)
       catch(:return) do
+        return unless @instances[v]
+
         @instances[v].each do |provider|
           u = provider.authenticate(*args)
           return u if u
@@ -48,6 +50,8 @@ module HaveAPI::Authentication
 
     def describe(context)
       ret = {}
+      
+      return ret unless @instances[context.version]
 
       @instances[context.version].each do |provider|
         ret[provider.name] = provider.describe

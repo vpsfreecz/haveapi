@@ -65,6 +65,17 @@ module HaveAPI
   #   my.call_class_hooks_for(:myhook, args: [1, 2, 3])
   #   # Call both instance and class hooks at once
   #   my.call_hooks_for(:myhook, args: [1, 2, 3])
+  #
+  # ==== \Chaining
+  #   5.times do |i|
+  #     MyClass.connect_hook(:myhook) do |ret, a, b, c|
+  #       ret[:counter] += i
+  #       ret
+  #     end
+  #   end
+  #
+  #   p MyClass.call_hooks(:myhook, args: [1, 2, 3], initial: {counter: 0})
+  #   => {:counter=>5}
   module Hooks
     INSTANCE_VARIABLE = '@_haveapi_hooks'
 

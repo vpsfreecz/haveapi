@@ -10,6 +10,14 @@ module HaveAPI
   # Hook definition contains additional information for as a documentation:
   # description, context, arguments, return value.
   #
+  # Every hook can have multiple listeners. They are invoked in the order of
+  # registration. Instance-level listeners first, then class-level. Hooks are
+  # chained using the block's first argument and return value. The first block
+  # to be executed gets the initial value, may make changes and returns it.
+  # The next block gets the return value of the previous block as its first
+  # argument, may make changes and returns it. Return value of the last block
+  # is returned to the caller of the hook.
+  #
   # === \Usage
   # ==== \Register hooks
   #   class MyClass
@@ -58,6 +66,8 @@ module HaveAPI
   #   # Call both instance and class hooks at once
   #   my.call_hooks_for(:myhook, args: [1, 2, 3])
   module Hooks
+    INSTANCE_VARIABLE = '@_haveapi_hooks'
+
     # Register a hook defined by +klass+ with +name+.
     # +klass+ is an instance of Class, that is class name, not it's instance.
     # +opts+ is a hash and can have following keys:
@@ -86,16 +96,16 @@ module HaveAPI
     end
 
     # Connect instance hook from instance +klass+ with +name+ to +block+.
-    def self.connect_instance_hook(klass, name, &block)
-      unless @hooks[klass]
-        @hooks[klass] = {}
+    def self.connect_instance_hook(instance, name, &block)
+      hooks = instance.instance_variable_get(INSTANCE_VARIABLE)
 
-        @hooks[klass.class].each do |k, v|
-          @hooks[klass][k] = {listeners: []}
-        end
+      unless hooks
+        hooks = {}
+        instance.instance_variable_set(INSTANCE_VARIABLE, hooks)
       end
 
-      @hooks[klass][name][:listeners] << block
+      hooks[name] ||= {listeners: []}
+      hooks[name][:listeners] << block
     end
 
     # Call all blocks that are connected to hook in +klass+ with +name+.
@@ -112,17 +122,39 @@ module HaveAPI
     # A block may decide that no further blocks should be executed.
     # In such a case it calls Hooks.stop with the return value. It is then
     # returned to the caller immediately.
-    def self.call_for(klass, name, where = nil, args: [], initial: {})
+    #
+    # @param klass [Class instance, instance]
+    # @param name [Symbol] hook name
+    # @param where [Class instance] class in whose context hooks are executed
+    # @param args [Array] an array of arguments passed to hooks
+    # @param initial [Hash] initial return value
+    # @param instance [Boolean] call instance hooks or not; nil means auto-detect
+    def self.call_for(
+        klass,
+        name,
+        where = nil,
+        args: [],
+        initial: {},
+        instance: nil
+    )
       classified = hook_classify(klass)
 
+      if (instance.nil? && !classified.is_a?(Class)) || instance
+        all_hooks = klass.instance_variable_get(INSTANCE_VARIABLE)
+
+      else
+        all_hooks = @hooks[classified]
+      end
+
       catch(:stop) do
-        return initial unless @hooks[classified]
-        hooks = @hooks[classified][name][:listeners]
+        return initial unless all_hooks
+        hooks = all_hooks[name][:listeners]
         return initial unless hooks
 
         hooks.each do |hook|
           if where
             ret = where.instance_exec(initial, *args, &hook)
+
           else
             ret = hook.call(initial, *args)
           end

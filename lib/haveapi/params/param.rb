@@ -76,6 +76,9 @@ module HaveAPI::Parameters
 
       elsif @type == Integer
         raw.to_i
+      
+      elsif @type == Float
+        raw.to_f
 
       elsif @type == Boolean
         Boolean.to_b(raw)

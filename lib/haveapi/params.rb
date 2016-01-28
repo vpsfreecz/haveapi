@@ -268,7 +268,7 @@ module HaveAPI
 
     private
     def add_param(*args)
-      p = Parameters::Param.new(*args)
+      p = Parameters::Typed.new(*args)
 
       return if @include && !@include.include?(p.name)
       return if @exclude && @exclude.include?(p.name)

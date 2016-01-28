@@ -2,11 +2,11 @@ require 'time'
 
 describe 'Parameters::Typed' do
   def p_type(type)
-    HaveAPI::Parameters::Param.new(:param1, type: type)
+    HaveAPI::Parameters::Typed.new(:param1, type: type)
   end
 
   def p_arg(arg = {})
-    HaveAPI::Parameters::Param.new(*[:param1, arg])
+    HaveAPI::Parameters::Typed.new(*[:param1, arg])
   end
 
   it 'does not change provided arguments' do

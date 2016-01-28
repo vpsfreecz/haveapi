@@ -13,7 +13,7 @@ module HaveAPI
 end
 
 require_relative 'haveapi/params'
-require_rel 'haveapi/params/'
+require_rel 'haveapi/parameters/'
 require_rel 'haveapi/*.rb'
 require_rel 'haveapi/model_adapters/hash'
 require_rel 'haveapi/model_adapters/active_record' if ar

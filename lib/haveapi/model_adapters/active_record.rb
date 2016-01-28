@@ -362,7 +362,7 @@ END
 
       def validator_for(param, key, opts)
         @params.each do |p|
-          next unless p.is_a?(::HaveAPI::Parameters::Param)
+          next unless p.is_a?(::HaveAPI::Parameters::Typed)
 
           if p.db_name == param
             p.add_validator(key, opts)

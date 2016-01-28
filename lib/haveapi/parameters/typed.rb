@@ -1,5 +1,5 @@
 module HaveAPI::Parameters
-  class Param
+  class Typed
     ATTRIBUTES = %i(label desc type db_name default fill clean)
 
     attr_reader :name, :label, :desc, :type, :default

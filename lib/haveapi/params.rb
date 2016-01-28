@@ -83,7 +83,7 @@ module HaveAPI
     end
 
     def optional(*args)
-      add_param(*apply(args, required: true))
+      add_param(*apply(args, required: false))
     end
 
     def string(*args)

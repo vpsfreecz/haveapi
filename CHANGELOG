@@ -1,4 +1,5 @@
 - Helper methods for testing APIs
+- Fixed overflow in table of contents in online API doc
 
 * Sun Jan 24 2016 - version 0.4.2
 - Inclusion validator: handle hash correctly, don't overwrite given values

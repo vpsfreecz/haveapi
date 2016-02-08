@@ -9,12 +9,11 @@ module HaveAPI::Client
       @api = api
       @name = name
       @prepared_args = []
+      @actions = {}
+      @resources = {}
     end
 
     def setup(description)
-      @actions = {}
-      @resources = {}
-
       description[:actions].each do |name, desc|
         action = HaveAPI::Client::Action.new(@api, name, desc, [])
         define_action(action)
@@ -32,12 +31,14 @@ module HaveAPI::Client
     # Copy actions and resources from the +original+ resource
     # and create methods for this instance.
     def setup_from_clone(original)
-      original.actions.each_value do |action|
+      original.actions.each do |name, action|
         define_action(action)
+        @actions[name] = action
       end
 
-      original.resources.each_value do |resource|
+      original.resources.each do |name, resource|
         define_resource(resource)
+        @resources[name] = resource
       end
     end
 

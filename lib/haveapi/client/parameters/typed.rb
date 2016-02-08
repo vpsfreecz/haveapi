@@ -17,8 +17,8 @@ module HaveAPI::Client
     def initialize(params, desc, value)
       @params = params
       @desc = desc
-      @value = coerce(value)
       @errors = []
+      @value = coerce(value)
     end
 
     def valid?

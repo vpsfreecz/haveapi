@@ -1,5 +1,13 @@
+* Tue Feb 9 2016 - version 0.5.0
 - Helper methods for testing APIs
+- Added tests covering the basic functionality
 - Fixed overflow in table of contents in online API doc
+- Authentication chain can be empty
+- Fixed Params.optional
+- Fixed coercion of Float input parameters
+- Renamed Params::Param to Parameters::Typed and Params::Resource to
+  Parameters::Resource
+- Instance-level hooks are stored in the object itself
 
 * Sun Jan 24 2016 - version 0.4.2
 - Inclusion validator: handle hash correctly, don't overwrite given values

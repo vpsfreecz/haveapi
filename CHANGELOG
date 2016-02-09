@@ -1,3 +1,6 @@
+* Tue Feb 9 2016 - version 0.5.0
+- No changes
+
 * Sun Jan 24 2016 - version 0.4.2
 - Fixed method ActionFailed->getErrors()
 

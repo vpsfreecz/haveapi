@@ -159,6 +159,7 @@ module HaveAPI
 
       catch(:stop) do
         return initial unless all_hooks
+        return initial unless all_hooks[name]
         hooks = all_hooks[name][:listeners]
         return initial unless hooks
 

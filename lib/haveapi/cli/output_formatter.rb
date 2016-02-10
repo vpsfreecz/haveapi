@@ -175,7 +175,13 @@ module HaveAPI::CLI
         fail "unknown column '#{@sort}'" unless col_i
 
         @str_objects.sort! do |a, b|
-          a[col_i] <=> b[col_i]
+          a_i = a[col_i]
+          b_i = b[col_i]
+
+          next 0 if a_i == @empty && b_i == @empty
+          next -1 if a_i == @empty && b_i != @empty
+          next 1 if a_i != @empty && b_i == @empty
+          a_i <=> b_i
         end
       end
 

@@ -1,3 +1,8 @@
+* Fri Feb 26 2016 - version 0.5.1
+- CLI
+  - Fix sorting of empty values
+  - Fetch action description only if it is fully resolved
+
 * Tue Feb 9 2016 - version 0.5.0
 - Fixed validation error reporting for Datetime parameters
 - Fixed resource object cloning

@@ -88,7 +88,9 @@ module HaveAPI::CLI
         show_help(false)
       end
 
-      action.update_description(@api.describe_action(action)) if authenticate(action)
+      if authenticate(action) && !action.unresolved_args?
+        action.update_description(@api.describe_action(action))
+      end
 
       @selected_params = @opts[:output] ? @opts[:output].split(',').uniq
                                         : nil

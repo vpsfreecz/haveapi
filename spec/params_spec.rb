@@ -183,8 +183,8 @@ describe HaveAPI::Params do
       string :param2
     end)
     p.exec
-
-    expect(p[:param1]).to eq(p.params.first)
-    expect(p[:param2]).to eq(p.params.second)
+    
+    expect(p[:param1]).to eq(p.params[0])
+    expect(p[:param2]).to eq(p.params[1])
   end
 end

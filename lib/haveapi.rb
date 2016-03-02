@@ -7,6 +7,7 @@ require 'sinatra/base'
 require 'sinatra/activerecord' if ar
 require 'pp'
 require 'github/markdown'
+require 'json'
 
 module HaveAPI
   module Actions

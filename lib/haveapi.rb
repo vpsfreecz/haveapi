@@ -1,6 +1,7 @@
-ar = defined?(:ActiveRecord)
+ar = Object.const_defined?(:ActiveRecord)
 
 require 'require_all'
+require 'active_support/inflector'
 require 'active_record' if ar
 require 'sinatra/base'
 require 'sinatra/activerecord' if ar

@@ -1,3 +1,8 @@
+* Thu Mar 03 2016 - version 0.5.2
+- Fix ActiveRecord dependency
+- Require json
+- Fix params_spec
+
 * Fri Feb 26 2016 - version 0.5.1
 - Fix call of an empty hook
 

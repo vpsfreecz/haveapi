@@ -84,6 +84,7 @@ module HaveAPI::Client
       setup_from_clone(@resource)
       define_attributes
 
+      @prepared_args = @response.meta[:url_params]
       @resolved = true
       self
     end

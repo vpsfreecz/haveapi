@@ -114,7 +114,22 @@ module HaveAPI::Client
             ensure_method(:"#{name}_id") { @params[name][ param[:value_id].to_sym ] }
 
             # id writer
-            ensure_method(:"#{name}_id=") { |id| @params[name][ param[:value_id].to_sym ] = id }
+            ensure_method(:"#{name}_id=") do |id|
+              @params[name][ param[:value_id].to_sym ] = id
+
+              @resource_instances[name] = find_association(
+                  param,
+                  {
+                      param[:value_id] => id,
+                      :_meta => {
+                          resolved: false,
+                          # TODO: this will not work for nested resources, as they have
+                          # multiple IDs
+                          url_params: [id],
+                      },
+                  }
+              )
+            end
 
             # value reader
             ensure_method(name) do

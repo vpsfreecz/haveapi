@@ -24,7 +24,6 @@ module HaveAPI::Client
       @rest = RestClient::Resource.new(@url)
       @version = v
       @identity = 'haveapi-client-ruby'
-      @desc = {}
     end
 
     # @return [:compatible] if perfectly compatible
@@ -58,9 +57,7 @@ module HaveAPI::Client
     end
 
     def describe_api(v=nil)
-      return @desc[v] if @desc.has_key?(v)
-
-      @desc[v] = description_for(path_for(v), v.nil? ? {describe: :default} : {})
+      description_for(path_for(v), v.nil? ? {describe: :default} : {})
     end
 
     def describe_resource(path)

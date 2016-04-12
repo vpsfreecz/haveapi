@@ -1,3 +1,5 @@
+- ActiveRecord.ar_parse_includes: ignore not existing associations
+
 * Thu Mar 03 2016 - version 0.5.2
 - Fix ActiveRecord dependency
 - Require json

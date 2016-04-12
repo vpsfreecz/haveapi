@@ -43,7 +43,21 @@ module HaveAPI::ModelAdapters
         # in an array of symbols and hashes.
         def ar_parse_includes(raw)
           return @ar_parsed_includes if @ar_parsed_includes
-          @ar_parsed_includes = ar_inner_includes(raw)
+          @ar_parsed_includes = ar_inner_includes(raw).select do |inc|
+            # Drop associations that are not registered in the AR:
+            #   The API resource may have associations that are not based on
+            #   associations in AR.
+            if inc.is_a?(::Hash)
+              inc.each_key do |k|
+                next(false) unless self.class.model.reflections.has_key?(k)
+              end
+
+            else
+              next(false) unless self.class.model.reflections.has_key?(inc)
+            end
+
+            true
+          end
         end
 
         # Called by ar_parse_includes for recursion purposes.

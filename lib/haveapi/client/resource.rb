@@ -1,7 +1,7 @@
 module HaveAPI::Client
   # An API resource.
   class Resource
-    attr_reader :actions, :resources
+    attr_reader :actions, :resources, :description
     attr_accessor :prepared_args
 
     def initialize(client, api, name)
@@ -14,6 +14,8 @@ module HaveAPI::Client
     end
 
     def setup(description)
+      @description = description
+
       description[:actions].each do |name, desc|
         action = HaveAPI::Client::Action.new(@api, name, desc, [])
         define_action(action)

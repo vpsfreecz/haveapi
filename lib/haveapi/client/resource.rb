@@ -1,7 +1,7 @@
 module HaveAPI::Client
   # An API resource.
   class Resource
-    attr_reader :actions, :resources, :description
+    attr_reader :actions, :resources
     attr_accessor :prepared_args
 
     def initialize(client, api, name)
@@ -59,6 +59,13 @@ module HaveAPI::Client
     # with ResourceInstance attributes.
     def _name
       @name
+    end
+
+    # Return resource description.
+    # Method is prefixed with an underscore to prevent name collision
+    # with ResourceInstance attributes.
+    def _description
+      @description
     end
 
     protected

@@ -24,6 +24,9 @@ Response.prototype.isOk = function() {
 Response.prototype.response = function() {
 	if(!this.action)
 		return this.envelope.response;
+
+        if (!this.envelope.response)
+            return null;
 	
 	switch (this.action.layout('output')) {
 		case 'object':
@@ -54,7 +57,7 @@ Response.prototype.message = function() {
 Response.prototype.meta = function() {
 	var metaNs = this.action.client.apiSettings.meta.namespace;
 	
-	if (this.envelope.response.hasOwnProperty(metaNs))
+	if (this.envelope.response && this.envelope.response.hasOwnProperty(metaNs))
 		return this.envelope.response[metaNs];
 	
 	return {};

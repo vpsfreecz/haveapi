@@ -1138,6 +1138,9 @@ Response.prototype.isOk = function() {
 Response.prototype.response = function() {
 	if(!this.action)
 		return this.envelope.response;
+
+        if (!this.envelope.response)
+            return null;
 	
 	switch (this.action.layout('output')) {
 		case 'object':
@@ -1168,7 +1171,7 @@ Response.prototype.message = function() {
 Response.prototype.meta = function() {
 	var metaNs = this.action.client.apiSettings.meta.namespace;
 	
-	if (this.envelope.response.hasOwnProperty(metaNs))
+	if (this.envelope.response && this.envelope.response.hasOwnProperty(metaNs))
 		return this.envelope.response[metaNs];
 	
 	return {};
@@ -1485,7 +1488,7 @@ function ResourceInstanceList (client, action, response) {
 	/**
 	 * @member {integer} HaveAPI.Client.ResourceInstanceList#length Number of items in the list.
 	 */
-	this.length = ret.length;
+	this.length = ret ? ret.length : 0;
 	
 	/**
 	 * @member {integer} HaveAPI.Client.ResourceInstanceList#totalCount Total number of items available.

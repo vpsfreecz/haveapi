@@ -18,7 +18,7 @@ function ResourceInstanceList (client, action, response) {
 	/**
 	 * @member {integer} HaveAPI.Client.ResourceInstanceList#length Number of items in the list.
 	 */
-	this.length = ret.length;
+	this.length = ret ? ret.length : 0;
 	
 	/**
 	 * @member {integer} HaveAPI.Client.ResourceInstanceList#totalCount Total number of items available.

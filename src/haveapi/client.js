@@ -9,10 +9,10 @@ function Client(url, opts) {
 	while (url.length > 0) {
 		if (url[ url.length - 1 ] == '/')
 			url = url.substr(0, url.length - 1);
-		
+
 		else break;
 	}
-	
+
 	/**
 	 * @member {Object} HaveAPI.Client#_private
 	 * @protected
@@ -23,20 +23,20 @@ function Client(url, opts) {
 		description: null,
 		debug: (opts !== undefined && opts.debug !== undefined) ? opts.debug : 0,
 	};
-	
+
 	this._private.hooks = new Client.Hooks(this._private.debug);
 	this._private.http = new Client.Http(this._private.debug);
-	
+
 	/**
 	 * @member {Object} HaveAPI.Client#apiSettings An object containg API settings.
 	 */
 	this.apiSettings = null;
-	
+
 	/**
 	 * @member {Array} HaveAPI.Client#resources A list of top-level resources attached to the client.
 	 */
 	this.resources = [];
-	
+
 	/**
 	 * @member {Object} HaveAPI.Client#authProvider Selected authentication provider.
 	 */
@@ -81,12 +81,12 @@ Client.Exceptions = {};
  */
 Client.prototype.setup = function(callback) {
 	var that = this;
-	
+
 	this.fetchDescription(function(status, extract) {
 		that._private.description = extract.call();
 		that.createSettings();
 		that.attachResources();
-		
+
 		callback(that, true);
 		that._private.hooks.invoke('after', 'setup', that, true);
 	});
@@ -129,7 +129,7 @@ Client.prototype.isCompatible = function(callback) {
 	var that = this;
 
 	this.fetchDescription(function (status, extract) {
-		
+
 		try {
 			extract.call();
 
@@ -188,7 +188,7 @@ Client.prototype.fetchDescription = function(callback, path) {
 				}
 
 				that._private.protocolVersion = response.version;
-				
+
 				if (response.version == Client.ProtocolVersion) {
 					return response.response;
 				}
@@ -207,7 +207,7 @@ Client.prototype.fetchDescription = function(callback, path) {
 					'WARNING: The client uses protocol v'+ Client.ProtocolVersion +
 					' while the API server uses v'+ response.version
 				);
-				
+
 				return response.response;
 			});
 		}
@@ -224,14 +224,20 @@ Client.prototype.attachResources = function() {
 	if (this.resources.length > 0) {
 		this.destroyResources();
 	}
-	
+
 	for(var r in this._private.description.resources) {
 		if (this._private.debug > 10)
 			console.log("Attach resource", r);
-		
+
 		this.resources.push(r);
-		
-		this[r] = new Client.Resource(this, r, this._private.description.resources[r], []);
+
+		this[r] = new Client.Resource(
+			this,
+			null,
+			r,
+			this._private.description.resources[r],
+			[]
+		);
 	}
 };
 
@@ -248,24 +254,24 @@ Client.prototype.attachResources = function() {
  */
 Client.prototype.authenticate = function(method, opts, callback, reset) {
 	var that = this;
-	
+
 	if (reset === undefined) reset = true;
-	
+
 	if (!this._private.description) {
 		// The client has not yet been setup.
 		// Fetch the description, do NOT attach the resources, use it only to authenticate.
-		
+
 		this.fetchDescription(function(status, extract) {
 			that._private.description = extract.call();
 			that.createSettings();
 			that.authenticate(method, opts, callback);
 		});
-		
+
 		return;
 	}
-	
+
 	this.authProvider = new Authentication.providers[method](this, opts, this._private.description.authentication[method]);
-	
+
 	this.authProvider.setup(function() {
 		// Fetch new description, which may be different when authenticated
 		if (reset) {
@@ -273,7 +279,7 @@ Client.prototype.authenticate = function(method, opts, callback, reset) {
 				callback(c, status);
 				that._private.hooks.invoke('after', 'authenticated', that, true);
 			});
-			
+
 		} else {
 			callback(that, true);
 			that._private.hooks.invoke('after', 'authenticated', that, true);
@@ -290,12 +296,12 @@ Client.prototype.authenticate = function(method, opts, callback, reset) {
  */
 Client.prototype.logout = function(callback) {
 	var that = this;
-	
+
 	this.authProvider.logout(function() {
 		that.authProvider = new Client.Authentication.Base();
 		that.destroyResources();
 		that._private.description = null;
-		
+
 		if (callback !== undefined)
 			callback(that, true);
 	});
@@ -310,9 +316,9 @@ Client.prototype.logout = function(callback) {
 Client.prototype.directInvoke = function(action, params, callback) {
 	if (this._private.debug > 5)
 		console.log("Executing", action, "with params", params, "at", action.preparedUrl);
-	
+
 	var that = this;
-	
+
 	var opts = {
 		method: action.httpMethod(),
 		url: this._private.url + action.preparedUrl,
@@ -325,32 +331,32 @@ Client.prototype.directInvoke = function(action, params, callback) {
 			}
 		}
 	};
-	
+
 	var paramsInQuery = this.sendAsQueryParams(opts.method);
 	var meta = null;
 	var metaNs = this.apiSettings.meta.namespace;
-	
+
 	if (params && params.hasOwnProperty('meta')) {
 		meta = params.meta;
 		delete params.meta;
 	}
-	
+
 	if (paramsInQuery) {
 		opts.url = this.addParamsToQuery(opts.url, action.namespace('input'), params);
-		
+
 		if (meta)
 			opts.url = this.addParamsToQuery(opts.url, metaNs, meta);
-		
+
 	} else {
 		var scopedParams = {};
 		scopedParams[ action.namespace('input') ] = params;
-		
+
 		if (meta)
 			scopedParams[metaNs] = meta;
-		
+
 		opts.params = scopedParams;
 	}
-	
+
 	this._private.http.request(opts);
 };
 
@@ -362,20 +368,25 @@ Client.prototype.directInvoke = function(action, params, callback) {
  */
 Client.prototype.invoke = function(action, params, callback) {
 	var that = this;
-	
+
 	this.directInvoke(action, params, function(status, response) {
 		if (callback === undefined)
 			return;
-		
+
 		switch (action.layout('output')) {
 			case 'object':
-				callback(that, new Client.ResourceInstance(that, action, response));
+				callback(that, new Client.ResourceInstance(
+					that,
+					action.resource._private.parent,
+					action,
+					response
+				));
 				break;
-				
+
 			case 'object_list':
 				callback(that, new Client.ResourceInstanceList(that, action, response));
 				break;
-			
+
 			default:
 				callback(that, response);
 		}
@@ -438,21 +449,21 @@ Client.prototype.sendAsQueryParams = function(method) {
  */
 Client.prototype.addParamsToQuery = function(url, namespace, params) {
 	var first = true;
-	
+
 	for (var key in params) {
 		if (first) {
 			if (url.indexOf('?') == -1)
 				url += '?';
-				
+
 			else if (url[ url.length - 1 ] != '&')
 				url += '&';
-			
+
 			first = false;
-			
+
 		} else url += '&';
-		
+
 		url += encodeURI(namespace) + '[' + encodeURI(key) + ']=' + encodeURI(params[key]);
 	}
-	
+
 	return url;
 };

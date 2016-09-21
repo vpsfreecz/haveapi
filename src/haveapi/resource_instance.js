@@ -15,57 +15,58 @@
  *                                            but just an object with parameters.
  * @memberof HaveAPI.Client
  */
-function ResourceInstance (client, action, response, shell, item) {
+function ResourceInstance (client, parent, action, response, shell, item) {
 	this._private = {
 		client: client,
+		parent: parent,
 		action: action,
 		response: response,
 		name: action.resource._private.name,
 		description: action.resource._private.description
 	};
-	
+
 	if (!response) {
 		if (shell !== undefined && shell) { // association that is to be fetched
 			this._private.resolved = false;
 			this._private.persistent = true;
-			
+
 			var that = this;
-			
+
 			action.directInvoke(function(c, response) {
 				that.attachResources(that._private.action.resource._private.description, response.meta().url_params);
 				that.attachActions(that._private.action.resource._private.description, response.meta().url_params);
 				that.attachAttributes(response.response());
-				
+
 				that._private.resolved = true;
-				
+
 				if (that._private.resolveCallbacks !== undefined) {
 					for (var i = 0; i < that._private.resolveCallbacks.length; i++)
 						that._private.resolveCallbacks[i](that._private.client, that);
-					
+
 					delete that._private.resolveCallbacks;
 				}
 			});
-			
+
 		} else { // a new, empty instance
 			this._private.resolved = true;
 			this._private.persistent = false;
-			
+
 			this.attachResources(this._private.action.resource._private.description, action.providedIdArgs);
 			this.attachActions(this._private.action.resource._private.description, action.providedIdArgs);
 			this.attachStubAttributes();
 		}
-		
+
 	} else if (item || response.isOk()) {
 		this._private.resolved = true;
 		this._private.persistent = true;
-		
+
 		var metaNs = client.apiSettings.meta.namespace;
 		var idArgs = item ? response[metaNs].url_params : response.meta().url_params;
-		
+
 		this.attachResources(this._private.action.resource._private.description, idArgs);
 		this.attachActions(this._private.action.resource._private.description, idArgs);
 		this.attachAttributes(item ? response : response.response());
-		
+
 	} else {
 		// FIXME
 	}
@@ -105,29 +106,29 @@ ResourceInstance.prototype.apiResponse = function() {
  */
 ResourceInstance.prototype.save = function(callback) {
 	var that = this;
-	
+
 	function updateAttrs(attrs) {
 		for (var attr in attrs) {
 			that._private.attributes[ attr ] = attrs[ attr ];
 		}
 	};
-	
+
 	function replyCallback(c, reply) {
 		that._private.response = reply;
 		updateAttrs(reply);
-		
+
 		if (callback !== undefined)
 			callback(c, that);
 	}
-	
+
 	if (this._private.persistent) {
 		this.update.directInvoke(replyCallback);
-		
+
 	} else {
 		this.create.directInvoke(function(c, reply) {
 			if (reply.isOk())
 				that._private.persistent = true;
-			
+
 			replyCallback(c, reply);
 		});
 	}
@@ -135,23 +136,23 @@ ResourceInstance.prototype.save = function(callback) {
 
 ResourceInstance.prototype.defaultParams = function(action) {
 	ret = {}
-	
+
 	for (var attr in this._private.attributes) {
 		var desc = action.description.input.parameters[ attr ];
-		
+
 		if (desc === undefined)
 			continue;
-		
+
 		switch (desc.type) {
 			case 'Resource':
 				ret[ attr ] = this._private.attributes[ attr ][ desc.value_id ];
 				break;
-			
+
 			default:
 				ret[ attr ] = this._private.attributes[ attr ];
 		}
 	}
-	
+
 	return ret;
 };
 
@@ -165,20 +166,33 @@ ResourceInstance.prototype.defaultParams = function(action) {
  */
 ResourceInstance.prototype.resolveAssociation = function(attr, path, url) {
 	var tmp = this._private.client;
-	
+
 	for(var i = 0; i < path.length; i++) {
 		tmp = tmp[ path[i] ];
 	}
-	
+
 	var obj = this._private.attributes[ attr ];
 	var metaNs = this._private.client.apiSettings.meta.namespace;
 	var action = tmp.show;
 	action.provideIdArgs(obj[metaNs].url_params);
-	
+
 	if (obj[metaNs].resolved)
-		return new Client.ResourceInstance(this._private.client, action, obj, false, true);
-	
-	return new Client.ResourceInstance(this._private.client, action, null, true);
+		return new Client.ResourceInstance(
+			this._private.client,
+			action.resource._private.parent,
+			action,
+			obj,
+			false,
+			true
+		);
+
+	return new Client.ResourceInstance(
+		this._private.client,
+		action.resource._private.parent,
+		action,
+		null,
+		true
+	);
 };
 
 /**
@@ -190,11 +204,11 @@ ResourceInstance.prototype.resolveAssociation = function(attr, path, url) {
 ResourceInstance.prototype.whenResolved = function(callback) {
 	if (this._private.resolved)
 		callback(this._private.client, this);
-	
+
 	else {
 		if (this._private.resolveCallbacks === undefined)
 			this._private.resolveCallbacks = [];
-		
+
 		this._private.resolveCallbacks.push(callback);
 	}
 };
@@ -208,13 +222,13 @@ ResourceInstance.prototype.whenResolved = function(callback) {
 ResourceInstance.prototype.attachAttributes = function(attrs) {
 	this._private.attributes = attrs;
 	this._private.associations = {};
-	
+
 	var metaNs = this._private.client.apiSettings.meta.namespace;
-	
+
 	for (var attr in attrs) {
 		if (attr === metaNs)
 			continue;
-		
+
 		this.createAttribute(attr, this._private.action.description.output.parameters[ attr ]);
 	}
 };
@@ -227,7 +241,7 @@ ResourceInstance.prototype.attachAttributes = function(attrs) {
 ResourceInstance.prototype.attachStubAttributes = function() {
 	var attrs = {};
 	var params = this._private.action.description.input.parameters;
-	
+
 	for (var attr in params) {
 		switch (params[ attr ].type) {
 			case 'Resource':
@@ -235,12 +249,12 @@ ResourceInstance.prototype.attachStubAttributes = function() {
 				attrs[ attr ][ params[attr].value_id ] = null;
 				attrs[ attr ][ params[attr].value_label ] = null;
 				break;
-			
+
 			default:
 				attrs[ attr ] = null;
 		}
 	}
-	
+
 	this.attachAttributes(attrs);
 };
 
@@ -253,14 +267,14 @@ ResourceInstance.prototype.attachStubAttributes = function() {
  */
 ResourceInstance.prototype.createAttribute = function(attr, desc) {
 	var that = this;
-	
+
 	switch (desc.type) {
 		case 'Resource':
 			Object.defineProperty(this, attr, {
 				get: function() {
 						if (that._private.associations.hasOwnProperty(attr))
 							return that._private.associations[ attr ];
-						
+
 						return that._private.associations[ attr ] = that.resolveAssociation(
 							attr,
 							desc.resource,
@@ -272,14 +286,14 @@ ResourceInstance.prototype.createAttribute = function(attr, desc) {
 						that._private.attributes[ attr ][ desc.value_label ] = v[ desc.value_label ];
 					}
 			});
-			
+
 			Object.defineProperty(this, attr + '_id', {
 				get: function()  { return that._private.attributes[ attr ][ desc.value_id ];  },
 				set: function(v) { that._private.attributes[ attr ][ desc.value_id ] = v;     }
 			});
-			
+
 			break;
-		
+
 		default:
 			Object.defineProperty(this, attr, {
 				get: function()  { return that._private.attributes[ attr ];  },

@@ -7,26 +7,33 @@
  */
 function ResourceInstanceList (client, action, response) {
 	this.response = response;
-	
+
 	/**
 	 * @member {Array} HaveAPI.Client.ResourceInstanceList#items An array containg all items.
 	 */
 	this.items = [];
-	
+
 	var ret = response.response();
-	
+
 	/**
 	 * @member {integer} HaveAPI.Client.ResourceInstanceList#length Number of items in the list.
 	 */
 	this.length = ret ? ret.length : 0;
-	
+
 	/**
 	 * @member {integer} HaveAPI.Client.ResourceInstanceList#totalCount Total number of items available.
 	 */
 	this.totalCount = response.meta().total_count;
-	
+
 	for (var i = 0; i < this.length; i++)
-		this.items.push(new Client.ResourceInstance(client, action, ret[i], false, true));
+		this.items.push(new Client.ResourceInstance(
+			client,
+			action.resource._private.parent,
+			action,
+			ret[i],
+			false,
+			true
+		));
 };
 
 /**
@@ -80,7 +87,7 @@ ResourceInstanceList.prototype.itemAt = function(index) {
 ResourceInstanceList.prototype.first = function() {
 	if (this.length == 0)
 		return null;
-	
+
 	return this.items[0];
 };
 
@@ -92,6 +99,6 @@ ResourceInstanceList.prototype.first = function() {
 ResourceInstanceList.prototype.last = function() {
 	if (this.length == 0)
 		return null;
-	
+
 	return this.items[ this.length - 1 ]
 };

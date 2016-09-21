@@ -18,10 +18,10 @@ function Client(url, opts) {
 	while (url.length > 0) {
 		if (url[ url.length - 1 ] == '/')
 			url = url.substr(0, url.length - 1);
-		
+
 		else break;
 	}
-	
+
 	/**
 	 * @member {Object} HaveAPI.Client#_private
 	 * @protected
@@ -32,20 +32,20 @@ function Client(url, opts) {
 		description: null,
 		debug: (opts !== undefined && opts.debug !== undefined) ? opts.debug : 0,
 	};
-	
+
 	this._private.hooks = new Client.Hooks(this._private.debug);
 	this._private.http = new Client.Http(this._private.debug);
-	
+
 	/**
 	 * @member {Object} HaveAPI.Client#apiSettings An object containg API settings.
 	 */
 	this.apiSettings = null;
-	
+
 	/**
 	 * @member {Array} HaveAPI.Client#resources A list of top-level resources attached to the client.
 	 */
 	this.resources = [];
-	
+
 	/**
 	 * @member {Object} HaveAPI.Client#authProvider Selected authentication provider.
 	 */
@@ -90,12 +90,12 @@ Client.Exceptions = {};
  */
 Client.prototype.setup = function(callback) {
 	var that = this;
-	
+
 	this.fetchDescription(function(status, extract) {
 		that._private.description = extract.call();
 		that.createSettings();
 		that.attachResources();
-		
+
 		callback(that, true);
 		that._private.hooks.invoke('after', 'setup', that, true);
 	});
@@ -138,7 +138,7 @@ Client.prototype.isCompatible = function(callback) {
 	var that = this;
 
 	this.fetchDescription(function (status, extract) {
-		
+
 		try {
 			extract.call();
 
@@ -197,7 +197,7 @@ Client.prototype.fetchDescription = function(callback, path) {
 				}
 
 				that._private.protocolVersion = response.version;
-				
+
 				if (response.version == Client.ProtocolVersion) {
 					return response.response;
 				}
@@ -216,7 +216,7 @@ Client.prototype.fetchDescription = function(callback, path) {
 					'WARNING: The client uses protocol v'+ Client.ProtocolVersion +
 					' while the API server uses v'+ response.version
 				);
-				
+
 				return response.response;
 			});
 		}
@@ -233,14 +233,20 @@ Client.prototype.attachResources = function() {
 	if (this.resources.length > 0) {
 		this.destroyResources();
 	}
-	
+
 	for(var r in this._private.description.resources) {
 		if (this._private.debug > 10)
 			console.log("Attach resource", r);
-		
+
 		this.resources.push(r);
-		
-		this[r] = new Client.Resource(this, r, this._private.description.resources[r], []);
+
+		this[r] = new Client.Resource(
+			this,
+			null,
+			r,
+			this._private.description.resources[r],
+			[]
+		);
 	}
 };
 
@@ -257,24 +263,24 @@ Client.prototype.attachResources = function() {
  */
 Client.prototype.authenticate = function(method, opts, callback, reset) {
 	var that = this;
-	
+
 	if (reset === undefined) reset = true;
-	
+
 	if (!this._private.description) {
 		// The client has not yet been setup.
 		// Fetch the description, do NOT attach the resources, use it only to authenticate.
-		
+
 		this.fetchDescription(function(status, extract) {
 			that._private.description = extract.call();
 			that.createSettings();
 			that.authenticate(method, opts, callback);
 		});
-		
+
 		return;
 	}
-	
+
 	this.authProvider = new Authentication.providers[method](this, opts, this._private.description.authentication[method]);
-	
+
 	this.authProvider.setup(function() {
 		// Fetch new description, which may be different when authenticated
 		if (reset) {
@@ -282,7 +288,7 @@ Client.prototype.authenticate = function(method, opts, callback, reset) {
 				callback(c, status);
 				that._private.hooks.invoke('after', 'authenticated', that, true);
 			});
-			
+
 		} else {
 			callback(that, true);
 			that._private.hooks.invoke('after', 'authenticated', that, true);
@@ -299,12 +305,12 @@ Client.prototype.authenticate = function(method, opts, callback, reset) {
  */
 Client.prototype.logout = function(callback) {
 	var that = this;
-	
+
 	this.authProvider.logout(function() {
 		that.authProvider = new Client.Authentication.Base();
 		that.destroyResources();
 		that._private.description = null;
-		
+
 		if (callback !== undefined)
 			callback(that, true);
 	});
@@ -319,9 +325,9 @@ Client.prototype.logout = function(callback) {
 Client.prototype.directInvoke = function(action, params, callback) {
 	if (this._private.debug > 5)
 		console.log("Executing", action, "with params", params, "at", action.preparedUrl);
-	
+
 	var that = this;
-	
+
 	var opts = {
 		method: action.httpMethod(),
 		url: this._private.url + action.preparedUrl,
@@ -334,32 +340,32 @@ Client.prototype.directInvoke = function(action, params, callback) {
 			}
 		}
 	};
-	
+
 	var paramsInQuery = this.sendAsQueryParams(opts.method);
 	var meta = null;
 	var metaNs = this.apiSettings.meta.namespace;
-	
+
 	if (params && params.hasOwnProperty('meta')) {
 		meta = params.meta;
 		delete params.meta;
 	}
-	
+
 	if (paramsInQuery) {
 		opts.url = this.addParamsToQuery(opts.url, action.namespace('input'), params);
-		
+
 		if (meta)
 			opts.url = this.addParamsToQuery(opts.url, metaNs, meta);
-		
+
 	} else {
 		var scopedParams = {};
 		scopedParams[ action.namespace('input') ] = params;
-		
+
 		if (meta)
 			scopedParams[metaNs] = meta;
-		
+
 		opts.params = scopedParams;
 	}
-	
+
 	this._private.http.request(opts);
 };
 
@@ -371,20 +377,25 @@ Client.prototype.directInvoke = function(action, params, callback) {
  */
 Client.prototype.invoke = function(action, params, callback) {
 	var that = this;
-	
+
 	this.directInvoke(action, params, function(status, response) {
 		if (callback === undefined)
 			return;
-		
+
 		switch (action.layout('output')) {
 			case 'object':
-				callback(that, new Client.ResourceInstance(that, action, response));
+				callback(that, new Client.ResourceInstance(
+					that,
+					action.resource._private.parent,
+					action,
+					response
+				));
 				break;
-				
+
 			case 'object_list':
 				callback(that, new Client.ResourceInstanceList(that, action, response));
 				break;
-			
+
 			default:
 				callback(that, response);
 		}
@@ -447,22 +458,22 @@ Client.prototype.sendAsQueryParams = function(method) {
  */
 Client.prototype.addParamsToQuery = function(url, namespace, params) {
 	var first = true;
-	
+
 	for (var key in params) {
 		if (first) {
 			if (url.indexOf('?') == -1)
 				url += '?';
-				
+
 			else if (url[ url.length - 1 ] != '&')
 				url += '&';
-			
+
 			first = false;
-			
+
 		} else url += '&';
-		
+
 		url += encodeURI(namespace) + '[' + encodeURI(key) + ']=' + encodeURI(params[key]);
 	}
-	
+
 	return url;
 };
 
@@ -720,7 +731,7 @@ Authentication.Token = function(client, opts, description) {
 	this.opts = opts;
 	this.description = description;
 	this.configured = false;
-	
+
 	/**
 	 * @member {String} HaveAPI.Client.Authentication.Token#token The token received from the API.
 	 */
@@ -733,15 +744,21 @@ Authentication.Token.prototype = new Authentication.Base();
  * @param {HaveAPI.Client~doneCallback} callback
  */
 Authentication.Token.prototype.setup = function(callback) {
-	this.resource = new Client.Resource(this.client, 'token', this.description.resources.token, []);
-	
+	this.resource = new Client.Resource(
+		this.client,
+		null,
+		'token',
+		this.description.resources.token,
+		[]
+	);
+
 	if (this.opts.hasOwnProperty('token')) {
 		this.token = this.opts.token;
 		this.configured = true;
-		
+
 		if(callback !== undefined)
 			callback(this.client, true);
-	
+
 	} else {
 		this.requestToken(callback);
 	}
@@ -757,23 +774,23 @@ Authentication.Token.prototype.requestToken = function(callback) {
 		password: this.opts.password,
 		lifetime: this.opts.lifetime || 'renewable_auto'
 	};
-	
+
 	if(this.opts.interval !== undefined)
 		params.interval = this.opts.interval;
-	
+
 	var that = this;
-	
+
 	this.resource.request(params, function(c, response) {
 		if (response.isOk()) {
 			var t = response.response();
-			
+
 			that.token = t.token;
 			that.validTo = t.valid_to;
 			that.configured = true;
-			
+
 			if(callback !== undefined)
 				callback(that.client, true);
-			
+
 		} else {
 			if(callback !== undefined)
 				callback(that.client, false);
@@ -787,10 +804,10 @@ Authentication.Token.prototype.requestToken = function(callback) {
 Authentication.Token.prototype.headers = function(){
 	if(!this.configured)
 		return;
-	
+
 	var ret = {};
 	ret[ this.description.http_header ] = this.token;
-	
+
 	return ret;
 };
 
@@ -821,11 +838,11 @@ function BaseResource (){};
  */
 BaseResource.prototype.attachResources = function(description, args) {
 	this.resources = [];
-	
+
 	for(var r in description.resources) {
 		this.resources.push(r);
-		
-		this[r] = new Client.Resource(this._private.client, r, description.resources[r], args);
+
+		this[r] = new Client.Resource(this._private.client, this, r, description.resources[r], args);
 	}
 };
 
@@ -838,18 +855,18 @@ BaseResource.prototype.attachResources = function(description, args) {
  */
 BaseResource.prototype.attachActions = function(description, args) {
 	this.actions = [];
-	
+
 	for(var a in description.actions) {
 		var names = [a].concat(description.actions[a].aliases);
 		var actionInstance = new Client.Action(this._private.client, this, a, description.actions[a], args);
-		
+
 		for(var i = 0; i < names.length; i++) {
 			if (names[i] == 'new')
 				continue;
-			
+
 			this[names[i]] = actionInstance;
 		}
-	        
+
                 this.actions.push(a);
 	}
 };
@@ -869,28 +886,30 @@ BaseResource.prototype.defaultParams = function(action) {
  * @class Resource
  * @memberof HaveAPI.Client
  */
-function Resource (client, name, description, args) {
+function Resource (client, parent, name, description, args) {
 	this._private = {
 		client: client,
+		parent: parent,
 		name: name,
 		description: description,
 		args: args
 	};
-	
+
 	this.attachResources(description, args);
 	this.attachActions(description, args);
-	
+
 	var that = this;
 	var fn = function() {
 		return new Resource(
 			that._private.client,
+			that._private.parent,
 			that._private.name,
 			that._private.description,
 			that._private.args.concat(Array.prototype.slice.call(arguments))
 		);
 	};
 	fn.__proto__ = this;
-	
+
 	return fn;
 };
 
@@ -901,7 +920,7 @@ Resource.prototype.applyArguments = function(args) {
 	for(var i = 0; i < args.length; i++) {
 		this._private.args.push(args[i]);
 	}
-	
+
 	return this;
 };
 
@@ -911,7 +930,7 @@ Resource.prototype.applyArguments = function(args) {
  * @return {HaveAPI.Client.ResourceInstance} resource instance
  */
 Resource.prototype.new = function() {
-	return new Client.ResourceInstance(this.client, this.create, null, false);
+	return new Client.ResourceInstance(this.client, this.parent, this.create, null, false);
 };
 
 /**
@@ -1196,57 +1215,58 @@ Response.prototype.meta = function() {
  *                                            but just an object with parameters.
  * @memberof HaveAPI.Client
  */
-function ResourceInstance (client, action, response, shell, item) {
+function ResourceInstance (client, parent, action, response, shell, item) {
 	this._private = {
 		client: client,
+		parent: parent,
 		action: action,
 		response: response,
 		name: action.resource._private.name,
 		description: action.resource._private.description
 	};
-	
+
 	if (!response) {
 		if (shell !== undefined && shell) { // association that is to be fetched
 			this._private.resolved = false;
 			this._private.persistent = true;
-			
+
 			var that = this;
-			
+
 			action.directInvoke(function(c, response) {
 				that.attachResources(that._private.action.resource._private.description, response.meta().url_params);
 				that.attachActions(that._private.action.resource._private.description, response.meta().url_params);
 				that.attachAttributes(response.response());
-				
+
 				that._private.resolved = true;
-				
+
 				if (that._private.resolveCallbacks !== undefined) {
 					for (var i = 0; i < that._private.resolveCallbacks.length; i++)
 						that._private.resolveCallbacks[i](that._private.client, that);
-					
+
 					delete that._private.resolveCallbacks;
 				}
 			});
-			
+
 		} else { // a new, empty instance
 			this._private.resolved = true;
 			this._private.persistent = false;
-			
+
 			this.attachResources(this._private.action.resource._private.description, action.providedIdArgs);
 			this.attachActions(this._private.action.resource._private.description, action.providedIdArgs);
 			this.attachStubAttributes();
 		}
-		
+
 	} else if (item || response.isOk()) {
 		this._private.resolved = true;
 		this._private.persistent = true;
-		
+
 		var metaNs = client.apiSettings.meta.namespace;
 		var idArgs = item ? response[metaNs].url_params : response.meta().url_params;
-		
+
 		this.attachResources(this._private.action.resource._private.description, idArgs);
 		this.attachActions(this._private.action.resource._private.description, idArgs);
 		this.attachAttributes(item ? response : response.response());
-		
+
 	} else {
 		// FIXME
 	}
@@ -1286,29 +1306,29 @@ ResourceInstance.prototype.apiResponse = function() {
  */
 ResourceInstance.prototype.save = function(callback) {
 	var that = this;
-	
+
 	function updateAttrs(attrs) {
 		for (var attr in attrs) {
 			that._private.attributes[ attr ] = attrs[ attr ];
 		}
 	};
-	
+
 	function replyCallback(c, reply) {
 		that._private.response = reply;
 		updateAttrs(reply);
-		
+
 		if (callback !== undefined)
 			callback(c, that);
 	}
-	
+
 	if (this._private.persistent) {
 		this.update.directInvoke(replyCallback);
-		
+
 	} else {
 		this.create.directInvoke(function(c, reply) {
 			if (reply.isOk())
 				that._private.persistent = true;
-			
+
 			replyCallback(c, reply);
 		});
 	}
@@ -1316,23 +1336,23 @@ ResourceInstance.prototype.save = function(callback) {
 
 ResourceInstance.prototype.defaultParams = function(action) {
 	ret = {}
-	
+
 	for (var attr in this._private.attributes) {
 		var desc = action.description.input.parameters[ attr ];
-		
+
 		if (desc === undefined)
 			continue;
-		
+
 		switch (desc.type) {
 			case 'Resource':
 				ret[ attr ] = this._private.attributes[ attr ][ desc.value_id ];
 				break;
-			
+
 			default:
 				ret[ attr ] = this._private.attributes[ attr ];
 		}
 	}
-	
+
 	return ret;
 };
 
@@ -1346,20 +1366,33 @@ ResourceInstance.prototype.defaultParams = function(action) {
  */
 ResourceInstance.prototype.resolveAssociation = function(attr, path, url) {
 	var tmp = this._private.client;
-	
+
 	for(var i = 0; i < path.length; i++) {
 		tmp = tmp[ path[i] ];
 	}
-	
+
 	var obj = this._private.attributes[ attr ];
 	var metaNs = this._private.client.apiSettings.meta.namespace;
 	var action = tmp.show;
 	action.provideIdArgs(obj[metaNs].url_params);
-	
+
 	if (obj[metaNs].resolved)
-		return new Client.ResourceInstance(this._private.client, action, obj, false, true);
-	
-	return new Client.ResourceInstance(this._private.client, action, null, true);
+		return new Client.ResourceInstance(
+			this._private.client,
+			action.resource._private.parent,
+			action,
+			obj,
+			false,
+			true
+		);
+
+	return new Client.ResourceInstance(
+		this._private.client,
+		action.resource._private.parent,
+		action,
+		null,
+		true
+	);
 };
 
 /**
@@ -1371,11 +1404,11 @@ ResourceInstance.prototype.resolveAssociation = function(attr, path, url) {
 ResourceInstance.prototype.whenResolved = function(callback) {
 	if (this._private.resolved)
 		callback(this._private.client, this);
-	
+
 	else {
 		if (this._private.resolveCallbacks === undefined)
 			this._private.resolveCallbacks = [];
-		
+
 		this._private.resolveCallbacks.push(callback);
 	}
 };
@@ -1389,13 +1422,13 @@ ResourceInstance.prototype.whenResolved = function(callback) {
 ResourceInstance.prototype.attachAttributes = function(attrs) {
 	this._private.attributes = attrs;
 	this._private.associations = {};
-	
+
 	var metaNs = this._private.client.apiSettings.meta.namespace;
-	
+
 	for (var attr in attrs) {
 		if (attr === metaNs)
 			continue;
-		
+
 		this.createAttribute(attr, this._private.action.description.output.parameters[ attr ]);
 	}
 };
@@ -1408,7 +1441,7 @@ ResourceInstance.prototype.attachAttributes = function(attrs) {
 ResourceInstance.prototype.attachStubAttributes = function() {
 	var attrs = {};
 	var params = this._private.action.description.input.parameters;
-	
+
 	for (var attr in params) {
 		switch (params[ attr ].type) {
 			case 'Resource':
@@ -1416,12 +1449,12 @@ ResourceInstance.prototype.attachStubAttributes = function() {
 				attrs[ attr ][ params[attr].value_id ] = null;
 				attrs[ attr ][ params[attr].value_label ] = null;
 				break;
-			
+
 			default:
 				attrs[ attr ] = null;
 		}
 	}
-	
+
 	this.attachAttributes(attrs);
 };
 
@@ -1434,14 +1467,14 @@ ResourceInstance.prototype.attachStubAttributes = function() {
  */
 ResourceInstance.prototype.createAttribute = function(attr, desc) {
 	var that = this;
-	
+
 	switch (desc.type) {
 		case 'Resource':
 			Object.defineProperty(this, attr, {
 				get: function() {
 						if (that._private.associations.hasOwnProperty(attr))
 							return that._private.associations[ attr ];
-						
+
 						return that._private.associations[ attr ] = that.resolveAssociation(
 							attr,
 							desc.resource,
@@ -1453,14 +1486,14 @@ ResourceInstance.prototype.createAttribute = function(attr, desc) {
 						that._private.attributes[ attr ][ desc.value_label ] = v[ desc.value_label ];
 					}
 			});
-			
+
 			Object.defineProperty(this, attr + '_id', {
 				get: function()  { return that._private.attributes[ attr ][ desc.value_id ];  },
 				set: function(v) { that._private.attributes[ attr ][ desc.value_id ] = v;     }
 			});
-			
+
 			break;
-		
+
 		default:
 			Object.defineProperty(this, attr, {
 				get: function()  { return that._private.attributes[ attr ];  },
@@ -1478,26 +1511,33 @@ ResourceInstance.prototype.createAttribute = function(attr, desc) {
  */
 function ResourceInstanceList (client, action, response) {
 	this.response = response;
-	
+
 	/**
 	 * @member {Array} HaveAPI.Client.ResourceInstanceList#items An array containg all items.
 	 */
 	this.items = [];
-	
+
 	var ret = response.response();
-	
+
 	/**
 	 * @member {integer} HaveAPI.Client.ResourceInstanceList#length Number of items in the list.
 	 */
 	this.length = ret ? ret.length : 0;
-	
+
 	/**
 	 * @member {integer} HaveAPI.Client.ResourceInstanceList#totalCount Total number of items available.
 	 */
 	this.totalCount = response.meta().total_count;
-	
+
 	for (var i = 0; i < this.length; i++)
-		this.items.push(new Client.ResourceInstance(client, action, ret[i], false, true));
+		this.items.push(new Client.ResourceInstance(
+			client,
+			action.resource._private.parent,
+			action,
+			ret[i],
+			false,
+			true
+		));
 };
 
 /**
@@ -1551,7 +1591,7 @@ ResourceInstanceList.prototype.itemAt = function(index) {
 ResourceInstanceList.prototype.first = function() {
 	if (this.length == 0)
 		return null;
-	
+
 	return this.items[0];
 };
 
@@ -1563,7 +1603,7 @@ ResourceInstanceList.prototype.first = function() {
 ResourceInstanceList.prototype.last = function() {
 	if (this.length == 0)
 		return null;
-	
+
 	return this.items[ this.length - 1 ]
 };
 

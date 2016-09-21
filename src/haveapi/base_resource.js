@@ -15,11 +15,11 @@ function BaseResource (){};
  */
 BaseResource.prototype.attachResources = function(description, args) {
 	this.resources = [];
-	
+
 	for(var r in description.resources) {
 		this.resources.push(r);
-		
-		this[r] = new Client.Resource(this._private.client, r, description.resources[r], args);
+
+		this[r] = new Client.Resource(this._private.client, this, r, description.resources[r], args);
 	}
 };
 
@@ -32,18 +32,18 @@ BaseResource.prototype.attachResources = function(description, args) {
  */
 BaseResource.prototype.attachActions = function(description, args) {
 	this.actions = [];
-	
+
 	for(var a in description.actions) {
 		var names = [a].concat(description.actions[a].aliases);
 		var actionInstance = new Client.Action(this._private.client, this, a, description.actions[a], args);
-		
+
 		for(var i = 0; i < names.length; i++) {
 			if (names[i] == 'new')
 				continue;
-			
+
 			this[names[i]] = actionInstance;
 		}
-	        
+
                 this.actions.push(a);
 	}
 };

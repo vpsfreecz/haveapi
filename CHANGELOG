@@ -1,3 +1,4 @@
+- Resources are aware of their parents
 - More thorough check to not require xmlhttprequest in browsers
 - Resource.actions does not contain aliases
 - Authenticate when fetching description

@@ -416,8 +416,8 @@ Client.prototype.createSettings = function() {
  * @private
  */
 Client.prototype.destroyResources = function() {
-	while (this.resources.length < 0) {
-		delete this[ that.resources.shift() ];
+	while (this.resources.length > 0) {
+		delete this[ this.resources.shift() ];
 	}
 };
 

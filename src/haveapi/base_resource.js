@@ -41,9 +41,10 @@ BaseResource.prototype.attachActions = function(description, args) {
 			if (names[i] == 'new')
 				continue;
 			
-			this.actions.push(names[i]);
 			this[names[i]] = actionInstance;
 		}
+	        
+                this.actions.push(a);
 	}
 };
 

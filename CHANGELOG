@@ -1,3 +1,4 @@
+- Resource.actions does not contain aliases
 - Authenticate when fetching description
 - Fix Client.destroyResources
 

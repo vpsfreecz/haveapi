@@ -184,6 +184,9 @@ Client.prototype.fetchDescription = function(callback, path) {
 	this._private.http.request({
 		method: 'OPTIONS',
 		url: url,
+		credentials: this.authProvider.credentials(),
+		headers: this.authProvider.headers(),
+		queryParameters: this.authProvider.queryParameters(),
 		callback: function (status, response) {
 			callback(status == 200, function () {
 				if (response.version === undefined) {

@@ -1592,7 +1592,7 @@ Client.Exceptions.UnresolvedArguments = function (action) {
  * @author Jakub Skokan <jakub.skokan@vpsfree.cz>
  **/
 
-if (typeof exports === 'object') {
+if (typeof exports === 'object' && !window && !window.XMLHttpRequest) {
 	XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
 }
 

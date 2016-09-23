@@ -281,17 +281,19 @@ Client.prototype.authenticate = function(method, opts, callback, reset) {
 
 	this.authProvider = new Authentication.providers[method](this, opts, this._private.description.authentication[method]);
 
-	this.authProvider.setup(function() {
+	this.authProvider.setup(function(c, status) {
 		// Fetch new description, which may be different when authenticated
-		if (reset) {
-			that.setup(function(c, status) {
-				callback(c, status);
+		if (status && reset) {
+			that.setup(function(c2, status2) {
+				callback(c2, status2);
 				that._private.hooks.invoke('after', 'authenticated', that, true);
 			});
 
 		} else {
-			callback(that, true);
-			that._private.hooks.invoke('after', 'authenticated', that, true);
+			callback(that, status);
+
+			if (status)
+				that._private.hooks.invoke('after', 'authenticated', that, true);
 		}
 	});
 };

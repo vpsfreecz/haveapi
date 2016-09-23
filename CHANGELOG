@@ -1,3 +1,4 @@
+- Client.authenticate: report if authentication has failed
 - Add method Authentication.Token.renewToken
 - Resources are aware of their parents
 - More thorough check to not require xmlhttprequest in browsers

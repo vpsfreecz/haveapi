@@ -76,6 +76,29 @@ Authentication.Token.prototype.requestToken = function(callback) {
 };
 
 /**
+ * @method HaveAPI.Client.Authentication.Token#requestToken
+ * @param {HaveAPI.Client~doneCallback} callback
+ */
+Authentication.Token.prototype.renewToken = function(callback) {
+	var that = this;
+
+	this.resource.renew(function(c, response) {
+		if (response.isOk()) {
+			var t = response.response();
+
+			that.validTo = t.valid_to;
+
+			if(callback !== undefined)
+				callback(that.client, true);
+
+		} else {
+			if(callback !== undefined)
+				callback(that.client, false);
+		}
+	});
+};
+
+/**
  * @method HaveAPI.Client.Authentication.Token#headers
  */
 Authentication.Token.prototype.headers = function(){

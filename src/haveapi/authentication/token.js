@@ -31,6 +31,7 @@ Authentication.Token.prototype.setup = function(callback) {
 
 	if (this.opts.hasOwnProperty('token')) {
 		this.token = this.opts.token;
+		this.validTo = this.opts.validTo;
 		this.configured = true;
 
 		if(callback !== undefined)

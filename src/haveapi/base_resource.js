@@ -17,9 +17,8 @@ BaseResource.prototype.attachResources = function(description, args) {
 	this.resources = [];
 
 	for(var r in description.resources) {
-		this.resources.push(r);
-
 		this[r] = new Client.Resource(this._private.client, this, r, description.resources[r], args);
+		this.resources.push(this[r]);
 	}
 };
 
@@ -44,7 +43,7 @@ BaseResource.prototype.attachActions = function(description, args) {
 			this[names[i]] = actionInstance;
 		}
 
-                this.actions.push(a);
+		this.actions.push(a);
 	}
 };
 
@@ -57,4 +56,12 @@ BaseResource.prototype.attachActions = function(description, args) {
  */
 BaseResource.prototype.defaultParams = function(action) {
 	return {};
+};
+
+/**
+ * @method HaveAPI.Client.BaseResource#getName
+ * @return {String} resource name
+ */
+BaseResource.prototype.getName = function () {
+	return this._private.name;
 };

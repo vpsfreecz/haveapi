@@ -238,8 +238,6 @@ Client.prototype.attachResources = function() {
 		if (this._private.debug > 10)
 			console.log("Attach resource", r);
 
-		this.resources.push(r);
-
 		this[r] = new Client.Resource(
 			this,
 			null,
@@ -247,6 +245,8 @@ Client.prototype.attachResources = function() {
 			this._private.description.resources[r],
 			[]
 		);
+
+		this.resources.push(this[r]);
 	}
 };
 
@@ -433,7 +433,7 @@ Client.prototype.createSettings = function() {
  */
 Client.prototype.destroyResources = function() {
 	while (this.resources.length > 0) {
-		delete this[ this.resources.shift() ];
+		delete this[ this.resources.shift().getName() ];
 	}
 };
 
@@ -866,9 +866,8 @@ BaseResource.prototype.attachResources = function(description, args) {
 	this.resources = [];
 
 	for(var r in description.resources) {
-		this.resources.push(r);
-
 		this[r] = new Client.Resource(this._private.client, this, r, description.resources[r], args);
+		this.resources.push(this[r]);
 	}
 };
 
@@ -893,7 +892,7 @@ BaseResource.prototype.attachActions = function(description, args) {
 			this[names[i]] = actionInstance;
 		}
 
-                this.actions.push(a);
+		this.actions.push(a);
 	}
 };
 
@@ -906,6 +905,14 @@ BaseResource.prototype.attachActions = function(description, args) {
  */
 BaseResource.prototype.defaultParams = function(action) {
 	return {};
+};
+
+/**
+ * @method HaveAPI.Client.BaseResource#getName
+ * @return {String} resource name
+ */
+BaseResource.prototype.getName = function () {
+	return this._private.name;
 };
 
 /**

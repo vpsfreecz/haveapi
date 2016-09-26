@@ -1,3 +1,4 @@
+- Client.availableVersions: fix callback arguments
 - Client.resources and BaseResource.resources contain objects
 - Client.authenticate: report if authentication has failed
 - Add method Authentication.Token.renewToken

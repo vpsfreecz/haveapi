@@ -110,8 +110,10 @@ Client.prototype.useDescription = function(description) {
  * @param {HaveAPI.Client~versionsCallback} callback
  */
 Client.prototype.availableVersions = function(callback) {
+	var that = this;
+
 	this.fetchDescription(function (status, extract) {
-		callback(status, extract.call());
+		callback(that, status, extract.call());
 
 	}, '/?describe=versions');
 };

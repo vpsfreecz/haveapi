@@ -8,6 +8,7 @@
 - Authenticate when fetching description
 - Fix Client.destroyResources
 - Client.fetchDescription: Handle errors when fetching/parsing fails
+- Client.setup: catch and report errors
 
 * Thu Mar 03 2016 - version 0.5.2
 - No changes

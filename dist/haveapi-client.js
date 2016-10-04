@@ -92,6 +92,15 @@ Client.prototype.setup = function(callback) {
 	var that = this;
 
 	this.fetchDescription(function(status, extract) {
+		var desc = null;
+
+		try {
+			desc = extract.call();
+
+		} catch (e) {
+			return callback(that, false);
+		}
+
 		that._private.description = extract.call();
 		that.createSettings();
 		that.attachResources();

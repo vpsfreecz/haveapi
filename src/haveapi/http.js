@@ -18,35 +18,48 @@ function Http (debug) {
 Http.prototype.request = function(opts) {
 	if (this.debug > 5)
 		console.log("Request to " + opts.method + " " + opts.url);
-	
+
 	var r = new XMLHttpRequest();
-	
+
 	if (opts.credentials === undefined)
 		r.open(opts.method, opts.url);
 	else
 		r.open(opts.method, opts.url, true, opts.credentials.username, opts.credentials.password);
-	
+
 	for (var h in opts.headers) {
 		r.setRequestHeader(h, opts.headers[h]);
 	}
-	
+
 	if (opts.params !== undefined)
 		r.setRequestHeader('Content-Type', 'application/json; charset=utf-8');
-	
+
 	r.onreadystatechange = function() {
 		var state = r.readyState;
-		
+
 		if (this.debug > 6)
 			console.log('Request state is ' + state);
-		
+
 		if (state == 4 && opts.callback !== undefined) {
-			opts.callback(r.status, JSON.parse(r.responseText));
+			var json = null;
+
+			try {
+				json = JSON.parse(r.responseText);
+
+			} catch (e) {
+				console.log('JSON.parse failed', e);
+			}
+
+			if (json)
+				opts.callback(r.status, json);
+
+			else
+				opts.callback(false, undefined);
 		}
 	};
-	
+
 	if (opts.params !== undefined) {
 		r.send(JSON.stringify( opts.params ));
-		
+
 	} else {
 		r.send();
 	}

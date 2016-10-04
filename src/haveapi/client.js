@@ -113,7 +113,13 @@ Client.prototype.availableVersions = function(callback) {
 	var that = this;
 
 	this.fetchDescription(function (status, extract) {
-		callback(that, status, extract.call());
+		var versions = null;
+
+		try {
+			versions = extract.call();
+		} catch (e) {}
+
+		callback(that, status && !(versions === null), versions);
 
 	}, '/?describe=versions');
 };
@@ -182,6 +188,9 @@ Client.prototype.fetchDescription = function(callback, path) {
 		queryParameters: this.authProvider.queryParameters(),
 		callback: function (status, response) {
 			callback(status == 200, function () {
+				if (!response)
+					throw new Client.Exceptions.ProtocolError('Failed to fetch the API description');
+
 				if (response.version === undefined) {
 					throw new Client.Exceptions.ProtocolError(
 						'Incompatible protocol version: the client uses v'+ Client.ProtocolVersion +

@@ -1006,7 +1006,7 @@ Resource.prototype.new = function() {
 function Action (client, resource, name, description, args) {
 	if (client._private.debug > 10)
 		console.log("Attach action", name, "to", resource._private.name);
-	
+
 	this.client = client;
 	this.resource = resource;
 	this.name = name;
@@ -1014,7 +1014,7 @@ function Action (client, resource, name, description, args) {
 	this.args = args;
 	this.providedIdArgs = [];
 	this.preparedUrl = null;
-	
+
 	var that = this;
 	var fn = function() {
 		var new_a = new Action(
@@ -1027,7 +1027,7 @@ function Action (client, resource, name, description, args) {
 		return new_a.invoke();
 	};
 	fn.__proto__ = this;
-	
+
 	return fn;
 };
 
@@ -1084,37 +1084,37 @@ Action.prototype.provideUrl = function(url) {
  * as object IDs in action URL. When there are no more URL parameters to fill,
  * the second last argument is an Object containing parameters to be sent.
  * The last argument is a {@link HaveAPI.Client~replyCallback} callback function.
- * 
+ *
  * The argument with parameters may be omitted, if the callback function
  * is in its place.
- * 
+ *
  * Arguments do not have to be passed to this method specifically. They may
  * be given to the resources above, the only thing that matters is their correct
  * order.
- * 
+ *
  * @example
  * // Call with parameters and a callback.
  * // The first argument '1' is a VPS ID.
  * api.vps.ip_address.list(1, {limit: 5}, function(c, reply) {
  * 		console.log("Got", reply.response());
  * });
- * 
+ *
  * @example
- * // Call only with a callback. 
+ * // Call only with a callback.
  * api.vps.ip_address.list(1, function(c, reply) {
  * 		console.log("Got", reply.response());
  * });
- * 
+ *
  * @example
  * // Give parameters to resources.
  * api.vps(101).ip_address(33).delete();
- * 
+ *
  * @method HaveAPI.Client.Action#invoke
  */
 Action.prototype.invoke = function() {
 	var prep = this.prepareInvoke(arguments);
-	
-	this.client.invoke(this, prep.params, prep.callback);
+
+	this.client.invoke(this, prep.params.params, prep.callback);
 };
 
 /**
@@ -1125,8 +1125,8 @@ Action.prototype.invoke = function() {
  */
 Action.prototype.directInvoke = function() {
 	var prep = this.prepareInvoke(arguments);
-	
-	this.client.directInvoke(this, prep.params, prep.callback);
+
+	this.client.directInvoke(this, prep.params.params, prep.callback);
 };
 
 /**
@@ -1138,59 +1138,61 @@ Action.prototype.directInvoke = function() {
 Action.prototype.prepareInvoke = function(new_args) {
 	var args = this.args.concat(Array.prototype.slice.call(new_args));
 	var rx = /(:[a-zA-Z\-_]+)/;
-	
+
 	if (!this.preparedUrl)
 		this.preparedUrl = this.description.url;
 
 	for (var i = 0; i < this.providedIdArgs.length; i++) {
 		if (this.preparedUrl.search(rx) == -1)
 			break;
-		
+
 		this.preparedUrl = this.preparedUrl.replace(rx, this.providedIdArgs[i]);
 	}
-	
+
 	while (args.length > 0) {
 		if (this.preparedUrl.search(rx) == -1)
 			break;
-		
+
 		var arg = args.shift();
 		this.providedIdArgs.push(arg);
-	
+
 		this.preparedUrl = this.preparedUrl.replace(rx, arg);
 	}
-	
+
 	if (args.length == 0 && this.preparedUrl.search(rx) != -1) {
 		console.log("UnresolvedArguments", "Unable to execute action '"+ this.name +"': unresolved arguments");
-		
+
 		throw new Client.Exceptions.UnresolvedArguments(this);
 	}
-	
+
 	var that = this;
 	var hasParams = args.length > 0;
 	var isFn = hasParams && args.length == 1 && typeof(args[0]) == "function";
-	var params = hasParams && !isFn ? args[0] : null;
-	
+	var rawParams = hasParams && !isFn ? args[0] : null;
+
 	if (this.layout('input') == 'object') {
 		var defaults = this.resource.defaultParams(this);
-		
+
 		for (var param in this.description.input.parameters) {
-			if ( defaults.hasOwnProperty(param) && (!params || (params && !params.hasOwnProperty(param))) ) {
-				if (!params)
-					params = {};
-				
-				params[ param ] = defaults[ param ];
+			if ( defaults.hasOwnProperty(param) && (!rawParams || (rawParams && !rawParams.hasOwnProperty(param))) ) {
+				if (!rawParams)
+					rawParams = {};
+
+				rawParams[ param ] = defaults[ param ];
 			}
 		}
 	}
-	
+
+	var params = new Parameters(this, rawParams);
+
 	return {
 		params: params,
 		callback: function(c, response) {
 			that.preparedUrl = null;
-			
+
 			if (args.length > 1) {
 				args[1](c, response);
-				
+
 			} else if(isFn) {
 				args[0](c, response);
 			}
@@ -1671,6 +1673,109 @@ ResourceInstanceList.prototype.last = function() {
 		return null;
 
 	return this.items[ this.length - 1 ]
+};
+
+/**
+ * @class Parameters
+ * @private
+ */
+function Parameters (action, params) {
+	this.action = action;
+	this.params = this.coerceParams(params);
+}
+
+/**
+ * Coerce parameters passed to the action to appropriate types.
+ * @method Parameters.coerceParams
+ * @param {Object} params
+ * @return {Object}
+ */
+Parameters.prototype.coerceParams = function (params) {
+	var ret = {};
+	var input = this.action.description.input.parameters;
+
+	if (params && params.hasOwnProperty('meta'))
+		ret.meta = params.meta;
+
+	for (var p in params) {
+		if (!params.hasOwnProperty(p) || !input.hasOwnProperty(p))
+			continue;
+
+		var v = params[p];
+
+		switch (input[p].type) {
+			case 'Resource':
+				if (params[p] instanceof ResourceInstance)
+					ret[p] = v.id;
+
+				else
+					ret[p] = v;
+
+				break;
+
+			case 'Integer':
+				ret[p] = parseInt(v);
+				break;
+
+			case 'Float':
+				ret[p] = parseFloat(v);
+				break;
+
+			case 'Boolean':
+				switch (typeof v) {
+					case 'boolean':
+						ret[p] = v;
+						break;
+
+					case 'string':
+						if (v.match(/^(t|true|yes|y)$/i))
+							ret[p] = true;
+
+						else if (v.match(/^(f|false|no|n)$/i))
+							ret[p] = false;
+
+						else
+							ret[p] = undefined;
+
+						break;
+
+					case 'number':
+						if (v === 0)
+							ret[p] = false;
+
+						else if (v >= 1)
+							ret[p] = true;
+
+						else
+							ret[p] = undefined;
+
+						break;
+
+					default:
+						ret[p] = undefined;
+				}
+
+				break;
+
+			case 'Datetime':
+				if (v instanceof Date)
+					ret[p] = v.toISOString();
+
+				else
+					ret[p] = v;
+
+				break;
+
+			case 'String':
+			case 'Text':
+				ret[p] = v + "";
+
+			default:
+				ret[p] = v;
+		}
+	}
+
+	return ret;
 };
 
 /**

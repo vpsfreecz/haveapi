@@ -21,6 +21,7 @@ var classes = [
 	'ResourceInstance',
 	'ResourceInstanceList',
 	'Response',
+	'LocalResponse',
 ];
 
 for (var i = 0; i < classes.length; i++)

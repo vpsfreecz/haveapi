@@ -1114,6 +1114,16 @@ Action.prototype.provideUrl = function(url) {
 Action.prototype.invoke = function() {
 	var prep = this.prepareInvoke(arguments);
 
+	if (!prep.params.validate()) {
+		prep.callback(this.client, new LocalResponse(
+			this,
+			false,
+			'invalid input parameters',
+			prep.params.errors
+		));
+		return;
+	}
+
 	this.client.invoke(this, prep.params.params, prep.callback);
 };
 
@@ -1125,6 +1135,16 @@ Action.prototype.invoke = function() {
  */
 Action.prototype.directInvoke = function() {
 	var prep = this.prepareInvoke(arguments);
+
+	if (!prep.params.validate()) {
+		prep.callback(this.client, new LocalResponse(
+			this,
+			false,
+			'invalid input parameters',
+			prep.params.errors
+		));
+		return;
+	}
 
 	this.client.directInvoke(this, prep.params.params, prep.callback);
 };
@@ -1265,6 +1285,22 @@ Response.prototype.meta = function() {
 	return {};
 };
 
+
+/**
+ * @class LocalResponse
+ * @memberof HaveAPI.Client
+ * @augments HaveAPI.Client.Response
+ */
+function LocalResponse (action, status, message, errors) {
+	this.action = action;
+	this.envelope = {
+		status: status,
+		message: message,
+		errors: errors,
+	};
+};
+
+LocalResponse.prototype = new Response();
 
 /**
  * @class ResourceInstance
@@ -1678,10 +1714,17 @@ ResourceInstanceList.prototype.last = function() {
 /**
  * @class Parameters
  * @private
+ * @param {HaveAPI.Client.Action} action
+ * @param {Object} input parameters
  */
 function Parameters (action, params) {
 	this.action = action;
 	this.params = this.coerceParams(params);
+
+	/**
+	 * @member {Object} Parameters#errors Errors found during the validation.
+	 */
+	this.errors = {};
 }
 
 /**
@@ -1779,6 +1822,219 @@ Parameters.prototype.coerceParams = function (params) {
 };
 
 /**
+ * Validate given input parameters.
+ * @method Parameters#validate
+ * @return {Boolean}
+ */
+Parameters.prototype.validate = function () {
+	var input = this.action.description.input.parameters;
+
+	for (var name in input) {
+		if (!input.hasOwnProperty(name))
+			continue;
+
+		var p = input[name];
+
+		if (!p.validators)
+			continue;
+
+		if (!this.params.hasOwnProperty(name) || this.params[name] === undefined) {
+			if (p.validators.present)
+				this.errors[name] = ['required parameter missing'];
+
+			continue;
+		}
+
+		for (var validatorName in p.validators) {
+			var validator = Validator.get(
+				validatorName,
+				p.validators[validatorName],
+				this.params[name],
+				this.params
+			);
+
+			if (validator === false) {
+				console.log("Unsupported validator '"+ validatorName +"' for parameter '"+ name +"'");
+				continue;
+			}
+
+			if (!validator.isValid()) {
+				if (!this.errors.hasOwnProperty(name))
+					this.errors[name] = [];
+
+				this.errors[name] = this.errors[name].concat(validator.errors);
+			}
+		}
+	}
+
+	return Object.keys(this.errors).length ? false : true;
+};
+
+/**
+ * @class Validator
+ * @private
+ * @param {Function} fn validator function
+ * @param {Object} opts validator options from API description
+ * @param value the value to validate
+ * @param {Object} params object with all parameters
+ */
+function Validator (fn, opts, value, params) {
+	this.fn = fn;
+	this.opts = opts;
+	this.value = value;
+	this.params = params;
+
+	/**
+	 * @member {Array} Validator#errors Errors found during the validation.
+	 */
+	this.errors = [];
+};
+
+/**
+ * @property {Object} Validator.validators Registered validators
+ */
+Validator.validators = {};
+
+/**
+ * Register validator function.
+ * @func Validator.register
+ * @param {String} name
+ * @param {fn} validator function
+ */
+Validator.register = function (name, fn) {
+	Validator.validators[name] = fn;
+};
+
+/**
+ * Get registered validator using its name.
+ * @func Validator.get
+ * @param {String} name
+ * @param {Object} opts validator options from API description
+ * @param value the value to validate
+ * @param {Object} params object with all parameters
+ * @return {Validator}
+ */
+Validator.get = function (name, opts, value, params) {
+	if (!Validator.validators.hasOwnProperty(name))
+		return false;
+
+	return new Validator(Validator.validators[name], opts, value, params);
+};
+
+/**
+ * @method Validator#isValid
+ * @return {Boolean}
+ */
+Validator.prototype.isValid = function () {
+	var ret = this.fn(this.opts, this.value, this.params);
+
+	if (ret === true)
+		return true;
+
+	if (ret === false) {
+		this.errors.push(this.opts.message.replace(/%{value}/g, this.value + ""));
+		return false;
+	}
+
+	this.errors = this.errors.concat(ret);
+	return false;
+};
+
+Validator.validators.accept = function (opts, value) {
+	return opts.value === value;
+};
+
+Validator.validators.confirm = function (opts, value, params) {
+	var cond = value === params[ opts.parameter ];
+
+	return opts.equal ? cond : !cond;
+};
+
+Validator.validators.custom = function () {
+	return true;
+};
+
+Validator.validators.exclude = function (opts, value) {
+	if (opts.values instanceof Array)
+		return opts.values.indexOf(value) === -1;
+
+	return !opts.values.hasOwnProperty(value);
+};
+
+Validator.validators.format = function (opts, value) {
+	if (typeof value != 'string')
+		return false;
+
+	var rx = new RegExp(opts.rx);
+
+	if (opts.match)
+		return value.match(rx) ? true : false;
+
+	return value.match(rx) ? false : true;
+};
+
+Validator.validators.include = function (opts, value) {
+	if (opts.values instanceof Array)
+		return !(opts.values.indexOf(value) === -1);
+
+	return opts.values.hasOwnProperty(value);
+};
+
+Validator.validators.length = function (opts, value) {
+	if (typeof value != 'string')
+		return false;
+
+	var len = value.length;
+
+	if (typeof opts.equals === 'number')
+		return len === opts.equals;
+
+	if (typeof opts.min === 'number' && !(typeof opts.max === 'number'))
+		return len >= opts.min;
+
+	if (!(typeof opts.min === 'number') && typeof opts.max === 'number')
+		return len <= opts.max;
+
+	return len >= opts.min && len <= opts.max;
+};
+
+Validator.validators.number = function (opts, value) {
+	var v = (typeof value === 'string') ? parseInt(value) : value;
+
+	if (typeof opts.min === 'number' && v < opts.min)
+		return false;
+
+	if (typeof opts.max === 'number' && v > opts.max)
+		return false;
+
+	if (typeof opts.step === 'number') {
+		if ( (v - (typeof opts.min === 'number' ? opts.min : 0)) % opts.step > 0 )
+			return false;
+	}
+
+	if (typeof opts.mod === 'number' && !(v % opts.mod === 0))
+		return false;
+
+	if (typeof opts.odd === 'number' && v % 2 === 0)
+		return false;
+
+	if (typeof opts.even === 'number' && v % 2 > 0)
+		return false;
+
+	return true;
+};
+
+Validator.validators.present = function (opts, value) {
+	if (value === undefined)
+		return false;
+
+	if (!opts.empty && typeof value === 'string' && !value.trim().length)
+		return false;
+
+	return true;
+};
+
+/**
  * Thrown when protocol error/incompatibility occurs.
  * @class ProtocolError
  * @memberof HaveAPI.Client.Exceptions
@@ -1821,6 +2077,7 @@ var classes = [
 	'ResourceInstance',
 	'ResourceInstanceList',
 	'Response',
+	'LocalResponse',
 ];
 
 for (var i = 0; i < classes.length; i++)

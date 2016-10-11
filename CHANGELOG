@@ -10,6 +10,7 @@
 - Client.fetchDescription: Handle errors when fetching/parsing fails
 - Client.setup: catch and report errors
 - Coercion of input parameters
+- Client-side validation of input parameters
 
 * Thu Mar 03 2016 - version 0.5.2
 - No changes

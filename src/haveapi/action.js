@@ -113,6 +113,16 @@ Action.prototype.provideUrl = function(url) {
 Action.prototype.invoke = function() {
 	var prep = this.prepareInvoke(arguments);
 
+	if (!prep.params.validate()) {
+		prep.callback(this.client, new LocalResponse(
+			this,
+			false,
+			'invalid input parameters',
+			prep.params.errors
+		));
+		return;
+	}
+
 	this.client.invoke(this, prep.params.params, prep.callback);
 };
 
@@ -124,6 +134,16 @@ Action.prototype.invoke = function() {
  */
 Action.prototype.directInvoke = function() {
 	var prep = this.prepareInvoke(arguments);
+
+	if (!prep.params.validate()) {
+		prep.callback(this.client, new LocalResponse(
+			this,
+			false,
+			'invalid input parameters',
+			prep.params.errors
+		));
+		return;
+	}
 
 	this.client.directInvoke(this, prep.params.params, prep.callback);
 };

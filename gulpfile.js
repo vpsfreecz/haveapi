@@ -15,9 +15,12 @@ var src = [
 	'src/haveapi/resource.js',
 	'src/haveapi/action.js',
 	'src/haveapi/response.js',
+	'src/haveapi/local_response.js',
 	'src/haveapi/resource_instance.js',
 	'src/haveapi/resource_instance_list.js',
 	'src/haveapi/parameters.js',
+	'src/haveapi/validator.js',
+	'src/haveapi/validators/*.js',
 	'src/haveapi/exceptions.js',
 	'src/*.js',
 ];

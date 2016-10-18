@@ -67,4 +67,14 @@ describe HaveAPI::Validators::Numericality do
     expect(v.valid?(0)).to be false
     expect(v.valid?(2)).to be false
   end
+
+  it 'checks number as string' do
+    v = HaveAPI::Validators::Numericality.new(:number, {min: 5})
+    expect(v.valid?('5')).to be true
+  end
+
+  it 'rejects a string that is not a number' do
+    v = HaveAPI::Validators::Numericality.new(:number, {min: 5})
+    expect(v.valid?('abc')).to be false
+  end
 end

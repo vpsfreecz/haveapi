@@ -21,7 +21,7 @@ which they otherwise know nothing about.
 - Auto-generated online HTML documentation
 - Generic interface for clients - one client can be used to access all APIs
   using this framework
-- Ruby, PHP and JavaScript clients already available
+- Ruby (with CLI), PHP and JavaScript (with web administration) clients already available
 - A change in the API is immediately reflected in all clients
 - Supports API versioning
 - ORM integration
@@ -270,6 +270,13 @@ APIs that are using HaveAPI.
 - JavaScript client: https://github.com/vpsfreecz/haveapi-client-js
 
 or [create your own client](doc/create-client.md).
+
+Complex applications can be built on top of these basic clients, e.g.:
+
+- [haveapi-webui](https://github.com/vpsfreecz/haveapi-webui), a generic web administration
+  for HaveAPI-based APIs
+- [haveapi-fs](https://github.com/vpsfreecz/haveapi-fs), a FUSE based filesystem that can
+  mount any HaveAPI-based API
 
 ## Read more
  - [Protocol definition](doc/protocol.md)

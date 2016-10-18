@@ -1,3 +1,4 @@
+* Tue Oct 18 2016 - version 0.6.0
 - Client.availableVersions: fix callback arguments
 - Client.resources and BaseResource.resources contain objects
 - Client.authenticate: report if authentication has failed

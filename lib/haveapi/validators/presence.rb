@@ -1,5 +1,5 @@
 module HaveAPI
-  # Checks the value is a number or a string containing only digits.
+  # Checks the value is present and not empty.
   #
   # Short form:
   #   string :param, required: true

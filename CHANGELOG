@@ -1,3 +1,6 @@
+* Tue Oct 18 2016 - version 0.6.0
+- No changes
+
 * Mon Apr 18 2016 - version 0.5.4
 - ActionFailed: add reader for response
 - Resource: save description and create a reader for it

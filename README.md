@@ -25,7 +25,7 @@ var HaveAPI = require('haveapi-client');
 Create a client instance:
 
 ```js
-api = new HaveAPI.Client("http://your.api.tld");
+var api = new HaveAPI.Client("http://your.api.tld");
 ```
 
 Before the client can be used, it must be set up:
@@ -45,7 +45,7 @@ method is by default not allowed by HaveAPI to be used from web browsers.
 ```js
 api.setup(function() {
 	console.log("The client is ready to roll");
-	
+
 	api.authenticate('basic', {
 			username: 'yourname',
 			password: 'yourpassword'
@@ -61,7 +61,7 @@ Request a token:
 ```js
 api.setup(function() {
 	console.log("The client is ready to roll");
-	
+
 	api.authenticate('token', {
 			username: 'yourname',
 			password: 'yourpassword'
@@ -77,7 +77,7 @@ Use an existing token:
 ```js
 api.setup(function() {
 	console.log("The client is ready to roll");
-	
+
 	api.authenticate('token', {
 			token: 'qwertyuiopasdfghjkl',
 		}, function(c, status) {
@@ -126,7 +126,7 @@ myvps.save(function(c, vps) {
 // Lists of objects
 api.vps.list({limit: 10}, function(c, vpses) {
 	console.log('received a list of vpses', vpses.isOk(), vpses.length);
-	
+
 	vpses.each(function(vps) {
 		console.log('containing', vps.id, vps.hostname);
 	});
@@ -145,7 +145,7 @@ api.vps.list({
 	console.log('received a list of vpses', vpses.isOk());
 	console.log('number of received vpses', vpses.length);
 	console.log('total count of vpses', vpses.tocalCount)
-	
+
 	vpses.each(function(vps) {
 		// Associations user, node and node__location are prefetched.
 		// They can be accessed immediately without any additional

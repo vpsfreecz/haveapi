@@ -1,5 +1,6 @@
 - Token authentication: fix output of action renew
 - ActiveRecord: fix parsing of includes
+- Params.use: fix nested calls
 
 * Mon Apr 18 2016 - version 0.5.3
 - ActiveRecord.ar_parse_includes: ignore not existing associations

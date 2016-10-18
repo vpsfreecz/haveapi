@@ -123,11 +123,14 @@ module HaveAPI
     end
 
     def use(name, include: nil, exclude: nil)
+      @include_back ||= []
+      @exclude_back ||= []
+
       block = @action.resource.params(name)
 
       if block
-        @include_back = @include.clone if @include
-        @exclude_back = @exclude.clone if @exclude
+        @include_back << @include.clone if @include
+        @exclude_back << @exclude.clone if @exclude
 
         if include
           @include ||= []
@@ -141,8 +144,8 @@ module HaveAPI
 
         instance_eval(&block)
 
-        @include = @include_back if include
-        @exclude = @exclude_back if exclude
+        @include = @include_back.pop if @include
+        @exclude = @exclude_back.pop if @exclude
       end
     end
 

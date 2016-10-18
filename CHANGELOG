@@ -1,3 +1,5 @@
+- Action: more meaningful message in exception UnresolvedArguments
+
 * Thu Mar 03 2016 - version 0.5.2
 - No changes
 

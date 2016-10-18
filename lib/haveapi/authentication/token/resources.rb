@@ -99,7 +99,7 @@ END
 
         def exec
           klass = self.class.resource.token_instance[@version]
-          klass.send(:renew_token, request, current_user, klass.token(request))
+          {valid_to: klass.send(:renew_token, request, current_user, klass.token(request))}
         end
       end
     end

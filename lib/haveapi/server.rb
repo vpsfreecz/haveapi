@@ -5,6 +5,7 @@ module HaveAPI
   class Server
     attr_reader :root, :routes, :module_name, :auth_chain, :versions, :default_version,
                 :extensions
+    attr_accessor :action_state
 
     include Hookable
 
@@ -295,8 +296,18 @@ module HaveAPI
         )))
       end
 
+      # Register blocking resource
       HaveAPI.get_version_resources(@module_name, v).each do |resource|
         mount_resource(prefix, v, resource, @routes[v][:resources])
+      end
+
+      if action_state
+        mount_resource(
+            prefix,
+            v,
+            HaveAPI::Resources::ActionState,
+            @routes[v][:resources]
+        )
       end
 
       validate_resources(@routes[v][:resources])

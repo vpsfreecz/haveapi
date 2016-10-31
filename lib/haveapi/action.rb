@@ -8,6 +8,7 @@ module HaveAPI
     has_attr :http_method, :get
     has_attr :auth, true
     has_attr :aliases, []
+    has_attr :blocking, false
 
     include Hookable
 
@@ -193,6 +194,7 @@ module HaveAPI
             auth: @auth,
             description: @desc,
             aliases: @aliases,
+            blocking: @blocking ? true : false,
             input: @input ? @input.describe(context) : {parameters: {}},
             output: @output ? @output.describe(context) : {parameters: {}},
             meta: @meta ? @meta.merge(@meta) { |_, v| v && v.describe(context) } : nil,
@@ -390,6 +392,10 @@ module HaveAPI
 
             else
               safe_ret = ret
+          end
+
+          if self.class.blocking
+            @reply_meta[:global][:action_state_id] = state_id
           end
 
           ns = {output.namespace => safe_ret}

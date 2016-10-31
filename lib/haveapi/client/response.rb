@@ -57,6 +57,12 @@ class HaveAPI::Client::Response
     @response[:response][@action.namespace(:output).to_sym].each
   end
 
+  # Block until the action is completed or timeout occurs. If the block is given,
+  # it is regularly called with the action's state.
+  # @param interval [Numeric] how often should the action state be checked
+  # @param timeout [Integer] timeout in seconds
+  # @param desc [Hash] has to be provided if action.client is nil
+  # @yieldparam state [Hash]
   def wait_for_completion(interval: 3, timeout: nil, desc: nil)
     if action.client
       resource = action.client.action_state

@@ -118,7 +118,17 @@ module HaveAPI::Client
           end
 
           if action.blocking? && @client.blocking?
-            ret.wait_for_completion(@client.block_opts) do |state|
+            client_opts = @client.opts(:block_interval, :block_timeout)
+            wait_opts = {}
+
+            {
+                block_interval: :interval,
+                block_timeout: :timeout
+            }.each do |k, v|
+              wait_opts[v] = client_opts[k] if client_opts[k]
+            end
+            
+            ret.wait_for_completion(wait_opts) do |state|
               block.call(return_value, state) if block
             end
           end

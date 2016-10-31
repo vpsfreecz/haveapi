@@ -8,18 +8,27 @@ class HaveAPI::Client::Client
   # The client by default uses the default version of the API.
   # API is asked for description only when needed or by calling #setup.
   # +identity+ is sent in each request to the API in User-Agent header.
-  def initialize(url, v = nil, identity: 'haveapi-client', communicator: nil, block: true, block_opts: {})
+  # @param url [String] API URL
+  # @param opts [Hash]
+  # @option opts [String] version
+  # @option opts [String] identity
+  # @option opts [HaveAPI::Client::Communicator] communicator
+  # @option opts [Boolean] block
+  # @option opts [Integer] block_interval
+  # @option opts [Integer] block_timeout
+  def initialize(url, opts = {})
     @setup = false
-    @version = v
-    @block = block
-    @block_opts = block_opts
+    @opts = opts
+    @version = @opts[:version]
+    @opts[:identity] ||= 'haveapi-client'
+    @opts[:block] ||= true
 
-    if communicator
-      @api = communicator
+    if @opts[:communicator]
+      @api = @opts[:communicator]
 
     else
-      @api = HaveAPI::Client::Communicator.new(url, v)
-      @api.identity = identity
+      @api = HaveAPI::Client::Communicator.new(url, @version)
+      @api.identity = @opts[:identity]
     end
   end
 
@@ -56,27 +65,20 @@ class HaveAPI::Client::Client
     @api.compatible?
   end
 
-  # Set global action blocking mode
-  # @param mode [Boolean]
-  def block_mode=(mode)
-    @block = mode
-  end
-
   # return [Boolean] true if global blocking mode is enabled
   def blocking?
-    @block
+    @opts[:block]
   end
 
+  # Override selected client options
   # @param opts [Hash] options
-  # @option opts [Integer] interval
-  # @option opts [Integer] timeout
-  def block_opts=(opts)
-    @block_opts = opts
+  def set_opts(opts)
+    @opts.update(opts)
   end
 
-  # @return [Hash]
-  def block_opts
-    @block_opts.clone
+  # @return [Hash] client options
+  def opts(*keys)
+    keys.empty? ? @opts.clone : @opts.select { |k, _| keys.include?(k) }
   end
 
   # Initialize the client if it is not yet initialized and call the resource

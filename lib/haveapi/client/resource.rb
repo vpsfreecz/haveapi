@@ -17,7 +17,7 @@ module HaveAPI::Client
       @description = description
 
       description[:actions].each do |name, desc|
-        action = HaveAPI::Client::Action.new(@api, name, desc, [])
+        action = HaveAPI::Client::Action.new(@client, @api, name, desc, [])
         define_action(action)
         @actions[name] = action
       end

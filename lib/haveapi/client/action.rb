@@ -1,8 +1,10 @@
 module HaveAPI::Client
   class Action
+    attr_reader :client, :api, :name
     attr_accessor :resource_path
 
-    def initialize(api, name, spec, args)
+    def initialize(client, api, name, spec, args)
+      @client = client
       @api = api
       @name = name
       @spec = spec

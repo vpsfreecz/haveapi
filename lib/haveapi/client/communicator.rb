@@ -97,7 +97,7 @@ module HaveAPI::Client
       end
 
       if a
-        obj = Action.new(self, action, a, args)
+        obj = Action.new(nil, self, action, a, args)
         obj.resource_path = resources
         obj
       else

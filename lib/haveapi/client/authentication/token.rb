@@ -36,7 +36,13 @@ module HaveAPI::Client::Authentication
 
     protected
     def request_token
-      a = HaveAPI::Client::Action.new(@communicator, :request, @desc[:resources][:token][:actions][:request], [])
+      a = HaveAPI::Client::Action.new(
+          nil,
+          @communicator,
+          :request,
+          @desc[:resources][:token][:actions][:request],
+          []
+      )
       ret = a.execute({
                           login: @opts[:user],
                           password: @opts[:password],

@@ -63,6 +63,40 @@ module HaveAPI::Resources
         ret
       end
     end
+    
+    class Poll < HaveAPI::Action
+      include Mixin
+
+      desc 'Returns when the action is completed or timeout occurs'
+      http_method :get
+      route ':%{resource}_id'
+
+      input(:hash) do
+        float :timeout, label: 'Timeout', desc: 'in seconds', default: 15, fill: true
+      end
+
+      output(:hash) do
+        use :all
+      end
+
+      authorize { allow }
+
+      def exec
+        t = Time.now
+
+        loop do
+          state = @context.server.action_state.new(
+              current_user,
+              id: params[:action_state_id]
+          )
+
+          error('action state not found') unless state.valid?
+
+          return state_to_hash(state) if state.finished? || (Time.now - t) >= input[:timeout]
+          sleep(1)
+        end
+      end
+    end
 
     class Show < HaveAPI::Actions::Default::Show
       include Mixin

@@ -3,6 +3,7 @@ require 'pp'
 require 'highline/import'
 require 'yaml'
 require 'time'
+require 'ruby-progressbar'
 
 module HaveAPI::CLI
   class Cli
@@ -122,18 +123,32 @@ module HaveAPI::CLI
         if @opts[:block]
           puts
           puts "Waiting for the action to complete (hit Ctrl+C to skip)... "
+          
+          pb = ProgressBar.create(
+            title: 'Executing',
+            total: nil,
+            format: '%t: [%B]',
+            starting_at: 0,
+            autofinish: false,
+          )
         
           # TODO: always get description for the entire API?
           description = @api.describe_api(@opts[:version])
 
           res.wait_for_completion(desc: description[:resources][:action_state]) do |state|
             if state[:total] && state[:total] > 0
-              puts("  #{state[:current]}/#{state[:total]} #{state[:unit]}")
+              pb.progress = state[:current]
+              pb.total = state[:total]
+              pb.format("%t: [%B] %c/%C #{state[:unit]}")
 
             else
-              puts '  .'
+              pb.total = nil
+              pb.format("%t: [%B] #{state[:unit]}")
+              pb.increment
             end
           end
+
+          pb.finish
 
         else
           puts

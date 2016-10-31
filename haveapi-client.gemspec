@@ -27,4 +27,5 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency 'rest-client', '~> 1.8.0'
   spec.add_runtime_dependency 'json', '~> 1.8.3'
   spec.add_runtime_dependency 'highline', '~> 1.7.8'
+  spec.add_runtime_dependency 'ruby-progressbar', '~> 1.7.5'
 end

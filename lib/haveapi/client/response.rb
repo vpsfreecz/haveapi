@@ -56,4 +56,30 @@ class HaveAPI::Client::Response
 
     @response[:response][@action.namespace(:output).to_sym].each
   end
+
+  def wait_for_completion(interval: 3, timeout: nil, desc: nil)
+    if action.client
+      resource = action.client.action_state
+
+    else
+      resource = HaveAPI::Client::Resource.new(action.client, action.api, :action_state)
+      resource.setup(desc)
+    end
+
+    id = meta[:action_state_id]
+    res = nil
+    t = Time.now if timeout
+
+    loop do
+      res = resource.show(id)
+
+      yield(res.response) if block_given?
+      break if res.response[:finished]
+      return nil if timeout && (Time.now - t) >= timeout
+
+      sleep(interval)
+    end
+
+    res.response[:status]
+  end
 end

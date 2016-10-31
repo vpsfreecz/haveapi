@@ -33,6 +33,10 @@ module HaveAPI::Client
       @spec[:auth]
     end
 
+    def blocking?
+      @spec[:blocking]
+    end
+
     def aliases(include_name = false)
       if include_name
         [@name] + @spec[:aliases]

@@ -115,6 +115,24 @@ module HaveAPI::CLI
         format_errors(action, ret[:message], ret[:errors])
         exit(false)
       end
+
+      if action.blocking?
+        puts
+        puts "Waiting for the action to complete (hit Ctrl+C to skip)... "
+       
+        # TODO: always get description for the entire API?
+        description = @api.describe_api(@opts[:version])
+        res = HaveAPI::Client::Response.new(action, ret)
+
+        res.wait_for_completion(desc: description[:resources][:action_state]) do |state|
+          if state[:total] && state[:total] > 0
+            puts("  #{state[:current]}/#{state[:total]} #{state[:unit]}")
+
+          else
+            puts '  .'
+          end
+        end
+      end
     end
 
     def api_url

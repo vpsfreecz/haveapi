@@ -59,7 +59,7 @@ class HaveAPI::Client::Response
 
   # Block until the action is completed or timeout occurs. If the block is given,
   # it is regularly called with the action's state.
-  # @param interval [Numeric] how often should the action state be checked
+  # @param interval [Float] how often should the action state be checked
   # @param timeout [Integer] timeout in seconds
   # @param desc [Hash] has to be provided if action.client is nil
   # @yieldparam state [Hash]
@@ -77,13 +77,11 @@ class HaveAPI::Client::Response
     t = Time.now if timeout
 
     loop do
-      res = resource.show(id)
+      res = resource.poll(id, timeout: interval)
 
       yield(res.response) if block_given?
       break if res.response[:finished]
       return nil if timeout && (Time.now - t) >= timeout
-
-      sleep(interval)
     end
 
     res.response[:status]

@@ -8,9 +8,11 @@ class HaveAPI::Client::Client
   # The client by default uses the default version of the API.
   # API is asked for description only when needed or by calling #setup.
   # +identity+ is sent in each request to the API in User-Agent header.
-  def initialize(url, v = nil, identity: 'haveapi-client', communicator: nil)
+  def initialize(url, v = nil, identity: 'haveapi-client', communicator: nil, block: true, block_opts: {})
     @setup = false
     @version = v
+    @block = block
+    @block_opts = block_opts
 
     if communicator
       @api = communicator
@@ -52,6 +54,29 @@ class HaveAPI::Client::Client
   # @see Communicator#compatible?
   def compatible?
     @api.compatible?
+  end
+
+  # Set global action blocking mode
+  # @param mode [Boolean]
+  def block_mode=(mode)
+    @block = mode
+  end
+
+  # return [Boolean] true if global blocking mode is enabled
+  def blocking?
+    @block
+  end
+
+  # @param opts [Hash] options
+  # @option opts [Integer] interval
+  # @option opts [Integer] timeout
+  def block_opts=(opts)
+    @block_opts = opts
+  end
+
+  # @return [Hash]
+  def block_opts
+    @block_opts.clone
   end
 
   # Initialize the client if it is not yet initialized and call the resource

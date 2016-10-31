@@ -74,7 +74,7 @@ module HaveAPI::Client
       action.aliases(true).each do |name|
         next unless define_method?(action, name)
 
-        define_singleton_method(name) do |*args|
+        define_singleton_method(name) do |*args, &block|
           all_args = @prepared_args + args
 
           if action.unresolved_args?
@@ -103,7 +103,7 @@ module HaveAPI::Client
 
           raise ActionFailed.new(ret) unless ret.ok?
 
-          case action.output_layout
+          return_value = case action.output_layout
             when :object
               ResourceInstance.new(@client, @api, self, action: action, response: ret)
 
@@ -116,6 +116,14 @@ module HaveAPI::Client
             else
               ret
           end
+
+          if action.blocking? && @client.blocking?
+            ret.wait_for_completion(@client.block_opts) do |state|
+              block.call(return_value, state) if block
+            end
+          end
+
+          return_value
         end
       end
     end

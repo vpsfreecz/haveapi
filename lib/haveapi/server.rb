@@ -358,7 +358,11 @@ module HaveAPI
 
     def mount_action(v, route)
       @sinatra.method(route.http_method).call(route.url) do
-        authenticate!(v) if route.action.auth
+        if route.action.auth
+          authenticate!(v)
+        else
+          authenticated?(v)
+        end
 
         request.body.rewind
 
@@ -406,7 +410,11 @@ module HaveAPI
 
         pass if params[:method] && params[:method] != route_method
 
-        authenticate!(v) if route.action.auth
+        if route.action.auth
+          authenticate!(v)
+        else
+          authenticated?(v)
+        end
 
         begin
           desc = route.action.describe(Context.new(

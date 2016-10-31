@@ -1,8 +1,6 @@
 module HaveAPI::Resources
   class ActionState < HaveAPI::Resource
-    # FIXME: shoudnlt require authentication
-    auth true
-    # auth false
+    auth false
     version :all
 
     params(:all) do

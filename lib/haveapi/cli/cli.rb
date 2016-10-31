@@ -117,20 +117,27 @@ module HaveAPI::CLI
       end
 
       if action.blocking?
-        puts
-        puts "Waiting for the action to complete (hit Ctrl+C to skip)... "
-       
-        # TODO: always get description for the entire API?
-        description = @api.describe_api(@opts[:version])
         res = HaveAPI::Client::Response.new(action, ret)
 
-        res.wait_for_completion(desc: description[:resources][:action_state]) do |state|
-          if state[:total] && state[:total] > 0
-            puts("  #{state[:current]}/#{state[:total]} #{state[:unit]}")
+        if @opts[:block]
+          puts
+          puts "Waiting for the action to complete (hit Ctrl+C to skip)... "
+        
+          # TODO: always get description for the entire API?
+          description = @api.describe_api(@opts[:version])
 
-          else
-            puts '  .'
+          res.wait_for_completion(desc: description[:resources][:action_state]) do |state|
+            if state[:total] && state[:total] > 0
+              puts("  #{state[:current]}/#{state[:total]} #{state[:unit]}")
+
+            else
+              puts '  .'
+            end
           end
+
+        else
+          puts
+          puts "Run '#{$0} action_state show #{res.meta[:action_state_id]}' to check the action's progress."
         end
       end
     end
@@ -142,6 +149,7 @@ module HaveAPI::CLI
     def options
       options = {
           client: default_url,
+          block: true,
           verbose: false,
       }
 
@@ -224,6 +232,10 @@ module HaveAPI::CLI
 
         opts.on('--date-format FORMAT', 'Display Datetime in custom format') do |f|
           options[:date_format] = f
+        end
+
+        opts.on('--[no-]block', 'Toggle action blocking mode') do |v|
+          options[:block] = v
         end
 
         opts.on('-v', '--[no-]verbose', 'Run verbosely') do |v|

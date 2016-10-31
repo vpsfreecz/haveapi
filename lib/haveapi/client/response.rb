@@ -73,6 +73,8 @@ class HaveAPI::Client::Response
     end
 
     id = meta[:action_state_id]
+    return nil unless id
+
     res = nil
     t = Time.now if timeout
 

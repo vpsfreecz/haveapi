@@ -18,23 +18,31 @@ module HaveAPI::CLI
     
       description = action.api.describe_api(version) unless action.client
 
-      ret = action.wait_for_completion(
-          id,
-          desc: description && description[:resources][:action_state],
-          timeout: timeout,
-      ) do |state|
-        pb.title = state[:status] ? 'Executing' : 'Failing'
+      begin
+        ret = action.wait_for_completion(
+            id,
+            desc: description && description[:resources][:action_state],
+            timeout: timeout,
+        ) do |state|
+          pb.title = state[:status] ? 'Executing' : 'Failing'
 
-        if state[:total] && state[:total] > 0
-          pb.progress = state[:current]
-          pb.total = state[:total]
-          pb.format("%t: [%B] %c/%C #{state[:unit]}")
+          if state[:total] && state[:total] > 0
+            pb.progress = state[:current]
+            pb.total = state[:total]
+            pb.format("%t: [%B] %c/%C #{state[:unit]}")
 
-        else
-          pb.total = nil
-          pb.format("%t: [%B] #{state[:unit]}")
-          pb.increment
+          else
+            pb.total = nil
+            pb.format("%t: [%B] #{state[:unit]}")
+            pb.increment
+          end
         end
+
+      rescue Interrupt
+        pb.stop
+        puts
+        action_state_help(id)
+        exit(false)
       end
 
       if ret
@@ -44,6 +52,14 @@ module HaveAPI::CLI
       end
 
       ret
+    end
+
+    def action_state_help(id)
+      puts "Run"
+      puts "  #{$0} action_state show #{id}"
+      puts "or"
+      puts "  #{$0} action_state wait #{id}"
+      puts "to check the action's progress."
     end
   end
 end

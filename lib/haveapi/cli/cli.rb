@@ -128,11 +128,7 @@ module HaveAPI::CLI
 
           else
             puts
-            puts "Run"
-            puts "  #{$0} action_state show #{res.meta[:action_state_id]}"
-            puts "or"
-            puts "  #{$0} action_state wait #{res.meta[:action_state_id]}"
-            puts "to check the action's progress."
+            action_state_help(res.meta[:action_state_id])
           end
         end
       end

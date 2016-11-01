@@ -40,6 +40,8 @@ end
             <dd><%= info[:auth] ? 'yes' : 'no' %></dd>
             <dt>Aliases:</dt>
             <dd><%= info[:aliases].join(', ') %></dd>
+            <dt>Blocking:</dt>
+            <dd><%= info[:blocking] ? 'yes' : 'no' %></dd>
           </dl>
 
           <h4>Input parameters</h4>

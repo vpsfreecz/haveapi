@@ -11,6 +11,7 @@ module HaveAPI::Resources
       integer :current
       integer :total
       string :unit
+      bool :can_cancel
     end
 
     module Mixin
@@ -19,6 +20,7 @@ module HaveAPI::Resources
             id: state.id,
             label: state.label,
             status: state.status,
+            can_cancel: state.can_cancel?,
         }
 
         if state.finished?

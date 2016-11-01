@@ -58,6 +58,11 @@ module HaveAPI
       raise NotImplementedError
     end
 
+    # @return [Boolean] true if the action can be cancelled
+    def can_cancel?
+      false
+    end
+
     # Stop action execution
     # @raise [RuntimeError] if the cancellation failed
     # @raise [NotImplementedError] if the cancellation is not supported

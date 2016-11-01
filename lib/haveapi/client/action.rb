@@ -146,7 +146,10 @@ module HaveAPI::Client
         resource.setup(desc)
       end
 
-      res = nil
+      res = resource.show(id)
+      yield(res.response) if block_given?
+      return res.response[:status] if res.response[:finished]
+
       t = Time.now if timeout
 
       loop do

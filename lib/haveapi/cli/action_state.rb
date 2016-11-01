@@ -57,39 +57,13 @@ module HaveAPI::CLI
         puts
 
         if !cancel && last_status
-          STDOUT.write("Do you wish to cancel the action? [y/N]: ")
-          STDOUT.flush
-
-          if STDIN.readline.strip.downcase == 'y'
-            begin
-              action.reset
-              res = action.cancel(
-                  id,
-                  desc: description && description[:resources][:action_state]
-              )
-
-            rescue HaveAPI::Client::ActionFailed => e
-              res = e.response
-            end
-        
-            if res.is_a?(HaveAPI::Client::Response) && res.ok?
-              puts "Cancelled"
-              exit
-
-            elsif res
-              wait_for_completion(
-                  version,
-                  action,
-                  res,
-                  timeout: timeout,
-                  cancel: true,
-              )
-              exit
-            end
-
-            warn "Cancel failed: #{res.message}"
-            exit(false)
-          end
+          cancel_action(
+              version,
+              action,
+              id,
+              description: description,
+              timeout: timeout,
+          )
         end
 
         puts
@@ -104,6 +78,44 @@ module HaveAPI::CLI
       end
 
       ret
+    end
+
+    def cancel_action(version, action, id, description: nil, timeout: nil)
+      STDOUT.write("Do you wish to cancel the action? [y/N]: ")
+      STDOUT.flush
+
+      if STDIN.readline.strip.downcase == 'y'
+        begin
+          # Reset action's prepared URL
+          action.reset
+
+          res = action.cancel(
+              id,
+              desc: description && description[:resources][:action_state]
+          )
+
+        rescue HaveAPI::Client::ActionFailed => e
+          res = e.response
+        end
+    
+        if res.is_a?(HaveAPI::Client::Response) && res.ok?
+          puts "Cancelled"
+          exit
+
+        elsif res
+          wait_for_completion(
+              version,
+              action,
+              res,
+              timeout: timeout,
+              cancel: true,
+          )
+          exit
+        end
+
+        warn "Cancel failed: #{res.message}"
+        exit(false)
+      end
     end
 
     def action_state_help(id)

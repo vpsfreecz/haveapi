@@ -3,7 +3,6 @@ require 'pp'
 require 'highline/import'
 require 'yaml'
 require 'time'
-require 'ruby-progressbar'
 
 module HaveAPI::CLI
   class Cli
@@ -24,6 +23,8 @@ module HaveAPI::CLI
         @commands << cmd
       end
     end
+
+    include ActionState
 
     def initialize
       @config = read_config || {}
@@ -120,41 +121,19 @@ module HaveAPI::CLI
       if action.blocking?
         res = HaveAPI::Client::Response.new(action, ret)
 
-        if @opts[:block]
-          puts
-          puts "Waiting for the action to complete (hit Ctrl+C to skip)... "
-          
-          pb = ProgressBar.create(
-            title: 'Executing',
-            total: nil,
-            format: '%t: [%B]',
-            starting_at: 0,
-            autofinish: false,
-          )
-        
-          # TODO: always get description for the entire API?
-          description = @api.describe_api(@opts[:version])
+        if res.meta[:action_state_id]
+          if @opts[:block]
+            puts
+            wait_for_completion(@opts[:version], action, res.meta[:action_state_id])
 
-          res.wait_for_completion(desc: description[:resources][:action_state]) do |state|
-            pb.title = state[:status] ? 'Executing' : 'Failing'
-
-            if state[:total] && state[:total] > 0
-              pb.progress = state[:current]
-              pb.total = state[:total]
-              pb.format("%t: [%B] %c/%C #{state[:unit]}")
-
-            else
-              pb.total = nil
-              pb.format("%t: [%B] #{state[:unit]}")
-              pb.increment
-            end
+          else
+            puts
+            puts "Run"
+            puts "  #{$0} action_state show #{res.meta[:action_state_id]}"
+            puts "or"
+            puts "  #{$0} action_state wait #{res.meta[:action_state_id]}"
+            puts "to check the action's progress."
           end
-
-          pb.finish
-
-        else
-          puts
-          puts "Run '#{$0} action_state show #{res.meta[:action_state_id]}' to check the action's progress."
         end
       end
     end

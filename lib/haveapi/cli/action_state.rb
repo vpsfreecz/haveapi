@@ -14,13 +14,7 @@ module HaveAPI::CLI
         puts "Waiting for the action to complete (hit Ctrl+C to skip)..."
       end
       
-      pb = ProgressBar.create(
-          title: cancel ? 'Cancelling' : 'Executing',
-          total: nil,
-          format: '%t: [%B]',
-          starting_at: 0,
-          autofinish: false,
-      )
+      pb = nil
       last_status = false
     
       description = action.api.describe_api(version) unless action.client
@@ -31,6 +25,14 @@ module HaveAPI::CLI
             desc: description && description[:resources][:action_state],
             timeout: timeout,
         ) do |state|
+          pb ||= ProgressBar.create(
+              title: cancel ? 'Cancelling' : 'Executing',
+              total: state[:total],
+              format: (state[:total] && state[:total] > 0) ? "%t: [%B] %c/%C #{state[:unit]}"
+                                                           : '%t: [%B]',
+              starting_at: state[:current],
+              autofinish: false,
+          )
           last_status = state[:status]
 
           if state[:status]
@@ -53,7 +55,7 @@ module HaveAPI::CLI
         end
 
       rescue Interrupt
-        pb.stop
+        pb && pb.stop
         puts
 
         if !cancel && last_status
@@ -72,9 +74,9 @@ module HaveAPI::CLI
       end
 
       if ret
-        pb.finish
+        pb && pb.finish
       else
-        pb.stop
+        pb && pb.stop
       end
 
       ret

@@ -156,6 +156,18 @@ module HaveAPI::Client
       res.response[:status]
     end
 
+    def cancel(id, desc: nil)
+      if @client
+        resource = @client.action_state
+
+      else
+        resource = HaveAPI::Client::Resource.new(@client, @api, :action_state)
+        resource.setup(desc)
+      end
+      
+      resource.cancel(id)
+    end
+
     private
     def apply_args(args)
       @prepared_url ||= @spec[:url].dup

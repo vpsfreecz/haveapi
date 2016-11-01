@@ -87,6 +87,17 @@ module HaveAPI
         model_adapter(input.layout).used_by(:input, self)
         model_adapter(output.layout).used_by(:output, self)
 
+        if blocking
+          meta(:global) do
+            output do
+              integer :action_state_id,
+                  label: 'Action state ID',
+                  desc: 'ID of ActionState object for state querying. When null, the action '+
+                        'is not blocking for the current invocation.'
+            end
+          end
+        end
+
         if @meta
           @meta.each_value do |m|
             next unless m

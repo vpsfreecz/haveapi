@@ -11,6 +11,10 @@ module HaveAPI::CLI
 
       def run
         c = new
+
+      rescue Interrupt
+        warn "Interrupted"
+        exit(false)
       end
 
       def register_auth_method(name, klass)

@@ -571,8 +571,6 @@ module HaveAPI::CLI
     end
 
     def authenticate(action = nil)
-      return false if !action.nil? && !action.auth?
-
       if @auth
         @auth.communicator = @api
         @auth.validate

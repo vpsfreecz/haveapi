@@ -136,6 +136,8 @@ module HaveAPI::CLI
           description = @api.describe_api(@opts[:version])
 
           res.wait_for_completion(desc: description[:resources][:action_state]) do |state|
+            pb.title = state[:status] ? 'Executing' : 'Failing'
+
             if state[:total] && state[:total] > 0
               pb.progress = state[:current]
               pb.total = state[:total]

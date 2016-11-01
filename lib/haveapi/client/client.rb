@@ -21,7 +21,7 @@ class HaveAPI::Client::Client
     @opts = opts
     @version = @opts[:version]
     @opts[:identity] ||= 'haveapi-client'
-    @opts[:block] ||= true
+    @opts[:block] = true if @opts[:block].nil?
 
     if @opts[:communicator]
       @api = @opts[:communicator]

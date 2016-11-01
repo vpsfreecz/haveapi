@@ -124,7 +124,17 @@ module HaveAPI::CLI
         if res.meta[:action_state_id]
           if @opts[:block]
             puts
-            wait_for_completion(@opts[:version], action, res.meta[:action_state_id])
+            action_ret = wait_for_completion(
+                @opts[:version],
+                action,
+                res.meta[:action_state_id],
+                timeout: @opts[:timeout]
+            )
+
+            if action_ret.nil?
+              warn "Timeout"
+              exit(false)
+            end
 
           else
             puts
@@ -228,6 +238,14 @@ module HaveAPI::CLI
 
         opts.on('--[no-]block', 'Toggle action blocking mode') do |v|
           options[:block] = v
+        end
+        
+        opts.on(
+            '--timeout SEC',
+            Float,
+            'Fail when the action does not finish within the timeout'
+        ) do |v|
+          options[:timeout] = v.to_f
         end
 
         opts.on('-v', '--[no-]verbose', 'Run verbosely') do |v|

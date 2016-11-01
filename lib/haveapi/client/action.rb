@@ -126,6 +126,35 @@ module HaveAPI::Client
     def update_description(spec)
       @spec = spec
     end
+  
+    # Block until the action is completed or timeout occurs. If the block is given,
+    # it is regularly called with the action's state.
+    # @param interval [Float] how often should the action state be checked
+    # @param timeout [Integer] timeout in seconds
+    # @param desc [Hash] has to be provided if action.client is nil
+    # @yieldparam state [Hash]
+    def wait_for_completion(id, interval: 3, timeout: nil, desc: nil)
+      if @client
+        resource = @client.action_state
+
+      else
+        resource = HaveAPI::Client::Resource.new(@client, @api, :action_state)
+        resource.setup(desc)
+      end
+
+      res = nil
+      t = Time.now if timeout
+
+      loop do
+        res = resource.poll(id, timeout: interval)
+
+        yield(res.response) if block_given?
+        break if res.response[:finished]
+        return nil if timeout && (Time.now - t) >= timeout
+      end
+
+      res.response[:status]
+    end
 
     private
     def apply_args(args)

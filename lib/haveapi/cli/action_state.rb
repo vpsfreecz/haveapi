@@ -5,11 +5,17 @@ module HaveAPI::CLI
     # @param version [String]
     # @param action [HaveAPI::Client::Action]
     # @param id [Integer]
-    def wait_for_completion(version, action, id, timeout: nil)
-      puts "Waiting for the action to complete (hit Ctrl+C to skip)..."
+    # @param timeout [Float]
+    # @param cancel [Boolean] determines whether we're waiting for a cancel to finish
+    def wait_for_completion(version, action, id, timeout: nil, cancel: false)
+      if cancel
+        puts "Waiting for the action to cancel (hit Ctrl+C to skip)..."
+      else
+        puts "Waiting for the action to complete (hit Ctrl+C to skip)..."
+      end
       
       pb = ProgressBar.create(
-          title: 'Executing',
+          title: cancel ? 'Cancelling' : 'Executing',
           total: nil,
           format: '%t: [%B]',
           starting_at: 0,
@@ -26,7 +32,13 @@ module HaveAPI::CLI
             timeout: timeout,
         ) do |state|
           last_status = state[:status]
-          pb.title = state[:status] ? 'Executing' : 'Failing'
+
+          if state[:status]
+            pb.title = cancel ? 'Cancelling' : 'Executing'
+
+          else
+            pb.title = 'Failing'
+          end
 
           if state[:total] && state[:total] > 0
             pb.progress = state[:current]
@@ -44,12 +56,13 @@ module HaveAPI::CLI
         pb.stop
         puts
 
-        if last_status
+        if !cancel && last_status
           STDOUT.write("Do you wish to cancel the action? [y/N]: ")
           STDOUT.flush
 
           if STDIN.readline.strip.downcase == 'y'
             begin
+              action.reset
               res = action.cancel(
                   id,
                   desc: description && description[:resources][:action_state]
@@ -57,16 +70,25 @@ module HaveAPI::CLI
 
             rescue HaveAPI::Client::ActionFailed => e
               res = e.response
-
-            ensure
-              if res.ok?
-                puts "Cancelled"
-                exit
-              end
-
-              warn "Cancel failed: #{res.message}"
-              exit(false)
             end
+        
+            if res.is_a?(HaveAPI::Client::Response) && res.ok?
+              puts "Cancelled"
+              exit
+
+            elsif res
+              wait_for_completion(
+                  version,
+                  action,
+                  res,
+                  timeout: timeout,
+                  cancel: true,
+              )
+              exit
+            end
+
+            warn "Cancel failed: #{res.message}"
+            exit(false)
           end
         end
 

@@ -20,8 +20,7 @@ module HaveAPI::Client
       end
 
       ret = @api.call(self, params.to_api)
-      @prepared_url = nil
-      @prepared_help = nil
+      reset
       ret
     end
 
@@ -123,6 +122,11 @@ module HaveAPI::Client
       @prepared_help = help
     end
 
+    def reset
+      @prepared_url = nil
+      @prepared_help = nil
+    end
+
     def update_description(spec)
       @spec = spec
     end
@@ -164,8 +168,15 @@ module HaveAPI::Client
         resource = HaveAPI::Client::Resource.new(@client, @api, :action_state)
         resource.setup(desc)
       end
-      
-      resource.cancel(id)
+     
+      res = resource.cancel(id)
+
+      if res.ok? && res.action.blocking? && res.meta[:action_state_id]
+        res.meta[:action_state_id]
+
+      else
+        res
+      end
     end
 
     private

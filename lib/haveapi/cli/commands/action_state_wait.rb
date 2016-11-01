@@ -12,6 +12,8 @@ module HaveAPI::CLI::Commands
         exit(false)
       end
 
+      @api.set_opts(block: false)
+
       ret = wait_for_completion(
           @global_opts[:version],
           @api.action_state.actions[:poll],

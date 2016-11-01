@@ -137,16 +137,28 @@ module HaveAPI::Client
     # @param timeout [Integer] timeout in seconds
     # @param desc [Hash] has to be provided if action.client is nil
     # @yieldparam state [Hash]
-    def self.wait_for_completion(client, id, interval: 3, timeout: nil, desc: nil)
+    def self.wait_for_completion(client, id, interval: 15, update_in: 3, timeout: nil, desc: nil)
       res = client.action_state.show(id)
 
       yield(res.response) if block_given?
       return res.response[:status] if res.response[:finished]
 
+      last = {}
       t = Time.now if timeout
 
       loop do
-        res = client.action_state.poll(id, timeout: interval)
+        res = client.action_state.poll(
+            id,
+            timeout: interval,
+            update_in: update_in,
+            status: last[:status],
+            current: last[:current],
+            total: last[:total],
+        )
+
+        last[:status] = res.response[:status]
+        last[:current] = res.response[:current]
+        last[:total] = res.response[:total]
 
         yield(res.response) if block_given?
         break if res.response[:finished]

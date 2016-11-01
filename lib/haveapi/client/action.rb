@@ -135,9 +135,8 @@ module HaveAPI::Client
     # it is regularly called with the action's state.
     # @param interval [Float] how often should the action state be checked
     # @param timeout [Integer] timeout in seconds
-    # @param desc [Hash] has to be provided if action.client is nil
     # @yieldparam state [Hash]
-    def self.wait_for_completion(client, id, interval: 15, update_in: 3, timeout: nil, desc: nil)
+    def self.wait_for_completion(client, id, interval: 15, update_in: 3, timeout: nil)
       res = client.action_state.show(id)
 
       yield(res.response) if block_given?

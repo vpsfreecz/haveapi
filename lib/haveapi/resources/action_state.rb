@@ -128,10 +128,14 @@ module HaveAPI::Resources
       authorize { allow }
 
       def exec
-        @context.server.action_state.cancel(
+        state = @context.server.action_state.new(
             current_user,
-            params[:action_state_id]
+            id: params[:action_state_id]
         )
+
+        error('action state not found') unless state.valid?
+
+        state.cancel
 
       rescue NotImplementedError => e
         error(e.message)

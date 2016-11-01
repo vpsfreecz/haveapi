@@ -59,6 +59,11 @@ module HaveAPI
     end
 
     # Stop action execution
+    # @raise [RuntimeError] if the cancellation failed
+    # @raise [NotImplementedError] if the cancellation is not supported
+    # @return [Integer] if the cancellation succeded and is a blocking action
+    # @return [truthy] if the cancellation succeeded
+    # @return [falsy] if the cancellation failed
     def cancel
       raise NotImplementedError, 'action cancellation is not implemented by this API'
     end

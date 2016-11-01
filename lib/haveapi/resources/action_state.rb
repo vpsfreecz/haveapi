@@ -123,8 +123,11 @@ module HaveAPI::Resources
 
     class Cancel < HaveAPI::Action
       http_method :post
-      route ':%{resource}_id'
+      route ':%{resource}_id/cancel'
+      blocking true
       
+      output(:hash) {}
+
       authorize { allow }
 
       def exec
@@ -135,10 +138,24 @@ module HaveAPI::Resources
 
         error('action state not found') unless state.valid?
 
-        state.cancel
+        ret = state.cancel
 
-      rescue NotImplementedError => e
+        if ret.is_a?(::Numeric)
+          @state_id = ret
+
+        elsif ret
+          ok
+
+        else
+          error('cancellation failed')
+        end
+
+      rescue RuntimeError, NotImplementedError => e
         error(e.message)
+      end
+
+      def state_id
+        @state_id
       end
     end
   end

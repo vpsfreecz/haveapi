@@ -1,100 +1,79 @@
 require 'ruby-progressbar'
 
 module HaveAPI::CLI
-  module ActionState
-    # @param version [String]
+  # This class can watch action's state and show it's progress with a progress bar.
+  #
+  # When interrupted, the user is asked whether he wishes to cancel the action,
+  # then it shows the progress of cancellation.
+  #
+  # Methods from this class may invoke `exit()` whenever appropriate.
+  class ActionState
+    # @param opts [Hash]
     # @param action [HaveAPI::Client::Action]
     # @param id [Integer]
+    def initialize(opts, client, id)
+      @opts = opts
+      @client = client
+      @id = id
+    end
+
+    # Block until the action is finished or timeout is reached. Progress is shown with
+    # a progress bar. Offers cancellation on interrupt.
+    #
     # @param timeout [Float]
     # @param cancel [Boolean] determines whether we're waiting for a cancel to finish
-    def wait_for_completion(version, action, id, timeout: nil, cancel: false)
+    def wait_for_completion(id: nil, timeout: nil, cancel: false)
+      id ||= @id
+
       if cancel
         puts "Waiting for the action to cancel (hit Ctrl+C to skip)..."
       else
         puts "Waiting for the action to complete (hit Ctrl+C to skip)..."
       end
       
-      pb = nil
       last_status = false
     
-      description = action.api.describe_api(version) unless action.client
-
       begin
-        ret = action.wait_for_completion(
+        ret = HaveAPI::Client::Action.wait_for_completion(
+            @client,
             id,
-            desc: description && description[:resources][:action_state],
             timeout: timeout,
         ) do |state|
-          pb ||= ProgressBar.create(
-              title: cancel ? 'Cancelling' : 'Executing',
-              total: state[:total],
-              format: (state[:total] && state[:total] > 0) ? "%t: [%B] %c/%C #{state[:unit]}"
-                                                           : '%t: [%B]',
-              starting_at: state[:current],
-              autofinish: false,
-          )
           last_status = state[:status]
-
-          if state[:status]
-            pb.title = cancel ? 'Cancelling' : 'Executing'
-
-          else
-            pb.title = 'Failing'
-          end
-
-          if state[:total] && state[:total] > 0
-            pb.progress = state[:current]
-            pb.total = state[:total]
-            pb.format("%t: [%B] %c/%C #{state[:unit]}")
-
-          else
-            pb.total = nil
-            pb.format("%t: [%B] #{state[:unit]}")
-            pb.increment
-          end
+          
+          update_progress(state, cancel)
         end
 
       rescue Interrupt
-        pb && pb.stop
+        @pb && @pb.stop
         puts
 
-        if !cancel && last_status
-          cancel_action(
-              version,
-              action,
-              id,
-              description: description,
-              timeout: timeout,
-          )
-        end
+        cancel_action(timeout: timeout) if !cancel && last_status
 
         puts
-        action_state_help(id)
+        print_help(id)
         exit(false)
       end
 
       if ret
-        pb && pb.finish
+        @pb && @pb.finish
       else
-        pb && pb.stop
+        @pb && @pb.stop
       end
 
       ret
     end
 
-    def cancel_action(version, action, id, description: nil, timeout: nil)
+    # Ask the user if he wishes to cancel the action. If so, execute cancel
+    # and call self.wait_for_completion on the cancellation, if it is blocking
+    # operation.
+    def cancel_action(timeout: nil)
       STDOUT.write("Do you wish to cancel the action? [y/N]: ")
       STDOUT.flush
 
       if STDIN.readline.strip.downcase == 'y'
         begin
-          # Reset action's prepared URL
-          action.reset
-
-          res = action.cancel(
-              id,
-              desc: description && description[:resources][:action_state]
-          )
+          res = HaveAPI::Client::Action.cancel(@client, @id)
 
         rescue HaveAPI::Client::ActionFailed => e
           res = e.response
@@ -105,10 +84,10 @@ module HaveAPI::CLI
           exit
 
         elsif res
+          @pb.resume
+
           wait_for_completion(
-              version,
-              action,
-              res,
+              id: res,
               timeout: timeout,
               cancel: true,
           )
@@ -120,12 +99,44 @@ module HaveAPI::CLI
       end
     end
 
-    def action_state_help(id)
+    def print_help(id = nil)
+      id ||= @id
+
       puts "Run"
       puts "  #{$0} action_state show #{id}"
       puts "or"
       puts "  #{$0} action_state wait #{id}"
       puts "to check the action's progress."
+    end
+
+    protected
+    def update_progress(state, cancel)
+      @pb ||= ProgressBar.create(
+          title: cancel ? 'Cancelling' : 'Executing',
+          total: state[:total],
+          format: (state[:total] && state[:total] > 0) ? "%t: [%B] %c/%C #{state[:unit]}"
+                                                       : '%t: [%B]',
+          starting_at: state[:current],
+          autofinish: false,
+      )
+
+      if state[:status]
+        @pb.title = cancel ? 'Cancelling' : 'Executing'
+
+      else
+        @pb.title = 'Failing'
+      end
+
+      if state[:total] && state[:total] > 0
+        @pb.progress = state[:current]
+        @pb.total = state[:total]
+        @pb.format("%t: [%B] %c/%C #{state[:unit]}")
+
+      else
+        @pb.total = nil
+        @pb.format("%t: [%B] #{state[:unit]}")
+        @pb.increment
+      end
     end
   end
 end

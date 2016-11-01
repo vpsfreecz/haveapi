@@ -65,6 +65,6 @@ class HaveAPI::Client::Response
     id = meta[:action_state_id]
     return nil unless id
 
-    action.wait_for_completion(id, *args, &block)
+    HaveAPI::Client::Action.wait_for_completion(@action.client, id, *args, &block)
   end
 end

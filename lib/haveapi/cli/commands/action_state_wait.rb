@@ -4,8 +4,6 @@ module HaveAPI::CLI::Commands
     args '<STATE ID>'
     desc 'Block until the action is finished'
 
-    include HaveAPI::CLI::ActionState
-
     def exec(args)
       if args.size < 1
         warn "Provide argument STATE ID"
@@ -14,12 +12,12 @@ module HaveAPI::CLI::Commands
 
       @api.set_opts(block: false)
 
-      ret = wait_for_completion(
-          @global_opts[:version],
-          @api.action_state.actions[:poll],
-          args.first.to_i,
-          timeout: @global_opts[:timeout],
+      state = HaveAPI::CLI::ActionState.new(
+          @global_opts,
+          @api,
+          args.first.to_i
       )
+      ret = state.wait_for_completion(timeout: @global_opts[:timeout])
 
       if ret.nil?
         warn "Timeout"

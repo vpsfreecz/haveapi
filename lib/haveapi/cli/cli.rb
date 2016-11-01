@@ -24,8 +24,6 @@ module HaveAPI::CLI
       end
     end
 
-    include ActionState
-
     def initialize
       @config = read_config || {}
       args, @opts = options
@@ -122,14 +120,15 @@ module HaveAPI::CLI
         res = HaveAPI::Client::Response.new(action, ret)
 
         if res.meta[:action_state_id]
+          state = ActionState.new(
+              @opts,
+              HaveAPI::Client::Client.new(@api.url, communicator: @api, block: false),
+              res.meta[:action_state_id]
+          )
+
           if @opts[:block]
             puts
-            action_ret = wait_for_completion(
-                @opts[:version],
-                action,
-                res.meta[:action_state_id],
-                timeout: @opts[:timeout]
-            )
+            action_ret = state.wait_for_completion(timeout: @opts[:timeout])
 
             if action_ret.nil?
               warn "Timeout"
@@ -138,7 +137,7 @@ module HaveAPI::CLI
 
           else
             puts
-            action_state_help(res.meta[:action_state_id])
+            state.print_help
           end
         end
       end

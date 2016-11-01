@@ -137,23 +137,16 @@ module HaveAPI::Client
     # @param timeout [Integer] timeout in seconds
     # @param desc [Hash] has to be provided if action.client is nil
     # @yieldparam state [Hash]
-    def wait_for_completion(id, interval: 3, timeout: nil, desc: nil)
-      if @client
-        resource = @client.action_state
+    def self.wait_for_completion(client, id, interval: 3, timeout: nil, desc: nil)
+      res = client.action_state.show(id)
 
-      else
-        resource = HaveAPI::Client::Resource.new(@client, @api, :action_state)
-        resource.setup(desc)
-      end
-
-      res = resource.show(id)
       yield(res.response) if block_given?
       return res.response[:status] if res.response[:finished]
 
       t = Time.now if timeout
 
       loop do
-        res = resource.poll(id, timeout: interval)
+        res = client.action_state.poll(id, timeout: interval)
 
         yield(res.response) if block_given?
         break if res.response[:finished]
@@ -161,18 +154,16 @@ module HaveAPI::Client
       end
 
       res.response[:status]
+
+    rescue Interrupt => e
+      %i(show poll).each do |action|
+        client.action_state.actions[action].reset
+      end
+      raise e
     end
 
-    def cancel(id, desc: nil)
-      if @client
-        resource = @client.action_state
-
-      else
-        resource = HaveAPI::Client::Resource.new(@client, @api, :action_state)
-        resource.setup(desc)
-      end
-     
-      res = resource.cancel(id)
+    def self.cancel(client, id)
+      res = client.action_state.cancel(id)
 
       if res.ok? && res.action.blocking? && res.meta[:action_state_id]
         res.meta[:action_state_id]

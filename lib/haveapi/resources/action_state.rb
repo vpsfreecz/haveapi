@@ -73,6 +73,12 @@ module HaveAPI::Resources
 
       input(:hash) do
         float :timeout, label: 'Timeout', desc: 'in seconds', default: 15, fill: true
+        float :update_in, label: 'Progress',
+            desc: 'number of seconds after which the state is returned if the progress '+
+                  'has changed'
+        bool :status, desc: 'status to check with if update_in is set'
+        integer :current, desc: 'progress to check with if update_in is set'
+        integer :total, desc: 'progress to check with if update_in is set'
       end
 
       output(:hash) do
@@ -92,7 +98,17 @@ module HaveAPI::Resources
 
           error('action state not found') unless state.valid?
 
-          return state_to_hash(state) if state.finished? || (Time.now - t) >= input[:timeout]
+          if state.finished? || (Time.now - t) >= input[:timeout]
+            return state_to_hash(state)
+
+          elsif input[:update_in]
+            new_state = state_to_hash(state)
+
+            %i(status current total).each do |v|
+              return new_state if input[v] != new_state[v]
+            end
+          end
+
           sleep(1)
         end
       end

@@ -75,6 +75,18 @@ module HaveAPI
         markdown :"../../../doc/#{file}"
       end
 
+      def base_url
+        "#{request.env['rack.url_scheme']}://#{request.env['HTTP_HOST']}"
+      end
+
+      def host
+        request.env['HTTP_HOST'].split(':').first
+      end
+
+      def api_version
+        @v
+      end
+
       def version
         HaveAPI::VERSION
       end
@@ -214,7 +226,7 @@ module HaveAPI
           GitHub::Markdown.render(File.new(settings.views + '/../../../README.md').read)
         end
       end
-      
+
       @sinatra.get "#{@root}doc/json-schema" do
         content_type 'text/html'
         erb :doc_layout, layout: :main_layout do
@@ -277,6 +289,7 @@ module HaveAPI
             user: current_user,
             params: params
         ))
+
         content_type 'text/html'
         erb :doc_layout, layout: :main_layout do
           @content = erb :version_page

@@ -41,10 +41,16 @@ end
       <% render_resource_body(resource.to_s, desc, 'auth') %>
     <% end %>
   <% end %>
+
+  <% HaveAPI::ClientExample.clients.each do |client| %>
+    <% render_client_auth(client, name) %>
+  <% end %>
 <% end %>
 
-<% def render_resource_body(resource, info, prefix='root', name=nil) %>
+<% def render_resource_body(resource, info, path = [], prefix='root', name=nil) %>
   <% name ||= resource.humanize %>
+  <% resource_path = path.clone << resource %>
+  <% resource_info = info %>
   <h2 class="resource" id="<%= "#{prefix}-#{resource}" %>"><%= resource.humanize %></h2>
   <div class="resource-body">
     <p><%= info[:description] %></p>
@@ -141,15 +147,47 @@ end
 
           <% unless info[:examples].empty? %>
             <h4>Examples</h4>
-            <% info[:examples].each do |example| %>
-                <h5><%= example[:label] %></h5>
+            <% info[:examples].each_with_index do |example, i| %>
+                <h5><%= example[:title].empty? ? "Example ##{i}" : example[:title] %></h5>
                 <p><%= example[:comment] %></p>
 
-                <h6>Request</h6>
-                <pre><code><%= JSON.pretty_generate(example[:request]) %></code></pre>
+                <% baseid = "example-#{resource_path.join('.')}-#{action}-#{i}" %>
+                <%# placeholder for tabs %>
+                <div id="<%= "#{baseid}-tabbar" %>"></div>
 
-                <h6>Response</h6>
-                <pre><code><%= JSON.pretty_generate(example[:response]) %></code></pre>
+                <div id="<%= "#{baseid}-examples" %>">
+                  <% HaveAPI::ClientExample.clients.each_with_index do |client, j| %>
+                    <div id="<%= "#{baseid}-#{j}" %>">
+                      <%
+                        render_client_example(
+                          client,
+                          resource_path,
+                          resource_info,
+                          action,
+                          info,
+                          example
+                        )
+                      %>
+                    </div>
+                  <% end %>
+                </div>
+
+                <script type="text/javascript">
+                nojsTabs({
+                  tabs: document.getElementById('<%= "#{baseid}-examples" %>'),
+                  titleSelector: 'h6',
+                  tabBar: document.getElementById('<%= "#{baseid}-tabbar" %>'),
+                  hiddenClass: 'tab-hidden',
+                  activeClass: 'active',
+                  createElement: function (el) {
+                    if (el.tagName == 'UL')
+                      el.classList.add('nav', 'nav-tabs');
+
+                    else if (el.tagName == 'LI')
+                      el.setAttribute('role', 'presentation');
+                  }
+                });
+                </script>
             <% end %>
           <% end %>
 
@@ -159,11 +197,26 @@ end
 
     <% unless info[:resources].empty? %>
       <% info[:resources].each do |r, i| %>
-        <% render_resource_body(r, i, "#{prefix}-#{resource}", "#{name}.#{r.humanize}") %>
+        <% render_resource_body(r, i, resource_path, "#{prefix}-#{resource}", "#{name}.#{r.humanize}") %>
       <% end %>
     <% end %>
 
   </div> <!-- resource -->
+<% end %>
+
+<% def render_client_init(client) %>
+  <h4><%= client.label %></h4>
+  <pre><code><%= client.init(host, base_url, api_version) %></code></pre>
+<% end %>
+
+<% def render_client_auth(client, method) %>
+  <h4><%= client.label %></h4>
+  <pre<code>><%= client.auth(host, base_url, api_version, method) %></code></pre>
+<% end %>
+
+<% def render_client_example(client, r_name, resource, a_name, action, example) %>
+  <h6><%= client.label %></h6>
+  <pre><code><%= client.example(host, base_url, api_version, r_name, resource, a_name, action, example) %></code></pre>
 <% end %>
 
 <h1 id="api">API v<%= @v %></h1>
@@ -171,6 +224,10 @@ end
   This page contains a list of resources available in API v<%= @v %>, their actions,
   description, parameters and example usage.
 </p>
+
+<% HaveAPI::ClientExample.clients.each do |client| %>
+  <% render_client_init(client) %>
+<% end %>
 
 <h1 id="auth">Authentication methods</h1>
 <% @help[:authentication].each do |name, info| %>

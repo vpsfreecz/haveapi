@@ -1,3 +1,20 @@
+<% def render_auth_nav(methods) %>
+  <ul>
+    <% methods.each do |method, info| %>
+      <li>
+        <a href="#auth-<%= method %>"><%= method.to_s.humanize %></a>
+        <% if info[:resources] %>
+          <ul>
+            <% info[:resources].each do |resource, info| %>
+              <% render_resource_nav(resource.to_s, info, "auth-#{method}") %>
+            <% end %>
+          </ul>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+<% end %>
+
 <% def render_resource_nav(resource, info, prefix='root') %>
     <li>
       <a href="#<%= "#{prefix}-#{resource}" %>">.<%= resource.humanize %></a>
@@ -35,6 +52,10 @@
 <h1>Contents</h1>
 <ul class="top-level">
   <li><a href="#api">API v<%= @v %></a></li>
+  <li>
+    <a href="#auth">Authentication</a>
+    <% render_auth_nav(@help[:authentication]) %>
+  </li>
   <li><a href="#resources">Resources</a></li>
   <% @help[:resources].each do |resource, info| %>
       <% render_resource_nav(resource, info) %>

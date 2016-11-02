@@ -21,6 +21,26 @@ def format_validators(validators)
 end
 %>
 
+<% def render_auth_body(name, info) %>
+  <h2 id="auth-<%= name %>"><%= name.to_s.humanize %></h2>
+
+  <% if name == :token %>
+    <dl>
+      <dt>HTTP header:</dt>
+      <dd><%= info[:http_header] %></dd>
+      <dt>Query parameter:</dt>
+      <dd><%= info[:query_parameter] %></dd>
+    </dl>
+  <% end %>
+
+  <% if info[:resources] %>
+    <h2>Resources</h2>
+    <% info[:resources].each do |resource, desc| %>
+      <% render_resource_body(resource.to_s, desc, 'auth') %>
+    <% end %>
+  <% end %>
+<% end %>
+
 <% def render_resource_body(resource, info, prefix='root', name=nil) %>
   <% name ||= resource.humanize %>
   <h2 class="resource" id="<%= "#{prefix}-#{resource}" %>"><%= resource.humanize %></h2>
@@ -149,6 +169,11 @@ end
   This page contains a list of resources available in API v<%= @v %>, their actions,
   description, parameters and example usage.
 </p>
+
+<h1 id="auth">Authentication methods</h1>
+<% @help[:authentication].each do |name, info| %>
+    <% render_auth_body(name, info) %>
+<% end %>
 
 <h1 id="resources">Resources</h1>
 <p>Follows a list of all resources in this API and their actions.</p>

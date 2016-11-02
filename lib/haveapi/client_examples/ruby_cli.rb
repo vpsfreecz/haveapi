@@ -59,7 +59,7 @@ END
         return value ? "--#{option}" : "--no-#{name}"
       end
 
-      "--#{name} '#{value}'"
+      "--#{option} '#{value}'"
 
     rescue NoMethodError => e
       require 'pry'

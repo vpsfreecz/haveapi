@@ -100,6 +100,11 @@ module HaveAPI::Authentication
         {
             http_header: http_header,
             query_parameter: query_parameter,
+            description: "The client authenticates with username and password and gets "+
+                         "a token. From this point, the password can be forgotten and "+
+                         "the token is used instead. Tokens can have different lifetimes, "+
+                         "can be renewed and revoked. The token is passed either via HTTP "+
+                         "header or query parameter."
         }
       end
 

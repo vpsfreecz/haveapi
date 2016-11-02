@@ -26,6 +26,13 @@ module HaveAPI::Authentication
         user
       end
 
+      def describe
+        {
+            description: "Authentication using HTTP basic. Username and password is passed "+
+                         "via HTTP header. It's use is forbidden from web browsers."
+        }
+      end
+
       protected
       # Reimplement this method. It has to return an authenticated
       # user or nil.

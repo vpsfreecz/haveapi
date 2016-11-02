@@ -1,5 +1,6 @@
 - Blocking actions
 - Attempt to authenticate even for actions that don't require auth
+- Authentication methods have documented text descriptions
 
 * Tue Oct 18 2016 - version 0.6.0
 - Token authentication: fix output of action renew

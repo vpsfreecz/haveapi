@@ -24,6 +24,8 @@ end
 <% def render_auth_body(name, info) %>
   <h2 id="auth-<%= name %>"><%= name.to_s.humanize %></h2>
 
+  <p><%= info[:description] %></p>
+
   <% if name == :token %>
     <dl>
       <dt>HTTP header:</dt>

@@ -42,9 +42,33 @@ end
     <% end %>
   <% end %>
 
-  <% HaveAPI::ClientExample.clients.each do |client| %>
-    <% render_client_auth(client, name) %>
-  <% end %>
+  <% baseid = "auth-#{name}" %>
+  <div id="<%= baseid %>-tabbar"></div>
+
+  <div id="<%= baseid %>-examples">
+    <% HaveAPI::ClientExample.clients.each_with_index do |client, i| %>
+      <div id="<%= "#{baseid}-#{i}" %>">
+        <% render_client_auth(client, name) %>
+      </div>
+    <% end %>
+  </div>
+
+  <script type="text/javascript">
+  nojsTabs({
+    tabs: document.getElementById('<%= "#{baseid}-examples" %>'),
+    titleSelector: 'h4',
+    tabBar: document.getElementById('<%= "#{baseid}-tabbar" %>'),
+    hiddenClass: 'tab-hidden',
+    activeClass: 'active',
+    createElement: function (el) {
+      if (el.tagName == 'UL')
+        el.classList.add('nav', 'nav-tabs');
+
+      else if (el.tagName == 'LI')
+        el.setAttribute('role', 'presentation');
+    }
+  });
+  </script>
 <% end %>
 
 <% def render_resource_body(resource, info, path = [], prefix='root', name=nil) %>

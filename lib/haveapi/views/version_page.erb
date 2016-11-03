@@ -249,9 +249,32 @@ end
   description, parameters and example usage.
 </p>
 
-<% HaveAPI::ClientExample.clients.each do |client| %>
-  <% render_client_init(client) %>
-<% end %>
+<div id="init-tabbar"></div>
+
+<div id="init-examples">
+  <% HaveAPI::ClientExample.clients.each_with_index do |client, i| %>
+    <div id="<%= "init-#{i}" %>">
+      <% render_client_init(client) %>
+    </div>
+  <% end %>
+</div>
+
+<script type="text/javascript">
+nojsTabs({
+  tabs: document.getElementById('init-examples'),
+  titleSelector: 'h4',
+  tabBar: document.getElementById('init-tabbar'),
+  hiddenClass: 'tab-hidden',
+  activeClass: 'active',
+  createElement: function (el) {
+    if (el.tagName == 'UL')
+      el.classList.add('nav', 'nav-tabs');
+
+    else if (el.tagName == 'LI')
+      el.setAttribute('role', 'presentation');
+  }
+});
+</script>
 
 <h1 id="auth">Authentication methods</h1>
 <% @help[:authentication].each do |name, info| %>

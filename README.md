@@ -40,6 +40,8 @@ Or install it yourself as:
             --utc                        Display Datetime parameters in UTC
             --localtime                  Display Datetime parameters in local timezone
             --date-format FORMAT         Display Datetime in custom format
+            --[no-]block                 Toggle action blocking mode
+            --timeout SEC                Fail when the action does not finish within the timeout
         -v, --[no-]verbose               Run verbosely
             --client-version             Show client version
             --protocol-version           Show protocol version

@@ -135,12 +135,18 @@ module HaveAPI::Client
     # it is regularly called with the action's state.
     # @param interval [Float] how often should the action state be checked
     # @param timeout [Integer] timeout in seconds
-    # @yieldparam state [Hash]
+    # @yieldparam state [ActionState]
+    # @return [Boolean] when the action is finished
+    # @return [nil] when timeout occurs
+    # @return [Response] if the action was cancelled and the cancel itself isn't blocking
+    # @return [Integer] id of cancellation if the action was cancelled, cancel is blocking
+    #                   and no cancel block is provided
     def self.wait_for_completion(client, id, interval: 15, update_in: 3, timeout: nil)
       res = client.action_state.show(id)
+      state = ActionState.new(res)
 
-      yield(res.response) if block_given?
-      return res.response[:status] if res.response[:finished]
+      yield(state) if block_given?
+      return state.status if state.finished?
 
       last = {}
       t = Time.now if timeout
@@ -155,16 +161,46 @@ module HaveAPI::Client
             total: last[:total],
         )
 
+        state = ActionState.new(res)
+
         last[:status] = res.response[:status]
         last[:current] = res.response[:current]
         last[:total] = res.response[:total]
 
-        yield(res.response) if block_given?
-        break if res.response[:finished]
-        return nil if timeout && (Time.now - t) >= timeout
+        yield(state) if block_given?
+        break if state.finished?
+
+        if state.cancel?
+          state.stop
+          cancel_block = state.cancel_block
+
+          ret = cancel(client, id)
+          
+          if ret.is_a?(Response)
+            # The cancel is not a blocking operation, return immediately
+            raise ActionFailed, ret unless ret.ok?
+            return ret
+          end
+
+          # Cancel is a blocking operation
+          if cancel_block
+            return wait_for_completion(
+                client,
+                ret,
+                interval: interval,
+                timeout: timeout,
+                update_in: update_in,
+                &cancel_block
+            )
+          end
+          
+          return ret
+        end
+
+        return nil if (timeout && (Time.now - t) >= timeout) || state.stop?
       end
 
-      res.response[:status]
+      state.status
 
     rescue Interrupt => e
       %i(show poll).each do |action|
@@ -174,7 +210,7 @@ module HaveAPI::Client
     end
 
     def self.cancel(client, id)
-      res = client.action_state.cancel(id)
+      res = client.action_state.cancel(id, meta: {block: false})
 
       if res.ok? && res.action.blocking? && res.meta[:action_state_id]
         res.meta[:action_state_id]

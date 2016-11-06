@@ -243,7 +243,14 @@ end
   <pre><code><%= client.example(host, base_url, api_version, r_name, resource, a_name, action, example) %></code></pre>
 <% end %>
 
+
 <h1 id="api">API v<%= @v %></h1>
+
+<ol class="breadcrumb">
+  <li><a href="<%= root %>"><%= host %></a></li>
+  <li class="active">v<%= @v %></li>
+</ol>
+
 <p>
   This page contains a list of resources available in API v<%= @v %>, their actions,
   description, parameters and example usage.

@@ -41,15 +41,13 @@ END
       cmd << action_name
       cmd.concat(sample[:url_params]) if sample[:url_params]
 
-      if sample[:request] && !sample[:request].empty?
-        cmd << '--'
+      return cmd.join(' ') if !sample[:request] || sample[:request].empty?
 
-        sample[:request].each do |k, v|
-          cmd << input_param(k, v)
-        end
-      end
+      cmd << "-- \\\n"
 
-      cmd.join(' ')
+      cmd.join(' ') + sample[:request].map do |k, v|
+        ' '*12 + input_param(k, v)
+      end.join(" \\\n")
     end
 
     def input_param(name, value)

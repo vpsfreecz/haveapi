@@ -157,6 +157,7 @@ Every action is described as:
         "auth": true|false,
         "description": "Describe what this action does",
         "aliases": ["list", "of", "aliases"],
+        "blocking": true|false,
         "input":  {
             "layout": "layout type",
             "namespace": "namespace name",
@@ -408,12 +409,26 @@ response.
             "input": ... parameters or null ...,
             "output: ... parameters or null ...
         } or null,
-        
+
         "object": {
             "input": ... parameters or null ...,
             "output: ... parameters or null ...
         } or null,
     }
+
+## Blocking mode
+Blocking mode is for actions whose execution takes a long time. Clients can monitor
+progress of such actions and even cancel their execution.
+
+The blocking action returns its result as usual, but provides a unique identifier using
+which clients can check its status via the `ActionState` resource. The state identifier
+is passed through global output metadata in a parameter called `action_state_id`.
+Resource `ActionState` is a part of the API's documentation and is the standard interface
+for browsing and manipulating currently active blocking actions.
+
+An action is blocking if parameter `blocking` in its description is `true` and if
+`action_state_id` is present in its metadata after each call. This allows actions
+to be blocking only when needed.
 
 ## List API versions
 Send request ``OPTIONS /?describe=versions``. The description format:
@@ -463,7 +478,7 @@ Example request:
     Content-Type: application/json
     Accept: application/json
     Connection: Close
-    
+
     {
         "user": {
             "login": "mylogin",
@@ -479,7 +494,7 @@ from the self-description.
 Example response to the request above:
 
     Content-Type: application/json
-    
+
     {
         "status": true,
         "response": {

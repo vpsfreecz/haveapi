@@ -60,7 +60,7 @@ class User < ActiveRecord::Base
     in: %w(admin user),
     message '%{value} is not a valid role'
   }
-  
+
   # An example authentication with plain text password
   def self.authenticate(username, password)
     u = User.find_by(login: username)
@@ -79,42 +79,42 @@ module MyAPI
     # This resource belongs to version 1.
     # It is also possible to put resource to multiple versions, e.g. [1, 2]
     version 1
-    
+
     # Provide description for this resource
     desc 'Manage users'
-    
+
     # ActiveRecord model to load validators from
     model ::User
-    
+
     # Require authentication, this is the default
     auth true
-    
+
     # Create a named group of shared params, that may be later included
     # by actions.
     params(:id) do
       id :id, label: 'User ID'
     end
-    
+
     params(:common) do
       string :login, label: 'Login', desc: 'Used for authentication'
       string :full_name, label: 'Full name'
       string :role, label: 'User role', desc: 'admin or user'
     end
-    
+
     # Actions
     # Module HaveAPI::Actions::Default contains helper classes that define
     # HTTP methods and routes for generic actions.
     class Index < HaveAPI::Actions::Default::Index
       desc 'List all users'
-      
+
       # There are no input parameters
-      
+
       # Output parameters
       output(:object_list) do
         use :id
         use :common
       end
-      
+
       # Determine if current user can use this action.
       # allow/deny immediately returns from this block.
       # Default rule is deny.
@@ -122,7 +122,7 @@ module MyAPI
         allow if u.role == 'admin'
         deny  # deny is implicit, so it may be omitted
       end
-      
+
       # Provide example usage
       example do
         request({})
@@ -147,30 +147,30 @@ module MyAPI
       def count
         query.count
       end
-      
+
       # Execute action, return the list
       def exec
         query.limit(input[:limit]).offset(input[:offset])
       end
     end
-    
+
     class Create < HaveAPI::Actions::Default::Create
       desc 'Create new user'
-      
+
       input do
         use :common
       end
-      
+
       output do
         use :id
         use :common
       end
-      
+
       authorize do |u|
         allow if u.role == 'admin'
         deny
       end
-      
+
       example do
         request({
           user: {
@@ -185,10 +185,10 @@ module MyAPI
         })
         comment 'Create new user like this'
       end
-      
+
       def exec
         user = ::User.new(input)
-        
+
         if user.save
           ok(user)
         else
@@ -260,6 +260,11 @@ resources, actions and parameters will be returned.
 ## Validation of input data
 Because validators are a part of the API's documentation, the clients can
 perform client-side validation before the data is sent to the API server.
+
+## Blocking actions
+Blocking mode is for actions whose execution is not immediate but takes an unspecified
+amount of time. HaveAPI protocol allows clients to monitor progress of such actions
+or cancel their execution.
 
 ## Available clients
 These clients completely rely on the API description and can be used for all

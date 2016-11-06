@@ -47,6 +47,18 @@ END
         req << JSON.pretty_generate({action[:input][:namespace] => sample[:request]})
       end
 
+      return req if sample[:response].nil? || sample[:response].empty?
+
+      content = JSON.pretty_generate({
+          action[:output][:namespace] => sample[:response]
+      })
+
+      req << "\n\n\n"
+      req << "HTTP/1.1 200 OK\n"
+      req << "Content-Type: application/json;charset=utf-8\n"
+      req << "Content-Length: #{content.size}\n\n"
+      req << content
+
       req
     end
 

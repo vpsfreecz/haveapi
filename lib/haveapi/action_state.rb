@@ -3,6 +3,11 @@ module HaveAPI
   # Blocking actions are not executed immediately, but their execution takes an unspecified
   # amount of time. This interface allows to list actions that are pending completion and view
   # their status.
+  #
+  # If method `poll` is defined, it is called by action Resources::ActionState::Poll.
+  # it can provide a more sophisticated polling implementation than the implicit one, which is
+  # to create a new instance of this class every second and check its state. `poll` is passed
+  # one argument, a hash of input parameters from Resources::ActionState::Poll.
   class ActionState
     # Return an array of objects representing actions that are pending completion.
     # @param [Object] user

@@ -29,7 +29,7 @@ module HaveAPI::Resources
         else
           hash[:finished] = false
         end
-          
+
         progress = state.progress
         hash[:current] = progress[:current] || 0
         hash[:total] = progress[:total] || 0
@@ -38,7 +38,7 @@ module HaveAPI::Resources
         hash
       end
     end
-    
+
     class Index < HaveAPI::Actions::Default::Index
       include Mixin
 
@@ -65,7 +65,7 @@ module HaveAPI::Resources
         ret
       end
     end
-    
+
     class Poll < HaveAPI::Action
       include Mixin
 
@@ -111,6 +111,8 @@ module HaveAPI::Resources
             end
           end
 
+          return state_to_hash(state.poll(input)) if state.respond_to?(:poll)
+
           sleep(1)
         end
       end
@@ -134,7 +136,7 @@ module HaveAPI::Resources
         )
 
         return state_to_hash(state) if state.valid?
-        
+
         error('action state not found')
       end
     end
@@ -143,7 +145,7 @@ module HaveAPI::Resources
       http_method :post
       route ':%{resource}_id/cancel'
       blocking true
-      
+
       output(:hash) {}
 
       authorize { allow }

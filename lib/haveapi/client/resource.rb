@@ -75,6 +75,7 @@ module HaveAPI::Client
         next unless define_method?(action, name)
 
         define_singleton_method(name) do |*args, &block|
+          client_opts = @client.opts(:block, :block_interval, :block_timeout)
           all_args = @prepared_args + args
 
           if action.unresolved_args?
@@ -95,6 +96,14 @@ module HaveAPI::Client
 
           elsif all_args.last.is_a?(Hash)
             last = all_args.pop
+
+            if last.has_key?(:meta)
+              meta = last[:meta]
+
+              %i(block block_interval block_timeout).each do |p|
+                client_opts[p] = meta.delete(p) if meta.has_key?(p)
+              end
+            end
 
             all_args << default_action_input_params(action).update(last)
           end
@@ -117,15 +126,14 @@ module HaveAPI::Client
               ret
           end
 
-          if action.blocking? && @client.blocking?
-            client_opts = @client.opts(:block_interval, :block_timeout)
+          if action.blocking? && client_opts[:block]
             wait_opts = {}
 
             {
                 block_interval: :interval,
                 block_timeout: :timeout
             }.each do |k, v|
-              wait_opts[v] = client_opts[k] if client_opts[k]
+              wait_opts[v] = client_opts[k] if client_opts.has_key?(k)
             end
             
             ret.wait_for_completion(wait_opts) do |state|

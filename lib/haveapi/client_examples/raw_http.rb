@@ -1,4 +1,5 @@
 require 'pp'
+require 'cgi'
 
 module HaveAPI::ClientExamples
   class RawHttp < HaveAPI::ClientExample
@@ -31,25 +32,35 @@ END
     end
 
     def example(sample)
-      path = resolve_path(action[:url], sample[:url_params] || [])
+      path = resolve_path(
+          action[:method],
+          action[:url],
+          sample[:url_params] || [],
+          sample[:request]
+      )
 
       req = "#{action[:method]} #{path} HTTP/1.1\n"
       req << "Host: #{host}\n"
       req << "Content-Type: application/json\n\n"
 
-      if sample[:request] && !sample[:request].empty?
+      if action[:method] != 'GET' && sample[:request] && !sample[:request].empty?
         req << JSON.pretty_generate({action[:input][:namespace] => sample[:request]})
       end
 
       req
     end
 
-    def resolve_path(url, params)
+    def resolve_path(method, url, url_params, input_params)
       ret = url.clone
 
-      params.each do |v|
+      url_params.each do |v|
         ret.sub!(/:[a-zA-Z\-_]+/, v.to_s)
       end
+
+      return ret if method != 'GET' || !input_params || input_params.empty?
+
+      ret << '?'
+      ret << input_params.map { |k, v| "#{k}=#{CGI.escape(v.to_s)}" }.join('&')
 
       ret
     end

@@ -40,8 +40,8 @@ module HaveAPI::CLI
             id,
             timeout: timeout,
         ) do |state|
-          last_status = state[:status]
-          can_cancel = state[:can_cancel]
+          last_status = state.status
+          can_cancel = state.can_cancel?
           
           update_progress(state, cancel)
         end
@@ -115,28 +115,31 @@ module HaveAPI::CLI
     def update_progress(state, cancel)
       @pb ||= ProgressBar.create(
           title: cancel ? 'Cancelling' : 'Executing',
-          total: state[:total],
-          format: (state[:total] && state[:total] > 0) ? "%t: [%B] %c/%C #{state[:unit]}"
-                                                       : '%t: [%B]',
-          starting_at: state[:current],
+          total: state.progress.total,
+          format: if state.progress.total && state.progress.total > 0
+                    "%t: [%B] %c/%C #{state.progress.unit}"
+                  else
+                    '%t: [%B]'
+                  end,
+          starting_at: state.progress.current,
           autofinish: false,
       )
 
-      if state[:status]
+      if state.status
         @pb.title = cancel ? 'Cancelling' : 'Executing'
 
       else
         @pb.title = 'Failing'
       end
 
-      if state[:total] && state[:total] > 0
-        @pb.progress = state[:current]
-        @pb.total = state[:total]
-        @pb.format("%t: [%B] %c/%C #{state[:unit]}")
+      if state.progress.total && state.progress.total > 0
+        @pb.progress = state.progress.current
+        @pb.total = state.progress.total
+        @pb.format("%t: [%B] %c/%C #{state.progress.unit}")
 
       else
         @pb.total = nil
-        @pb.format("%t: [%B] #{state[:unit]}")
+        @pb.format("%t: [%B] #{state.progress.unit}")
         @pb.increment
       end
     end

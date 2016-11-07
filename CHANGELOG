@@ -2,6 +2,7 @@
 - Authenticate even for actions that do not require it
 - New CLI options --[no-]block and --timeout
 - CLI handles all interrupts
+- Add shortcut method HaveAPI::Client.new
 
 * Tue Oct 18 2016 - version 0.6.0
 - No changes

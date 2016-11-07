@@ -2,7 +2,7 @@ require 'pp'
 require 'cgi'
 
 module HaveAPI::ClientExamples
-  class RawHttp < HaveAPI::ClientExample
+  class Http < HaveAPI::ClientExample
     label 'HTTP'
     order 100
 

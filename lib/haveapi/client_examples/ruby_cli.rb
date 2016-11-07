@@ -1,6 +1,7 @@
 module HaveAPI::ClientExamples
   class RubyCli < HaveAPI::ClientExample
     label 'CLI'
+    code :bash
     order 30
 
     def init

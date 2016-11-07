@@ -1,6 +1,7 @@
 module HaveAPI::ClientExamples
   class FsClient < HaveAPI::ClientExample
     label 'File system'
+    code :bash
     order 40
 
     def init

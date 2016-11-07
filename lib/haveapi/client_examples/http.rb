@@ -4,6 +4,7 @@ require 'cgi'
 module HaveAPI::ClientExamples
   class Http < HaveAPI::ClientExample
     label 'HTTP'
+    code :http
     order 100
 
     def init

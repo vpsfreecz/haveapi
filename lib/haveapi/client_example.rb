@@ -12,6 +12,11 @@ module HaveAPI
         @label
       end
 
+      def code(v = nil)
+        @code = v if v
+        @code
+      end
+
       def order(v = nil)
         @order = v if v
         @order

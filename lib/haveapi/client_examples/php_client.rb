@@ -1,6 +1,7 @@
 module HaveAPI::ClientExamples
   class PhpClient < HaveAPI::ClientExample
     label 'PHP'
+    code :php
     order 20
 
     def init

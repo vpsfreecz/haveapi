@@ -3,6 +3,7 @@ require 'pp'
 module HaveAPI::ClientExamples
   class RubyClient < HaveAPI::ClientExample
     label 'Ruby'
+    code :ruby
     order 0
 
     def init

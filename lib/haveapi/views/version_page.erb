@@ -232,17 +232,17 @@ end
 
 <% def render_client_init(client) %>
   <h4><%= client.label %></h4>
-  <pre><code><%= client.init(host, base_url, api_version) %></code></pre>
+  <pre><code class="<%= client.code %>"><%= client.init(host, base_url, api_version) %></code></pre>
 <% end %>
 
 <% def render_client_auth(client, method) %>
   <h4><%= client.label %></h4>
-  <pre><code><%= client.auth(host, base_url, api_version, method) %></code></pre>
+  <pre><code class="<%= client.code %>"><%= client.auth(host, base_url, api_version, method) %></code></pre>
 <% end %>
 
 <% def render_client_example(client, r_name, resource, a_name, action, example) %>
   <h6><%= client.label %></h6>
-  <pre><code><%= client.example(host, base_url, api_version, r_name, resource, a_name, action, example) %></code></pre>
+  <pre><code class="<%= client.code %>"><%= client.example(host, base_url, api_version, r_name, resource, a_name, action, example) %></code></pre>
 <% end %>
 
 

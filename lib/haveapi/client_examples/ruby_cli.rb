@@ -4,7 +4,7 @@ module HaveAPI::ClientExamples
     order 30
 
     def init
-      "haveapi-cli -u #{base_url}"
+      "$ haveapi-cli -u #{base_url}"
     end
 
     def auth(method)
@@ -46,7 +46,7 @@ END
       cmd << "-- \\\n"
 
       cmd.join(' ') + sample[:request].map do |k, v|
-        ' '*12 + input_param(k, v)
+        ' '*14 + input_param(k, v)
       end.join(" \\\n")
     end
 

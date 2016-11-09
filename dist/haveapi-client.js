@@ -1500,8 +1500,15 @@ ActionState.prototype.shouldStop = function () {
 };
 
 /**
+ * Cancel execution of this action. Action can be cancelled only if
+ * {@link HaveAPI.Client.ActionState#canCancel}  is `true`, otherwise exception
+ * {@link HaveAPI.Client.Exceptions.UncancelableAction} is thrown.
+ *
+ * Note that the cancellation can be a blocking action, so you can pass standard callback
+ * functions.
+ *
  * @method HaveAPI.Client.ActionState#cancel
- * @param {HaveAPI.Client.ActionCall} opts
+ * @param {HaveAPI.Client~ActionCall} opts
  */
 ActionState.prototype.cancel = function (opts) {
 	this.doCancel = true;

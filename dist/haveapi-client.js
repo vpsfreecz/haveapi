@@ -2185,8 +2185,13 @@ Client.Exceptions.UnresolvedArguments = function (action) {
  * @author Jakub Skokan <jakub.skokan@vpsfree.cz>
  **/
 
-if (typeof exports === 'object' && !window && !window.XMLHttpRequest) {
+var XMLHttpRequest;
+
+if (typeof exports === 'object' && (typeof window === 'undefined' || !window.XMLHttpRequest)) {
 	XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
+
+} else {
+	XMLHttpRequest = window.XMLHttpRequest;
 }
 
 // Register built-in providers

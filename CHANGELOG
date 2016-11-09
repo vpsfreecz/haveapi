@@ -1,4 +1,5 @@
 - Action parameters and callbacks can be passed in an object
+- Fix checking of XMLHttpRequest presence to work in both browser and nodejs
 
 * Tue Oct 18 2016 - version 0.6.0
 - Client.availableVersions: fix callback arguments

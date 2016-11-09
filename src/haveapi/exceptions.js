@@ -15,7 +15,7 @@ Client.Exceptions.ProtocolError = function (msg) {
  */
 Client.Exceptions.UnresolvedArguments = function (action) {
 	this.name = 'UnresolvedArguments';
-	this.message = "Unable to execute action '"+ this.name +"': unresolved arguments";
+	this.message = "Unable to execute action '"+ action.name +"': unresolved arguments";
 }
 
 /**

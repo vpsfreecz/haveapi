@@ -391,6 +391,7 @@ Client.prototype.directInvoke = function(action, opts) {
 						client: that,
 						reply: res,
 						blockInterval: opts.blockInterval,
+						blockUpdateIn: opts.blockUpdateIn,
 						onStateChange: opts.onStateChange,
 						onDone: opts.onDone
 					});
@@ -475,6 +476,7 @@ Client.prototype.invoke = function(action, opts) {
 					client: that,
 					reply: responseObject,
 					blockInterval: opts.blockInterval,
+					blockUpdateIn: opts.blockUpdateIn,
 					onStateChange: opts.onStateChange,
 					onDone: opts.onDone
 				});
@@ -1424,6 +1426,10 @@ Action.waitForCompletion = function (opts) {
 		opts.client.action_state.poll(opts.id, {
 			params: {
 				timeout: interval,
+				update_in: updateIn,
+				current: state.progress.current,
+				total: state.progress.total,
+				status: state.status
 			},
 			onReply: onPoll
 		});

@@ -382,6 +382,7 @@ Client.prototype.directInvoke = function(action, opts) {
 						client: that,
 						reply: res,
 						blockInterval: opts.blockInterval,
+						blockUpdateIn: opts.blockUpdateIn,
 						onStateChange: opts.onStateChange,
 						onDone: opts.onDone
 					});
@@ -466,6 +467,7 @@ Client.prototype.invoke = function(action, opts) {
 					client: that,
 					reply: responseObject,
 					blockInterval: opts.blockInterval,
+					blockUpdateIn: opts.blockUpdateIn,
 					onStateChange: opts.onStateChange,
 					onDone: opts.onDone
 				});

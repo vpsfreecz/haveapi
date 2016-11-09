@@ -360,6 +360,10 @@ Action.waitForCompletion = function (opts) {
 		opts.client.action_state.poll(opts.id, {
 			params: {
 				timeout: interval,
+				update_in: updateIn,
+				current: state.progress.current,
+				total: state.progress.total,
+				status: state.status
 			},
 			onReply: onPoll
 		});

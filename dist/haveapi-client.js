@@ -1528,19 +1528,19 @@ ActionState.prototype.shouldCancel = function () {
  */
 ActionState.Progress = function (state) {
 	/**
-   * @member {Integer} HaveAPI.Client.ActionState.Progress.current
+   * @member {Integer} HaveAPI.Client.ActionState.Progress#current
 	 * @readonly
 	 */
 	this.current = state.current;
 
 	/**
-	 * @member {Integer} HaveAPI.Client.ActionState.Progress.total
+	 * @member {Integer} HaveAPI.Client.ActionState.Progress#total
 	 * @readonly
 	 */
 	this.total = state.total;
 
 	/**
-	 * @member {String} HaveAPI.Client.ActionState.Progress.unit
+	 * @member {String} HaveAPI.Client.ActionState.Progress#unit
 	 * @readonly
 	 */
 	this.unit = state.unit;

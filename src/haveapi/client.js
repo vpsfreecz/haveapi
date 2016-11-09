@@ -75,6 +75,14 @@ Client.Exceptions = {};
  */
 
 /**
+ * Action call parameters
+ * @typedef {Object} HaveAPI.Client~ActionCall
+ * @property {Object} params - Input parameters
+ * @property {Object} meta - Input meta parameters
+ * @property {HaveAPI.Client~replyCallback} onReply - called when the API responds
+ */
+
+/**
  * Setup resources and actions as properties and functions.
  * @method HaveAPI.Client#setup
  * @param {HaveAPI.Client~doneCallback} callback
@@ -333,71 +341,77 @@ Client.prototype.logout = function(callback) {
  * Always calls the callback with {@link HaveAPI.Client.Response} object. It does
  * not interpret the response.
  * @method HaveAPI.Client#directInvoke
- * @param {HaveAPI.Client~replyCallback} callback
+ * @param {HaveAPI.Client.Action} action
+ * @param {HaveAPI.Client~ActionCall} opts
  */
-Client.prototype.directInvoke = function(action, params, callback) {
+Client.prototype.directInvoke = function(action, opts) {
 	if (this._private.debug > 5)
-		console.log("Executing", action, "with params", params, "at", action.preparedUrl);
+		console.log("Executing", action, "with opts", opts, "at", action.preparedUrl);
 
 	var that = this;
 
-	var opts = {
+	var httpOpts = {
 		method: action.httpMethod(),
 		url: this._private.url + action.preparedUrl,
 		credentials: this.authProvider.credentials(),
 		headers: this.authProvider.headers(),
 		queryParameters: this.authProvider.queryParameters(),
 		callback: function(status, response) {
-			if(callback !== undefined) {
-				callback(that, new Client.Response(action, response));
+			if(opts.onReply !== undefined) {
+				opts.onReply(that, new Client.Response(action, response));
 			}
 		}
 	};
 
-	var paramsInQuery = this.sendAsQueryParams(opts.method);
-	var meta = null;
+	var paramsInQuery = this.sendAsQueryParams(httpOpts.method);
 	var metaNs = this.apiSettings.meta.namespace;
 
-	if (params && params.hasOwnProperty('meta')) {
-		meta = params.meta;
-		delete params.meta;
-	}
-
 	if (paramsInQuery) {
-		opts.url = this.addParamsToQuery(opts.url, action.namespace('input'), params);
+		httpOpts.url = this.addParamsToQuery(
+			httpOpts.url,
+			action.namespace('input'),
+			opts.params
+		);
 
-		if (meta)
-			opts.url = this.addParamsToQuery(opts.url, metaNs, meta);
+		if (opts.meta) {
+			httpOpts.url = this.addParamsToQuery(
+				httpOpts.url,
+				metaNs,
+				opts.meta
+			);
+		}
 
 	} else {
 		var scopedParams = {};
-		scopedParams[ action.namespace('input') ] = params;
+		scopedParams[ action.namespace('input') ] = opts.params;
 
-		if (meta)
-			scopedParams[metaNs] = meta;
+		if (opts.meta)
+			scopedParams[metaNs] = opts.meta;
 
-		opts.params = scopedParams;
+		httpOpts.params = scopedParams;
 	}
 
-	this._private.http.request(opts);
+	this._private.http.request(httpOpts);
 };
 
 /**
  * The response is interpreted and if the layout is object or object_list, ResourceInstance
  * or ResourceInstanceList is returned with the callback.
  * @method HaveAPI.Client#invoke
- * @param {HaveAPI.Client~replyCallback} callback
+ * @param {HaveAPI.Client.Action} action
+ * @param {HaveAPI.Client~ActionCall} opts
  */
-Client.prototype.invoke = function(action, params, callback) {
+Client.prototype.invoke = function(action, opts) {
 	var that = this;
+	var origOnReply = opts.onReply;
 
-	this.directInvoke(action, params, function(status, response) {
-		if (callback === undefined)
+	opts.onReply = function (status, response) {
+		if (origOnReply === undefined)
 			return;
 
 		switch (action.layout('output')) {
 			case 'object':
-				callback(that, new Client.ResourceInstance(
+				origOnReply(that, new Client.ResourceInstance(
 					that,
 					action.resource._private.parent,
 					action,
@@ -406,13 +420,15 @@ Client.prototype.invoke = function(action, params, callback) {
 				break;
 
 			case 'object_list':
-				callback(that, new Client.ResourceInstanceList(that, action, response));
+				origOnReply(that, new Client.ResourceInstanceList(that, action, response));
 				break;
 
 			default:
-				callback(that, response);
+				origOnReply(that, response);
 		}
-	});
+	};
+
+	this.directInvoke(action, opts);
 };
 
 /**

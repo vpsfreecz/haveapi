@@ -80,21 +80,36 @@ Action.prototype.provideUrl = function(url) {
 /**
  * Invoke the action.
  * This method has a variable number of arguments. Arguments are first applied
- * as object IDs in action URL. When there are no more URL parameters to fill,
- * the second last argument is an Object containing parameters to be sent.
- * The last argument is a {@link HaveAPI.Client~replyCallback} callback function.
+ * as object IDs in action URL. Then there are two ways in which input parameters
+ * can and other options be given to the action.
  *
- * The argument with parameters may be omitted, if the callback function
- * is in its place.
+ * The new-style is to pass {@link HaveAPI.Client~ActionCall} object that contains
+ * input parameters, meta parameters and callbacks.
+ *
+ * The old-style, is to pass an object with parameters (meta parameters are passed
+ * within this object) and the second argument is {@link HaveAPI.Client~replyCallback}
+ * callback function.  The argument with parameters may be omitted if there aren't any,
+ * making the callback function the only additional argument.
  *
  * Arguments do not have to be passed to this method specifically. They may
  * be given to the resources above, the only thing that matters is their correct
  * order.
  *
  * @example
- * // Call with parameters and a callback.
+ * // Call with parameters and a callback (new-style).
  * // The first argument '1' is a VPS ID.
- * api.vps.ip_address.list(1, {limit: 5}, function(c, reply) {
+ * api.vps.ip_address.list(1, {
+ *   params: {limit: 5},
+ *   meta: {count: true},
+ *   onReply: function(c, reply) {
+ * 		console.log("Got", reply.response());
+ *   }
+ * });
+ *
+ * @example
+ * // Call with parameters and a callback (old-style).
+ * // The first argument '1' is a VPS ID.
+ * api.vps.ip_address.list(1, {limit: 5, meta: {count: true}}, function(c, reply) {
  * 		console.log("Got", reply.response());
  * });
  *
@@ -123,7 +138,11 @@ Action.prototype.invoke = function() {
 		return;
 	}
 
-	this.client.invoke(this, prep.params.params, prep.callback);
+	this.client.invoke(this, {
+		params: prep.params.params,
+		meta: prep.meta,
+		onReply: prep.onReply
+	});
 };
 
 /**
@@ -145,7 +164,11 @@ Action.prototype.directInvoke = function() {
 		return;
 	}
 
-	this.client.directInvoke(this, prep.params.params, prep.callback);
+	this.client.directInvoke(this, {
+		params: prep.params.params,
+		meta: prep.meta,
+		onReply: prep.onReply
+	});
 };
 
 /**
@@ -161,6 +184,7 @@ Action.prototype.prepareInvoke = function(new_args) {
 	if (!this.preparedUrl)
 		this.preparedUrl = this.description.url;
 
+	// First, apply ids returned from the API
 	for (var i = 0; i < this.providedIdArgs.length; i++) {
 		if (this.preparedUrl.search(rx) == -1)
 			break;
@@ -168,6 +192,7 @@ Action.prototype.prepareInvoke = function(new_args) {
 		this.preparedUrl = this.preparedUrl.replace(rx, this.providedIdArgs[i]);
 	}
 
+	// Apply ids passed as arguments
 	while (args.length > 0) {
 		if (this.preparedUrl.search(rx) == -1)
 			break;
@@ -185,36 +210,124 @@ Action.prototype.prepareInvoke = function(new_args) {
 	}
 
 	var that = this;
-	var hasParams = args.length > 0;
-	var isFn = hasParams && args.length == 1 && typeof(args[0]) == "function";
-	var rawParams = hasParams && !isFn ? args[0] : null;
+	var params = this.prepareParams(args);
 
-	if (this.layout('input') == 'object') {
+	console.log('prepared params', params);
+
+	// Add default parameters from object instance
+	if (this.layout('input') === 'object') {
 		var defaults = this.resource.defaultParams(this);
 
 		for (var param in this.description.input.parameters) {
-			if ( defaults.hasOwnProperty(param) && (!rawParams || (rawParams && !rawParams.hasOwnProperty(param))) ) {
-				if (!rawParams)
-					rawParams = {};
+			if ( defaults.hasOwnProperty(param) && (
+					 !params.params || (params.params && !params.params.hasOwnProperty(param))
+				 )) {
+				if (!params.params)
+					params.params = {};
 
-				rawParams[ param ] = defaults[ param ];
+				params.params[ param ] = defaults[ param ];
 			}
 		}
 	}
-
-	var params = new Parameters(this, rawParams);
 
 	return {
-		params: params,
-		callback: function(c, response) {
+		params: new Parameters(this, params.params),
+		meta: params.meta,
+		onReply: function(c, response) {
 			that.preparedUrl = null;
 
-			if (args.length > 1) {
-				args[1](c, response);
-
-			} else if(isFn) {
-				args[0](c, response);
-			}
+			if (params.onReply)
+				params.onReply(c, response);
 		}
 	}
+};
+
+/**
+ * Determine what kind of a call type was used and return parameters
+ * in a unified object.
+ * @private
+ * @method HaveAPI.Client.Action#prepareParams
+ * @param {Array} mix of input parameters and callbacks
+ * @return {Object}
+ */
+Action.prototype.prepareParams = function (args) {
+	if (!args.length)
+		return {};
+
+	if (args.length == 1 && (args[0].params || args[0].onReply)) {
+		// Parameters passed in an object
+		var opts = args[0];
+
+		return {
+			params: opts.params,
+			meta: opts.meta,
+			onReply: opts.onReply,
+		};
+	}
+
+	// One parameter is passed, it can be old-style hash of parameters or a callback
+	if (args.length == 1) {
+		if (typeof(args[0]) === 'function') {
+			// The one parameter is a callback -- no input parameters given
+			return {onReply: args[0]};
+		}
+
+		var params = this.separateMetaParams(args[0]);
+
+		return {
+			params: params.params,
+			meta: params.meta
+		};
+
+		var ret = {};
+
+		if (opts.meta) {
+			ret.meta = opts.meta;
+			delete opts.meta;
+		}
+
+		ret.params = opts;
+
+		return ret;
+	}
+
+	// Two or more parameters are passed. The first is a hash of parameters, the second
+	// is a callback. The rest is ignored.
+	var params = this.separateMetaParams(args[0]);
+
+	return {
+		params: params.params,
+		meta: params.meta,
+		onReply: args[1]
+	};
+};
+
+/**
+ * Extract meta parameters from `params` and return and object with keys
+ * `params` (action's input parameters) and `meta` (action's input meta parameters).
+ *
+ * @private
+ * @method HaveAPI.Client.Action#separateMetaParams
+ * @param {Object} action's input parameters, meta parameters may be present
+ * @return {Object}
+ */
+Action.prototype.separateMetaParams = function (params) {
+	var ret = {};
+
+	for (var k in params) {
+		if (!params.hasOwnProperty(k))
+			continue;
+
+		if (k === 'meta') {
+			ret.meta = params[k];
+
+		} else {
+			if (!ret.params)
+				ret.params = {};
+
+			ret.params[k] = params[k];
+		}
+	}
+
+	return ret;
 };

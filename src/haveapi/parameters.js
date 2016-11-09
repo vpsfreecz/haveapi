@@ -24,9 +24,6 @@ Parameters.prototype.coerceParams = function (params) {
 	var ret = {};
 	var input = this.action.description.input.parameters;
 
-	if (params && params.hasOwnProperty('meta'))
-		ret.meta = params.meta;
-
 	for (var p in params) {
 		if (!params.hasOwnProperty(p) || !input.hasOwnProperty(p))
 			continue;

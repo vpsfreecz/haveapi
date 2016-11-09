@@ -41,6 +41,7 @@ gulp.task('scripts', function() {
 
 gulp.task('doc', function (cb) {
 	gulp.src(src.concat(['README.md']), {read: false}).pipe(jsdoc({
+		plugins: ["plugins/markdown"],
 		opts: { destination: "html_doc" }
 	}, cb));
 });

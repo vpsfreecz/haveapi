@@ -138,11 +138,9 @@ Action.prototype.invoke = function() {
 		return;
 	}
 
-	this.client.invoke(this, {
+	this.client.invoke(this, Object.assign({}, prep, {
 		params: prep.params.params,
-		meta: prep.meta,
-		onReply: prep.onReply
-	});
+	}));
 };
 
 /**
@@ -164,11 +162,9 @@ Action.prototype.directInvoke = function() {
 		return;
 	}
 
-	this.client.directInvoke(this, {
-		params: prep.params.params,
-		meta: prep.meta,
-		onReply: prep.onReply
-	});
+	this.client.directInvoke(this, Object.assign({}, prep, {
+		params: prep.params.params
+	}));
 };
 
 /**
@@ -212,8 +208,6 @@ Action.prototype.prepareInvoke = function(new_args) {
 	var that = this;
 	var params = this.prepareParams(args);
 
-	console.log('prepared params', params);
-
 	// Add default parameters from object instance
 	if (this.layout('input') === 'object') {
 		var defaults = this.resource.defaultParams(this);
@@ -230,16 +224,15 @@ Action.prototype.prepareInvoke = function(new_args) {
 		}
 	}
 
-	return {
+	return Object.assign({}, params, {
 		params: new Parameters(this, params.params),
-		meta: params.meta,
 		onReply: function(c, response) {
 			that.preparedUrl = null;
 
 			if (params.onReply)
 				params.onReply(c, response);
-		}
-	}
+		},
+	});
 };
 
 /**
@@ -256,13 +249,7 @@ Action.prototype.prepareParams = function (args) {
 
 	if (args.length == 1 && (args[0].params || args[0].onReply)) {
 		// Parameters passed in an object
-		var opts = args[0];
-
-		return {
-			params: opts.params,
-			meta: opts.meta,
-			onReply: opts.onReply,
-		};
+		return args[0];
 	}
 
 	// One parameter is passed, it can be old-style hash of parameters or a callback
@@ -330,4 +317,53 @@ Action.prototype.separateMetaParams = function (params) {
 	}
 
 	return ret;
+};
+
+/**
+ * @function HaveAPI.Client.Action.waitForCompletion
+ * @memberof HaveAPI.Client.Action
+ * @static
+ * @param {Object} opts
+ */
+Action.waitForCompletion = function (opts) {
+	var interval = opts.blockInterval || 15;
+	var updateIn = opts.blockUpdateIn || 3;
+
+	var updateState = function (state) {
+		if (!opts.onStateChange)
+			return;
+
+		opts.onStateChange(opts.client, opts.reply, state);
+	};
+
+	var callOnDone = function () {
+		if (!opts.onDone)
+			return;
+
+		opts.onDone(opts.client, opts.reply);
+	};
+
+	var onPoll = function (c, reply) {
+		if (!reply.isOk())
+			return; // TODO report error?
+
+		var state = new ActionState(reply.response());
+
+		updateState(state);
+
+		if (state.finished)
+			return callOnDone();
+
+		if (state.shouldStop())
+			return;
+
+		opts.client.action_state.poll(opts.id, {
+			params: {
+				timeout: interval,
+			},
+			onReply: onPoll
+		});
+	};
+
+	opts.client.action_state.show(opts.id, onPoll);
 };

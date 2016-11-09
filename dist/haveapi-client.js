@@ -84,11 +84,24 @@ Client.Exceptions = {};
  */
 
 /**
+ * @callback HaveAPI.Client~actionStateCallback
+ * @param {HaveAPI.Client} client
+ * @param {HaveAPI.Client.Response} response
+ * @param {HaveAPI.Client.ActionState} state
+ */
+
+/**
  * Action call parameters
  * @typedef {Object} HaveAPI.Client~ActionCall
  * @property {Object} params - Input parameters
  * @property {Object} meta - Input meta parameters
+ * @property {Boolean} block
+ * @property {Integer} blockInterval
+ * @property {Integer} blockUpdateIn
  * @property {HaveAPI.Client~replyCallback} onReply - called when the API responds
+ * @property {HaveAPI.Client~actionStateCallback} onStateChange - called when the
+ *                                                                action's state changes
+ * @property {HaveAPI.Client~replyCallback} onDone - called when the blocking action finishes
  */
 
 /**
@@ -366,8 +379,22 @@ Client.prototype.directInvoke = function(action, opts) {
 		headers: this.authProvider.headers(),
 		queryParameters: this.authProvider.queryParameters(),
 		callback: function(status, response) {
-			if(opts.onReply !== undefined) {
-				opts.onReply(that, new Client.Response(action, response));
+			var res = new Client.Response(action, response);
+
+			if(opts.onReply !== undefined)
+				opts.onReply(that, res);
+
+			if (action.description.blocking && res.meta().action_state_id && opts.block) {
+				if (opts.onStateChange || opts.onDone) {
+					Action.waitForCompletion({
+						id: res.meta().action_state_id,
+						client: that,
+						reply: res,
+						blockInterval: opts.blockInterval,
+						onStateChange: opts.onStateChange,
+						onDone: opts.onDone
+					});
+				}
 			}
 		}
 	};
@@ -415,27 +442,47 @@ Client.prototype.invoke = function(action, opts) {
 	var origOnReply = opts.onReply;
 
 	opts.onReply = function (status, response) {
-		if (origOnReply === undefined)
+		if (!origOnReply && (!action.description.blocking || (!opts.onStateUpdate && !opts.onDone)))
 			return;
+
+		var responseObject;
 
 		switch (action.layout('output')) {
 			case 'object':
-				origOnReply(that, new Client.ResourceInstance(
+				responseObject = new Client.ResourceInstance(
 					that,
 					action.resource._private.parent,
 					action,
 					response
-				));
+				);
 				break;
 
 			case 'object_list':
-				origOnReply(that, new Client.ResourceInstanceList(that, action, response));
+				responseObject = new Client.ResourceInstanceList(that, action, response);
 				break;
 
 			default:
-				origOnReply(that, response);
+				responseObject = response;
+		}
+
+		if (origOnReply)
+			origOnReply(that, responseObject);
+
+		if (action.description.blocking && response.meta().action_state_id) {
+			if (opts.onStateChange || opts.onDone) {
+				Action.waitForCompletion({
+					id: response.meta().action_state_id,
+					client: that,
+					reply: responseObject,
+					blockInterval: opts.blockInterval,
+					onStateChange: opts.onStateChange,
+					onDone: opts.onDone
+				});
+			}
 		}
 	};
+
+	opts.block = false;
 
 	this.directInvoke(action, opts);
 };
@@ -1155,11 +1202,9 @@ Action.prototype.invoke = function() {
 		return;
 	}
 
-	this.client.invoke(this, {
+	this.client.invoke(this, Object.assign({}, prep, {
 		params: prep.params.params,
-		meta: prep.meta,
-		onReply: prep.onReply
-	});
+	}));
 };
 
 /**
@@ -1181,11 +1226,9 @@ Action.prototype.directInvoke = function() {
 		return;
 	}
 
-	this.client.directInvoke(this, {
-		params: prep.params.params,
-		meta: prep.meta,
-		onReply: prep.onReply
-	});
+	this.client.directInvoke(this, Object.assign({}, prep, {
+		params: prep.params.params
+	}));
 };
 
 /**
@@ -1229,8 +1272,6 @@ Action.prototype.prepareInvoke = function(new_args) {
 	var that = this;
 	var params = this.prepareParams(args);
 
-	console.log('prepared params', params);
-
 	// Add default parameters from object instance
 	if (this.layout('input') === 'object') {
 		var defaults = this.resource.defaultParams(this);
@@ -1247,16 +1288,15 @@ Action.prototype.prepareInvoke = function(new_args) {
 		}
 	}
 
-	return {
+	return Object.assign({}, params, {
 		params: new Parameters(this, params.params),
-		meta: params.meta,
 		onReply: function(c, response) {
 			that.preparedUrl = null;
 
 			if (params.onReply)
 				params.onReply(c, response);
-		}
-	}
+		},
+	});
 };
 
 /**
@@ -1273,13 +1313,7 @@ Action.prototype.prepareParams = function (args) {
 
 	if (args.length == 1 && (args[0].params || args[0].onReply)) {
 		// Parameters passed in an object
-		var opts = args[0];
-
-		return {
-			params: opts.params,
-			meta: opts.meta,
-			onReply: opts.onReply,
-		};
+		return args[0];
 	}
 
 	// One parameter is passed, it can be old-style hash of parameters or a callback
@@ -1347,6 +1381,145 @@ Action.prototype.separateMetaParams = function (params) {
 	}
 
 	return ret;
+};
+
+/**
+ * @function HaveAPI.Client.Action.waitForCompletion
+ * @memberof HaveAPI.Client.Action
+ * @static
+ * @param {Object} opts
+ */
+Action.waitForCompletion = function (opts) {
+	var interval = opts.blockInterval || 15;
+	var updateIn = opts.blockUpdateIn || 3;
+
+	var updateState = function (state) {
+		if (!opts.onStateChange)
+			return;
+
+		opts.onStateChange(opts.client, opts.reply, state);
+	};
+
+	var callOnDone = function () {
+		if (!opts.onDone)
+			return;
+
+		opts.onDone(opts.client, opts.reply);
+	};
+
+	var onPoll = function (c, reply) {
+		if (!reply.isOk())
+			return; // TODO report error?
+
+		var state = new ActionState(reply.response());
+
+		updateState(state);
+
+		if (state.finished)
+			return callOnDone();
+
+		if (state.shouldStop())
+			return;
+
+		opts.client.action_state.poll(opts.id, {
+			params: {
+				timeout: interval,
+			},
+			onReply: onPoll
+		});
+	};
+
+	opts.client.action_state.show(opts.id, onPoll);
+};
+
+/**
+ * @class ActionState
+ * @memberof HaveAPI.Client
+ */
+function ActionState (state) {
+	/**
+	 * @member {String} HaveAPI.Client.ActionState#label
+	 * @readonly
+	 */
+	this.label = state.label;
+
+	/**
+	 * @member {Boolean} HaveAPI.Client.ActionState#finished
+	 * @readonly
+	 */
+	this.finished = state.finished;
+
+	/**
+	 * @member {Boolean} HaveAPI.Client.ActionState#status
+	 * @readonly
+	 */
+	this.status = state.status;
+
+	/**
+	 * @member {Boolean} HaveAPI.Client.ActionState#canCancel
+	 * @readonly
+	 */
+	this.canCancel = state.can_cancel;
+
+	/**
+	 * @member {HaveAPI.Client.ActionState.Progress} HaveAPI.Client.ActionState#progress
+	 * @readonly
+	 */
+	this.progress = new ActionState.Progress(state);
+};
+
+/**
+ * Stop tracking of this action state
+ * @method HaveAPI.Client.ActionState#stop
+ */
+ActionState.prototype.stop = function () {
+	this.doStop = true;
+};
+
+/**
+ * @method HaveAPI.Client.ActionState#shouldStop
+ */
+ActionState.prototype.shouldStop = function () {
+	return this.doStop || false;
+};
+
+/**
+ * @method HaveAPI.Client.ActionState#cancel
+ */
+ActionState.prototype.cancel = function () {
+	// TODO
+};
+
+/**
+ * @class HaveAPI.Client.ActionState.Progress
+ * @memberof HaveAPI.Client.ActionState
+ */
+ActionState.Progress = function (state) {
+	/**
+   * @member {Integer} HaveAPI.Client.ActionState.Progress.current
+	 * @readonly
+	 */
+	this.current = state.current;
+
+	/**
+	 * @member {Integer} HaveAPI.Client.ActionState.Progress.total
+	 * @readonly
+	 */
+	this.total = state.total;
+
+	/**
+	 * @member {String} HaveAPI.Client.ActionState.Progress.unit
+	 * @readonly
+	 */
+	this.unit = state.unit;
+};
+
+/**
+ * @method HaveAPI.Client.ActionState.Progress#toString
+ * @return {String}
+ */
+ActionState.Progress.prototype.toString = function () {
+	return this.current + "/" + this.total + " " + this.unit;
 };
 
 /**
@@ -2200,6 +2373,7 @@ Authentication.registerProvider('token', Authentication.Token);
 
 var classes = [
 	'Action',
+	'ActionState',
 	'Authentication',
 	'BaseResource',
 	'Hooks',

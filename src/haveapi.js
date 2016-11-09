@@ -18,6 +18,7 @@ Authentication.registerProvider('token', Authentication.Token);
 
 var classes = [
 	'Action',
+	'ActionState',
 	'Authentication',
 	'BaseResource',
 	'Hooks',

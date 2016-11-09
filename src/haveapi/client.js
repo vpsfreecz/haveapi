@@ -75,11 +75,24 @@ Client.Exceptions = {};
  */
 
 /**
+ * @callback HaveAPI.Client~actionStateCallback
+ * @param {HaveAPI.Client} client
+ * @param {HaveAPI.Client.Response} response
+ * @param {HaveAPI.Client.ActionState} state
+ */
+
+/**
  * Action call parameters
  * @typedef {Object} HaveAPI.Client~ActionCall
  * @property {Object} params - Input parameters
  * @property {Object} meta - Input meta parameters
+ * @property {Boolean} block
+ * @property {Integer} blockInterval
+ * @property {Integer} blockUpdateIn
  * @property {HaveAPI.Client~replyCallback} onReply - called when the API responds
+ * @property {HaveAPI.Client~actionStateCallback} onStateChange - called when the
+ *                                                                action's state changes
+ * @property {HaveAPI.Client~replyCallback} onDone - called when the blocking action finishes
  */
 
 /**
@@ -357,8 +370,22 @@ Client.prototype.directInvoke = function(action, opts) {
 		headers: this.authProvider.headers(),
 		queryParameters: this.authProvider.queryParameters(),
 		callback: function(status, response) {
-			if(opts.onReply !== undefined) {
-				opts.onReply(that, new Client.Response(action, response));
+			var res = new Client.Response(action, response);
+
+			if(opts.onReply !== undefined)
+				opts.onReply(that, res);
+
+			if (action.description.blocking && res.meta().action_state_id && opts.block) {
+				if (opts.onStateChange || opts.onDone) {
+					Action.waitForCompletion({
+						id: res.meta().action_state_id,
+						client: that,
+						reply: res,
+						blockInterval: opts.blockInterval,
+						onStateChange: opts.onStateChange,
+						onDone: opts.onDone
+					});
+				}
 			}
 		}
 	};
@@ -406,27 +433,47 @@ Client.prototype.invoke = function(action, opts) {
 	var origOnReply = opts.onReply;
 
 	opts.onReply = function (status, response) {
-		if (origOnReply === undefined)
+		if (!origOnReply && (!action.description.blocking || (!opts.onStateUpdate && !opts.onDone)))
 			return;
+
+		var responseObject;
 
 		switch (action.layout('output')) {
 			case 'object':
-				origOnReply(that, new Client.ResourceInstance(
+				responseObject = new Client.ResourceInstance(
 					that,
 					action.resource._private.parent,
 					action,
 					response
-				));
+				);
 				break;
 
 			case 'object_list':
-				origOnReply(that, new Client.ResourceInstanceList(that, action, response));
+				responseObject = new Client.ResourceInstanceList(that, action, response);
 				break;
 
 			default:
-				origOnReply(that, response);
+				responseObject = response;
+		}
+
+		if (origOnReply)
+			origOnReply(that, responseObject);
+
+		if (action.description.blocking && response.meta().action_state_id) {
+			if (opts.onStateChange || opts.onDone) {
+				Action.waitForCompletion({
+					id: response.meta().action_state_id,
+					client: that,
+					reply: responseObject,
+					blockInterval: opts.blockInterval,
+					onStateChange: opts.onStateChange,
+					onDone: opts.onDone
+				});
+			}
 		}
 	};
+
+	opts.block = false;
 
 	this.directInvoke(action, opts);
 };

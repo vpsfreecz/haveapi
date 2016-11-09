@@ -357,6 +357,16 @@ Action.waitForCompletion = function (opts) {
 		if (state.shouldStop())
 			return;
 
+		if (state.shouldCancel()) {
+			if (!state.canCancel)
+				throw new Client.Exceptions.UncancelableAction(opts.id);
+
+			return opts.client.action_state.cancel(
+				opts.id,
+				Object.assign({}, opts, state.cancelOpts)
+			);
+		}
+
 		opts.client.action_state.poll(opts.id, {
 			params: {
 				timeout: interval,

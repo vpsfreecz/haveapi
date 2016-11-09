@@ -1423,6 +1423,16 @@ Action.waitForCompletion = function (opts) {
 		if (state.shouldStop())
 			return;
 
+		if (state.shouldCancel()) {
+			if (!state.canCancel)
+				throw new Client.Exceptions.UncancelableAction(opts.id);
+
+			return opts.client.action_state.cancel(
+				opts.id,
+				Object.assign({}, opts, state.cancelOpts)
+			);
+		}
+
 		opts.client.action_state.poll(opts.id, {
 			params: {
 				timeout: interval,
@@ -1491,9 +1501,18 @@ ActionState.prototype.shouldStop = function () {
 
 /**
  * @method HaveAPI.Client.ActionState#cancel
+ * @param {HaveAPI.Client.ActionCall} opts
  */
-ActionState.prototype.cancel = function () {
-	// TODO
+ActionState.prototype.cancel = function (opts) {
+	this.doCancel = true;
+	this.cancelOpts = opts;
+};
+
+/**
+ * @method HaveAPI.Client.ActionState#shouldCancel
+ */
+ActionState.prototype.shouldCancel = function () {
+	return this.doCancel || false;
 };
 
 /**
@@ -2357,6 +2376,16 @@ Client.Exceptions.ProtocolError = function (msg) {
 Client.Exceptions.UnresolvedArguments = function (action) {
 	this.name = 'UnresolvedArguments';
 	this.message = "Unable to execute action '"+ this.name +"': unresolved arguments";
+}
+
+/**
+ * Thrown when trying to cancel an action that cannot be cancelled.
+ * @class UncancelableAction
+ * @memberof HaveAPI.Client.Exceptions
+ */
+Client.Exceptions.UncancelableAction = function (stateId) {
+	this.name = 'UncancelableAction';
+	this.message = "Action state #"+ stateId +" cannot be cancelled";
 }
 
 /**

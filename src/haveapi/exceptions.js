@@ -17,3 +17,13 @@ Client.Exceptions.UnresolvedArguments = function (action) {
 	this.name = 'UnresolvedArguments';
 	this.message = "Unable to execute action '"+ this.name +"': unresolved arguments";
 }
+
+/**
+ * Thrown when trying to cancel an action that cannot be cancelled.
+ * @class UncancelableAction
+ * @memberof HaveAPI.Client.Exceptions
+ */
+Client.Exceptions.UncancelableAction = function (stateId) {
+	this.name = 'UncancelableAction';
+	this.message = "Action state #"+ stateId +" cannot be cancelled";
+}

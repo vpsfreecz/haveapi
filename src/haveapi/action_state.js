@@ -51,9 +51,18 @@ ActionState.prototype.shouldStop = function () {
 
 /**
  * @method HaveAPI.Client.ActionState#cancel
+ * @param {HaveAPI.Client.ActionCall} opts
  */
-ActionState.prototype.cancel = function () {
-	// TODO
+ActionState.prototype.cancel = function (opts) {
+	this.doCancel = true;
+	this.cancelOpts = opts;
+};
+
+/**
+ * @method HaveAPI.Client.ActionState#shouldCancel
+ */
+ActionState.prototype.shouldCancel = function () {
+	return this.doCancel || false;
 };
 
 /**

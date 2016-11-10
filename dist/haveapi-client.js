@@ -56,7 +56,7 @@ function Client(url, opts) {
 Client.Version = '0.6.0';
 
 /** @constant HaveAPI.Client.ProtocolVersion */
-Client.ProtocolVersion = '1.0';
+Client.ProtocolVersion = '1.1';
 
 /**
  * @namespace Exceptions
@@ -1481,13 +1481,13 @@ function ActionState (state) {
 	 * @member {Date} HaveAPI.Client.ActionState#createdAt
 	 * @readonly
 	 */
-	this.createdAt = state.created_at;
+	this.createdAt = state.created_at && new Date(state.created_at);
 
 	/**
 	 * @member {Date} HaveAPI.Client.ActionState#updatedAt
 	 * @readonly
 	 */
-	this.updatedAt = state.updated_at;
+	this.updatedAt = state.updated_at && new Date(state.updated_at);
 
 	/**
 	 * @member {Boolean} HaveAPI.Client.ActionState#canCancel

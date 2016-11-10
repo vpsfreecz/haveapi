@@ -4,6 +4,12 @@
  */
 function ActionState (state) {
 	/**
+	 * @member {Integer} HaveAPI.Client.ActionState#id
+	 * @readonly
+	 */
+	this.id = state.id;
+
+	/**
 	 * @member {String} HaveAPI.Client.ActionState#label
 	 * @readonly
 	 */

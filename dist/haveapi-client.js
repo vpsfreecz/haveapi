@@ -1478,6 +1478,18 @@ function ActionState (state) {
 	this.status = state.status;
 
 	/**
+	 * @member {Date} HaveAPI.Client.ActionState#createdAt
+	 * @readonly
+	 */
+	this.createdAt = state.created_at;
+
+	/**
+	 * @member {Date} HaveAPI.Client.ActionState#updatedAt
+	 * @readonly
+	 */
+	this.updatedAt = state.updated_at;
+
+	/**
 	 * @member {Boolean} HaveAPI.Client.ActionState#canCancel
 	 * @readonly
 	 */

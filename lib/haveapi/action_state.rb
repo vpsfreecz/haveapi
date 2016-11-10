@@ -63,6 +63,16 @@ module HaveAPI
       raise NotImplementedError
     end
 
+    # @return [Time]
+    def created_at
+
+    end
+
+    # @return [Time]
+    def updated_at
+
+    end
+
     # @return [Boolean] true if the action can be cancelled
     def can_cancel?
       false

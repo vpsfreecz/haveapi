@@ -12,6 +12,8 @@ module HaveAPI::Resources
       integer :total
       string :unit
       bool :can_cancel
+      datetime :created_at
+      datetime :updated_at
     end
 
     module Mixin
@@ -20,6 +22,8 @@ module HaveAPI::Resources
             id: state.id,
             label: state.label,
             status: state.status,
+            created_at: state.created_at,
+            updated_at: state.updated_at,
             can_cancel: state.can_cancel?,
         }
 

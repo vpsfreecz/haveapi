@@ -13,8 +13,9 @@ module HaveAPI
     # @param [Object] user
     # @param [Integer] offset
     # @param [Integer] limit
+    # @param [Symbol] order (:newest or :oldest)
     # @return [Array<ActionState>]
-    def self.list_pending(user, offset, limit)
+    def self.list_pending(user, offset, limit, order)
       raise NotImplementedError
     end
 

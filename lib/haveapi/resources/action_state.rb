@@ -48,6 +48,10 @@ module HaveAPI::Resources
 
       desc 'List states of pending actions'
 
+      input(:hash) do
+        string :order, choices: %w(newest oldest), default: 'newest', fill: true
+      end
+
       output(:hash_list) do
         use :all
       end
@@ -59,7 +63,8 @@ module HaveAPI::Resources
         actions = @context.server.action_state.list_pending(
             current_user,
             input[:offset],
-            input[:limit]
+            input[:limit],
+            input[:order].to_sym
         )
 
         actions.each do |state|

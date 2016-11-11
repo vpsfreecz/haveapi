@@ -24,11 +24,11 @@ END
 
       when :token
         <<END
-POST /_auth/token HTTP/1.1
+POST /_auth/token/tokens HTTP/1.1
 Host: #{host}
 Content-Type: application/json
 
-#{JSON.pretty_generate({token: {username: 'user', password: 'secret'}})}
+#{JSON.pretty_generate({token: {login: 'user', password: 'secret', lifetime: 'fixed'}})}
 END
       end
     end

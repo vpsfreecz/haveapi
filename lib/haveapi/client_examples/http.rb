@@ -55,9 +55,9 @@ END
     def response(sample)
       content = JSON.pretty_generate({
           status: true,
-          message: nil,
+          message: sample[:message],
           response: {action[:output][:namespace] => sample[:response]},
-          errors: nil,
+          errors: sample[:errors],
       })
 
       status_msg = Rack::Utils::HTTP_STATUS_CODES[sample[:http_status]]

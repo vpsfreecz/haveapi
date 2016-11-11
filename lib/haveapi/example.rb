@@ -16,6 +16,10 @@ module HaveAPI
       @response = f
     end
 
+    def status(status)
+      @status = status
+    end
+
     def message(msg)
       @message = msg
     end
@@ -46,6 +50,7 @@ module HaveAPI
             url_params: @url_params,
             request: @request,
             response: @response,
+            status: @status.nil? ? true : @status,
             message: @message,
             errors: @errors,
             http_status: @http_status || 200,

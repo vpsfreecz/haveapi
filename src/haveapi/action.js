@@ -124,6 +124,45 @@ Action.prototype.provideUrl = function(url) {
  * api.vps(101).ip_address(33).delete();
  *
  * @method HaveAPI.Client.Action#invoke
+ *
+ * @example
+ * // Calling blocking actions
+ * api.vps.restart(101, {
+ *   onReply: function (c, reply) {
+ *     console.log('The server has returned a response, the action is being executed.');
+ *   },
+ *   onStateChange: function  (c, reply, state) {
+ *     console.log(
+ *       "The action's state has changed, current progress:",
+ *       state.progress.toString()
+ *     );
+ *   },
+ *   onDone: function (c, reply) {
+ *     console.log('The action is finished');
+ *   }
+ * });
+ *
+ * @example
+ * // If the API server supports it, blocking actions can be cancelled
+ * api.vps.restart(101, {
+ *   onReply: function (c, reply) {
+ *     console.log('The server has returned a response, the action is being executed.');
+ *   },
+ *   onStateChange: function  (c, reply, state) {
+ *     if (state.canCancel) {
+ *       // Cancel action can be blocking too, depends on the API server
+ *       state.cancel({
+ *         onReply: function () {},
+ *         onStateChange: function () {},
+ *         onDone: function () {},
+ *       });
+ *     }
+ *   },
+ *   onDone: function (c, reply) {
+ *     console.log('The action is finished');
+ *   }
+ * });
+ *
  */
 Action.prototype.invoke = function() {
 	var prep = this.prepareInvoke(arguments);

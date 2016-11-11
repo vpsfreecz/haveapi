@@ -1,5 +1,6 @@
 require 'pp'
 require 'cgi'
+require 'rack/utils'
 
 module HaveAPI::ClientExamples
   class Http < HaveAPI::ClientExample
@@ -59,7 +60,9 @@ END
           errors: nil,
       })
 
-      res = "HTTP/1.1 200 OK\n"
+      status_msg = Rack::Utils::HTTP_STATUS_CODES[sample[:http_status]]
+
+      res = "HTTP/1.1 #{sample[:http_status]} #{status_msg}\n"
       res << "Content-Type: application/json;charset=utf-8\n"
       res << "Content-Length: #{content.size}\n\n"
       res << content

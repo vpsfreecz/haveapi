@@ -54,7 +54,7 @@ END
 
     def response(sample)
       content = JSON.pretty_generate({
-          status: true,
+          status: sample[:status],
           message: sample[:message],
           response: {action[:output][:namespace] => sample[:response]},
           errors: sample[:errors],

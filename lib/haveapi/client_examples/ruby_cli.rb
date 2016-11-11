@@ -8,7 +8,7 @@ module HaveAPI::ClientExamples
       "$ haveapi-cli -u #{base_url}"
     end
 
-    def auth(method)
+    def auth(method, desc)
       case method
       when :basic
         <<END

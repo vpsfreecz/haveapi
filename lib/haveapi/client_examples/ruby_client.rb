@@ -14,7 +14,7 @@ client = HaveAPI::Client::Client.new("#{base_url}")
 END
     end
 
-    def auth(method)
+    def auth(method, desc)
       case method
       when :basic
         <<END

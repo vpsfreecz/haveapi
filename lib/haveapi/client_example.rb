@@ -45,7 +45,7 @@ module HaveAPI
 
       # Shortcut to {ClientExample#auth}
       def auth(*args)
-        new(*args[0..-2]).auth(args.last)
+        new(*args[0..-3]).auth(*args[-2..-1])
       end
 
       # Shortcut to {ClientExample#example}
@@ -72,7 +72,7 @@ module HaveAPI
 
     end
 
-    def auth(method)
+    def auth(method, desc)
 
     end
   end

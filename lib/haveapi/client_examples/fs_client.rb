@@ -8,7 +8,7 @@ module HaveAPI::ClientExamples
       "# Mount the file system\n$ haveapi-fs #{base_url} #{mountpoint}"
     end
 
-    def auth(method)
+    def auth(method, desc)
       case method
       when :basic
         <<END

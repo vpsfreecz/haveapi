@@ -10,7 +10,7 @@ module HaveAPI::ClientExamples
       "$ curl --request OPTIONS '#{base_url}'"
     end
 
-    def auth(method)
+    def auth(method, desc)
       login = {login: 'user', password: 'password', lifetime: 'fixed'}
 
       case method
@@ -38,7 +38,7 @@ $ curl --request POST \\
 
 # Use a previously acquired token
 $ curl --request OPTIONS \\
-       --header 'X-HaveAPI-Auth-Token: thetoken' \\
+       --header '#{desc[:http_header]}: thetoken' \\
        '#{base_url}'
 END
       end

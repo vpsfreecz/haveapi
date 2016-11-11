@@ -49,7 +49,7 @@ end
   <div id="<%= baseid %>-examples">
     <% HaveAPI::ClientExample.clients.each_with_index do |client, i| %>
       <div id="<%= "#{baseid}-#{i}" %>">
-        <% render_client_auth(client, name) %>
+        <% render_client_auth(client, name, info) %>
       </div>
     <% end %>
   </div>
@@ -235,9 +235,9 @@ end
   <pre><code class="<%= client.code %>"><%= client.init(host, base_url, api_version) %></code></pre>
 <% end %>
 
-<% def render_client_auth(client, method) %>
+<% def render_client_auth(client, method, desc) %>
   <h4><%= client.label %></h4>
-  <pre><code class="<%= client.code %>"><%= client.auth(host, base_url, api_version, method) %></code></pre>
+  <pre><code class="<%= client.code %>"><%= client.auth(host, base_url, api_version, method, desc) %></code></pre>
 <% end %>
 
 <% def render_client_example(client, r_name, resource, a_name, action, example) %>

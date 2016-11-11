@@ -81,6 +81,7 @@ DEFINITIONS = {
                         type: :array,
                         items: { type: :string }
                     },
+                    blocking: { type: :boolean },
                     input: { '$ref' => '#/definitions/input_parameters' },
                     output: { '$ref' => '#/definitions/output_parameters' },
           					meta: { '$ref' => '#/definitions/action_meta' },

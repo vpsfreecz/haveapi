@@ -371,6 +371,7 @@ Client.prototype.directInvoke = function(action, opts) {
 		console.log("Executing", action, "with opts", opts, "at", action.preparedUrl);
 
 	var that = this;
+	var block = opts.block === undefined ? true : opts.block;
 
 	var httpOpts = {
 		method: action.httpMethod(),
@@ -441,6 +442,7 @@ Client.prototype.directInvoke = function(action, opts) {
 Client.prototype.invoke = function(action, opts) {
 	var that = this;
 	var origOnReply = opts.onReply;
+	var origOnBlock = opts.block === undefined ? true : opts.block;
 
 	opts.onReply = function (status, response) {
 		if (!origOnReply && (!action.description.blocking || (!opts.onStateUpdate && !opts.onDone)))
@@ -469,7 +471,7 @@ Client.prototype.invoke = function(action, opts) {
 		if (origOnReply)
 			origOnReply(that, responseObject);
 
-		if (action.description.blocking && response.meta().action_state_id) {
+		if (action.description.blocking && response.meta().action_state_id && origOnBlock) {
 			if (opts.onStateChange || opts.onDone) {
 				Action.waitForCompletion({
 					id: response.meta().action_state_id,

@@ -16,22 +16,39 @@ module HaveAPI
       @response = f
     end
 
+    def message(msg)
+      @message = msg
+    end
+
+    def errors(errs)
+      @errors = errs
+    end
+
+    def http_status(code)
+      @http_status = code
+    end
+
     def comment(str)
       @comment = str
     end
 
     def provided?
-      @request || @response || @comment
+      instance_variables.detect do |v|
+        instance_variable_get(v)
+      end ? true : false
     end
 
     def describe
       if provided?
         {
             title: @title,
+            comment: @comment,
             url_params: @url_params,
             request: @request,
             response: @response,
-            comment: @comment
+            message: @message,
+            errors: @errors,
+            http_status: @http_status || 200,
         }
       else
         {}

@@ -1,7 +1,7 @@
 - Blocking actions
 - Attempt to authenticate even for actions that don't require auth
 - Authentication methods have documented text descriptions
-- Examples can contain URL parameters
+- Examples can contain URL parameters, message, errors and HTTP status code
 - Examples are rendered in HaveAPI client languages, showing a snippet of
   code generated from the example
 - Allow APIs to set HTTP status code

@@ -390,12 +390,19 @@ render them according to its syntax.
 
     {
         "title": "A title",
+        "url_params: [ ... array of integers ... ],
         "request": {
             ... a hash of request parameters ...
         },
         "response": {
             ... a hash of response parameters ...
         },
+        "status": true/false,
+        "message": "Message explaining an error if it occurs",
+        "errors": {
+            "<parameter>": [ ... array of errors ... ],
+        },
+        http_status: 200,
         "comment": "Description of the example"
     }
 

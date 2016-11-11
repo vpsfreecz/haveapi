@@ -83,13 +83,26 @@ DEFINITIONS = {
                     },
                     input: { '$ref' => '#/definitions/input_parameters' },
                     output: { '$ref' => '#/definitions/output_parameters' },
-					meta: { '$ref' => '#/definitions/action_meta' },
+          					meta: { '$ref' => '#/definitions/action_meta' },
                     examples: {
                         type: :object,
                         properties: {
                             title: { type: :string },
+                            url_params: { type: :array, items: { type: :integer } },
                             request: { type: :object },
                             response: { type: :object },
+                            status: { type: :boolean },
+                            message: { type: :string },
+                            errors: {
+                                type: :object,
+                                patternProperties: {
+                                    '^[a-z_]+$' => {
+                                        type: :array,
+                                        items: { type: :string },
+                                    }
+                                }
+                            },
+                            http_status: { type: :integer },
                             comment: { type: :string },
                         }
                     },
@@ -99,7 +112,7 @@ DEFINITIONS = {
                 }
             }
         }
-        
+
     },
 
     input_parameters: {

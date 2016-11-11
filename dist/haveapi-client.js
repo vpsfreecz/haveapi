@@ -1441,16 +1441,16 @@ Action.waitForCompletion = function (opts) {
 		opts.onStateChange(opts.client, opts.reply, state);
 	};
 
-	var callOnDone = function () {
+	var callOnDone = function (reply) {
 		if (!opts.onDone)
 			return;
 
-		opts.onDone(opts.client, opts.reply);
+		opts.onDone(opts.client, reply || opts.reply);
 	};
 
 	var onPoll = function (c, reply) {
 		if (!reply.isOk())
-			return; // TODO report error?
+			return callOnDone(reply);
 
 		var state = new ActionState(reply.response());
 

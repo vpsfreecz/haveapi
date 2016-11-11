@@ -59,10 +59,6 @@ END
       end
 
       "--#{option} '#{value}'"
-
-    rescue NoMethodError => e
-      require 'pry'
-      binding.pry
     end
   end
 end

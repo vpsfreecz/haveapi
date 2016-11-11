@@ -23,25 +23,25 @@ A model paradigm (in no particular language):
 
     // Create client instance
     api = new HaveAPI.Client("https://your.api.tld")
-    
+
     // Authenticate
     api.authenticate("basic", {"user": "yourname", "password": "yourpassword"})
-    
+
     // Access resources and actions
     api.<resource>.<action>( { <parameters> } )
     api.user.new({"name": "Very Name", "password": "donottellanyone"})
     api.user.list()
     api.nested.resource.deep.list()
-    
+
     // Pass IDs to resources
     api.nested(1).resource(2).deep.list()
-    
+
     // Object-like access
     user = api.user.show(1)
     user.id
     user.name
     user.destroy()
-    
+
     // Logout
     api.logout()
 
@@ -96,3 +96,12 @@ Metadata channel is currently used to specify what associated resources should
 be prefetched and whether an object list should contain total number of items.
 
 Metadata is nothing more than a hash in input parameters under key `_meta`.
+
+## Blocking actions
+Useful for APIs with long-running actions. Clients can check state of such actions
+using resource `ActionState`. Because this resource is automatically present in all
+APIs that use blocking actions, client libraries expose this resource to the developer
+just as any other resource in the API.
+
+However, you may wish to integrate it in your client and provide ways for the action
+call to block/accept callbacks.

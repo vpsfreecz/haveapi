@@ -242,7 +242,16 @@ end
 
 <% def render_client_example(client, r_name, resource, a_name, action, example) %>
   <h6><%= client.label %></h6>
-  <pre><code class="<%= client.code %>"><%= client.example(host, base_url, api_version, r_name, resource, a_name, action, example) %></code></pre>
+  <% sample = client.new(host, base_url, api_version, r_name, resource, a_name, action) %>
+  <% if sample.respond_to?(:example) %>
+    <pre><code class="<%= client.code %>"><%= sample.example(example) %></code></pre>
+
+  <% else %>
+    <h6>Request</h6>
+    <pre><code class="<%= client.code %>"><%= sample.request(example) %></code></pre>
+    <h6>Response</h6>
+    <pre><code class="<%= client.code %>"><%= sample.response(example) %></code></pre>
+  <% end %>
 <% end %>
 
 

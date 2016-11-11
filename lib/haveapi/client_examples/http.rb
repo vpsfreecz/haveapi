@@ -32,7 +32,7 @@ END
       end
     end
 
-    def example(sample)
+    def request(sample)
       path = resolve_path(
           action[:method],
           action[:url],
@@ -48,19 +48,19 @@ END
         req << JSON.pretty_generate({action[:input][:namespace] => sample[:request]})
       end
 
-      return req if sample[:response].nil? || sample[:response].empty?
+      req
+    end
 
+    def response(sample)
       content = JSON.pretty_generate({
           action[:output][:namespace] => sample[:response]
       })
 
-      req << "\n\n\n"
-      req << "HTTP/1.1 200 OK\n"
-      req << "Content-Type: application/json;charset=utf-8\n"
-      req << "Content-Length: #{content.size}\n\n"
-      req << content
-
-      req
+      res = "HTTP/1.1 200 OK\n"
+      res << "Content-Type: application/json;charset=utf-8\n"
+      res << "Content-Length: #{content.size}\n\n"
+      res << content
+      res
     end
 
     def resolve_path(method, url, url_params, input_params)

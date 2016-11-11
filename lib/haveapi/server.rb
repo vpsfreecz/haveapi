@@ -222,6 +222,7 @@ module HaveAPI
 
       @sinatra.get "#{@root}doc/readme" do
         content_type 'text/html'
+
         erb :main_layout do
           GitHub::Markdown.render(File.new(settings.views + '/../../../README.md').read)
         end
@@ -406,15 +407,18 @@ module HaveAPI
           report_error(403, {}, 'Access denied. Insufficient permissions.')
         end
 
-        status, reply, errors = action.safe_exec
+        status, reply, errors, http_status = action.safe_exec
 
-        @formatter.format(
-            status,
-            status  ? reply : nil,
-            !status ? reply : nil,
-            errors,
-            version: false
-        )
+        [
+            http_status || 200,
+            @formatter.format(
+                status,
+                status  ? reply : nil,
+                !status ? reply : nil,
+                errors,
+                version: false
+            ),
+        ]
       end
 
       @sinatra.options route.url do |*args|

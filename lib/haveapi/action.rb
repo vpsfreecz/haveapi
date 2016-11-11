@@ -340,7 +340,9 @@ module HaveAPI
             error('Server error occurred')
           end
 
-          error(tmp[:message]) unless tmp[:status]
+          unless tmp[:status]
+            error(tmp[:message], http_status: tmp[:http_status] || 500)
+          end
         end
       end
 
@@ -419,7 +421,7 @@ module HaveAPI
         end
 
       else
-        [false, @message, @errors]
+        [false, @message, @errors, @http_status]
       end
     end
 
@@ -492,13 +494,15 @@ module HaveAPI
       ret
     end
 
-    def ok(ret={})
+    def ok(ret = {}, http_status: nil)
+      @http_status = http_status
       throw(:return, ret)
     end
 
-    def error(msg, errs={})
+    def error(msg, errs = {}, http_status: nil)
       @message = msg
       @errors = errs
+      @http_status = http_status
       throw(:return, false)
     end
 

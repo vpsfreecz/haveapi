@@ -134,6 +134,54 @@ api.vps.list({limit: 10}, function(c, vpses) {
 
 ```
 
+### Blocking actions
+HaveAPI has support for long-running actions. Progress of such actions can be monitored.
+The client has a callback to get updates about the action's state and a callback that
+is called when the action is finished.
+
+Notice that the callbacks are passed in a different way, see the
+[documentation](https://projects.vpsfree.cz/haveapi-client-js/ref/HaveAPI.Client.Action.html#invoke__anchor)
+to learn more about it.
+
+```js
+api.vps.restart(101, {
+    // onReply is called when the API server responds. It is the final callback
+    // for non-blocking actions.
+    onReply: function (c, reply) {
+        console.log('Server replied, action is being executed');
+    },
+
+    // Called regularly when the action's state changes
+    onStateChange: function (c, reply, state) {
+        console.log('Current progress:', state.progress.toString());
+    },
+
+    // Called when the action finishes
+    onDone: function (c, reply) {
+        console.log('Action done!');
+    }
+})
+```
+
+Some actions can be cancelled from the `onStateChange` callback if
+`state.canCancel` is `true`.
+
+```js
+...
+onStateChange: function (c, reply, state) {
+    if (state.canCancel) {
+        // Note that the cancel operation can also be blocking. That depends on the
+        // API server.
+        state.cancel({
+            onReply: function () { ... },
+            onStateChange: function () { ... },
+            onDone: function () { ... }
+        });
+    }
+}
+...
+```
+
 ### Metadata
 Metadata may be used to prefetch associated resources or get total item count.
 

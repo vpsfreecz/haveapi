@@ -53,7 +53,10 @@ END
 
     def response(sample)
       content = JSON.pretty_generate({
-          action[:output][:namespace] => sample[:response]
+          status: true,
+          message: nil,
+          response: {action[:output][:namespace] => sample[:response]},
+          errors: nil,
       })
 
       res = "HTTP/1.1 200 OK\n"

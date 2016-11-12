@@ -1,3 +1,9 @@
+module HaveAPI
+  module CLI ; end
+end
+
+require 'haveapi/cli/output_formatter'
+
 module HaveAPI::ClientExamples
   class RubyCli < HaveAPI::ClientExample
     label 'CLI'
@@ -42,13 +48,45 @@ END
       cmd << action_name
       cmd.concat(sample[:url_params]) if sample[:url_params]
 
-      return cmd.join(' ') if !sample[:request] || sample[:request].empty?
+      if sample[:request] && !sample[:request].empty?
+        cmd << "-- \\\n"
 
-      cmd << "-- \\\n"
+        res = cmd.join(' ') + sample[:request].map do |k, v|
+          ' '*14 + input_param(k, v)
+        end.join(" \\\n")
 
-      cmd.join(' ') + sample[:request].map do |k, v|
-        ' '*14 + input_param(k, v)
-      end.join(" \\\n")
+      else
+        res = cmd.join(' ')
+      end
+
+      return res if sample[:response].nil? || sample[:response].empty?
+
+      cols = []
+
+      action[:output][:parameters].each do |name, param|
+        col = {
+            name: name,
+            align: %w(Integer Float).include?(param[:type]) ? 'right' : 'left',
+            label: param[:label] && !param[:label].empty? ? param[:label] : name.upcase,
+        }
+
+        if param[:type] == 'Resource'
+          col[:display] = Proc.new do |r|
+            next '' unless r
+            next r unless r.is_a?(::Hash)
+
+            "#{r[ param[:value_label].to_sym ]} (##{r[ param[:value_id].to_sym ]})"
+          end
+        end
+
+        cols << col
+      end
+
+      res << "\n" << HaveAPI::CLI::OutputFormatter.format(
+          sample[:response],
+          cols
+      )
+      res
     end
 
     def input_param(name, value)

@@ -59,6 +59,21 @@ END
         res = cmd.join(' ')
       end
 
+      return response(sample, res) if sample[:status]
+
+      res << "\nAction failed: #{sample[:message]}\n"
+
+      if sample[:errors] && sample[:errors].any?
+        res << "Errors:\n"
+        sample[:errors].each do |param, e|
+          res << "\t#{param}: #{e.join('; ')}\n"
+        end
+      end
+
+      res
+    end
+
+    def response(sample, res)
       return res if sample[:response].nil? || sample[:response].empty?
 
       cols = []

@@ -48,8 +48,58 @@ END
       end
 
       out = "#{init}\n"
-      out << "client.#{resource_path.join('.')}.#{action_name}"
+      out << "reply = client.#{resource_path.join('.')}.#{action_name}"
       out << "(#{args.join(', ')})" unless args.empty?
+
+      return (out << response(sample)) if sample[:status]
+
+      out << "\n"
+      out << "# Raises exception HaveAPI::Client::ActionFailed"
+      out
+    end
+
+    def response(sample)
+      out = "\n\n"
+
+      case action[:output][:layout]
+      when :hash
+        out << "# reply is an instance of HaveAPI::Client::Response\n"
+        out << "# reply.response() returns a hash of output parameters:\n"
+        out << PP.pp(sample[:response] || {}, '').split("\n").map { |v| "# #{v}" }.join("\n")
+
+      when :hash_list
+        out << "# reply is an instance of HaveAPI::Client::Response\n"
+        out << "# reply.response() returns an array of hashes:\n"
+        out << PP.pp(sample[:response] || [], '').split("\n").map { |v| "# #{v}" }.join("\n")
+
+      when :object
+        out << "# reply is an instance of HaveAPI::Client::ResourceInstance\n"
+
+        (sample[:response] || {}).each do |k, v|
+          param = action[:output][:parameters][k]
+
+          if param[:type] == 'Resource'
+            out << "# reply.#{k} = HaveAPI::Client::ResourceInstance("
+            out << "resource: #{param[:resource].join('.')}, "
+
+            if v.is_a?(::Hash)
+              out << v.map { |k,v| "#{k}: #{PP.pp(v, '').strip}" }.join(', ')
+            else
+              out << "id: #{v}"
+            end
+
+            out << ")\n"
+
+          else
+            out << "# reply.#{k} = #{PP.pp(v, '')}"
+          end
+        end
+
+      when :object_list
+        out << "# reply is an instance of HaveAPI::Client::ResourceInstanceList,\n"
+        out << "# which is a subclass of Array"
+      end
+
       out
     end
   end

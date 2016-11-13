@@ -5,15 +5,19 @@ module HaveAPI::Resources
 
     params(:all) do
       id :id
-      string :label
-      bool :finished
-      bool :status
-      integer :current
-      integer :total
-      string :unit
-      bool :can_cancel
-      datetime :created_at
-      datetime :updated_at
+      string :label, label: 'Label'
+      bool :finished, label: 'Finished'
+      bool :status, label: 'Status',
+          desc: 'Determines whether the action is proceeding or failing'
+      integer :current, label: 'Current progress'
+      integer :total, label: 'Total',
+          desc: 'The action is finished when current equals to total'
+      string :unit, label: 'Unit', desc: 'Unit of current and total'
+      bool :can_cancel, label: 'Can cancel',
+          desc: 'When true, execution of this action can be cancelled'
+      datetime :created_at, label: 'Created at'
+      datetime :updated_at, label: 'Updated at',
+          desc: 'When was the progress last updated'
     end
 
     module Mixin

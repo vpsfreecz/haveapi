@@ -66,6 +66,42 @@ END
       cmd << "\n# Execute the action"
       cmd << "$ echo 1 > exec"
 
+      cmd << "\n# Query the action's result"
+      cmd << "$ cat status"
+      cmd << (sample[:status] ? '1' : '0')
+
+      if sample[:status]
+        if sample[:response] && !sample[:response].empty? \
+           && %i(hash object).include?(action[:output][:layout])
+          cmd << "\n# Query the output parameters"
+
+          sample[:response].each do |k, v|
+            cmd << "$ cat output/#{k}"
+
+            if v === true
+              cmd << '1'
+
+            elsif v === false
+              cmd << '0'
+
+            else
+              cmd << "#{v.to_s}"
+            end
+
+            cmd << "\n"
+          end
+        end
+
+      else
+        cmd << "\n# Get the error message"
+        cmd << "$ cat message"
+        cmd << sample[:message]
+
+        cmd << "\n# Parameter errors can be seen in the `errors` directory"
+        cmd << "$ ls errors"
+        cmd << (sample[:errors] || {}).keys.join("\n")
+      end
+
       cmd.join("\n")
     end
 

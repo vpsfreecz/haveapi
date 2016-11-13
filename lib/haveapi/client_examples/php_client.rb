@@ -23,12 +23,12 @@ END
         <<END
 #{init}
 
-# Get token using username and password
+// Get token using username and password
 $api->authenticate("token", ["username" => "user", "password" => "secret"]);
 
 echo "Token = ".$api->getAuthenticationProvider()->getToken();
 
-# Next time, the client can authenticate using the token directly
+// Next time, the client can authenticate using the token directly
 $api->authenticate("token", ["token" => $savedToken]);
 END
       end
@@ -40,23 +40,78 @@ END
       args.concat(sample[:url_params]) if sample[:url_params]
 
       if sample[:request] && !sample[:request].empty?
-        args << input_parameters(sample[:request])
+        args << format_parameters(:input, sample[:request])
       end
 
       out = "#{init}\n"
-      out << "$api->#{resource_path.join('->')}->#{action_name}"
-      out << "(#{args.join(', ')});"
+      out << "$reply = $api->#{resource_path.join('->')}->#{action_name}"
+      out << "(#{args.join(', ')});\n"
+
+      return (out << response(sample)) if sample[:status]
+
+      out << "// Throws exception \\HaveAPI\\Client\\Exception\\ActionFailed"
       out
     end
 
-    def input_parameters(params)
+    def response(sample)
+      out = "\n"
+
+      case action[:output][:layout]
+      when :hash
+        out << "// $reply is an instance of \\HaveAPI\\Client\\Response\n"
+        out << "// $reply->getResponse() returns an associative array of output parameters:\n"
+        out << format_parameters(:output, sample[:response] || {}, "// ")
+
+      when :hash_list
+        out << "// $reply is an instance of \\HaveAPI\\Client\\Response\n"
+        out << "// $reply->getResponse() returns an array of associative arrays:\n"
+
+      when :object
+        out << "// $reply is an instance of \\HaveAPI\\Client\\ResourceInstance\n"
+
+        (sample[:response] || {}).each do |k, v|
+          param = action[:output][:parameters][k]
+
+          if param[:type] == 'Resource'
+            out << "// $reply->#{k} = \\HaveAPI\\Client\\ResourceInstance("
+            out << "resource: #{param[:resource].join('.')}, "
+
+            if v.is_a?(::Hash)
+              out << v.map { |k,v| "#{k}: #{PP.pp(v, '').strip}" }.join(', ')
+            else
+              out << "id: #{v}"
+            end
+
+            out << ")\n"
+
+          elsif param[:type] == 'Custom'
+            out << "// $reply->#{k} is a custom type"
+
+          else
+            out << "// $reply->#{k} = #{PP.pp(v, '')}"
+          end
+        end
+
+      when :object_list
+        out << "// $reply is an instance of \\HaveAPI\\Client\\ResourceInstanceList"
+      end
+
+      out
+    end
+
+    def format_parameters(dir, params, prefix = '')
       ret = []
 
       params.each do |k, v|
-        ret << "  \"#{k}\" => #{value(v)}"
+        if action[dir][:parameters][k][:type] == 'Custom'
+          ret << "#{prefix}  \"#{k}\" => custom type}"
+
+        else
+          ret << "#{prefix}  \"#{k}\" => #{value(v)}"
+        end
       end
 
-      "[\n#{ret.join(",\n")}\n]"
+      "#{prefix}[\n#{ret.join(",\n")}\n#{prefix}]"
     end
 
     def value(v)

@@ -9,7 +9,11 @@ module HaveAPI::ClientExamples
     order 100
 
     def init
+      <<END
+OPTIONS /v#{version}/ HTTP/1.1
+Host: #{host}
 
+END
     end
 
     def auth(method, desc)

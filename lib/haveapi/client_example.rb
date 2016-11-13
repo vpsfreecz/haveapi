@@ -75,5 +75,9 @@ module HaveAPI
     def auth(method, desc)
 
     end
+
+    def version_url
+      File.join(base_url, "v#{version}", '/')
+    end
   end
 end

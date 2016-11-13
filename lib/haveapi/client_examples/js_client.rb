@@ -8,7 +8,7 @@ module HaveAPI::ClientExamples
       <<END
 import HaveAPI from 'haveapi-client'
 
-var api = new HaveAPI.Client("#{base_url}");
+var api = new HaveAPI.Client("#{base_url}", {version: "#{version}"});
 END
     end
 

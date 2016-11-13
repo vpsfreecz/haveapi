@@ -7,7 +7,7 @@ module HaveAPI::ClientExamples
     order 90
 
     def init
-      "$ curl --request OPTIONS '#{base_url}'"
+      "$ curl --request OPTIONS '#{version_url}'"
     end
 
     def auth(method, desc)

@@ -11,7 +11,7 @@ module HaveAPI::ClientExamples
     order 30
 
     def init
-      "$ haveapi-cli -u #{base_url}"
+      "$ haveapi-cli -u #{base_url} --version #{version}"
     end
 
     def auth(method, desc)

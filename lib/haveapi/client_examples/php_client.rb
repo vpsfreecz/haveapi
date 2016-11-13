@@ -6,7 +6,7 @@ module HaveAPI::ClientExamples
 
     def init
       <<END
-$api = new \\HaveAPI\\Client("#{base_url}");
+$api = new \\HaveAPI\\Client("#{base_url}", "#{version}");
 END
     end
 

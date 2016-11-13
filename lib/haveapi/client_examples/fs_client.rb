@@ -5,7 +5,7 @@ module HaveAPI::ClientExamples
     order 40
 
     def init
-      "# Mount the file system\n$ haveapi-fs #{base_url} #{mountpoint}"
+      "# Mount the file system\n$ haveapi-fs #{base_url} #{mountpoint} -o version=#{version}"
     end
 
     def auth(method, desc)

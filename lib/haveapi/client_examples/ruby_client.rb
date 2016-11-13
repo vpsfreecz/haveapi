@@ -10,7 +10,7 @@ module HaveAPI::ClientExamples
       <<END
 require 'haveapi-client'
 
-client = HaveAPI::Client::Client.new("#{base_url}")
+client = HaveAPI::Client.new("#{base_url}")
 END
     end
 

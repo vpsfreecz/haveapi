@@ -5,6 +5,7 @@
 - Examples are rendered in HaveAPI client languages, showing a snippet of
   code generated from the example
 - Allow APIs to set HTTP status code
+- New hook HaveAPI::Server.description_exception
 
 * Tue Oct 18 2016 - version 0.6.0
 - Token authentication: fix output of action renew

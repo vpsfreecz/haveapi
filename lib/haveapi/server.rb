@@ -17,6 +17,17 @@ module HaveAPI
             current_user: 'object returned by the authentication backend',
         }
 
+    has_hook :description_exception,
+        desc: 'Called when an exception occurs when building self-description',
+        args: {
+            context: 'HaveAPI::Context',
+            exception: 'exception instance',
+        },
+        ret: {
+            http_status: 'HTTP status code to send to client',
+            message: 'error message sent to the client',
+        }
+
     module ServerHelpers
       def authenticate!(v)
         require_auth! unless authenticated?(v)
@@ -433,24 +444,31 @@ module HaveAPI
           authenticated?(v)
         end
 
+        ctx = Context.new(
+            settings.api_server,
+            version: v,
+            action: route.action,
+            url: route.url,
+            args: args,
+            params: params,
+            user: current_user,
+            endpoint: true
+        )
+
         begin
-          desc = route.action.describe(Context.new(
-              settings.api_server,
-              version: v,
-              action: route.action,
-              url: route.url,
-              args: args,
-              params: params,
-              user: current_user,
-              endpoint: true
-          ))
+          desc = route.action.describe(ctx)
 
           unless desc
             report_error(403, {}, 'Access denied. Insufficient permissions.')
           end
 
-        rescue ActiveRecord::RecordNotFound
-          report_error(404, {}, 'Object not found')
+        rescue => e
+          tmp = settings.api_server.call_hooks_for(:description_exception, args: [ctx, e])
+          report_error(
+              tmp[:http_status] || 500,
+              {},
+              tmp[:message] || 'Server error occured'
+          )
         end
 
         @formatter.format(true, desc)

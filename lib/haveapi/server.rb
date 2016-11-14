@@ -1,5 +1,6 @@
 require 'erb'
 require 'redcarpet'
+require 'cgi'
 
 module HaveAPI
   class Server
@@ -92,6 +93,10 @@ module HaveAPI
 
       def host
         request.env['HTTP_HOST'].split(':').first
+      end
+
+      def urlescape(v)
+        CGI.escape(v)
       end
 
       def api_version

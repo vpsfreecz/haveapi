@@ -6,6 +6,7 @@
   code generated from the example
 - Allow APIs to set HTTP status code
 - New hook HaveAPI::Server.description_exception
+- Online doc: link to prebuilt haveapi-webui at webui.haveapi.org
 
 * Tue Oct 18 2016 - version 0.6.0
 - Token authentication: fix output of action renew

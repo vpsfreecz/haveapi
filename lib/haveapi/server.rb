@@ -152,6 +152,12 @@ module HaveAPI
         set :public_folder, settings.root + '/public'
         set :bind, '0.0.0.0'
 
+        if settings.development?
+          set :dump_errors, true
+          set :raise_errors, true
+          set :show_exceptions, false
+        end
+
         helpers ServerHelpers
 
         before do

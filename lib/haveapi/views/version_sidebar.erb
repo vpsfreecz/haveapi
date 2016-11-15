@@ -5,7 +5,7 @@
         <a href="#auth-<%= method %>"><%= method.to_s.humanize %></a>
         <% if info[:resources] %>
           <ul>
-            <% info[:resources].each do |resource, info| %>
+            <% sort_hash(info[:resources]).each do |resource, info| %>
               <% render_resource_nav(resource.to_s, info, "auth-#{method}") %>
             <% end %>
           </ul>
@@ -20,13 +20,13 @@
       <a href="#<%= "#{prefix}-#{resource}" %>">.<%= resource.humanize %></a>
 
       <ul>
-        <% info[:actions].each do |action, info| %>
+        <% sort_hash(info[:actions]).each do |action, info| %>
             <li>
               <a href="#<%= "#{prefix}-#{resource}-#{action}" %>">#<%= action.capitalize %></a>
             </li>
         <% end %>
 
-        <% info[:resources].each do |r, i| %>
+        <% sort_hash(info[:resources]).each do |r, i| %>
             <% render_resource_nav(r, i, "#{prefix}-#{resource}") %>
         <% end %>
       </ul>
@@ -57,7 +57,7 @@
     <% render_auth_nav(@help[:authentication]) %>
   </li>
   <li><a href="#resources">Resources</a></li>
-  <% @help[:resources].each do |resource, info| %>
+  <% sort_hash(@help[:resources]).each do |resource, info| %>
       <% render_resource_nav(resource, info) %>
   <% end %>
 </ul>

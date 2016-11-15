@@ -99,6 +99,10 @@ module HaveAPI
         CGI.escape(v)
       end
 
+      def sort_hash(hash)
+        hash.sort { |a, b| a[0] <=> b[0] }
+      end
+
       def api_version
         @v
       end

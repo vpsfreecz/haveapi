@@ -38,7 +38,7 @@ end
 
   <% if info[:resources] %>
     <h2>Resources</h2>
-    <% info[:resources].each do |resource, desc| %>
+    <% sort_hash(info[:resources]).each do |resource, desc| %>
       <% render_resource_body(resource.to_s, desc, 'auth') %>
     <% end %>
   <% end %>
@@ -82,7 +82,7 @@ end
     <p><%= info[:description] %></p>
 
     <div class="actions">
-      <% info[:actions].each do |action, info| %>
+      <% sort_hash(info[:actions]).each do |action, info| %>
         <h3 id="<%= "#{prefix}-#{resource}-#{action}" %>"><%= name %> # <%= action.capitalize %></h3>
         <div class="action">
           <dl>
@@ -222,7 +222,7 @@ end
     </div>
 
     <% unless info[:resources].empty? %>
-      <% info[:resources].each do |r, i| %>
+      <% sort_hash(info[:resources]).each do |r, i| %>
         <% render_resource_body(r, i, resource_path, "#{prefix}-#{resource}", "#{name}.#{r.humanize}") %>
       <% end %>
     <% end %>
@@ -325,7 +325,7 @@ nojsTabs({
 <h1 id="resources">Resources</h1>
 <p>Follows a list of all resources in this API and their actions.</p>
 
-<% @help[:resources].each do |resource, info| %>
+<% sort_hash(@help[:resources]).each do |resource, info| %>
     <% render_resource_body(resource, info) %>
 <% end %>
 </div>

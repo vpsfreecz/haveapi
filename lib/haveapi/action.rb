@@ -341,7 +341,7 @@ module HaveAPI
           end
 
           unless tmp[:status]
-            error(tmp[:message], http_status: tmp[:http_status] || 500)
+            error(tmp[:message], {}, http_status: tmp[:http_status] || 500)
           end
         end
       end
@@ -494,15 +494,22 @@ module HaveAPI
       ret
     end
 
-    def ok(ret = {}, http_status: nil)
-      @http_status = http_status
+    # @param ret [Hash] response
+    # @param opts [Hash] options
+    # @option opts [Integer] http_status HTTP status code sent to the client
+    def ok(ret = {}, opts = {})
+      @http_status = opts[:http_status]
       throw(:return, ret)
     end
 
-    def error(msg, errs = {}, http_status: nil)
+    # @param msg [String] error message sent to the client
+    # @param errs [Hash<Array>] parameter errors sent to the client
+    # @param opts [Hash] options
+    # @option opts [Integer] http_status HTTP status code sent to the client
+    def error(msg, errs = {}, opts = {})
       @message = msg
       @errors = errs
-      @http_status = http_status
+      @http_status = opts[:http_status]
       throw(:return, false)
     end
 

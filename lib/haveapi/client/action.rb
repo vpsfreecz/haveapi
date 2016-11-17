@@ -88,6 +88,10 @@ module HaveAPI::Client
       @spec[dir][:parameters][name]
     end
 
+    def meta(scope)
+      @spec[:meta][scope]
+    end
+
     def url
       @spec[:url]
     end

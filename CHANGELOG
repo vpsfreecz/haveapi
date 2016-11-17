@@ -3,6 +3,7 @@
 - New CLI options --[no-]block and --timeout
 - CLI handles all interrupts
 - Add shortcut method HaveAPI::Client.new
+- Add method Action#meta
 
 * Tue Oct 18 2016 - version 0.6.0
 - No changes

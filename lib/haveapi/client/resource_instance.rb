@@ -22,11 +22,13 @@ module HaveAPI::Client
         if response.is_a?(Hash)
           @params = response
           @prepared_args = response[:_meta][:url_params]
+          @meta = response[:_meta] unless @meta
 
         else
           @response = response
           @params = response.response
           @prepared_args = response.meta[:url_params]
+          @meta = response.meta unless @meta
         end
 
         setup_from_clone(resource)

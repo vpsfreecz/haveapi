@@ -4,6 +4,7 @@
 - CLI handles all interrupts
 - Add shortcut method HaveAPI::Client.new
 - Add method Action#meta
+- Fix access to nil associations in ResourceInstance
 
 * Tue Oct 18 2016 - version 0.6.0
 - No changes

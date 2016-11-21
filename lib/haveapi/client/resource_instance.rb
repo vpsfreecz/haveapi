@@ -114,10 +114,13 @@ module HaveAPI::Client
             @resource_instances[name] = find_association(param, @params[name])
 
             # id reader
-            ensure_method(:"#{name}_id") { @params[name][ param[:value_id].to_sym ] }
+            ensure_method(:"#{name}_id") do
+              @params[name] && @params[name][ param[:value_id].to_sym ]
+            end
 
             # id writer
             ensure_method(:"#{name}_id=") do |id|
+              @params[name] ||= {}
               @params[name][ param[:value_id].to_sym ] = id
 
               @resource_instances[name] = find_association(
@@ -141,6 +144,7 @@ module HaveAPI::Client
 
             # value writer
             ensure_method(:"#{name}=") do |obj|
+              @params[name] ||= {}
               @params[name][ param[:value_id].to_sym ] = obj.method(param[:value_id]).call
               @params[name][ param[:value_label].to_sym ] = obj.method(param[:value_label]).call
 

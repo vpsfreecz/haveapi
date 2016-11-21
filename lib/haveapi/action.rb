@@ -15,7 +15,7 @@ module HaveAPI
     has_hook :exec_exception,
         desc: 'Called when unhandled exceptions occurs during Action.exec',
         args: {
-            action: 'HaveAPI::Action instance',
+            context: 'HaveAPI::Context instance',
             exception: 'exception instance',
         },
         ret: {
@@ -332,7 +332,7 @@ module HaveAPI
           pre_exec
           exec
         rescue Exception => e
-          tmp = call_class_hooks_as_for(Action, :exec_exception, args: [self, e])
+          tmp = call_class_hooks_as_for(Action, :exec_exception, args: [@context, e])
 
           if tmp.empty?
             p e.message

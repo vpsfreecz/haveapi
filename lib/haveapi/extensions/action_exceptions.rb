@@ -1,8 +1,8 @@
 module HaveAPI::Extensions
   class ActionExceptions < Base
     class << self
-      def enabled
-        HaveAPI::Action.connect_hook(:exec_exception) do |ret, action, e|
+      def enabled(server)
+        HaveAPI::Action.connect_hook(:exec_exception) do |ret, context, e|
           break(ret) unless @exceptions
 
           @exceptions.each do |handler|

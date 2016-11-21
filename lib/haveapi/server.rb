@@ -292,7 +292,7 @@ module HaveAPI
       @auth_chain << HaveAPI.default_authenticate if @auth_chain.empty?
       @auth_chain.setup(@versions)
 
-      @extensions.each { |e| e.enabled }
+      @extensions.each { |e| e.enabled(self) }
 
       # Mount default version first
       mount_version(@root, @default_version)
@@ -422,6 +422,7 @@ module HaveAPI
         action = route.action.new(request, v, params, body, Context.new(
             settings.api_server,
             version: v,
+            request: self,
             action: route.action,
             url: route.url,
             params: params,
@@ -462,6 +463,7 @@ module HaveAPI
         ctx = Context.new(
             settings.api_server,
             version: v,
+            request: self,
             action: route.action,
             url: route.url,
             args: args,

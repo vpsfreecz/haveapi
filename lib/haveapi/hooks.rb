@@ -183,7 +183,7 @@ module HaveAPI
     end
 
     def self.stop(ret)
-      throw(ret)
+      throw(:stop, ret)
     end
   end
 

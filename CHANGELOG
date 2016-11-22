@@ -9,6 +9,7 @@
 - Online doc: link to prebuilt haveapi-webui at webui.haveapi.org
 - Print errors and exceptions in development mode
 - New extension ExceptionMailer
+- Fixed HaveAPI::Hooks.stop
 
 * Tue Oct 18 2016 - version 0.6.0
 - Token authentication: fix output of action renew

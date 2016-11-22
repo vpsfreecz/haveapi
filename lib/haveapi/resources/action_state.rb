@@ -1,5 +1,6 @@
 module HaveAPI::Resources
   class ActionState < HaveAPI::Resource
+    desc 'Browse states of blocking actions'
     auth false
     version :all
 

@@ -5,6 +5,8 @@
 - Add shortcut method HaveAPI::Client.new
 - Add method Action#meta
 - Fix access to nil associations in ResourceInstance
+- Handle 404 errors when fetching description
+- Handle RestClient::ResourceNotFound
 
 * Tue Oct 18 2016 - version 0.6.0
 - No changes

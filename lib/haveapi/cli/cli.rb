@@ -93,7 +93,13 @@ module HaveAPI::CLI
       end
 
       if authenticate(action) && !action.unresolved_args?
-        action.update_description(@api.describe_action(action))
+        begin
+          action.update_description(@api.describe_action(action))
+
+        rescue RestClient::ResourceNotFound => e
+          format_errors(action, 'Object not found', {})
+          exit(false)
+        end
       end
 
       @selected_params = @opts[:output] ? @opts[:output].split(',').uniq
@@ -647,7 +653,7 @@ module HaveAPI::CLI
     def format_errors(action, msg, errors)
       warn "Action failed: #{msg}"
 
-      if errors.any?
+      if errors && errors.any?
         puts 'Errors:'
         errors.each do |param, e|
           puts "\t#{param}: #{e.join('; ')}"

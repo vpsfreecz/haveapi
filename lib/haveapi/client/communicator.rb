@@ -144,6 +144,9 @@ module HaveAPI::Client
       rescue RestClient::Forbidden
         return error('Access forbidden. Bad user name or password? Not authorized?')
 
+      rescue RestClient::ResourceNotFound => e
+        response = parse(e.http_body)
+
       rescue => e
         return error("Fatal API error: #{e.inspect}")
       end

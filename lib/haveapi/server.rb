@@ -435,6 +435,7 @@ module HaveAPI
         end
 
         status, reply, errors, http_status = action.safe_exec
+        @halted = true
 
         [
             http_status || 200,

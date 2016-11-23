@@ -1,3 +1,5 @@
+require 'date'
+
 module HaveAPI::Parameters
   class Typed
     ATTRIBUTES = %i(label desc type db_name default fill clean)
@@ -67,7 +69,7 @@ module HaveAPI::Parameters
 
     def clean(raw)
       return instance_exec(raw, &@clean) if @clean
-      
+
       val = if raw.nil?
         @default
 
@@ -76,7 +78,7 @@ module HaveAPI::Parameters
 
       elsif @type == Integer
         raw.to_i
-      
+
       elsif @type == Float
         raw.to_f
 
@@ -85,7 +87,7 @@ module HaveAPI::Parameters
 
       elsif @type == ::Datetime
         begin
-          Time.iso8601(raw)
+          DateTime.iso8601(raw).to_time
 
         rescue ArgumentError
           raise HaveAPI::ValidationError.new("not in ISO 8601 format '#{raw}'")

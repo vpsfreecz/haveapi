@@ -10,6 +10,7 @@
 - Print errors and exceptions in development mode
 - New extension ExceptionMailer
 - Fixed HaveAPI::Hooks.stop
+- Use DateTime.iso8601 to parse dates
 
 * Tue Oct 18 2016 - version 0.6.0
 - Token authentication: fix output of action renew

@@ -9,14 +9,15 @@ class Meta {
 }
 
 abstract class Authentication {
-	
+
 }
 
 class Basic {
-	
+	description : String
 }
 
 class Token {
+	description : String
 	http_header : String
 	query_parameter : String
 }
@@ -30,7 +31,8 @@ class Action {
 	name : String
 	auth : Bool
 	description : String
-	aliases : list
+	aliases : Array<String>
+	blocking : Bool
 	url : String
 	method : String
 	help : String
@@ -38,8 +40,12 @@ class Action {
 
 class Example {
 	title : String
+	url_params : Array<Integer>
 	request : hash
 	response : hash
+	status : Bool
+	message : String
+	http_status : Integer
 	comment : String
 }
 
@@ -60,7 +66,7 @@ class InputParameter {
 }
 
 class OutputParameter {
-	
+
 }
 
 abstract class ResourceParameter {
@@ -69,14 +75,14 @@ abstract class ResourceParameter {
 }
 
 class TypedInputParameter {
-	
+
 }
 
 class ResourceInputParameter {
 }
 
 class TypedOutputParameter {
-	
+
 }
 
 class ResourceOutputParameter {
@@ -119,7 +125,7 @@ class FormatValidator {
 }
 
 abstract class InclusionValidator {
-	
+
 }
 
 class ArrayInclusionValidator {
@@ -131,7 +137,7 @@ class HashInclusionValidator {
 }
 
 abstract class LengthValidator {
-	
+
 }
 
 class EqualLengthValidator {

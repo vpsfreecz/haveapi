@@ -660,7 +660,7 @@ module HaveAPI::CLI
         end
       end
 
-      print_examples(action)
+      puts "\nUse --help to see available parameters and example usage."
     end
 
     def find_command(resource, action)

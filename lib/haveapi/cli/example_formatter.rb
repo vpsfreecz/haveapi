@@ -7,20 +7,27 @@ module HaveAPI::CLI
         # request
         out << "$ #{$0} #{action.resource_path.join('.')} #{action.name}"
 
-        params = example[:request][action.namespace(:input).to_sym]
+        params = example[:request]
 
         if params
           out << ' --' unless params.empty?
 
           params.each do |k, v|
-            out << ' ' << example_param(k, v, action.param_description(:input, k))
+            desc = action.param_description(:input, k)
+            next unless desc
+
+            out << ' ' << example_param(k, v, desc)
           end
         end
 
         out << "\n"
 
         # response
-        cli.format_output(action, example[:response], out)
+        cli.format_output(
+            action,
+            {action.namespace(:output).to_sym => example[:response]},
+            out
+        )
       end
     end
 

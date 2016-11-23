@@ -1,3 +1,5 @@
+require 'date'
+
 module HaveAPI::Client
   class Parameters::Typed
     module Boolean
@@ -52,7 +54,7 @@ module HaveAPI::Client
 
       elsif type == 'Datetime'
         begin
-          Time.iso8601(raw)
+          DateTime.iso8601(raw).to_time
 
         rescue ArgumentError
           @errors << 'not in ISO 8601 format'

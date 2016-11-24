@@ -5,7 +5,7 @@ require 'haveapi/version'
 Gem::Specification.new do |s|
   s.name        = 'haveapi'
   s.version     = HaveAPI::VERSION
-  s.date        = '2016-10-18'
+  s.date        = '2016-11-24'
   s.summary     =
   s.description = 'Framework for creating self-describing APIs'
   s.authors     = 'Jakub Skokan'
@@ -13,7 +13,7 @@ Gem::Specification.new do |s|
   s.files       = `git ls-files -z`.split("\x0")
   s.license     = 'MIT'
 
-  s.required_ruby_version = '~> 2.0'
+  s.required_ruby_version = '>= 2.0.0'
 
   s.add_runtime_dependency 'require_all'
   s.add_runtime_dependency 'json'

@@ -6,7 +6,7 @@ require 'haveapi/client/version'
 Gem::Specification.new do |spec|
   spec.name          = 'haveapi-client'
   spec.version       = HaveAPI::Client::VERSION
-  spec.date          = '2016-10-18'
+  spec.date          = '2016-11-24'
   spec.authors       = ['Jakub Skokan']
   spec.email         = ['jakub.skokan@vpsfree.cz']
   spec.summary       =

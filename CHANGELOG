@@ -1,3 +1,4 @@
+* Thu Nov 24 2016 - version 0.7.0
 - Action parameters and callbacks can be passed in an object
 - Fix checking of XMLHttpRequest presence to work in both browser and nodejs
 - Tracking of blocking actions

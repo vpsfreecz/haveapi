@@ -88,7 +88,14 @@ module HaveAPI
       end
 
       def base_url
-        "#{request.env['rack.url_scheme']}://#{request.env['HTTP_HOST']}"
+        if request.env['HTTP_X_FORWARDED_SSL'] == 'on'
+          scheme = 'https'
+
+        else
+          scheme = request.env['rack.url_scheme']
+        end
+
+        "#{scheme}://#{request.env['HTTP_HOST']}"
       end
 
       def host

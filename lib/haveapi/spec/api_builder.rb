@@ -40,7 +40,7 @@ module HaveAPI::Spec
     # Select API versions to be used.
     def use_version(v)
       before(:each) do
-        opts(:versions, v)
+        self.class.opt(:versions, v)
       end
     end
 
@@ -51,7 +51,7 @@ module HaveAPI::Spec
 
     # Set a custom mount path.
     def mount_to(path)
-      opts(:mount, path)
+      opt(:mount, path)
     end
 
     # Login using HTTP basic.

@@ -1,4 +1,5 @@
 - Server.base_url: support for proxied https
+- Fix typos and scoping in Spec::ApiBuilder
 
 * Fri Nov 25 2016 - version 0.7.1
 - Require haveapi-client 0.7.0

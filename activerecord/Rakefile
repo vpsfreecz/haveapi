@@ -1,0 +1,10 @@
+require 'active_record'
+require 'sinatra/activerecord/rake'
+require 'haveapi'
+require 'rspec/core'
+require 'rspec/core/rake_task'
+
+RSpec::Core::RakeTask.new(:spec) do |spec|
+  spec.pattern = FileList['spec/*_spec.rb', 'spec/**/*_spec.rb']
+  spec.rspec_opts = '--require spec_helper'
+end

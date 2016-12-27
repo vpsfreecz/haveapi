@@ -9,3 +9,7 @@ See `README.md` of each project directories to learn more.
 
 ## Basic
 This is an empty project with no model backend.
+
+## ActiveRecord
+This project uses ActiveRecord, a well-known ORM from Ruby on Rails, as a model
+backend.

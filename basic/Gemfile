@@ -1,0 +1,8 @@
+source 'https://rubygems.org'
+
+gem 'haveapi', '~> 0.7.1'
+
+group :test do
+  gem 'rack-test'
+  gem 'rspec'
+end

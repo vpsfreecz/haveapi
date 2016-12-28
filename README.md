@@ -30,14 +30,15 @@ At the moment, the following clients are available:
 - PHP client: https://github.com/vpsfreecz/haveapi-client-php
 - JavaScript client: https://github.com/vpsfreecz/haveapi-client-js
 
-If there isn't a client in the language you need, you can [create it](doc/create-client.md).
-
 Complex applications can be built on top of these basic clients, e.g.:
 
 - [haveapi-webui](https://github.com/vpsfreecz/haveapi-webui), a generic web administration
   for HaveAPI-based APIs
 - [haveapi-fs](https://github.com/vpsfreecz/haveapi-fs), a FUSE based filesystem that can
   mount any HaveAPI-based API
+
+If there isn't a client in the language you need, you can [create it](doc/create-client.md)
+and then use it for all HaveAPI-based APIs.
 
 ## Protocol features
 - Creates RESTful APIs usable even with simple HTTP client, should it be needed
@@ -300,6 +301,8 @@ or cancel their execution.
 ## Read more
  - [Protocol definition](doc/protocol.md)
  - [How to create a client](doc/create-client.md)
+ - [Project templates](https://github.com/vpsfreecz/haveapi-server-project-templates)
+ - [API examples](https://github.com/vpsfreecz/haveapi-server-examples)
 
 ## Contributing
 

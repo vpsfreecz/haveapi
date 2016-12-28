@@ -1,0 +1,21 @@
+development:
+  adapter:  sqlite3
+  encoding: utf8
+#  host:     localhost
+#  username: api
+#  password: secret
+  database: db/development.sqlite3
+
+production:
+  adapter:  sqlite3
+  encoding: utf8
+#  host:     localhost
+#  username: api
+#  password: secret
+  database: db/production.sqlite3
+
+test:
+  adapter: sqlite3
+  database: db/test.sqlite3
+#  pool: 5
+#  timeout: 5000

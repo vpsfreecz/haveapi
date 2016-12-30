@@ -8,7 +8,7 @@ describe HaveAPI::Params do
     class Index < HaveAPI::Actions::Default::Index
 
     end
-    
+
     class Show < HaveAPI::Actions::Default::Show
       output do
         string :not_label
@@ -19,7 +19,7 @@ describe HaveAPI::Params do
 
     end
   end
-  
+
   it 'executes all blocks' do
     p = HaveAPI::Params.new(:input, MyResource::Index)
     p.add_block Proc.new { string :param1 }
@@ -134,8 +134,8 @@ describe HaveAPI::Params do
     p.exec
     p.patch(:param1, label: 'Better param 1')
     p.patch(:param2, desc: 'Better description')
-    expect(p.params.first.label).to eq('Better param 1')
-    expect(p.params.second.desc).to eq('Better description')
+    expect(p.params[0].label).to eq('Better param 1')
+    expect(p.params[1].desc).to eq('Better description')
   end
 
   it 'validates upon build' do
@@ -183,7 +183,7 @@ describe HaveAPI::Params do
       string :param2
     end)
     p.exec
-    
+
     expect(p[:param1]).to eq(p.params[0])
     expect(p[:param2]).to eq(p.params[1])
   end

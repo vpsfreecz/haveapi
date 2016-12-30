@@ -137,7 +137,7 @@ DEFINITIONS = {
                                         enum: %w(String Text Integer Float Datetime Boolean)
                                     },
                                     validators: { '$ref' => '#/definitions/input_validators' },
-                                    default: {}
+                                    default: {},
                                 }
                             },
                             {
@@ -281,7 +281,59 @@ DEFINITIONS = {
     output_parameters: {
         type: :object,
         properties: {
-          parameters: {},
+          parameters: {
+              type: :object,
+              patternProperties: {
+                  '^[a-z_]+$' => {
+                      type: :object,
+                      oneOf: [
+                          {
+                              title: 'Data type',
+                              type: :object,
+                              properties: {
+                                  label: { type: :string },
+                                  description: { type: :string },
+                                  type: {
+                                      type: :string,
+                                      enum: %w(String Text Integer Float Datetime Boolean)
+                                  },
+                              }
+                          },
+                          {
+                              title: 'Resource',
+                              type: :object,
+                              properties: {
+                                  label: { type: :string },
+                                  description: { type: :string },
+                                  type: {
+                                      type: :string,
+                                      enum: %w(Resource)
+                                  },
+                                  resource: { type: :array },
+                                  value_id: { type: :string },
+                                  value_label: { type: :string },
+                                  value: {
+                                      type: :object,
+                                      properties: {
+                                          url: { type: :string },
+                                          method: { type: :string },
+                                          help: { type: :string },
+                                      }
+                                  },
+                                  choices: {
+                                      type: :object,
+                                      properties: {
+                                          url: { type: :string },
+                                          method: { type: :string },
+                                          help: { type: :string },
+                                      }
+                                  }
+                              }
+                          }
+                      ]
+                  }
+              }
+          },
           layout: {},
           namespace: {}
         }

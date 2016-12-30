@@ -43,10 +43,10 @@ describe 'Parameters::Typed' do
   it 'can be optional' do
     p = p_arg
     expect(p.optional?).to be true
-    
+
     p = p_arg(required: false)
     expect(p.optional?).to be true
-    
+
     p = p_arg(required: nil)
     expect(p.optional?).to be true
   end
@@ -55,7 +55,7 @@ describe 'Parameters::Typed' do
     # Integer
     p = p_type(Integer)
     expect(p.clean('42')).to eq(42)
-    
+
     # Float
     p = p_type(Float)
     expect(p.clean('3.1456')).to eq(3.1456)
@@ -66,7 +66,7 @@ describe 'Parameters::Typed' do
     %w(true t yes y 1).each do |v|
       expect(p.clean(v)).to be true
     end
-    
+
     %w(false f no n 0).each do |v|
       expect(p.clean(v)).to be false
     end
@@ -89,5 +89,18 @@ describe 'Parameters::Typed' do
 
     p.patch(default: 'bazinga')
     expect(p.clean(nil)).to eq('bazinga')
+  end
+
+  it 'can be protected' do
+    p = p_arg(protected: true)
+    expect(p.describe(nil)[:protected]).to be true
+
+    p = p_arg(protected: false)
+    expect(p.describe(nil)[:protected]).to be false
+  end
+
+  it 'is unprotected by default' do
+    p = p_arg
+    expect(p.describe(nil)[:protected]).to be false
   end
 end

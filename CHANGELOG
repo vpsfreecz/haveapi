@@ -1,5 +1,8 @@
+- Protocol version 1.2
 - Server.base_url: support for proxied https
 - Fix typos and scoping in Spec::ApiBuilder
+- Typed parameters can be set as protected, i.e. their values are to be
+  visually hidden (like passwords)
 
 * Fri Nov 25 2016 - version 0.7.1
 - Require haveapi-client 0.7.0

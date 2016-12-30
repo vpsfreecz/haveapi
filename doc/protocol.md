@@ -227,7 +227,8 @@ The type can be one of:
             "description": "Describe it's meaning",
             "type": "<one of the data types>",
             "validators": ... validators ...,
-            "default": "default value that is used if the parameter is omitted"
+            "default": "default value that is used if the parameter is omitted",
+            "protected": true/false
         }
 
 

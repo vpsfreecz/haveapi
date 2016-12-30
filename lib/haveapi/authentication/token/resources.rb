@@ -14,7 +14,7 @@ module HaveAPI::Authentication::Token
 
         input(:hash) do
           string :login, label: 'Login', required: true
-          string :password, label: 'Password', required: true
+          password :password, label: 'Password', required: true
           string :lifetime, label: 'Lifetime', required: true,
                   choices: %i(fixed renewable_manual renewable_auto permanent),
                   desc: <<END

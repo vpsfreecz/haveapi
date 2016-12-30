@@ -2,7 +2,7 @@ require 'date'
 
 module HaveAPI::Parameters
   class Typed
-    ATTRIBUTES = %i(label desc type db_name default fill clean)
+    ATTRIBUTES = %i(label desc type db_name default fill clean protected)
 
     attr_reader :name, :label, :desc, :type, :default
 
@@ -47,7 +47,8 @@ module HaveAPI::Parameters
           description: @desc,
           type: @type ? @type.to_s : String.to_s,
           validators: @validators ? @validators.describe : {},
-          default: @default
+          default: @default,
+          protected: @protected || false,
       }
     end
 

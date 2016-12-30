@@ -94,6 +94,10 @@ module HaveAPI
       add_param(*apply(args, type: Text))
     end
 
+    def password(*args)
+      add_param(*apply(args, type: String, protected: true))
+    end
+
     def id(*args)
       integer(*args)
     end
@@ -218,7 +222,7 @@ module HaveAPI
     # convert params to correct data types, set default values if necessary.
     def validate(params)
       errors = {}
-     
+
       layout_aware(params) do |input|
         # First run - coerce values to correct types
         @params.each do |p|
@@ -226,7 +230,7 @@ module HaveAPI
             errors[p.name] = ['required parameter missing']
             next
           end
-          
+
           unless input.has_key?(p.name)
             input[p.name] = p.default if p.respond_to?(:fill?) && p.fill?
             next
@@ -240,24 +244,24 @@ module HaveAPI
             errors[p.name] << e.message
             next
           end
-          
+
           input[p.name] = cleaned if cleaned != :_nil
         end
-        
+
         # Second run - validate parameters
         @params.each do |p|
           next if errors.has_key?(p.name)
           next if input[p.name].nil?
 
           res = p.validate(input[p.name], input)
-          
+
           unless res === true
             errors[p.name] ||= []
             errors[p.name].concat(res)
           end
         end
       end
-      
+
       unless errors.empty?
         raise ValidationError.new('input parameters not valid', errors)
       end

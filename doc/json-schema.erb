@@ -138,6 +138,7 @@ DEFINITIONS = {
                                     },
                                     validators: { '$ref' => '#/definitions/input_validators' },
                                     default: {},
+                                    protected: { type: :boolean },
                                 }
                             },
                             {
@@ -300,6 +301,7 @@ DEFINITIONS = {
                                         type: :string,
                                         enum: %w(String Text Integer Float Datetime Boolean)
                                     },
+                                    protected: { type: :boolean },
                                 }
                             },
                             {

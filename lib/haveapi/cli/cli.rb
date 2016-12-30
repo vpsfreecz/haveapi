@@ -308,7 +308,14 @@ module HaveAPI::CLI
 
         action.input[:parameters].each do |name, p|
           opts.on(param_option(name, p), p[:description] || p[:label] || '') do |*args|
-            options[name] = args.first
+            arg = args.first
+
+            if arg.nil?
+              options[name] = read_param(name, p)
+
+            else
+              options[name] = args.first
+            end
           end
         end
 
@@ -354,10 +361,18 @@ module HaveAPI::CLI
         ret += "[no-]#{name}"
 
       else
-        ret += "#{name} #{name.underscore.upcase}"
+        ret += "#{name} [#{name.underscore.upcase}]"
       end
 
       ret
+    end
+
+    def read_param(name, p)
+      prompt = "#{p[:label] || name}: "
+
+      ask(prompt) do |q|
+        q.default = nil
+      end
     end
 
     def list_versions

@@ -372,6 +372,7 @@ module HaveAPI::CLI
 
       ask(prompt) do |q|
         q.default = nil
+        q.echo = !p[:protected]
       end
     end
 

@@ -1,5 +1,6 @@
 - Fix coercion of Text parameters
 - Ask on input parameters on stdin if an argument isn't provided
+- Protocol version set to 1.2
 
 * Fri Nov 25 2016 - version 0.7.1
 - Do not require a concrete version of json

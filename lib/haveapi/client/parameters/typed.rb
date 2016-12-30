@@ -61,7 +61,7 @@ module HaveAPI::Client
           nil
         end
 
-      elsif type == 'String'
+      elsif %w(String Text).include?(type)
         raw.to_s
 
       else

@@ -4,7 +4,7 @@ module HaveAPI
     has_attr :version
     has_attr :desc
     has_attr :route
-    has_attr :resolve, ->(klass){ klass.respond_to?(:id) ? klass.id : nil }
+    has_attr :resolve
     has_attr :http_method, :get
     has_attr :auth, true
     has_attr :aliases, []
@@ -239,6 +239,15 @@ module HaveAPI
         end
 
         ret
+      end
+
+      def resolve_url_params(object)
+        if self.resolve
+          self.resolve.call(object)
+
+        else
+          object.respond_to?(:id) ? object.id : nil
+        end
       end
     end
 

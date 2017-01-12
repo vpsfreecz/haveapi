@@ -61,7 +61,7 @@ module HaveAPI
     end
 
     def call_url_params(action, obj)
-      ret = params && action.resolve.call(obj)
+      ret = params && action.resolve_url_params(obj)
 
       return [ret] if ret && !ret.is_a?(Array)
       ret

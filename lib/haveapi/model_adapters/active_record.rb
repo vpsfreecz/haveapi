@@ -165,7 +165,14 @@ END
       end
 
       def meta
-        params = @context.action.resolve.call(@object)
+        res = @context.action.resource
+
+        if !@context.action.resolve && res.const_defined?(:Show)
+          params = res::Show.resolve_url_params(@object)
+
+        else
+          params = @context.action.resolve_url_params(@object)
+        end
 
         {
             url_params: params.is_a?(Array) ? params : [params],
@@ -184,7 +191,7 @@ END
         res_show = param.show_action
         res_output = res_show.output
 
-        args = res_show.resolve.call(val)
+        args = res_show.resolve_url_params(val)
 
         if includes_include?(param.name)
           push_cls = @context.action
@@ -307,7 +314,7 @@ END
       # handle ::ActiveRecord::Validations::PresenceValidator do |v|
       #   opts = { empty: false }
       #   opts[:message] = v.options[:message] if v.options[:message]
-      # 
+      #
       #   validator(HaveAPI::Validators::Presence, :present, opts)
       # end
 
@@ -350,15 +357,15 @@ END
 
       handle ::ActiveModel::Validations::NumericalityValidator do |v|
         opts = {}
-        
+
         opts[:min] = v.options[:greater_than] + 1 if v.options[:greater_than]
         opts[:min] = v.options[:greater_than_or_equal_to] if v.options[:greater_than_or_equal_to]
-        
+
         if v.options[:equal_to]
           validator(accept: v.options[:equal_to])
           next
         end
-        
+
         opts[:max] = v.options[:less_than] - 1 if v.options[:less_than]
         opts[:max] = v.options[:less_than_or_equal_to] if v.options[:less_than_or_equal_to]
 

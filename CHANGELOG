@@ -1,3 +1,5 @@
+- Send client's IP address in HTTP header Client-IP
+
 * Fri Nov 25 2016 - version 0.7.1
 - No changes
 

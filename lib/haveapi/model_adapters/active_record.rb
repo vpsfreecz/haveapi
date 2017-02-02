@@ -167,7 +167,9 @@ END
       def meta
         res = @context.action.resource
 
-        if !@context.action.resolve && res.const_defined?(:Show)
+        if @context.action.name.demodulize == 'Index' \
+           && !@context.action.resolve \
+           && res.const_defined?(:Show)
           params = res::Show.resolve_url_params(@object)
 
         else

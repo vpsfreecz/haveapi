@@ -3,6 +3,7 @@ require 'pp'
 require 'highline/import'
 require 'yaml'
 require 'time'
+require 'date'
 
 module HaveAPI::CLI
   class Cli
@@ -723,7 +724,7 @@ module HaveAPI::CLI
     def format_date(date)
       return '' unless date
 
-      t = Time.iso8601(date)
+      t = DateTime.iso8601(date).to_time
       ret = case @opts[:datetime]
       when :timestamp
         t.to_i

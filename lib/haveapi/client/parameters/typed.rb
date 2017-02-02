@@ -53,12 +53,20 @@ module HaveAPI::Client
         Boolean.to_b(raw)
 
       elsif type == 'Datetime'
-        begin
-          DateTime.iso8601(raw).to_time
+        if raw.is_a?(::Time)
+          raw
 
-        rescue ArgumentError
-          @errors << 'not in ISO 8601 format'
-          nil
+        elsif raw.is_a?(::Date) || raw.is_a?(::DateTime)
+          raw.to_time
+
+        else
+          begin
+            DateTime.iso8601(raw).to_time
+
+          rescue ArgumentError
+            @errors << 'not in ISO 8601 format'
+            nil
+          end
         end
 
       elsif %w(String Text).include?(type)

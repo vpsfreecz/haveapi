@@ -1,9 +1,9 @@
 HaveAPI Server Project Templates
 ================================
 This repository contains empty project templates for APIs built using the
-HaveAPI server framework in Ruby. There are several projects, each different
-model backends. You can use these templates when you want to start a new
-project.
+HaveAPI server framework in Ruby. There are several projects, with different
+model backends and configurations. You can use these templates when you want to
+start a new project.
 
 See `README.md` in project directories to learn more about them.
 

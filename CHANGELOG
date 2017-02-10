@@ -1,3 +1,4 @@
+* Fri Feb 10 2017 - version 0.8.0
 - Fix coercion of Text parameters
 - Ask on input parameters on stdin if an argument isn't provided
 - Protocol version set to 1.2

@@ -1,4 +1,6 @@
+* Fri Feb 10 2017 - version 0.8.0
 - Send client's IP address in HTTP header Client-IP
+- Protocol v1.2
 
 * Fri Nov 25 2016 - version 0.7.1
 - No changes

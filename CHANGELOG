@@ -1,3 +1,5 @@
+- Optionally forbid loading parameter validators from model
+
 * Fri Feb 10 2017 - version 0.8.0
 - Protocol version 1.2
 - Server.base_url: support for proxied https

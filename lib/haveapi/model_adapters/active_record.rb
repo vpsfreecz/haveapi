@@ -388,7 +388,7 @@ END
           next unless p.is_a?(::HaveAPI::Parameters::Typed)
 
           if p.db_name == param
-            p.add_validator(key, opts)
+            p.add_validator(key, opts) if p.load_validators?
             break
           end
         end

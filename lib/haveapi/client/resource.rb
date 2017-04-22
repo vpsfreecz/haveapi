@@ -33,6 +33,8 @@ module HaveAPI::Client
     # Copy actions and resources from the +original+ resource
     # and create methods for this instance.
     def setup_from_clone(original)
+      @description = original._description
+
       original.actions.each do |name, action|
         define_action(action)
         @actions[name] = action

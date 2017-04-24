@@ -7,6 +7,6 @@ group :test do
 end
 
 group :activerecord do
-  gem 'activerecord', '~> 4.1.14'
-  gem 'sinatra-activerecord', '~> 2.0.9'
+  gem 'activerecord', '>= 4.0'
+  gem 'sinatra-activerecord'
 end

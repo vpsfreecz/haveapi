@@ -30,7 +30,7 @@ defmodule HaveAPI.Builder do
         Plug.Conn.send_resp(
           binding()[:conn],
           200,
-          Poison.encode!(HaveAPI.Doc.api(@haveapi_resources))
+          HaveAPI.Protocol.send(true, response: HaveAPI.Doc.api(@haveapi_resources))
         )
       end
 

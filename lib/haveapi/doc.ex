@@ -24,6 +24,20 @@ defmodule HaveAPI.Doc do
   end
 
   def action(act) do
-    %{url: act.route, method: Atom.to_string(act.method) |> String.upcase}
+    method = Atom.to_string(act.method) |> String.upcase
+
+    %{
+      auth: false, # TODO
+      description: act.desc,
+      aliases: act.aliases,
+      blocking: false, # TODO
+      input: nil, # TODO
+      output: nil, # TODO
+      examples: [], # TODO
+      meta: nil, # TODO
+      url: act.route,
+      method: method,
+      help: "#{act.route}?method=#{method}"
+    }
   end
 end

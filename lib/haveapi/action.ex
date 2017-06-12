@@ -29,8 +29,8 @@ defmodule HaveAPI.Action do
 
   defmacro input([do: block]) do
     quote do
-      def input(var!(params)) do
-        import HaveAPI.Parameters.Dsl
+      defmodule Input do
+        use HaveAPI.Parameters.Dsl
 
         unquote(block)
       end
@@ -39,8 +39,8 @@ defmodule HaveAPI.Action do
 
   defmacro output([do: block]) do
     quote do
-      def output(var!(params)) do
-        import HaveAPI.Parameters.Dsl
+      defmodule Output do
+        use HaveAPI.Parameters.Dsl
 
         unquote(block)
       end

@@ -24,7 +24,27 @@ defmodule HaveAPI.Action do
   end
 
   defmacro aliases(v) do
-    quote do: @haveapi_aliases ++ unquote(v)
+    quote do: @haveapi_aliases (@haveapi_aliases ++ unquote(v))
+  end
+
+  defmacro input([do: block]) do
+    quote do
+      def input(var!(params)) do
+        import HaveAPI.Parameters.Dsl
+
+        unquote(block)
+      end
+    end
+  end
+
+  defmacro output([do: block]) do
+    quote do
+      def output(var!(params)) do
+        import HaveAPI.Parameters.Dsl
+
+        unquote(block)
+      end
+    end
   end
 
   defmacro __before_compile__(_env) do

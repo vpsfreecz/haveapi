@@ -11,4 +11,14 @@ defmodule HaveAPI.Protocol do
       errors: opts[:errors] || nil,
     })
   end
+
+  def send_doc(doc) do
+    Poison.encode!(%{
+      version: "1.2",
+      status: true,
+      response: doc,
+      message: nil,
+      errors: nil,
+    })
+  end
 end

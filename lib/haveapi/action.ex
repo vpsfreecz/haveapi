@@ -126,6 +126,34 @@ defmodule HaveAPI.Action do
   end
 
   def execute(action, conn) do
-    apply(action, :exec, [conn])
+    case apply(action, :exec, [%HaveAPI.Request{conn: conn, input: %{}}]) do
+      response when is_map(response) ->
+        Plug.Conn.send_resp(
+          conn,
+          200,
+          HaveAPI.Protocol.send(true, response: response)
+        )
+
+      {:ok, response} when is_map(response) ->
+        Plug.Conn.send_resp(
+          conn,
+          200,
+          HaveAPI.Protocol.send(true, response: response)
+        )
+
+      {:error, msg} when is_binary(msg) ->
+        Plug.Conn.send_resp(
+          conn,
+          400,
+          HaveAPI.Protocol.send(false, message: msg)
+        )
+
+      _ ->
+        Plug.Conn.send_resp(
+          conn,
+          500,
+          HaveAPI.Protocol.send(false, message: "Server error occurred.")
+        )
+    end
   end
 end

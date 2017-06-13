@@ -5,6 +5,10 @@ defmodule HaveAPI.Builder do
       use Plug.Router
       
       plug :match
+      plug Plug.Parsers,
+        parsers: [:json],
+        pass:  ["application/json"],
+        json_decoder: Poison
       plug :dispatch
 
       Module.register_attribute __MODULE__, :haveapi_resources, accumulate: true
@@ -30,13 +34,14 @@ defmodule HaveAPI.Builder do
         Plug.Conn.send_resp(
           binding()[:conn],
           200,
-          HaveAPI.Protocol.send(true, response: HaveAPI.Doc.api(@haveapi_resources))
+          HaveAPI.Protocol.send_doc(HaveAPI.Doc.api(@haveapi_resources))
         )
       end
 
       Enum.each(@haveapi_resources, fn r ->
         Enum.each(r.actions, fn a ->
           @current_action a
+
           match Path.join([prefix, r.route, a.route]), via: a.method do
             HaveAPI.Action.execute(@current_action, binding()[:conn])
           end

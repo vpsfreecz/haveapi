@@ -20,10 +20,15 @@ defmodule HaveAPI.Parameters.Dsl do
     [:string, :text, :integer, :float, :datetime, :boolean],
     fn v ->
       defmacro unquote(:"#{v}")(name, opts \\ []) do
-        IO.puts("#{unquote(v)} #{name}")
+        type = unquote(v)
 
-        quote do
-          @haveapi_params unquote(name)
+        quote bind_quoted: [name: name, opts: opts, type: type] do
+          @haveapi_params %HaveAPI.Parameter{
+            name: name,
+            type: type,
+            label: opts[:label],
+            description: opts[:description]
+          }
         end
       end
     end

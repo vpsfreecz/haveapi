@@ -5,6 +5,7 @@ defmodule HaveAPI.Builder do
       use Plug.Router
 
       plug :match
+      plug :fetch_query_params
       plug Plug.Parsers,
         parsers: [:json],
         pass:  ["application/json"],
@@ -31,10 +32,26 @@ defmodule HaveAPI.Builder do
   defmacro mount(prefix \\ "/") do
     quote bind_quoted: [prefix: prefix] do
       match prefix, via: :options do
+        conn = binding()[:conn]
+
         Plug.Conn.send_resp(
-          binding()[:conn],
+          conn,
           200,
-          HaveAPI.Protocol.send_doc(HaveAPI.Doc.api(@haveapi_resources))
+          HaveAPI.Protocol.send_doc(
+            case conn.query_params["describe"] do
+              "versions" ->
+                %{
+                  versions: [1],
+                  default: 1,
+                }
+
+              "default" ->
+                HaveAPI.Doc.version(%HaveAPI.Context{version: 1}, @haveapi_resources)
+
+              _ -> # TODO: report error on invalid values?
+                HaveAPI.Doc.api(@haveapi_resources)
+            end
+          )
         )
       end
 

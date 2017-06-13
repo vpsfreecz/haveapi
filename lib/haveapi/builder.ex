@@ -55,9 +55,11 @@ defmodule HaveAPI.Builder do
         )
       end
 
+      ctx = %HaveAPI.Context{version: 1}
+
       Enum.each(@haveapi_resources, fn r ->
         Enum.each(r.actions, fn a ->
-          @current_action a
+          @current_action %{ctx | resource: r, action: a}
 
           match Path.join([prefix, r.route, a.route]), via: a.method do
             HaveAPI.Action.execute(@current_action, binding()[:conn])

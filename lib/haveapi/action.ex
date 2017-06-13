@@ -5,9 +5,42 @@ defmodule HaveAPI.Action do
       @haveapi_route ""
       @haveapi_desc ""
       @haveapi_aliases []
+      @haveapi_parent_input []
+      @haveapi_parent_output []
       @before_compile HaveAPI.Action
 
       import HaveAPI.Action
+
+      defmacro __using__(_opts) do
+        quote do
+          parent = unquote(__MODULE__)
+
+          @haveapi_method :get
+          @haveapi_route ""
+          @haveapi_desc ""
+          @haveapi_aliases []
+          @haveapi_parent_input []
+          @haveapi_parent_output []
+          @before_compile HaveAPI.Action
+
+          Enum.each(
+            [:Input, :Output],
+            fn v ->
+              mod = Module.concat(parent, v)
+
+              if function_exported?(mod, :params, 0) do
+                Module.put_attribute(
+                  __MODULE__,
+                  :"haveapi_parent_#{v |> Atom.to_string |> String.downcase}",
+                  apply(mod, :params, [])
+                )
+              end
+            end
+          )
+          
+          import HaveAPI.Action
+        end
+      end
     end
   end
 
@@ -29,8 +62,17 @@ defmodule HaveAPI.Action do
 
   defmacro input([do: block]) do
     quote do
+      parent_in = @haveapi_parent_input
+
       defmodule Input do
         use HaveAPI.Parameters.Dsl
+
+        unless Enum.empty?(parent_in) do
+          Enum.each(
+            parent_in,
+            fn v -> @haveapi_params v end
+          )
+        end
 
         unquote(block)
       end
@@ -39,8 +81,17 @@ defmodule HaveAPI.Action do
 
   defmacro output([do: block]) do
     quote do
+      parent_out = @haveapi_parent_output
+
       defmodule Output do
         use HaveAPI.Parameters.Dsl
+
+        unless Enum.empty?(parent_out) do
+          Enum.each(
+            parent_out,
+            fn v -> @haveapi_params v end
+          )
+        end
 
         unquote(block)
       end

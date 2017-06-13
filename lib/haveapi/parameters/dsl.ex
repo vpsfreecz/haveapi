@@ -11,7 +11,7 @@ defmodule HaveAPI.Parameters.Dsl do
   defmacro __before_compile__(_env) do
     quote do
       def params do
-        @haveapi_params
+        Enum.reverse(@haveapi_params)
       end
     end
   end

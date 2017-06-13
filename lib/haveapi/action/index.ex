@@ -8,4 +8,8 @@ defmodule HaveAPI.Action.Index do
     integer :limit
     integer :offset
   end
+
+  output :hash_list do
+
+  end
 end

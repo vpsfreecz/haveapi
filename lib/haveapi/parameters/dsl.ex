@@ -1,15 +1,20 @@
 defmodule HaveAPI.Parameters.Dsl do
-  defmacro __using__(_opts) do
+  defmacro __using__(opts) do
     quote do
       import HaveAPI.Parameters.Dsl
 
       Module.register_attribute __MODULE__, :haveapi_params, accumulate: true
+      @haveapi_layout unquote(opts[:layout])
       @before_compile HaveAPI.Parameters.Dsl
     end
   end
 
   defmacro __before_compile__(_env) do
     quote do
+      def layout do
+        @haveapi_layout
+      end
+
       def params do
         Enum.reverse(@haveapi_params)
       end

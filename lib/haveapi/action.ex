@@ -5,7 +5,9 @@ defmodule HaveAPI.Action do
       @haveapi_route ""
       @haveapi_desc ""
       @haveapi_aliases []
+      @haveapi_parent_input_layout nil
       @haveapi_parent_input []
+      @haveapi_parent_output_layout nil
       @haveapi_parent_output []
       @before_compile HaveAPI.Action
 
@@ -19,7 +21,9 @@ defmodule HaveAPI.Action do
           @haveapi_route ""
           @haveapi_desc ""
           @haveapi_aliases []
+          @haveapi_parent_input_layout nil
           @haveapi_parent_input []
+          @haveapi_parent_output_layout nil
           @haveapi_parent_output []
           @before_compile HaveAPI.Action
 
@@ -40,9 +44,16 @@ defmodule HaveAPI.Action do
               mod = Module.concat(parent, v)
 
               if function_exported?(mod, :params, 0) do
+                name = v |> Atom.to_string |> String.downcase
+
                 Module.put_attribute(
                   __MODULE__,
-                  :"haveapi_parent_#{v |> Atom.to_string |> String.downcase}",
+                  :"haveapi_parent_#{name}_layout",
+                  apply(mod, :layout, [])
+                )
+                Module.put_attribute(
+                  __MODULE__,
+                  :"haveapi_parent_#{name}",
                   apply(mod, :params, [])
                 )
               end
@@ -71,12 +82,20 @@ defmodule HaveAPI.Action do
     quote do: @haveapi_aliases (@haveapi_aliases ++ unquote(v))
   end
 
-  defmacro input([do: block]) do
+  defmacro input(layout \\ nil, [do: block]) do
     quote do
+      layout = case unquote(layout) do
+        nil ->
+          @haveapi_parent_input_layout || :hash
+
+        any ->
+          any
+      end
+
       parent_in = @haveapi_parent_input
 
       defmodule Input do
-        use HaveAPI.Parameters.Dsl
+        use HaveAPI.Parameters.Dsl, layout: layout
 
         unless Enum.empty?(parent_in) do
           Enum.each(
@@ -90,12 +109,20 @@ defmodule HaveAPI.Action do
     end
   end
 
-  defmacro output([do: block]) do
+  defmacro output(layout \\ nil, [do: block]) do
     quote do
+      layout = case unquote(layout) do
+        nil ->
+          @haveapi_parent_output_layout || :hash
+
+        any ->
+          any
+      end
+
       parent_out = @haveapi_parent_output
 
       defmodule Output do
-        use HaveAPI.Parameters.Dsl
+        use HaveAPI.Parameters.Dsl, layout: layout
 
         unless Enum.empty?(parent_out) do
           Enum.each(

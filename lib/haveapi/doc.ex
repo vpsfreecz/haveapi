@@ -58,7 +58,7 @@ defmodule HaveAPI.Doc do
 
     else
       %{
-        layout: :hash,
+        layout: apply(mod, :layout, []),
         namespace: ctx.resource.name(),
         parameters: params(ctx, v),
       }

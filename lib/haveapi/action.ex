@@ -24,6 +24,17 @@ defmodule HaveAPI.Action do
           @before_compile HaveAPI.Action
 
           Enum.each(
+            [:method, :route, :aliases],
+            fn v ->
+              Module.put_attribute(
+                __MODULE__,
+                :"haveapi_#{v}",
+                apply(parent, v, [])
+              )
+            end
+          )
+
+          Enum.each(
             [:Input, :Output],
             fn v ->
               mod = Module.concat(parent, v)

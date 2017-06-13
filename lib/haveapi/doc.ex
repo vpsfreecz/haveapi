@@ -52,7 +52,7 @@ defmodule HaveAPI.Doc do
     mod = Module.concat(ctx.action, dir)
 
     v = apply(mod, :params, [])
-    
+
     if Enum.empty?(v) do
       nil
 

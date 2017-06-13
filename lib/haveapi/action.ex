@@ -48,7 +48,7 @@ defmodule HaveAPI.Action do
               end
             end
           )
-          
+
           import HaveAPI.Action
         end
       end

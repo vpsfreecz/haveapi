@@ -3,7 +3,7 @@ defmodule HaveAPI.Builder do
     quote do
       import HaveAPI.Builder
       use Plug.Router
-      
+
       plug :match
       plug Plug.Parsers,
         parsers: [:json],
@@ -15,7 +15,7 @@ defmodule HaveAPI.Builder do
       @before_compile HaveAPI.Builder
     end
   end
-  
+
   defmacro resources(res) do
     quote do
       Enum.each(unquote(res), &(@haveapi_resources &1))

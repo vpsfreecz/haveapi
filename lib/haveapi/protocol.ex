@@ -1,6 +1,6 @@
 defmodule HaveAPI.Protocol do
   def read() do
-    
+
   end
 
   def send(status, opts) do

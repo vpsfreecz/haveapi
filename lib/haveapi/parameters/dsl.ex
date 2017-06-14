@@ -6,6 +6,12 @@ defmodule HaveAPI.Parameters.Dsl do
       Module.register_attribute __MODULE__, :haveapi_params, accumulate: true
       @haveapi_layout unquote(opts[:layout])
       @before_compile HaveAPI.Parameters.Dsl
+
+      defmacro __using__(_opts) do
+        quote do
+          Enum.each(unquote(__MODULE__).params, &(@haveapi_params &1))
+        end
+      end
     end
   end
 

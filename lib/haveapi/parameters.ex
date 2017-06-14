@@ -1,4 +1,10 @@
 defmodule HaveAPI.Parameters do
+  defmacro __using__(_opts) do
+    quote do
+      use HaveAPI.Parameters.Dsl
+    end
+  end
+
   def extract(ctx, data) when map_size(data) == 0 do
     nil
   end

@@ -112,29 +112,27 @@ defmodule HaveAPI.Builder do
       # Mount the default version
       def_v = @haveapi_default_version || (@haveapi_resources |> Map.keys |> List.first)
 
-      Enum.each(
-        @haveapi_resources[def_v],
-        fn r ->
-          Enum.each(r.actions, fn a ->
-            @current_action %{ctx |
-              version: def_v,
-              resource: r,
-              action: a
-            }
-            path = Path.join([@current_action.prefix, r.route, a.route])
+      Enum.each(@haveapi_resources[def_v], fn r ->
+        Enum.each(r.actions, fn a ->
+          @current_action %{ctx |
+            version: def_v,
+            resource: r,
+            action: a
+          }
+          path = Path.join([@current_action.prefix, r.route, a.route])
 
-            # Action execution
-            match path, via: a.method do
-              HaveAPI.Action.execute(@current_action, binding()[:conn])
-            end
+          # Action execution
+          match path, via: a.method do
+            HaveAPI.Action.execute(@current_action, binding()[:conn])
+          end
 
-            # Action doc
-            match Path.join([path, "method=#{a.method}"]), via: :options do
-              Plug.Conn.send_resp(
-                binding()[:conn],
-                200,
-                HaveAPI.Protocol.send_doc(HaveAPI.Doc.action(@current_action))
-              )
+          # Action doc
+          match Path.join([path, "method=#{a.method}"]), via: :options do
+            Plug.Conn.send_resp(
+              binding()[:conn],
+              200,
+              HaveAPI.Protocol.send_doc(HaveAPI.Doc.action(@current_action))
+            )
           end
         end)
       end)

@@ -7,6 +7,30 @@ defmodule HaveAPI.Parameters.Dsl do
       @haveapi_layout unquote(opts[:layout])
       @before_compile HaveAPI.Parameters.Dsl
 
+      defmacro __using__(only: params) when is_list(params) do
+        quote do
+          only = unquote(params)
+
+          Enum.filter_map(
+            unquote(__MODULE__).params,
+            &(&1.name in only),
+            &(@haveapi_params &1)
+          )
+        end
+      end
+
+      defmacro __using__(except: params) when is_list(params) do
+        quote do
+          except = unquote(params)
+
+          Enum.filter_map(
+            unquote(__MODULE__).params,
+            &(not (&1.name in except)),
+            &(@haveapi_params &1)
+          )
+        end
+      end
+
       defmacro __using__(_opts) do
         quote do
           Enum.each(unquote(__MODULE__).params, &(@haveapi_params &1))

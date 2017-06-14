@@ -46,8 +46,8 @@ defmodule HaveAPI.Doc do
       description: ctx.action.desc,
       aliases: ctx.action.aliases,
       blocking: false, # TODO
-      input: io(ctx, :Input),
-      output: io(ctx, :Output),
+      input: io(ctx, :input),
+      output: io(ctx, :output),
       examples: [], # TODO
       meta: nil, # TODO
       url: route,
@@ -57,23 +57,18 @@ defmodule HaveAPI.Doc do
   end
 
   def io(ctx, dir) do
-    mod = Module.concat(ctx.action, dir)
+    v = ctx.action.params(dir)
 
-    v = apply(mod, :params, [])
-
-    if Enum.empty?(v) do
+    if is_nil(v) || Enum.empty?(v) do
       nil
 
     else
       %{
-        layout: apply(mod, :layout, []),
+        layout: apply(ctx.action.io(dir), :layout, []),
         namespace: ctx.resource.name(),
         parameters: params(ctx, v),
       }
     end
-
-  rescue
-    UndefinedFunctionError -> nil
   end
 
   def params(ctx, param_list) do

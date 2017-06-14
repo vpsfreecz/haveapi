@@ -1,2 +1,24 @@
 defmodule HaveAPI.Parameters do
+  def extract(ctx, data) when map_size(data) == 0 do
+    nil
+  end
+
+  def extract(ctx, data) do
+    if data[ctx.resource.name] do
+      allowed = ctx.action.params(:input)
+
+      Enum.filter_map(
+        data[ctx.resource.name],
+        fn {k, v} ->
+          Enum.find(allowed, &(k == Atom.to_string(&1.name)))
+        end,
+        fn {k, v} ->
+          {String.to_atom(k), v}
+        end
+      )
+
+    else
+      nil
+    end
+  end
 end

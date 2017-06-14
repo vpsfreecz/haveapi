@@ -1,3 +1,3 @@
 defmodule HaveAPI.Request do
-  defstruct [:conn, :input]
+  defstruct [:context, :conn, :params, :input]
 end

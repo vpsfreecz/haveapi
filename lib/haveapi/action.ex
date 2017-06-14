@@ -149,11 +149,30 @@ defmodule HaveAPI.Action do
       def desc, do: @haveapi_desc
 
       def aliases, do: @haveapi_aliases
+
+      def io(:input) do
+        Module.concat(__MODULE__, :Input)
+      end
+
+      def io(:output) do
+        Module.concat(__MODULE__, :Output)
+      end
+
+      def params(dir) do
+        apply(io(dir), :params, [])
+
+      rescue
+        UndefinedFunctionError -> nil
+      end
     end
   end
 
   def execute(ctx, conn) do
-    case apply(ctx.action, :exec, [%HaveAPI.Request{conn: conn, input: %{}}]) do
+    req = %HaveAPI.Request{context: ctx, conn: conn}
+      |> fetch_path_parameters
+      |> fetch_input_parameters
+
+    case apply(ctx.action, :exec, [req]) do
       response when is_map(response) or is_list(response) ->
         Plug.Conn.send_resp(
           conn,
@@ -182,5 +201,25 @@ defmodule HaveAPI.Action do
           HaveAPI.Protocol.send(false, message: "Server error occurred.")
         )
     end
+  end
+
+  def fetch_path_parameters(req) do
+    %{req | params: Enum.map(
+      req.conn.path_params,
+      fn {k,v} -> {String.to_atom(k), v} end
+    )}
+  end
+
+  def fetch_input_parameters(req) do
+    Map.put(
+      req,
+      :input,
+      if req.context.action.method == :get do
+        HaveAPI.Parameters.extract(req.context, req.conn.query_params)
+
+      else
+        HaveAPI.Parameters.extract(req.context, req.conn.body_params)
+      end
+    )
   end
 end

@@ -158,6 +158,13 @@ defmodule HaveAPI.Action do
         Module.concat(__MODULE__, :Output)
       end
 
+      def layout(dir) do
+        apply(io(dir), :layout, [])
+
+      rescue
+        UndefinedFunctionError -> nil
+      end
+
       def params(dir) do
         apply(io(dir), :params, [])
 
@@ -168,10 +175,15 @@ defmodule HaveAPI.Action do
   end
 
   def execute(ctx, conn) do
-    %HaveAPI.Request{context: ctx, conn: conn}
+    ret = %HaveAPI.Request{context: ctx, conn: conn}
       |> fetch_path_parameters
       |> fetch_input_parameters
       |> do_exec
+
+    ret
+      |> build_output(ctx.action.layout(:output), %HaveAPI.Response{context: ctx, conn: conn})
+      |> filter_output(ctx.action.layout(:output))
+      |> reply
   end
 
   defp fetch_path_parameters(req) do
@@ -195,36 +207,79 @@ defmodule HaveAPI.Action do
   end
 
   defp do_exec(req) do
-    do_reply(req, apply(req.context.action, :exec, [req]))
+    apply(req.context.action, :exec, [req])
   end
 
-  defp do_reply(req, response) when is_map(response) or is_list(response) do
+  defp build_output(:ok, nil, res) do
+    %{res | status: true}
+  end
+
+  defp build_output({:error, msg}, nil, res) when is_binary(msg) do
+    %{res | status: false, message: msg}
+  end
+
+  defp build_output(data, :hash, res) when is_map(data) do
+    %{res | status: true, output: data}
+  end
+
+  defp build_output({:ok, data}, :hash, res) when is_map(data) do
+    %{res | status: true, output: data}
+  end
+
+  defp build_output({:error, msg}, :hash, res) when is_binary(msg) do
+    %{res | status: false, message: msg}
+  end
+
+  defp build_output(data, :hash_list, res) when is_list(data) do
+    %{res | status: true, output: data}
+  end
+
+  defp build_output({:ok, data}, :hash_list, res) when is_list(data) do
+    %{res | status: true, output: data}
+  end
+
+  defp build_output({:error, msg}, :hash_list, res) when is_binary(msg) do
+    %{res | status: false, message: msg}
+  end
+
+  defp build_output(_, _, res) do
+    %{res | status: false, message: "Server error occurred."}
+  end
+
+  defp filter_output(%HaveAPI.Response{output: nil} = res, _) do
+    res
+  end
+
+  defp filter_output(res, :hash) do
+    %{res | output: HaveAPI.Parameters.filter(res.context, res.output)}
+  end
+
+  defp filter_output(res, :hash_list) do
+    %{res | output: Enum.map(
+      res.output,
+      &(HaveAPI.Parameters.filter(res.context, &1))
+    )}
+  end
+
+  defp reply(%HaveAPI.Response{status: true} = res) do
     Plug.Conn.send_resp(
-      req.conn,
+      res.conn,
       200,
-      HaveAPI.Protocol.send(true, response: %{req.context.resource.name() => response})
+      HaveAPI.Protocol.send(true, response: %{res.context.resource.name() => res.output})
     )
   end
 
-  defp do_reply(req, {:ok, response}) when is_map(response) or is_list(response) do
+  defp reply(%HaveAPI.Response{status: false} = res) do
     Plug.Conn.send_resp(
-      req.conn,
-      200,
-      HaveAPI.Protocol.send(true, response: %{req.context.resource.name() => response})
-    )
-  end
-
-  defp do_reply(req, {:error, msg}) do
-    Plug.Conn.send_resp(
-      req.conn,
+      res.conn,
       400,
-      HaveAPI.Protocol.send(false, message: msg)
+      HaveAPI.Protocol.send(false, message: res.message)
     )
   end
 
-  defp do_reply(req, _response) do
+  defp reply(res) do
     Plug.Conn.send_resp(
-      req.conn,
+      res.conn,
       500,
       HaveAPI.Protocol.send(false, message: "Server error occurred.")
     )

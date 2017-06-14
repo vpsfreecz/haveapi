@@ -21,4 +21,14 @@ defmodule HaveAPI.Parameters do
       nil
     end
   end
+
+  def filter(ctx, data) do
+    data
+      |> Enum.filter(
+           fn {k, v}
+             -> Enum.find(ctx.action.params(:output), &(k == &1.name))
+           end
+        )
+      |> Map.new
+  end
 end

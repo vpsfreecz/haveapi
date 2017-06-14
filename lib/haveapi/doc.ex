@@ -1,8 +1,16 @@
 defmodule HaveAPI.Doc do
-  def api(ctx, resources) do
+  def api(ctx, version_resources, default_v) do
     %{
-      versions: %{1 => version(ctx, resources)},
-      default: 1,
+      versions: Enum.map(
+        version_resources,
+        fn {v, resource_list} ->
+          version(
+            %{ctx | prefix: Path.join([ctx.prefix, "v#{v}"]), version: v},
+            resource_list
+          )
+        end
+      ),
+      default: version(%{ctx | version: default_v}, version_resources[default_v]),
     }
   end
 

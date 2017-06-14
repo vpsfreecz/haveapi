@@ -18,7 +18,7 @@ defmodule HaveAPI.Builder do
     end
   end
 
-  defmacro resources(version, resource_list, opts \\ []) do
+  defmacro version(version, resource_list, opts \\ []) do
     quote bind_quoted: [version: version, resource_list: resource_list, opts: opts] do
       @haveapi_resources Map.put(@haveapi_resources, version, resource_list)
 

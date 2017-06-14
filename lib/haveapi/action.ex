@@ -168,49 +168,20 @@ defmodule HaveAPI.Action do
   end
 
   def execute(ctx, conn) do
-    req = %HaveAPI.Request{context: ctx, conn: conn}
+    %HaveAPI.Request{context: ctx, conn: conn}
       |> fetch_path_parameters
       |> fetch_input_parameters
-
-    case apply(ctx.action, :exec, [req]) do
-      response when is_map(response) or is_list(response) ->
-        Plug.Conn.send_resp(
-          conn,
-          200,
-          HaveAPI.Protocol.send(true, response: %{ctx.resource.name() => response})
-        )
-
-      {:ok, response} when is_map(response) ->
-        Plug.Conn.send_resp(
-          conn,
-          200,
-          HaveAPI.Protocol.send(true, response: %{ctx.resource.name() => response})
-        )
-
-      {:error, msg} when is_binary(msg) ->
-        Plug.Conn.send_resp(
-          conn,
-          400,
-          HaveAPI.Protocol.send(false, message: msg)
-        )
-
-      _ ->
-        Plug.Conn.send_resp(
-          conn,
-          500,
-          HaveAPI.Protocol.send(false, message: "Server error occurred.")
-        )
-    end
+      |> do_exec
   end
 
-  def fetch_path_parameters(req) do
+  defp fetch_path_parameters(req) do
     %{req | params: Enum.map(
       req.conn.path_params,
       fn {k,v} -> {String.to_atom(k), v} end
     )}
   end
 
-  def fetch_input_parameters(req) do
+  defp fetch_input_parameters(req) do
     Map.put(
       req,
       :input,
@@ -220,6 +191,42 @@ defmodule HaveAPI.Action do
       else
         HaveAPI.Parameters.extract(req.context, req.conn.body_params)
       end
+    )
+  end
+
+  defp do_exec(req) do
+    do_reply(req, apply(req.context.action, :exec, [req]))
+  end
+
+  defp do_reply(req, response) when is_map(response) or is_list(response) do
+    Plug.Conn.send_resp(
+      req.conn,
+      200,
+      HaveAPI.Protocol.send(true, response: %{req.context.resource.name() => response})
+    )
+  end
+
+  defp do_reply(req, {:ok, response}) when is_map(response) or is_list(response) do
+    Plug.Conn.send_resp(
+      req.conn,
+      200,
+      HaveAPI.Protocol.send(true, response: %{req.context.resource.name() => response})
+    )
+  end
+
+  defp do_reply(req, {:error, msg}) do
+    Plug.Conn.send_resp(
+      req.conn,
+      400,
+      HaveAPI.Protocol.send(false, message: msg)
+    )
+  end
+
+  defp do_reply(req, _response) do
+    Plug.Conn.send_resp(
+      req.conn,
+      500,
+      HaveAPI.Protocol.send(false, message: "Server error occurred.")
     )
   end
 end

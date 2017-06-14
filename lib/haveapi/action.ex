@@ -39,22 +39,20 @@ defmodule HaveAPI.Action do
           )
 
           Enum.each(
-            [:Input, :Output],
-            fn v ->
-              mod = Module.concat(parent, v)
+            [:input, :output],
+            fn dir ->
+              params = parent.params(dir)
 
-              if function_exported?(mod, :params, 0) do
-                name = v |> Atom.to_string |> String.downcase
-
+              if params do
                 Module.put_attribute(
                   __MODULE__,
-                  :"haveapi_parent_#{name}_layout",
-                  apply(mod, :layout, [])
+                  :"haveapi_parent_#{dir}_layout",
+                  parent.layout(dir)
                 )
                 Module.put_attribute(
                   __MODULE__,
-                  :"haveapi_parent_#{name}",
-                  apply(mod, :params, [])
+                  :"haveapi_parent_#{dir}",
+                  params
                 )
               end
             end

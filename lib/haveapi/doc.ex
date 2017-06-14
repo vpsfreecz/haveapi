@@ -1,6 +1,5 @@
 defmodule HaveAPI.Doc do
-  def api(resources) do
-    ctx = %HaveAPI.Context{version: 1}
+  def api(ctx, resources) do
     %{
       versions: %{1 => version(ctx, resources)},
       default: 1,
@@ -32,6 +31,7 @@ defmodule HaveAPI.Doc do
 
   def action(ctx) do
     method = ctx.action.method |> Atom.to_string |> String.upcase
+    route = Path.join([ctx.prefix, ctx.resource.name, ctx.action.route])
 
     %{
       auth: false, # TODO
@@ -42,9 +42,9 @@ defmodule HaveAPI.Doc do
       output: io(ctx, :Output),
       examples: [], # TODO
       meta: nil, # TODO
-      url: ctx.action.route,
+      url: route,
       method: method,
-      help: "#{ctx.action.route}?method=#{method}"
+      help: Path.join([route, "method=#{ctx.action.method}"]),
     }
   end
 

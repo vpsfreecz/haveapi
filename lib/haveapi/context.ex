@@ -1,3 +1,3 @@
 defmodule HaveAPI.Context do
-  defstruct [:version, :resource, :action]
+  defstruct [:prefix, :version, :resource, :action]
 end

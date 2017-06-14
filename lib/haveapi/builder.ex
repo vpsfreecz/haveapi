@@ -31,6 +31,9 @@ defmodule HaveAPI.Builder do
 
   defmacro mount(prefix \\ "/") do
     quote bind_quoted: [prefix: prefix] do
+      ctx = %HaveAPI.Context{prefix: prefix, version: 1}
+      @haveapi_ctx ctx
+
       match prefix, via: :options do
         conn = binding()[:conn]
 
@@ -46,23 +49,30 @@ defmodule HaveAPI.Builder do
                 }
 
               "default" ->
-                HaveAPI.Doc.version(%HaveAPI.Context{version: 1}, @haveapi_resources)
+                HaveAPI.Doc.version(@haveapi_ctx, @haveapi_resources)
 
               _ -> # TODO: report error on invalid values?
-                HaveAPI.Doc.api(@haveapi_resources)
+                HaveAPI.Doc.api(@haveapi_ctx, @haveapi_resources)
             end
           )
         )
       end
 
-      ctx = %HaveAPI.Context{version: 1}
-
       Enum.each(@haveapi_resources, fn r ->
         Enum.each(r.actions, fn a ->
           @current_action %{ctx | resource: r, action: a}
+          path = Path.join([prefix, r.route, a.route])
 
-          match Path.join([prefix, r.route, a.route]), via: a.method do
+          match path, via: a.method do
             HaveAPI.Action.execute(@current_action, binding()[:conn])
+          end
+
+          match Path.join([path, "method=#{a.method}"]), via: :options do
+            Plug.Conn.send_resp(
+              binding()[:conn],
+              200,
+              HaveAPI.Protocol.send_doc(HaveAPI.Doc.action(@current_action))
+            )
           end
         end)
       end)

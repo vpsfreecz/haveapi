@@ -70,37 +70,63 @@ defmodule HaveAPI.Builder do
         )
       end
 
-      # Mount all versions
+      # Setup Plug.Router per API version
       Enum.each(@haveapi_versions, fn version ->
-        # Per-version documentation
-        @current_version version
+        mount_version(%{ctx |
+          prefix: Path.join([@haveapi_ctx.prefix, "v#{version.version}"]),
+          version: version
+        })
+      end)
 
-        match Path.join([prefix, "v#{version.version}"]), via: :options do
-          version = @current_version
+      # Setup the default API version
+      def_v = if @haveapi_default_version do
+        Enum.find(@haveapi_versions, &(&1.version == @haveapi_default_version))
+
+      else
+        List.last(@haveapi_versions)
+      end
+
+      mount_version(%{ctx | version: def_v}, true)
+    end
+  end
+
+  defmacro mount_version(ctx, default \\ false) do
+    quote bind_quoted: [ctx: ctx, default: default] do
+      mod = if default do
+        :"Version_#{ctx.version.version}_Default_Router"
+      else
+        :"Version_#{ctx.version.version}_Router"
+      end
+
+      defmodule :"#{mod}" do
+        use Plug.Router
+
+        plug :match
+        plug :dispatch
+
+        # Per-version documentation
+        @haveapi_ctx ctx
+
+        match "/", via: :options do
+          version = @haveapi_ctx.version
 
           Plug.Conn.send_resp(
             binding()[:conn],
             200,
             HaveAPI.Protocol.send_doc(
-              HaveAPI.Doc.version(
-                %{@haveapi_ctx |
-                  prefix: Path.join([@haveapi_ctx.prefix, "v#{version.version}"]),
-                  version: version
-                }
-              )
+              HaveAPI.Doc.version(%{@haveapi_ctx | version: version})
             )
           )
         end
 
-        Enum.each(version.resources, fn r ->
+        # Version actions
+        Enum.each(ctx.version.resources, fn r ->
           Enum.each(r.actions, fn a ->
             @current_action %{ctx |
-              prefix: Path.join([prefix, "v#{version.version}"]),
-              version: version,
               resource: r,
               action: a
             }
-            path = Path.join([@current_action.prefix, r.route, a.route])
+            path = Path.join(["/", r.route, a.route])
 
             # Action execution
             match path, via: a.method do
@@ -117,40 +143,26 @@ defmodule HaveAPI.Builder do
             end
           end)
         end)
-      end)
-
-      # Mount the default version
-      def_v = if @haveapi_default_version do
-        Enum.find(@haveapi_versions, &(&1.version == @haveapi_default_version))
-
-      else
-        List.last(@haveapi_versions)
       end
 
-      Enum.each(def_v.resources, fn r ->
-        Enum.each(r.actions, fn a ->
-          @current_action %{ctx |
-            version: def_v,
-            resource: r,
-            action: a
-          }
-          path = Path.join([@current_action.prefix, r.route, a.route])
+      # Forward to version router
+      @haveapi_forward_target mod
+      @haveapi_forward_opts @haveapi_forward_target.init([])
 
-          # Action execution
-          match path, via: a.method do
-            HaveAPI.Action.execute(@current_action, binding()[:conn])
-          end
+      path = if default do
+        ""
+      else
+        ctx.prefix
+      end
 
-          # Action doc
-          match Path.join([path, "method=#{a.method}"]), via: :options do
-            Plug.Conn.send_resp(
-              binding()[:conn],
-              200,
-              HaveAPI.Protocol.send_doc(HaveAPI.Doc.action(@current_action))
-            )
-          end
-        end)
-      end)
+      match(Path.join([path | ["*glob"]])) do
+        Plug.Router.Utils.forward(
+          var!(conn),
+          var!(glob),
+          @haveapi_forward_target,
+          @haveapi_forward_opts
+        )
+      end
     end
   end
 

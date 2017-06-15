@@ -100,8 +100,10 @@ defmodule HaveAPI.Builder do
 
       defmodule :"#{mod}" do
         use Plug.Router
+        import HaveAPI.Authentication.Chain, only: [authenticate: 2]
 
         plug :match
+        plug :authenticate, chain: ctx.version.auth_chain
         plug :dispatch
 
         # Per-version documentation

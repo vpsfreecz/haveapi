@@ -173,7 +173,7 @@ defmodule HaveAPI.Action do
   end
 
   def execute(ctx, conn) do
-    ret = %HaveAPI.Request{context: ctx, conn: conn}
+    ret = %HaveAPI.Request{context: ctx, conn: conn, user: conn.private.haveapi_user}
       |> fetch_path_parameters
       |> fetch_input_parameters
       |> do_exec

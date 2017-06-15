@@ -13,18 +13,29 @@ defmodule HaveAPI.Builder do
       plug :dispatch
 
       @haveapi_default_version nil
-      @haveapi_resources %{}
+      Module.register_attribute __MODULE__, :haveapi_versions, accumulate: true
       @before_compile HaveAPI.Builder
     end
   end
 
-  defmacro version(version, resource_list, opts \\ []) do
-    quote bind_quoted: [version: version, resource_list: resource_list, opts: opts] do
-      @haveapi_resources Map.put(@haveapi_resources, version, resource_list)
+  defmacro version(v, [do: block]) do
+    mod = :"Version_#{v}"
 
-      if opts[:default] do
-        @haveapi_default_version version
+    quote do
+      @haveapi_versions unquote(mod)
+
+      defmodule unquote(mod) do
+        use HaveAPI.Version
+
+        version unquote(v)
+        unquote(block)
       end
+    end
+  end
+
+  defmacro default(v) do
+    quote do
+      @haveapi_default_version unquote(v)
     end
   end
 
@@ -45,27 +56,27 @@ defmodule HaveAPI.Builder do
             case conn.query_params["describe"] do
               "versions" ->
                 %{
-                  versions: versions(),
-                  default: def_v,
+                  versions: Enum.map(versions(), &(&1.version)),
+                  default: def_v.version,
                 }
 
               "default" ->
-                HaveAPI.Doc.version(%{@haveapi_ctx | version: def_v}, @haveapi_resources[def_v])
+                HaveAPI.Doc.version(%{@haveapi_ctx | version: def_v})
 
               _ -> # TODO: report error on invalid values?
-                HaveAPI.Doc.api(@haveapi_ctx, @haveapi_resources, def_v)
+                HaveAPI.Doc.api(@haveapi_ctx, @haveapi_versions, def_v)
             end
           )
         )
       end
 
       # Mount all versions
-      Enum.each(@haveapi_resources, fn {version, resource_list} ->
+      Enum.each(@haveapi_versions, fn version ->
         # Per-version documentation
-        @current_version {version, resource_list}
+        @current_version version
 
-        match Path.join([prefix, "v#{version}"]), via: :options do
-          {version, resource_list} = @current_version
+        match Path.join([prefix, "v#{version.version}"]), via: :options do
+          version = @current_version
 
           Plug.Conn.send_resp(
             binding()[:conn],
@@ -73,19 +84,18 @@ defmodule HaveAPI.Builder do
             HaveAPI.Protocol.send_doc(
               HaveAPI.Doc.version(
                 %{@haveapi_ctx |
-                  prefix: Path.join([@haveapi_ctx.prefix, "v#{version}"]),
+                  prefix: Path.join([@haveapi_ctx.prefix, "v#{version.version}"]),
                   version: version
-                },
-                resource_list
+                }
               )
             )
           )
         end
 
-        Enum.each(resource_list, fn r ->
+        Enum.each(version.resources, fn r ->
           Enum.each(r.actions, fn a ->
             @current_action %{ctx |
-              prefix: Path.join([prefix, "v#{version}"]),
+              prefix: Path.join([prefix, "v#{version.version}"]),
               version: version,
               resource: r,
               action: a
@@ -110,9 +120,14 @@ defmodule HaveAPI.Builder do
       end)
 
       # Mount the default version
-      def_v = @haveapi_default_version || (@haveapi_resources |> Map.keys |> List.first)
+      def_v = if @haveapi_default_version do
+        Enum.find(@haveapi_versions, &(&1.version == @haveapi_default_version))
 
-      Enum.each(@haveapi_resources[def_v], fn r ->
+      else
+        List.last(@haveapi_versions)
+      end
+
+      Enum.each(def_v.resources, fn r ->
         Enum.each(r.actions, fn a ->
           @current_action %{ctx |
             version: def_v,
@@ -142,15 +157,20 @@ defmodule HaveAPI.Builder do
   defmacro __before_compile__(_env) do
     quote do
       def versions do
-        Map.keys(@haveapi_resources)
+        Enum.reverse(@haveapi_versions)
       end
 
       def default_version do
-        @haveapi_default_version || (@haveapi_resources |> Map.keys |> List.first)
+        if @haveapi_default_version do
+          Enum.find(@haveapi_versions, &(&1.version == @haveapi_default_version))
+
+        else
+          List.last(@haveapi_versions)
+        end
       end
 
       def resources(version) do
-        @haveapi_resources[version]
+        Enum.find(@haveapi_versions, &(&1.version == version)).resources
       end
     end
   end

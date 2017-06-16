@@ -1,8 +1,5 @@
 defmodule HaveAPI.Authentication.Chain do
   def authenticate(conn, [chain: chain]) do
-    IO.puts("auth!")
-    IO.inspect(chain)
-
     user = Enum.reduce_while(
       chain,
       nil,

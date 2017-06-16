@@ -12,6 +12,7 @@ defmodule HaveAPI.Builder do
         json_decoder: Poison
       plug :dispatch
 
+      @haveapi_prefix nil
       @haveapi_default_version nil
       Module.register_attribute __MODULE__, :haveapi_versions, accumulate: true
       @before_compile HaveAPI.Builder
@@ -44,6 +45,7 @@ defmodule HaveAPI.Builder do
     quote bind_quoted: [prefix: prefix] do
       ctx = %HaveAPI.Context{prefix: prefix}
       @haveapi_ctx ctx
+      @haveapi_prefix prefix
 
       # Documentation of the whole API
       match prefix, via: :options do
@@ -182,6 +184,8 @@ defmodule HaveAPI.Builder do
 
   defmacro __before_compile__(_env) do
     quote do
+      def prefix, do: @haveapi_prefix
+
       def versions do
         Enum.reverse(@haveapi_versions)
       end

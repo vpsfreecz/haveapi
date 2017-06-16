@@ -26,7 +26,9 @@ defmodule HaveAPI.Doc do
       resources: Enum.reduce(
         ctx.version.resources,
         %{},
-        fn r, acc -> Map.put(acc, r.name, resource(%{ctx | resource: r})) end
+        fn r, acc ->
+          Map.put(acc, r.name, resource(%{ctx | resource_path: [r], resource: r}))
+        end
       ),
       meta: %{namespace: "meta"}
     }
@@ -39,13 +41,26 @@ defmodule HaveAPI.Doc do
         %{},
         fn a, acc -> Map.put(acc, a.name, action(%{ctx | action: a})) end
       ),
-      resources: %{},
+      resources: Enum.reduce(
+        ctx.resource.resources,
+        %{},
+        fn r, acc ->
+          Map.put(acc, r.name, resource(%{ctx |
+            resource_path: ctx.resource_path ++ [r],
+            resource: r,
+          }))
+        end
+      ),
     }
   end
 
   def action(ctx) do
     method = ctx.action.method |> Atom.to_string |> String.upcase
-    route = Path.join([ctx.prefix, ctx.resource.action_route(ctx.action)])
+    route = Path.join(
+      [ctx.prefix] ++
+      Enum.map(ctx.resource_path, &(&1.route)) ++
+      [ctx.action.route]
+    ) |> ctx.action.resolve_route(ctx.resource_path)
 
     %{
       auth: false, # TODO

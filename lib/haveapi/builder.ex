@@ -128,13 +128,13 @@ defmodule HaveAPI.Builder do
         Enum.each(ctx.version.auth_chain, fn auth ->
           Enum.each(
             auth.resources,
-            &(mount_resource(%{ctx | prefix: "/_auth", resource: &1}))
+            &(mount_resource(%{ctx | prefix: "/_auth", resource_path: [&1], resource: &1}))
           )
         end)
 
         # Version actions
         Enum.each(ctx.version.resources, fn r ->
-          mount_resource(%{ctx | prefix: "/", resource: r})
+          mount_resource(%{ctx | prefix: "/", resource_path: [r], resource: r})
         end)
       end
 
@@ -161,9 +161,26 @@ defmodule HaveAPI.Builder do
 
   defmacro mount_resource(ctx) do
     quote bind_quoted: [ctx: ctx] do
+      mount_single_resource(ctx)
+
+      # Mount subresources
+      Enum.each(ctx.resource.resources, fn r ->
+        mount_single_resource(%{ctx | resource_path: ctx.resource_path ++ [r], resource: r})
+      end)
+    end
+  end
+
+  defmacro mount_single_resource(ctx) do
+    quote bind_quoted: [ctx: ctx] do
+      # Mount actions
       Enum.each(ctx.resource.actions, fn a ->
         @current_action %{ctx | action: a}
-        path = Path.join([ctx.prefix, ctx.resource.action_route(a)])
+
+        path = Path.join(
+          [ctx.prefix] ++
+          Enum.map(ctx.resource_path, &(&1.route)) ++
+          [a.route]
+        ) |> a.resolve_route(ctx.resource_path)
 
         # Action execution
         match path, via: a.method do

@@ -94,6 +94,7 @@ defmodule HaveAPI.Authentication.Token do
           resources: %{
             token: HaveAPI.Doc.resource(%{ctx |
               prefix: Path.join(ctx.prefix, "_auth"),
+              resource_path: [Token],
               resource: Token
             })
           },

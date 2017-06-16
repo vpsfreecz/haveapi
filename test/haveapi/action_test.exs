@@ -20,6 +20,20 @@ defmodule HaveAPI.ActionTest do
       end
 
       actions [Show, Custom]
+
+      defmodule SubResource do
+        use HaveAPI.Resource
+
+        resource_route ":%{resource}_id/%{resource}"
+
+        defmodule Show do
+          use HaveAPI.Action.Show
+        end
+
+        actions [Show]
+      end
+
+      resources [SubResource]
     end
 
     version "1.0" do
@@ -35,5 +49,8 @@ defmodule HaveAPI.ActionTest do
 
     conn = call_api(PathParameters, :options, "/myresource/$id/custom/method=post")
     assert conn.resp_body["response"]["url"] == "/myresource/:myresource_id/custom"
+
+    conn = call_api(PathParameters, :options, "/myresource/$id/subresource/$id/method=get")
+    assert conn.resp_body["response"]["url"] == "/myresource/:myresource_id/subresource/:subresource_id"
   end
 end

@@ -4,6 +4,18 @@ defmodule HaveAPI.Resource do
       import HaveAPI.Resource
       @before_compile HaveAPI.Resource
       Module.register_attribute __MODULE__, :haveapi_actions, accumulate: true
+      Module.register_attribute __MODULE__, :haveapi_resources, accumulate: true
+      @haveapi_route nil
+    end
+  end
+
+  defmacro resource_route(v) do
+    quote do: @haveapi_route unquote(v)
+  end
+
+  defmacro resources(list) do
+    quote do
+      Enum.each(unquote(list), &(@haveapi_resources &1))
     end
   end
 
@@ -13,27 +25,18 @@ defmodule HaveAPI.Resource do
     end
   end
 
-  defmacro actions() do
-    quote do
-      @haveapi_actions
-    end
-  end
-
   defmacro __before_compile__(_env) do
     quote do
+      def resources do
+        @haveapi_resources
+      end
+
       def actions do
         @haveapi_actions
       end
 
       def route do
-        name()
-      end
-
-      def action_route(action) do
-        Path.join([
-          route(),
-          Regex.replace(~r/%{resource}/, action.route, name(), global: false)
-        ])
+        @haveapi_route || name()
       end
 
       def name do

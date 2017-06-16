@@ -163,7 +163,7 @@ defmodule HaveAPI.Builder do
     quote bind_quoted: [ctx: ctx] do
       Enum.each(ctx.resource.actions, fn a ->
         @current_action %{ctx | action: a}
-        path = Path.join([ctx.prefix, ctx.resource.route, a.route])
+        path = Path.join([ctx.prefix, ctx.resource.action_route(a)])
 
         # Action execution
         match path, via: a.method do

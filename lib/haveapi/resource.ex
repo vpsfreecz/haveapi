@@ -29,6 +29,13 @@ defmodule HaveAPI.Resource do
         name()
       end
 
+      def action_route(action) do
+        Path.join([
+          route(),
+          Regex.replace(~r/%{resource}/, action.route, name(), global: false)
+        ])
+      end
+
       def name do
         Module.split(__MODULE__) |> List.last |> String.downcase
       end

@@ -45,7 +45,7 @@ defmodule HaveAPI.Doc do
 
   def action(ctx) do
     method = ctx.action.method |> Atom.to_string |> String.upcase
-    route = Path.join([ctx.prefix, ctx.resource.name, ctx.action.route])
+    route = Path.join([ctx.prefix, ctx.resource.action_route(ctx.action)])
 
     %{
       auth: false, # TODO

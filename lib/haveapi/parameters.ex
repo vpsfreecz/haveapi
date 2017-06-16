@@ -21,7 +21,7 @@ defmodule HaveAPI.Parameters do
         fn {k, v} ->
           {String.to_atom(k), v}
         end
-      )
+      ) |> Map.new
 
     else
       nil

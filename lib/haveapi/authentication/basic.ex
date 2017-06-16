@@ -34,6 +34,8 @@ defmodule HaveAPI.Authentication.Basic do
       rescue ArgumentError ->
         nil
       end
+
+      def resources, do: []
     end
   end
 end

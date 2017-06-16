@@ -121,29 +121,17 @@ defmodule HaveAPI.Builder do
           )
         end
 
+        # Version auth
+        Enum.each(ctx.version.auth_chain, fn auth ->
+          Enum.each(
+            auth.resources,
+            &(mount_resource(%{ctx | prefix: "/_auth", resource: &1}))
+          )
+        end)
+
         # Version actions
         Enum.each(ctx.version.resources, fn r ->
-          Enum.each(r.actions, fn a ->
-            @current_action %{ctx |
-              resource: r,
-              action: a
-            }
-            path = Path.join(["/", r.route, a.route])
-
-            # Action execution
-            match path, via: a.method do
-              HaveAPI.Action.execute(@current_action, binding()[:conn])
-            end
-
-            # Action doc
-            match Path.join([path, "method=#{a.method}"]), via: :options do
-              Plug.Conn.send_resp(
-                binding()[:conn],
-                200,
-                HaveAPI.Protocol.send_doc(HaveAPI.Doc.action(@current_action))
-              )
-            end
-          end)
+          mount_resource(%{ctx | prefix: "/", resource: r})
         end)
       end
 
@@ -165,6 +153,29 @@ defmodule HaveAPI.Builder do
           @haveapi_forward_opts
         )
       end
+    end
+  end
+
+  defmacro mount_resource(ctx) do
+    quote bind_quoted: [ctx: ctx] do
+      Enum.each(ctx.resource.actions, fn a ->
+        @current_action %{ctx | action: a}
+        path = Path.join([ctx.prefix, ctx.resource.route, a.route])
+
+        # Action execution
+        match path, via: a.method do
+          HaveAPI.Action.execute(@current_action, binding()[:conn])
+        end
+
+        # Action doc
+        match Path.join([path, "method=#{a.method}"]), via: :options do
+          Plug.Conn.send_resp(
+            binding()[:conn],
+            200,
+            HaveAPI.Protocol.send_doc(HaveAPI.Doc.action(@current_action))
+          )
+        end
+      end)
     end
   end
 

@@ -21,7 +21,7 @@ defmodule HaveAPI.Doc do
       authentication: Enum.reduce(
         ctx.version.auth_chain,
         %{},
-        fn auth, acc -> Map.put(acc, auth.name, auth.describe) end
+        fn auth, acc -> Map.put(acc, auth.name, auth.describe(ctx)) end
       ),
       resources: Enum.reduce(
         ctx.version.resources,

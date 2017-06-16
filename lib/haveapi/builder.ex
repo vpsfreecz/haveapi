@@ -19,15 +19,16 @@ defmodule HaveAPI.Builder do
   end
 
   defmacro version(v, [do: block]) do
-    mod = :"Version_#{v}"
-
     quote do
-      @haveapi_versions unquote(mod)
+      un_v = unquote(v)
+      mod = :"#{__MODULE__}.Version_#{un_v}"
 
-      defmodule unquote(mod) do
+      @haveapi_versions mod
+
+      defmodule :"#{mod}" do
         use HaveAPI.Version
 
-        version unquote(v)
+        version un_v
         unquote(block)
       end
     end
@@ -93,9 +94,9 @@ defmodule HaveAPI.Builder do
   defmacro mount_version(ctx, default \\ false) do
     quote bind_quoted: [ctx: ctx, default: default] do
       mod = if default do
-        :"Version_#{ctx.version.version}_Default_Router"
+        :"#{__MODULE__}.Version_#{ctx.version.version}_Default_Router"
       else
-        :"Version_#{ctx.version.version}_Router"
+        :"#{__MODULE__}.Version_#{ctx.version.version}_Router"
       end
 
       defmodule :"#{mod}" do

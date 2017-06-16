@@ -1,6 +1,6 @@
 defmodule HaveAPI.Authentication.Token do
   @callback find_user_by_credentials(%Plug.Conn{}, String.t, String.t) :: any
-  @callback save_token(%Plug.Conn{}, any, String.t, Integer, Integer) :: any
+  @callback save_token(%Plug.Conn{}, any, String.t, Integer, Integer) :: DateTime
   @callback revoke_token(%Plug.Conn{}, any, String.t) :: any
   @callback renew_token(%Plug.Conn{}, any, String.t) :: any
   @callback find_user_by_token(%Plug.Conn{}, String.t) :: any
@@ -149,15 +149,17 @@ defmodule HaveAPI.Authentication.Token do
 
     if user do
       token = provider.generate_token
-      provider.save_token(
-        req.conn,
-        user,
-        token,
-        req.input[:lifetime],
-        req.input[:interval]
-      )
 
-      %{token: token, valid_to: "2017-12-31T00:00:00Z"}
+      %{
+        token: token,
+        valid_to: provider.save_token(
+          req.conn,
+          user,
+          token,
+          req.input[:lifetime],
+          req.input[:interval]
+        ),
+      }
 
     else
       {:error, "bad login or password"}

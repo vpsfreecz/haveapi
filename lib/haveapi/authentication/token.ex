@@ -8,6 +8,7 @@ defmodule HaveAPI.Authentication.Token do
   defmacro __using__(_opts) do
     quote do
       @behaviour unquote(__MODULE__)
+      alias HaveAPI.Authentication.Token, as: Provider
 
       provider = __MODULE__
 
@@ -37,27 +38,7 @@ defmodule HaveAPI.Authentication.Token do
           end
 
           def exec(req) do
-            user = @haveapi_provider.find_user_by_credentials(
-              req.conn,
-              req.input.login,
-              req.input.password
-            )
-
-            if user do
-              token = @haveapi_provider.generate_token
-              @haveapi_provider.save_token(
-                req.conn,
-                user,
-                token,
-                req.input[:lifetime],
-                req.input[:interval]
-              )
-
-              %{token: token, valid_to: "2017-12-31T00:00:00Z"}
-
-            else
-              {:error, "bad login or password"}
-            end
+            Provider.request(@haveapi_provider, req)
           end
         end
 
@@ -119,37 +100,67 @@ defmodule HaveAPI.Authentication.Token do
         }
       end
 
-      def http_header, do: "X-HaveAPI-Auth-Token"
+      def http_header, do: Provider.http_header
 
-      def query_parameter, do: "_auth_token"
+      def query_parameter, do: Provider.query_parameter
 
-      def generate_token do
-        :crypto.strong_rand_bytes(50) |> Base.encode16(case: :lower)
-      end
+      def generate_token, do: Provider.generate_token
 
       defoverridable [http_header: 0, query_parameter: 0, generate_token: 0]
 
-      def authenticate(conn) do
-        t = get_token(conn)
-        t && find_user_by_token(conn, t)
-      end
+      def authenticate(conn), do: Provider.authenticate(__MODULE__, conn)
 
       def resources, do: [Token]
+    end
+  end
 
-      defp get_token(conn) do
-        conn.query_params[query_parameter()] || get_header_token(conn)
-      end
+  def http_header, do: "X-HaveAPI-Auth-Token"
 
-      defp get_header_token(conn) do
-        header = http_header() |> String.downcase
+  def query_parameter, do: "_auth_token"
 
-        case Enum.find(conn.req_headers, fn {k, v} -> k == header end) do
-          {_, token} ->
-            token
-          _ ->
-            nil
-        end
-      end
+  def generate_token, do: :crypto.strong_rand_bytes(50) |> Base.encode16(case: :lower)
+
+  def authenticate(provider, conn) do
+    t = get_token(provider, conn)
+    t && provider.find_user_by_token(conn, t)
+  end
+
+  defp get_token(provider, conn) do
+    conn.query_params[provider.query_parameter] || get_header_token(provider, conn)
+  end
+
+  defp get_header_token(provider, conn) do
+    header = provider.http_header |> String.downcase
+
+    case Enum.find(conn.req_headers, fn {k, _} -> k == header end) do
+      {_, token} ->
+        token
+      _ ->
+        nil
+    end
+  end
+
+  def request(provider, req) do
+    user = provider.find_user_by_credentials(
+      req.conn,
+      req.input.login,
+      req.input.password
+    )
+
+    if user do
+      token = provider.generate_token
+      provider.save_token(
+        req.conn,
+        user,
+        token,
+        req.input[:lifetime],
+        req.input[:interval]
+      )
+
+      %{token: token, valid_to: "2017-12-31T00:00:00Z"}
+
+    else
+      {:error, "bad login or password"}
     end
   end
 end

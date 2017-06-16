@@ -1,5 +1,5 @@
 defmodule HaveAPI.Authentication.Basic do
-  @callback find_user(String.t, String.t) :: any
+  @callback find_user(%Plug.Conn{}, String.t, String.t) :: any
 
   defmacro __using__(_opts) do
     quote do
@@ -7,7 +7,7 @@ defmodule HaveAPI.Authentication.Basic do
 
       def name, do: :basic
 
-      def describe do
+      def describe(_ctx) do
         %{
           description: "Authentication using HTTP basic. Username and password is passed " <>
                        "via HTTP header. Its use is forbidden from web browsers."
@@ -25,7 +25,7 @@ defmodule HaveAPI.Authentication.Basic do
           [_, auth] = String.split(auth, ~r{\s}, trim: true)
           [user, password] = auth |> Base.decode64! |> String.split(":")
 
-          find_user(user, password)
+          find_user(conn, user, password)
 
         else
           nil

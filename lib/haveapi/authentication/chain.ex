@@ -3,7 +3,7 @@ defmodule HaveAPI.Authentication.Chain do
     IO.puts("auth!")
     IO.inspect(chain)
 
-    user = Enum.reduce(
+    user = Enum.reduce_while(
       chain,
       nil,
       fn auth, acc ->

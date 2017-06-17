@@ -48,6 +48,8 @@ defmodule HaveAPI.BuilderTest do
       defmodule Index do
         use HaveAPI.Action.Index
 
+        auth false
+
         output do
           string :test
         end
@@ -59,6 +61,8 @@ defmodule HaveAPI.BuilderTest do
 
       defmodule Show do
         use HaveAPI.Action.Show
+
+        auth false
 
         output do
           string :test
@@ -74,6 +78,7 @@ defmodule HaveAPI.BuilderTest do
 
         method :post
         route "custom"
+        auth false
 
         input do
           string :str

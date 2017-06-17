@@ -16,7 +16,7 @@ defmodule HaveAPI.Version do
     end
   end
 
-  defmacro auth(chain) do
+  defmacro auth_chain(chain) do
     quote do
       Enum.each(unquote(chain), &(@haveapi_auth &1))
     end

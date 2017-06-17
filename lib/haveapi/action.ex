@@ -5,6 +5,7 @@ defmodule HaveAPI.Action do
       @haveapi_route ""
       @haveapi_desc ""
       @haveapi_aliases []
+      @haveapi_auth true
       @haveapi_parent_input_layout nil
       @haveapi_parent_input []
       @haveapi_parent_output_layout nil
@@ -21,6 +22,7 @@ defmodule HaveAPI.Action do
           @haveapi_route ""
           @haveapi_desc ""
           @haveapi_aliases []
+          @haveapi_auth true
           @haveapi_parent_input_layout nil
           @haveapi_parent_input []
           @haveapi_parent_output_layout nil
@@ -28,7 +30,7 @@ defmodule HaveAPI.Action do
           @before_compile HaveAPI.Action
 
           Enum.each(
-            [:method, :route, :aliases],
+            [:method, :route, :aliases, :auth],
             fn v ->
               Module.put_attribute(
                 __MODULE__,
@@ -78,6 +80,10 @@ defmodule HaveAPI.Action do
 
   defmacro aliases(v) do
     quote do: @haveapi_aliases (@haveapi_aliases ++ unquote(v))
+  end
+
+  defmacro auth(v) do
+    quote do: @haveapi_auth unquote(v)
   end
 
   defmacro input(layout \\ nil, [do: block]) do
@@ -157,6 +163,8 @@ defmodule HaveAPI.Action do
 
       def aliases, do: @haveapi_aliases
 
+      def auth, do: @haveapi_auth
+
       def io(:input) do
         Module.concat(__MODULE__, :Input)
       end
@@ -183,16 +191,20 @@ defmodule HaveAPI.Action do
 
   def execute(ctx, conn) do
     ctx = %{ctx | conn: conn, user: conn.private.haveapi_user}
+    req = %HaveAPI.Request{context: ctx, conn: conn, user: ctx.user}
+    res = %HaveAPI.Response{context: ctx, conn: conn}
 
-    ret = %HaveAPI.Request{context: ctx, conn: conn, user: ctx.user}
-      |> fetch_path_parameters
-      |> fetch_input_parameters
-      |> do_exec
-
-    ret
-      |> build_output(ctx.action.layout(:output), %HaveAPI.Response{context: ctx, conn: conn})
-      |> filter_output(ctx.action.layout(:output))
-      |> reply
+    with true <- authenticated?(ctx.action.auth, ctx.user),
+         req <- fetch_path_parameters(req),
+         req <- fetch_input_parameters(req),
+         data <- do_exec(req),
+         output = ctx.action.layout(:output),
+         res <- build_output(data, output, res),
+         res <- filter_output(res, output) do
+      reply(res)
+    else
+      {:error, msg} -> reply(%{res | status: false, message: msg})
+    end
   end
 
   def internal(%HaveAPI.Context{conn: conn} = ctx, opts \\ []) do
@@ -204,11 +216,19 @@ defmodule HaveAPI.Action do
       input: opts[:input],
     }
 
-    req
-      |> do_exec
-      |> build_output(ctx.action.layout(:output), %HaveAPI.Response{context: ctx, conn: conn})
-      |> filter_output(ctx.action.layout(:output))
+    with data <- do_exec(req),
+         res = %HaveAPI.Response{context: ctx, conn: conn},
+         output = ctx.action.layout(:output),
+         res <- build_output(data, output, res),
+         res <- filter_output(res, output),
+    do: res
   end
+
+  defp authenticated?(true, user) do
+    if user, do: true, else: {:error, "Access forbidden"}
+  end
+
+  defp authenticated?(false, _user), do: true
 
   defp map_path_params(ctx, params) do
     route = Path.join(

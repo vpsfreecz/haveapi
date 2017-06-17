@@ -23,7 +23,10 @@ defmodule HaveAPI.Parameter do
       params: value
     )
 
-    ret.output
+    case ret do
+      {:error, msg} -> nil
+      _ -> ret.output
+    end
   end
 
   def format(ctx, p, _, value) do

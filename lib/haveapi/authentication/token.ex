@@ -21,6 +21,7 @@ defmodule HaveAPI.Authentication.Token do
           @haveapi_provider provider
 
           method :post
+          auth false
 
           input do
             # TODO: validators, proper lifetime & inverval handling

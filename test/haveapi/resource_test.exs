@@ -11,6 +11,8 @@ defmodule HaveAPI.ResourceTest do
       defmodule Show do
         use HaveAPI.Action.Show
 
+        auth false
+
         output do
           integer :id
           string :str
@@ -34,6 +36,8 @@ defmodule HaveAPI.ResourceTest do
         defmodule Show do
           use HaveAPI.Action.Show
 
+          auth false
+
           output do
             integer :nested_id
           end
@@ -55,6 +59,8 @@ defmodule HaveAPI.ResourceTest do
       defmodule Index do
         use HaveAPI.Action.Index
 
+        auth false
+
         output do
           resource [TopResource]
         end
@@ -64,6 +70,8 @@ defmodule HaveAPI.ResourceTest do
 
       defmodule Show do
         use HaveAPI.Action.Show
+
+        auth false
 
         output do
           resource [TopResource]
@@ -80,6 +88,8 @@ defmodule HaveAPI.ResourceTest do
 
       defmodule Show do
         use HaveAPI.Action.Show
+
+        auth false
 
         output do
           resource [TopResource, TopResource.NestedResource]

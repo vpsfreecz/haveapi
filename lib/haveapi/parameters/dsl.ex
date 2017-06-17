@@ -68,4 +68,18 @@ defmodule HaveAPI.Parameters.Dsl do
       end
     end
   )
+
+  defmacro resource(resource_list, opts \\ []) do
+    quote bind_quoted: [resource_list: resource_list, opts: opts] do
+      @haveapi_params %HaveAPI.Parameter{
+        name: opts[:name] || String.to_atom(List.last(resource_list).name),
+        type: :resource,
+        label: opts[:label],
+        description: opts[:description],
+        resource_path: resource_list,
+        value_id: opts[:value_id],
+        value_label: opts[:value_label],
+      }
+    end
+  end
 end

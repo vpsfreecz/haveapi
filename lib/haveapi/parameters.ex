@@ -30,9 +30,13 @@ defmodule HaveAPI.Parameters do
 
   def filter(ctx, data) do
     data
-      |> Enum.filter(
-           fn {k, v}
-             -> Enum.find(ctx.action.params(:output), &(k == &1.name))
+      |> Enum.filter_map(
+           fn {k, v} ->
+             Enum.find(ctx.action.params(:output), &(k == &1.name))
+           end,
+           fn {k, v} ->
+             p = Enum.find(ctx.action.params(:output), &(k == &1.name))
+             {k, HaveAPI.Parameter.format(ctx, p, p.type, v)}
            end
         )
       |> Map.new

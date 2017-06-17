@@ -182,7 +182,9 @@ defmodule HaveAPI.Action do
   end
 
   def execute(ctx, conn) do
-    ret = %HaveAPI.Request{context: ctx, conn: conn, user: conn.private.haveapi_user}
+    ctx = %{ctx | conn: conn, user: conn.private.haveapi_user}
+
+    ret = %HaveAPI.Request{context: ctx, conn: conn, user: ctx.user}
       |> fetch_path_parameters
       |> fetch_input_parameters
       |> do_exec
@@ -191,6 +193,34 @@ defmodule HaveAPI.Action do
       |> build_output(ctx.action.layout(:output), %HaveAPI.Response{context: ctx, conn: conn})
       |> filter_output(ctx.action.layout(:output))
       |> reply
+  end
+
+  def internal(%HaveAPI.Context{conn: conn} = ctx, opts \\ []) do
+    req = %HaveAPI.Request{
+      context: ctx,
+      conn: conn,
+      user: ctx.user,
+      params: opts[:params] && map_path_params(ctx, opts[:params]),
+      input: opts[:input],
+    }
+
+    req
+      |> do_exec
+      |> build_output(ctx.action.layout(:output), %HaveAPI.Response{context: ctx, conn: conn})
+      |> filter_output(ctx.action.layout(:output))
+  end
+
+  defp map_path_params(ctx, params) do
+    route = Path.join(
+      [ctx.prefix] ++
+      Enum.map(ctx.resource_path, &(&1.route)) ++
+      [ctx.action.route]
+    ) |> ctx.action.resolve_route(ctx.resource_path)
+
+    path_params = Regex.scan(~r{:([^/]+)}, route)
+      |> Enum.map(fn [m, v] -> String.to_atom(v) end)
+
+    Enum.zip(path_params, params)
   end
 
   defp fetch_path_parameters(req) do

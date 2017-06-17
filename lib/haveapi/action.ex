@@ -82,7 +82,7 @@ defmodule HaveAPI.Action do
     quote do: @haveapi_aliases (@haveapi_aliases ++ unquote(v))
   end
 
-  defmacro auth(v) do
+  defmacro auth(v) when is_boolean(v) do
     quote do: @haveapi_auth unquote(v)
   end
 

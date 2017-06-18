@@ -57,6 +57,18 @@ defmodule HaveAPI.Test do
       conn
     end
 
+    conn = if opts[:basic] do
+      {user, pass} = opts[:basic]
+
+      put_req_header(
+        conn,
+        "authorization",
+        "basic " <> Base.encode64("#{user}:#{pass}")
+      )
+    else
+      conn
+    end
+
     conn
   end
 

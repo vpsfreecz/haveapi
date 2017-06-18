@@ -158,7 +158,6 @@ defmodule HaveAPI.BuilderTest do
 
   test "executes action" do
     conn = call_action(WithResources, "myresource", "index")
-
     assert conn.status == 200
     assert is_list(conn.resp_body["response"]["myresource"])
 

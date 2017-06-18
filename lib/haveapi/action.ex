@@ -186,6 +186,10 @@ defmodule HaveAPI.Action do
       rescue
         UndefinedFunctionError -> nil
       end
+
+      def authorize(_req, _user), do: if auth(), do: :deny, else: :allow
+
+      defoverridable [authorize: 2]
     end
   end
 
@@ -197,9 +201,11 @@ defmodule HaveAPI.Action do
     with true <- authenticated?(ctx.action.auth, ctx.user),
          req <- fetch_path_parameters(req),
          req <- fetch_input_parameters(req),
+         {:ok, req} <- HaveAPI.Authorization.authorize(req),
          data <- do_exec(req),
          output = ctx.action.layout(:output),
          res <- build_output(data, output, res),
+         {:ok, res} <- HaveAPI.Authorization.authorize(res),
          res <- filter_output(res, output) do
       reply(res)
     else
@@ -216,10 +222,12 @@ defmodule HaveAPI.Action do
       input: opts[:input],
     }
 
-    with data <- do_exec(req),
+    with {:ok, req} <- HaveAPI.Authorization.authorize(req),
+         data <- do_exec(req),
          res = %HaveAPI.Response{context: ctx, conn: conn},
          output = ctx.action.layout(:output),
          res <- build_output(data, output, res),
+         {:ok, res} <- HaveAPI.Authorization.authorize(res),
          res <- filter_output(res, output),
     do: res
   end

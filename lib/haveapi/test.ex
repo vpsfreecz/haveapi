@@ -13,7 +13,7 @@ defmodule HaveAPI.Test do
     plug_opts = api.init(opts)
 
     conn = api.call(
-      make_conn(method, path, ns, payload),
+      make_conn(method, path, ns, payload, opts),
       plug_opts
     )
     %{conn | resp_body: Poison.decode!(conn.resp_body)}
@@ -37,7 +37,8 @@ defmodule HaveAPI.Test do
         action.method,
         resolve_path_params(path, opts[:params]),
         resource.name,
-        opts[:input]
+        opts[:input],
+        opts
       ),
       plug_opts
     )
@@ -45,15 +46,18 @@ defmodule HaveAPI.Test do
     %{conn | resp_body: Poison.decode!(conn.resp_body)}
   end
 
-  defp make_conn(method, path, ns, payload) do
-    conn = conn(method, path, params_or_body(ns, method, payload))
+  defp make_conn(method, path, ns, payload, opts \\ []) do
+    {path, body} = params_and_body(method, path, ns, payload)
+    conn = conn(method, path, body)
 
-    if method != :get && payload do
+    conn = if method != :get && payload do
       put_req_header(conn, "content-type", "application/json")
 
     else
       conn
     end
+
+    conn
   end
 
   defp resolve_path_params(path, nil) do
@@ -81,13 +85,17 @@ defmodule HaveAPI.Test do
     )
   end
 
-  defp params_or_body(_, _, nil), do: nil
+  defp params_and_body(_method, path, _ns, nil), do: {path, nil}
 
-  defp params_or_body(ns, :get, payload) do
-    payload
+  defp params_and_body(:get, path, ns, payload) do
+    query_string = payload
       |> Enum.map(fn {k,v} -> "#{ns}[#{k}]=#{v}" end)
       |> Enum.join("&")
+
+    {path <> "?" <> query_string, nil}
   end
 
-  defp params_or_body(ns, _, payload), do: Poison.encode!(%{ns => payload})
+  defp params_or_body(_method, path, ns, payload) do
+    {path, Poison.encode!(%{ns => payload})}
+  end
 end

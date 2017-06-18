@@ -77,7 +77,7 @@ defmodule HaveAPI.BuilderTest do
         use HaveAPI.Action
 
         method :post
-        route "custom"
+        route "%{action}"
         auth false
 
         input do

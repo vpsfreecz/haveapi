@@ -20,7 +20,7 @@ defmodule HaveAPI.AuthorizationTest do
         use HaveAPI.Action
 
         auth false
-        route "defaultnoauth"
+        route "%{action}"
 
         def exec(_req), do: :ok
       end
@@ -29,7 +29,7 @@ defmodule HaveAPI.AuthorizationTest do
         use HaveAPI.Action
 
         auth true
-        route "defaultwithauth"
+        route "%{action}"
 
         def exec(_req), do: :ok
       end
@@ -38,7 +38,7 @@ defmodule HaveAPI.AuthorizationTest do
         use HaveAPI.Action
 
         auth true
-        route "denyatom"
+        route "%{action}"
 
         def authorize(_, _), do: :deny
         def exec(_req), do: :ok
@@ -48,7 +48,7 @@ defmodule HaveAPI.AuthorizationTest do
         use HaveAPI.Action
 
         auth true
-        route "denymsg"
+        route "%{action}"
 
         def authorize(_, _), do: {:deny, "test"}
         def exec(_req), do: :ok
@@ -58,7 +58,7 @@ defmodule HaveAPI.AuthorizationTest do
         use HaveAPI.Action
 
         auth true
-        route "allowatom"
+        route "%{action}"
 
         def authorize(_, _), do: :allow
         def exec(_req), do: :ok
@@ -68,7 +68,7 @@ defmodule HaveAPI.AuthorizationTest do
         use HaveAPI.Action
 
         auth true
-        route "whitelistoutput"
+        route "%{action}"
 
         output do
           string :str1
@@ -85,7 +85,7 @@ defmodule HaveAPI.AuthorizationTest do
         use HaveAPI.Action
 
         auth true
-        route "blacklistoutput"
+        route "%{action}"
 
         output do
           string :str1
@@ -102,7 +102,7 @@ defmodule HaveAPI.AuthorizationTest do
         use HaveAPI.Action
 
         auth true
-        route "whitelistinput"
+        route "%{action}"
 
         input do
           string :str1
@@ -126,7 +126,7 @@ defmodule HaveAPI.AuthorizationTest do
         use HaveAPI.Action
 
         auth true
-        route "blacklistinput"
+        route "%{action}"
 
         input do
           string :str1

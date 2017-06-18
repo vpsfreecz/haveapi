@@ -16,7 +16,7 @@ defmodule HaveAPI.ActionTest do
         use HaveAPI.Action
 
         method :post
-        route ":%{resource}_id/custom"
+        route ":%{resource}_id/%{action}"
       end
 
       actions [Show, Custom]

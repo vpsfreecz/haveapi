@@ -30,7 +30,12 @@ defmodule HaveAPI.Test do
 
     resource = Enum.find(version.resources, &(resource_name == &1.name))
     action = Enum.find(resource.actions, &(action_name == &1.name))
-    path = Path.join([api.prefix, "v#{version.version}", resource.route, action.route])
+    path = Path.join([
+      api.prefix,
+      "v#{version.version}",
+      resource.route,
+      action.route
+    ]) |> action.resolve_route([resource])
 
     conn = api.call(
       make_conn(

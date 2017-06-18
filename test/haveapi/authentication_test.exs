@@ -11,14 +11,14 @@ defmodule HaveAPI.AuthenticationTest do
       defmodule DefAuth do
         use HaveAPI.Action
 
-        route "defauth"
+        route "%{action}"
 
         def exec(_), do: :ok
       end
 
       defmodule NoAuth do
         use HaveAPI.Action
-        route "noauth"
+        route "%{action}"
         auth false
 
         def exec(_), do: :ok
@@ -26,7 +26,7 @@ defmodule HaveAPI.AuthenticationTest do
 
       defmodule WithAuth do
         use HaveAPI.Action
-        route "withauth"
+        route "%{action}"
         auth true
 
         def exec(_), do: :ok

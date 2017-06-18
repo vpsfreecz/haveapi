@@ -147,12 +147,14 @@ defmodule HaveAPI.Action do
       def route, do: @haveapi_route
 
       def resolve_route(route, [resource]) do
-        Regex.replace(~r/%{resource}/, route, resource.name, global: true)
+        route = Regex.replace(~r/%{resource}/, route, resource.name, global: true)
+        route = Regex.replace(~r/%{action}/, route, name(), global: true)
       end
 
       def resolve_route(route, [first, second]) do
         route = Regex.replace(~r/%{resource}/, route, first.name, global: false)
         route = Regex.replace(~r/%{resource}/, route, second.name, global: true)
+        route = Regex.replace(~r/%{action}/, route, name(), global: true)
       end
 
       def name do

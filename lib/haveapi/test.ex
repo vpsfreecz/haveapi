@@ -107,7 +107,7 @@ defmodule HaveAPI.Test do
     {path <> "?" <> query_string, nil}
   end
 
-  defp params_or_body(_method, path, ns, payload) do
+  defp params_and_body(_method, path, ns, payload) do
     {path, Poison.encode!(%{ns => payload})}
   end
 end

@@ -116,10 +116,13 @@ defmodule HaveAPI.Builder do
           version = @haveapi_ctx.version
 
           Plug.Conn.send_resp(
-            binding()[:conn],
+            var!(conn),
             200,
             HaveAPI.Protocol.send_doc(
-              HaveAPI.Doc.version(%{@haveapi_ctx | version: version})
+              HaveAPI.Doc.version(%{@haveapi_ctx |
+                version: version,
+                user: var!(conn).private.haveapi_user
+              })
             )
           )
         end
@@ -190,9 +193,11 @@ defmodule HaveAPI.Builder do
         # Action doc
         match Path.join([path, "method=#{a.method}"]), via: :options do
           Plug.Conn.send_resp(
-            binding()[:conn],
+            var!(conn),
             200,
-            HaveAPI.Protocol.send_doc(HaveAPI.Doc.action(@current_action))
+            HaveAPI.Protocol.send_doc(HaveAPI.Doc.action(%{@current_action |
+              user: var!(conn).private.haveapi_user
+            }))
           )
         end
       end)

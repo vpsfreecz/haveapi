@@ -10,6 +10,8 @@ defmodule HaveAPI.ActionTest do
 
       defmodule Show do
         use HaveAPI.Action.Show
+
+        auth false
       end
 
       defmodule Custom do
@@ -17,6 +19,7 @@ defmodule HaveAPI.ActionTest do
 
         method :post
         route ":%{resource}_id/%{action}"
+        auth false
       end
 
       actions [Show, Custom]
@@ -28,6 +31,8 @@ defmodule HaveAPI.ActionTest do
 
         defmodule Show do
           use HaveAPI.Action.Show
+
+          auth false
         end
 
         actions [Show]

@@ -146,6 +146,16 @@ defmodule HaveAPI.AuthorizationTest do
         def exec(req), do: req.input
       end
 
+      defmodule AdminOnly do
+        use HaveAPI.Action
+
+        auth true
+        route "%{action}"
+
+        def authorize(_, "admin"), do: :allow
+        def authorize(_, _), do: :deny
+      end
+
       actions [
         DefaultNoAuth,
         DefaultWithAuth,
@@ -156,12 +166,29 @@ defmodule HaveAPI.AuthorizationTest do
         BlacklistOutput,
         WhitelistInput,
         BlacklistInput,
+        AdminOnly,
       ]
+    end
+
+    defmodule AdminResource do
+      use HaveAPI.Resource
+
+      defmodule AdminOnly do
+        use HaveAPI.Action
+
+        auth true
+        route "%{action}"
+
+        def authorize(_, "admin"), do: :allow
+        def authorize(_, _), do: :deny
+      end
+
+      actions [AdminOnly]
     end
 
     version "1.0" do
       auth_chain [BasicAuth]
-      resources [MyResource]
+      resources [MyResource, AdminResource]
     end
 
     mount "/"
@@ -273,5 +300,38 @@ defmodule HaveAPI.AuthorizationTest do
     assert conn.status == 200
     assert conn.resp_body["status"] === true
     assert Map.has_key?(conn.resp_body["response"]["myresource"], "secret")
+  end
+
+  test "it filters actions in documentation" do
+    conn = call_api(Api, :options, "/v1.0", nil, nil, basic: {"user", "1234"})
+
+    assert conn.status == 200
+    assert conn.resp_body["status"] === true
+    assert Map.has_key?(conn.resp_body["response"]["resources"], "myresource")
+    refute Map.has_key?(conn.resp_body["response"]["resources"]["myresource"]["actions"], "adminonly")
+
+    conn = call_api(Api, :options, "/v1.0", nil, nil, basic: {"admin", "1234"})
+
+    assert conn.status == 200
+    assert conn.resp_body["status"] === true
+    assert Map.has_key?(conn.resp_body["response"]["resources"], "myresource")
+    assert Map.has_key?(conn.resp_body["response"]["resources"]["myresource"]["actions"], "adminonly")
+  end
+
+  test "it filters resources in documentation" do
+    conn = call_api(Api, :options, "/v1.0", nil, nil, basic: {"user", "1234"})
+
+    assert conn.status == 200
+    assert conn.resp_body["status"] === true
+    assert Map.has_key?(conn.resp_body["response"]["resources"], "myresource")
+    refute Map.has_key?(conn.resp_body["response"]["resources"], "adminresource")
+
+    conn = call_api(Api, :options, "/v1.0", nil, nil, basic: {"admin", "1234"})
+
+    assert conn.status == 200
+    assert conn.resp_body["status"] === true
+    assert Map.has_key?(conn.resp_body["response"]["resources"], "myresource")
+    assert Map.has_key?(conn.resp_body["response"]["resources"], "adminresource")
+    assert Map.has_key?(conn.resp_body["response"]["resources"]["adminresource"]["actions"], "adminonly")
   end
 end

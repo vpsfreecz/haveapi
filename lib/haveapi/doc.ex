@@ -23,34 +23,34 @@ defmodule HaveAPI.Doc do
         %{},
         fn auth, acc -> Map.put(acc, auth.name, auth.describe(ctx)) end
       ),
-      resources: Enum.reduce(
-        ctx.version.resources,
-        %{},
-        fn r, acc ->
-          Map.put(acc, r.name, resource(%{ctx | resource_path: [r], resource: r}))
-        end
-      ),
+      resources: ctx.version.resources
+        |> Enum.map(&{&1.name, resource(%{ctx |
+             resource_path: [&1],
+             resource: &1,
+           })})
+        |> Enum.filter(fn {name, desc} ->
+             !Enum.empty?(desc.actions) && Enum.empty?(desc.resources)
+           end)
+        |> Map.new,
       meta: %{namespace: "meta"}
     }
   end
 
   def resource(ctx) do
     %{
-      actions: Enum.reduce(
-        ctx.resource.actions,
-        %{},
-        fn a, acc -> Map.put(acc, a.name, action(%{ctx | action: a})) end
-      ),
-      resources: Enum.reduce(
-        ctx.resource.resources,
-        %{},
-        fn r, acc ->
-          Map.put(acc, r.name, resource(%{ctx |
-            resource_path: ctx.resource_path ++ [r],
-            resource: r,
-          }))
-        end
-      ),
+      actions: ctx.resource.actions
+        |> Enum.map(&{&1.name, action(%{ctx | action: &1})})
+        |> Enum.filter(fn {name, desc} -> not is_nil(desc) end)
+        |> Map.new,
+      resources: ctx.resource.resources
+        |> Enum.map(&{&1.name, resource(%{ctx |
+             resource_path: ctx.resource_path ++ [&1],
+             resource: &1,
+           })})
+        |> Enum.filter(fn {name, desc} ->
+             !Enum.empty?(desc.actions) && Enum.empty?(desc.resources)
+           end)
+        |> Map.new,
     }
   end
 
@@ -62,33 +62,59 @@ defmodule HaveAPI.Doc do
       [ctx.action.route]
     ) |> ctx.action.resolve_route(ctx.resource_path)
 
-    %{
-      auth: ctx.action.auth,
-      description: ctx.action.desc,
-      aliases: ctx.action.aliases,
-      blocking: false, # TODO
-      input: io(ctx, :input),
-      output: io(ctx, :output),
-      examples: [], # TODO
-      meta: nil, # TODO
-      url: route,
-      method: method,
-      help: Path.join([route, "method=#{ctx.action.method}"]),
-    }
+    with {:ok, input} <- io(ctx, :input),
+         {:ok, output} <- io(ctx, :output) do
+      %{
+        auth: ctx.action.auth,
+        description: ctx.action.desc,
+        aliases: ctx.action.aliases,
+        blocking: false, # TODO
+        input: input,
+        output: output,
+        examples: [], # TODO
+        meta: nil, # TODO
+        url: route,
+        method: method,
+        help: Path.join([route, "method=#{ctx.action.method}"]),
+      }
+    else
+      {:error, msg} ->
+        nil
+    end
   end
 
   def io(ctx, dir) do
     v = ctx.action.params(dir)
 
-    if is_nil(v) || Enum.empty?(v) do
-      nil
+    if is_nil(v) do
+      case authorize_params(nil, ctx, dir) do
+        {:error, msg} ->
+          {:error, msg}
+
+        {:ok, nil} ->
+          {:ok, nil}
+      end
 
     else
-      %{
-        layout: apply(ctx.action.io(dir), :layout, []),
-        namespace: ctx.resource.name(),
-        parameters: params(ctx, v),
-      }
+      authorized_params = v
+        |> Enum.map(&{&1.name, &1})
+        |> Map.new
+        |> authorize_params(ctx, dir)
+
+      case authorized_params do
+        {:error, msg} ->
+          {:error, msg}
+
+        {:ok, nil} ->
+          {:ok, nil}
+
+        {:ok, params} ->
+          {:ok, %{
+            layout: apply(ctx.action.io(dir), :layout, []),
+            namespace: ctx.resource.name(),
+            parameters: params(ctx, params),
+          }}
+      end
     end
   end
 
@@ -96,7 +122,7 @@ defmodule HaveAPI.Doc do
     Enum.reduce(
       param_list,
       %{},
-      fn p, acc -> Map.put(acc, p.name, param(p)) end
+      fn {name, p}, acc -> Map.put(acc, name, param(p)) end
     )
   end
 
@@ -118,6 +144,39 @@ defmodule HaveAPI.Doc do
 
       _ ->
         desc
+    end
+  end
+
+  defp authorize_params(params, ctx, :input) do
+    ret = HaveAPI.Authorization.authorize(%HaveAPI.Request{
+      context: ctx,
+      conn: ctx.conn,
+      user: ctx.user,
+      input: params,
+    })
+
+    case ret do
+      {:ok, data} ->
+        {:ok, data.input}
+
+      {:error, msg} ->
+        {:error, msg}
+    end
+  end
+
+  defp authorize_params(params, ctx, :output) do
+    ret = HaveAPI.Authorization.authorize(%HaveAPI.Response{
+      context: ctx,
+      conn: ctx.conn,
+      output: params,
+    })
+
+    case ret do
+      {:ok, data} ->
+        {:ok, data.output}
+
+      {:error, msg} ->
+        {:error, msg}
     end
   end
 end

@@ -63,7 +63,7 @@ defmodule HaveAPI.Doc do
     ) |> ctx.action.resolve_route(ctx.resource_path)
 
     %{
-      auth: false, # TODO
+      auth: ctx.action.auth,
       description: ctx.action.desc,
       aliases: ctx.action.aliases,
       blocking: false, # TODO

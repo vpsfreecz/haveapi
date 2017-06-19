@@ -6,8 +6,10 @@ defmodule HaveAPI.Action do
       @haveapi_desc ""
       @haveapi_aliases []
       @haveapi_auth true
+      @haveapi_input false
       @haveapi_parent_input_layout nil
       @haveapi_parent_input []
+      @haveapi_output false
       @haveapi_parent_output_layout nil
       @haveapi_parent_output []
       @before_compile HaveAPI.Action
@@ -23,8 +25,10 @@ defmodule HaveAPI.Action do
           @haveapi_desc ""
           @haveapi_aliases []
           @haveapi_auth true
+          @haveapi_input false
           @haveapi_parent_input_layout nil
           @haveapi_parent_input []
+          @haveapi_output false
           @haveapi_parent_output_layout nil
           @haveapi_parent_output []
           @before_compile HaveAPI.Action
@@ -88,6 +92,8 @@ defmodule HaveAPI.Action do
 
   defmacro input(layout \\ nil, [do: block]) do
     quote do
+      @haveapi_input true
+
       layout = case unquote(layout) do
         nil ->
           @haveapi_parent_input_layout || :hash
@@ -115,6 +121,8 @@ defmodule HaveAPI.Action do
 
   defmacro output(layout \\ nil, [do: block]) do
     quote do
+      @haveapi_output true
+
       layout = case unquote(layout) do
         nil ->
           @haveapi_parent_output_layout || :hash
@@ -142,6 +150,14 @@ defmodule HaveAPI.Action do
 
   defmacro __before_compile__(_env) do
     quote do
+      if @haveapi_parent_input_layout && !@haveapi_input do
+        input do: nil
+      end
+
+      if @haveapi_parent_output_layout && !@haveapi_output do
+        output do: nil
+      end
+
       def method, do: @haveapi_method
 
       def route, do: @haveapi_route

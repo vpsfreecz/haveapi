@@ -1,6 +1,7 @@
 defmodule HaveAPI.Action do
   defmacro __using__(_opts) do
     quote do
+      @haveapi_parent nil
       @haveapi_method :get
       @haveapi_route ""
       @haveapi_desc ""
@@ -22,6 +23,7 @@ defmodule HaveAPI.Action do
         quote do
           parent = unquote(__MODULE__)
 
+          @haveapi_parent parent
           @haveapi_method :get
           @haveapi_route ""
           @haveapi_desc ""
@@ -155,9 +157,23 @@ defmodule HaveAPI.Action do
   defmacro meta(:local, [do: block]) do
     quote do
       @haveapi_meta_local true
+      parent = @haveapi_parent
 
       defmodule LocalMeta do
         use HaveAPI.Meta
+
+        if parent && parent.has_meta?(:local) do
+          Enum.each([:input, :output], fn dir ->
+            attr = :"haveapi_parent_#{dir}"
+            Module.register_attribute(__MODULE__, attr, [])
+
+            params = parent.meta(:local).params(dir)
+
+            if params do
+              Module.put_attribute(__MODULE__, attr, params)
+            end
+          end)
+        end
 
         unquote(block)
       end
@@ -167,9 +183,23 @@ defmodule HaveAPI.Action do
   defmacro meta(:global, [do: block]) do
     quote do
       @haveapi_meta_global true
+      parent = @haveapi_parent
 
       defmodule GlobalMeta do
         use HaveAPI.Meta
+
+        if parent && parent.has_meta?(:global) do
+          Enum.each([:input, :output], fn dir ->
+            attr = :"haveapi_parent_#{dir}"
+            Module.register_attribute(__MODULE__, :attr, [])
+
+            params = parent.meta(:global).params(dir)
+
+            if params do
+              Module.put_attribute(__MODULE__, attr, params)
+            end
+          end)
+        end
 
         unquote(block)
       end
@@ -184,6 +214,33 @@ defmodule HaveAPI.Action do
 
       if @haveapi_parent_output_layout && !@haveapi_output do
         output do: nil
+      end
+
+      parent = @haveapi_parent
+      if parent do
+        if parent.has_meta?(:local) do
+          meta(:local) do
+            if parent.meta(:local).params(:input) do
+              input do: nil
+            end
+
+            if parent.meta(:local).params(:output) do
+              output do: nil
+            end
+          end
+        end
+
+        if parent.has_meta?(:global) do
+          meta(:global) do
+            if parent.meta(:global).params(:input) do
+              input do: nil
+            end
+
+            if parent.meta(:global).params(:output) do
+              output do: nil
+            end
+          end
+        end
       end
 
       def method, do: @haveapi_method

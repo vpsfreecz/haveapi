@@ -24,8 +24,13 @@ defmodule HaveAPI.Parameter do
     )
 
     case ret do
-      {:error, msg} -> nil
-      _ -> ret.output
+      {:error, msg} ->
+        nil
+      _ ->
+        HaveAPI.Meta.add(ret.output, %{
+          resolved: true,
+          url_params: value,
+        })
     end
   end
 

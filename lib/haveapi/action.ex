@@ -12,6 +12,8 @@ defmodule HaveAPI.Action do
       @haveapi_output false
       @haveapi_parent_output_layout nil
       @haveapi_parent_output []
+      @haveapi_meta_local false
+      @haveapi_meta_global false
       @before_compile HaveAPI.Action
 
       import HaveAPI.Action
@@ -31,6 +33,8 @@ defmodule HaveAPI.Action do
           @haveapi_output false
           @haveapi_parent_output_layout nil
           @haveapi_parent_output []
+          @haveapi_meta_local false
+          @haveapi_meta_global false
           @before_compile HaveAPI.Action
 
           Enum.each(
@@ -148,6 +152,30 @@ defmodule HaveAPI.Action do
     end
   end
 
+  defmacro meta(:local, [do: block]) do
+    quote do
+      @haveapi_meta_local true
+
+      defmodule LocalMeta do
+        use HaveAPI.Meta
+
+        unquote(block)
+      end
+    end
+  end
+
+  defmacro meta(:global, [do: block]) do
+    quote do
+      @haveapi_meta_global true
+
+      defmodule GlobalMeta do
+        use HaveAPI.Meta
+
+        unquote(block)
+      end
+    end
+  end
+
   defmacro __before_compile__(_env) do
     quote do
       if @haveapi_parent_input_layout && !@haveapi_input do
@@ -205,6 +233,12 @@ defmodule HaveAPI.Action do
         UndefinedFunctionError -> nil
       end
 
+      def has_meta?(:local), do: @haveapi_meta_local
+      def has_meta?(:global), do: @haveapi_meta_global
+
+      def meta(:local), do: Module.concat(__MODULE__, :LocalMeta)
+      def meta(:global), do: Module.concat(__MODULE__, :GlobalMeta)
+
       def authorize(_req, _user), do: if auth(), do: :deny, else: :allow
 
       defoverridable [authorize: 2]
@@ -224,7 +258,8 @@ defmodule HaveAPI.Action do
          output = ctx.action.layout(:output),
          res <- build_output(data, output, res),
          {:ok, res} <- HaveAPI.Authorization.authorize(res),
-         res <- filter_output(res, output) do
+         res <- filter_output(res, output),
+         res <- filter_output_meta(res) do
       reply(res)
     else
       {:error, msg} -> reply(%{res | status: false, message: msg})
@@ -277,16 +312,37 @@ defmodule HaveAPI.Action do
   end
 
   defp fetch_input_parameters(req) do
-    Map.put(
-      req,
-      :input,
-      if req.context.action.method == :get do
-        HaveAPI.Parameters.extract(req.context, req.conn.query_params)
+    if req.context.action.method == :get do
+      fetch_input_parameters(req, req.conn.query_params)
 
-      else
-        HaveAPI.Parameters.extract(req.context, req.conn.body_params)
-      end
+    else
+      fetch_input_parameters(req, req.conn.body_params)
+    end
+  end
+
+  defp fetch_input_parameters(req, data) do
+    %{req |
+      input: fetch_input_parameters(req, data, :input),
+      meta: fetch_input_parameters(req, data, :meta),
+    }
+  end
+
+  defp fetch_input_parameters(req, data, :input) do
+    HaveAPI.Parameters.extract(
+      req.context.action.params(:input),
+      req.context.resource.name,
+      data
     )
+  end
+
+  defp fetch_input_parameters(req, data, :meta) do
+    if req.context.action.has_meta?(:global) do
+      HaveAPI.Parameters.extract(
+        req.context.action.meta(:global).params(:input),
+        Atom.to_string(HaveAPI.Meta.namespace),
+        data
+      )
+    end
   end
 
   defp do_exec(req) do
@@ -309,6 +365,10 @@ defmodule HaveAPI.Action do
     %{res | status: true, output: data}
   end
 
+  defp build_output({:ok, data, meta}, :hash, res) when is_map(meta) do
+    %{res | status: true, output: data, meta: meta}
+  end
+
   defp build_output({:error, msg}, :hash, res) when is_binary(msg) do
     %{res | status: false, message: msg}
   end
@@ -319,6 +379,10 @@ defmodule HaveAPI.Action do
 
   defp build_output({:ok, data}, :hash_list, res) when is_list(data) do
     %{res | status: true, output: data}
+  end
+
+  defp build_output({:ok, data, meta}, :hash_list, res) when is_map(meta) do
+    %{res | status: true, output: data, meta: meta}
   end
 
   defp build_output({:error, msg}, :hash_list, res) when is_binary(msg) do
@@ -334,21 +398,46 @@ defmodule HaveAPI.Action do
   end
 
   defp filter_output(res, :hash) do
-    %{res | output: HaveAPI.Parameters.filter(res.context, res.output)}
+    %{res |
+      output: HaveAPI.Parameters.filter(
+        res.context,
+        res.context.action.params(:output),
+        res.output
+      )
+    }
   end
 
   defp filter_output(res, :hash_list) do
     %{res | output: Enum.map(
       res.output,
-      &(HaveAPI.Parameters.filter(res.context, &1))
+      &(HaveAPI.Parameters.filter(res.context, res.context.action.params(:output), &1))
     )}
+  end
+
+  defp filter_output_meta(res) do
+    if res.context.action.has_meta?(:global) && res.meta do
+      params = res.context.action.meta(:global).params(:output)
+
+      if params do
+        %{res | meta: HaveAPI.Parameters.filter(res.context, params, res.meta)}
+
+      else
+        %{res | meta: nil}
+      end
+
+    else
+      res
+    end
   end
 
   defp reply(%HaveAPI.Response{status: true} = res) do
     Plug.Conn.send_resp(
       res.conn,
       200,
-      HaveAPI.Protocol.send(true, response: %{res.context.resource.name() => res.output})
+      HaveAPI.Protocol.send(true, response: %{
+        res.context.resource.name() => res.output,
+        HaveAPI.Meta.namespace => res.meta,
+      })
     )
   end
 

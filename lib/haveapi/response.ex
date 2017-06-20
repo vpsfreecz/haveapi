@@ -1,3 +1,3 @@
 defmodule HaveAPI.Response do
-  defstruct [:context, :conn, :status, :output, :message, :errors]
+  defstruct [:context, :conn, :status, :output, :meta, :message, :errors]
 end

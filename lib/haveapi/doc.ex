@@ -32,7 +32,7 @@ defmodule HaveAPI.Doc do
              !Enum.empty?(desc.actions) && Enum.empty?(desc.resources)
            end)
         |> Map.new,
-      meta: %{namespace: "meta"}
+      meta: %{namespace: HaveAPI.Meta.namespace}
     }
   end
 
@@ -72,7 +72,7 @@ defmodule HaveAPI.Doc do
         input: input,
         output: output,
         examples: [], # TODO
-        meta: nil, # TODO
+        meta: meta(ctx),
         url: route,
         method: method,
         help: Path.join([route, "method=#{ctx.action.method}"]),
@@ -80,6 +80,41 @@ defmodule HaveAPI.Doc do
     else
       {:error, msg} ->
         nil
+    end
+  end
+
+  def meta(ctx) do
+    %{
+      global: meta(ctx, :global),
+      object: meta(ctx, :local),
+    }
+  end
+
+  def meta(ctx, type) do
+    if ctx.action.has_meta?(type) do
+      %{
+        input: meta_io(ctx, type, :input),
+        output: meta_io(ctx, type, :output),
+      }
+
+    else
+      nil
+    end
+  end
+
+  def meta_io(ctx, type, dir) do
+    m = ctx.action.meta(type)
+    params = m.params(dir)
+
+    if params do
+      %{
+        layout: m.io(dir).layout,
+        namespace: ctx.resource.name,
+        parameters: params(ctx, Enum.map(params, &{&1.name, &1})),
+      }
+
+    else
+      nil
     end
   end
 

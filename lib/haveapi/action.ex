@@ -17,6 +17,8 @@ defmodule HaveAPI.Action do
       @haveapi_meta_global false
       @before_compile HaveAPI.Action
 
+      Module.register_attribute(__MODULE__, :haveapi_post_exec, accumulate: true)
+
       import HaveAPI.Action
 
       defmacro __using__(_opts) do
@@ -38,6 +40,8 @@ defmodule HaveAPI.Action do
           @haveapi_meta_local false
           @haveapi_meta_global false
           @before_compile HaveAPI.Action
+
+          Module.register_attribute(__MODULE__, :haveapi_post_exec, accumulate: true)
 
           Enum.each(
             [:method, :route, :aliases, :auth],
@@ -206,6 +210,18 @@ defmodule HaveAPI.Action do
     end
   end
 
+  defmacro post_exec(func) do
+    quote bind_quoted: [func: func] do
+      post_exec(__MODULE__, func)
+    end
+  end
+
+  defmacro post_exec(mod, func) do
+    quote bind_quoted: [mod: mod, func: func] do
+      @haveapi_post_exec {mod, func}
+    end
+  end
+
   defmacro __before_compile__(_env) do
     quote do
       if @haveapi_parent_input_layout && !@haveapi_input do
@@ -296,6 +312,19 @@ defmodule HaveAPI.Action do
       def meta(:local), do: Module.concat(__MODULE__, :LocalMeta)
       def meta(:global), do: Module.concat(__MODULE__, :GlobalMeta)
 
+      def post_exec(req, res) do
+        res = if @haveapi_parent do
+          @haveapi_parent.post_exec(req, res)
+
+        else
+          res
+        end
+
+        @haveapi_post_exec
+        |> Enum.reverse
+        |> Enum.reduce(res, fn {mod, func}, acc -> apply(mod, func, [req, acc]) end)
+      end
+
       def authorize(_req, _user), do: if auth(), do: :deny, else: :allow
 
       defoverridable [authorize: 2]
@@ -314,6 +343,7 @@ defmodule HaveAPI.Action do
          data <- do_exec(req),
          output = ctx.action.layout(:output),
          res <- build_output(data, output, res),
+         res <- ctx.action.post_exec(req, res),
          {:ok, res} <- HaveAPI.Authorization.authorize(res),
          res <- filter_output(res, output),
          res <- filter_output_meta(res) do

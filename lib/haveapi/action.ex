@@ -517,30 +517,5 @@ defmodule HaveAPI.Action do
     end
   end
 
-  defp reply(%HaveAPI.Response{status: true} = res) do
-    Plug.Conn.send_resp(
-      res.conn,
-      200,
-      HaveAPI.Protocol.send(true, response: %{
-        res.context.resource.name() => res.output,
-        HaveAPI.Meta.namespace => res.meta,
-      })
-    )
-  end
-
-  defp reply(%HaveAPI.Response{status: false} = res) do
-    Plug.Conn.send_resp(
-      res.conn,
-      400,
-      HaveAPI.Protocol.send(false, message: res.message)
-    )
-  end
-
-  defp reply(res) do
-    Plug.Conn.send_resp(
-      res.conn,
-      500,
-      HaveAPI.Protocol.send(false, message: "Server error occurred.")
-    )
-  end
+  defp reply(res), do: HaveAPI.Protocol.send_data(res)
 end

@@ -1,17 +1,4 @@
 defmodule HaveAPI.Protocol do
-  def read() do
-
-  end
-
-  def send(status, opts) do
-    Poison.encode!(%{
-      status: status,
-      response: opts[:response] || nil,
-      message: opts[:message] || nil,
-      errors: opts[:errors] || nil,
-    })
-  end
-
   def describe_api(ctx, conn) do
     def_v = ctx.api.default_version
 
@@ -58,6 +45,33 @@ defmodule HaveAPI.Protocol do
     )
   end
 
+  def send_data(%HaveAPI.Response{status: true} = res) do
+    Plug.Conn.send_resp(
+      res.conn,
+      200,
+      format_data(res.status, response: %{
+        res.context.resource.name() => res.output,
+        HaveAPI.Meta.namespace => res.meta,
+      })
+    )
+  end
+
+  def send_data(%HaveAPI.Response{status: false} = res) do
+    Plug.Conn.send_resp(
+      res.conn,
+      400,
+      format_data(res.status, message: res.message)
+    )
+  end
+
+  def send_data(res) do
+    Plug.Conn.send_resp(
+      res.conn,
+      500,
+      format_data(false, message: "Server error occurred.")
+    )
+  end
+
   def format_doc(doc) do
     Poison.encode!(%{
       version: "1.2",
@@ -65,6 +79,15 @@ defmodule HaveAPI.Protocol do
       response: doc,
       message: nil,
       errors: nil,
+    })
+  end
+
+  def format_data(status, opts) do
+    Poison.encode!(%{
+      status: status,
+      response: opts[:response] || nil,
+      message: opts[:message] || nil,
+      errors: opts[:errors] || nil,
     })
   end
 end

@@ -314,7 +314,7 @@ defmodule HaveAPI.Action do
 
       def post_exec(req, res) do
         res = if @haveapi_parent do
-          @haveapi_parent.post_exec(req, res)
+          apply(@haveapi_parent, :post_exec, [req, res])
 
         else
           res

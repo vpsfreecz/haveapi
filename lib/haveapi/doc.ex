@@ -122,7 +122,7 @@ defmodule HaveAPI.Doc do
     v = ctx.action.params(dir)
 
     if is_nil(v) do
-      case authorize_params(nil, ctx, dir) do
+      case authorize_params(nil, ctx, dir, ctx.user) do
         {:error, msg} ->
           {:error, msg}
 
@@ -134,7 +134,7 @@ defmodule HaveAPI.Doc do
       authorized_params = v
         |> Enum.map(&{&1.name, &1})
         |> Map.new
-        |> authorize_params(ctx, dir)
+        |> authorize_params(ctx, dir, ctx.user)
 
       case authorized_params do
         {:error, msg} ->
@@ -182,11 +182,15 @@ defmodule HaveAPI.Doc do
     end
   end
 
-  defp authorize_params(params, ctx, :input) do
+  defp authorize_params(params, _ctx, _dir, nil) do
+    {:ok, params}
+  end
+
+  defp authorize_params(params, ctx, :input, user) do
     ret = HaveAPI.Authorization.authorize(%HaveAPI.Request{
       context: ctx,
       conn: ctx.conn,
-      user: ctx.user,
+      user: user,
       input: params,
     })
 
@@ -199,9 +203,9 @@ defmodule HaveAPI.Doc do
     end
   end
 
-  defp authorize_params(params, ctx, :output) do
+  defp authorize_params(params, ctx, :output, user) do
     ret = HaveAPI.Authorization.authorize(%HaveAPI.Response{
-      context: ctx,
+      context: %{ctx | user: user},
       conn: ctx.conn,
       output: params,
     })

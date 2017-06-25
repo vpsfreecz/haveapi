@@ -52,7 +52,7 @@ defmodule HaveAPI.Parameters.Dsl do
   end
 
   Enum.each(
-    [:string, :text, :integer, :float, :datetime, :boolean],
+    [:string, :text, :integer, :float, :datetime, :boolean, :custom],
     fn v ->
       defmacro unquote(:"#{v}")(name, opts \\ []) do
         type = unquote(v)

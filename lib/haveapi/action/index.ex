@@ -23,7 +23,15 @@ defmodule HaveAPI.Action.Index do
     end
   end
 
+  meta :local do
+    output do
+      custom :url_params
+      boolean :resolved
+    end
+  end
+
   post_exec :add_total_count
+  post_exec :add_local_metadata
 
   def add_total_count(req, res) do
     if req.meta && req.meta.total_count do
@@ -33,6 +41,21 @@ defmodule HaveAPI.Action.Index do
       else
         %{res | meta: %{total_count: req.context.action.count(req)}}
       end
+
+    else
+      res
+    end
+  end
+
+  # TODO: mention/fix that we need output parameter `id` to be present
+  def add_local_metadata(req, res) do
+    if Enum.find(res.context.action.params(:output), &(&1.name == :id)) do
+      %{res | output: Enum.map(res.output, fn item ->
+        Map.put(item, :_meta, %{
+          url_params: (req.params |> Keyword.delete_first(:glob) |> Keyword.values) ++ [item.id],
+          resolved: true
+        })
+      end)}
 
     else
       res

@@ -65,7 +65,7 @@ defmodule HaveAPI.ResourceTest do
           resource [TopResource]
         end
 
-        def exec(req), do: for n <- 1..10, do: %{topresource: [n]}
+        def exec(_req), do: for n <- 1..10, do: %{topresource: [n]}
       end
 
       defmodule Show do
@@ -77,7 +77,7 @@ defmodule HaveAPI.ResourceTest do
           resource [TopResource]
         end
 
-        def exec(req), do: %{topresource: [10]}
+        def exec(_req), do: %{topresource: [10]}
       end
 
       actions [Index, Show]
@@ -95,7 +95,7 @@ defmodule HaveAPI.ResourceTest do
           resource [TopResource, TopResource.NestedResource]
         end
 
-        def exec(req), do: %{nestedresource: [10,20]}
+        def exec(_req), do: %{nestedresource: [10,20]}
       end
 
       actions [Show]

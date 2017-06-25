@@ -117,7 +117,7 @@ defmodule HaveAPI.AuthorizationTest do
         end
 
         def authorize(%HaveAPI.Request{}, "user"), do: {:allow, whitelist: [:str1, :str2]}
-        def authorize(%HaveAPI.Request{}, _, "admin"), do: :allow
+        def authorize(%HaveAPI.Request{}, "admin"), do: :allow
         def authorize(_, _), do: :allow
         def exec(req), do: req.input
       end
@@ -141,7 +141,7 @@ defmodule HaveAPI.AuthorizationTest do
         end
 
         def authorize(%HaveAPI.Request{}, "user"), do: {:allow, blacklist: [:secret]}
-        def authorize(%HaveAPI.Request{}, _, "admin"), do: :allow
+        def authorize(%HaveAPI.Request{}, "admin"), do: :allow
         def authorize(_, _), do: :allow
         def exec(req), do: req.input
       end

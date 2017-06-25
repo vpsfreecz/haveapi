@@ -36,12 +36,14 @@ defmodule HaveAPI.Resource do
       end
 
       def route do
-        @haveapi_route || name()
+        _route() || name()
       end
 
       def name do
         Module.split(__MODULE__) |> List.last |> String.downcase
       end
+
+      defp _route, do: @haveapi_route
     end
   end
 end

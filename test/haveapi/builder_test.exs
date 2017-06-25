@@ -54,7 +54,7 @@ defmodule HaveAPI.BuilderTest do
           string :test
         end
 
-        def exec(req) do
+        def exec(_req) do
           [%{test: "hello"}, %{test: "world"}]
         end
       end
@@ -68,7 +68,7 @@ defmodule HaveAPI.BuilderTest do
           string :test
         end
 
-        def exec(req) do
+        def exec(_req) do
           %{test: "hello"}
         end
       end

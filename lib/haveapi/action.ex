@@ -117,12 +117,10 @@ defmodule HaveAPI.Action do
       defmodule Input do
         use HaveAPI.Parameters.Dsl, layout: layout
 
-        unless Enum.empty?(parent_in) do
-          Enum.each(
-            parent_in,
-            fn v -> @haveapi_params v end
-          )
-        end
+        Enum.each(
+          parent_in,
+          fn v -> @haveapi_params v end
+        )
 
         unquote(block)
       end
@@ -146,12 +144,10 @@ defmodule HaveAPI.Action do
       defmodule Output do
         use HaveAPI.Parameters.Dsl, layout: layout
 
-        unless Enum.empty?(parent_out) do
-          Enum.each(
-            parent_out,
-            fn v -> @haveapi_params v end
-          )
-        end
+        Enum.each(
+          parent_out,
+          fn v -> @haveapi_params v end
+        )
 
         unquote(block)
       end
@@ -234,7 +230,7 @@ defmodule HaveAPI.Action do
 
       parent = @haveapi_parent
       if parent do
-        if parent.has_meta?(:local) do
+        if parent.has_meta?(:local) && !@haveapi_meta_local do
           meta(:local) do
             if parent.meta(:local).params(:input) do
               input do: nil
@@ -246,7 +242,7 @@ defmodule HaveAPI.Action do
           end
         end
 
-        if parent.has_meta?(:global) do
+        if parent.has_meta?(:global) && !@haveapi_meta_global do
           meta(:global) do
             if parent.meta(:global).params(:input) do
               input do: nil
@@ -312,9 +308,13 @@ defmodule HaveAPI.Action do
       def meta(:local), do: Module.concat(__MODULE__, :LocalMeta)
       def meta(:global), do: Module.concat(__MODULE__, :GlobalMeta)
 
+      def template, do: @haveapi_parent
+
       def post_exec(req, res) do
-        res = if @haveapi_parent do
-          apply(@haveapi_parent, :post_exec, [req, res])
+        tpl = template()
+
+        res = if tpl do
+          apply(tpl, :post_exec, [req, res])
 
         else
           res
@@ -386,7 +386,7 @@ defmodule HaveAPI.Action do
     ) |> ctx.action.resolve_route(ctx.resource_path)
 
     path_params = Regex.scan(~r{:([^/]+)}, route)
-      |> Enum.map(fn [m, v] -> String.to_atom(v) end)
+      |> Enum.map(fn [_m, v] -> String.to_atom(v) end)
 
     Enum.zip(path_params, params)
   end

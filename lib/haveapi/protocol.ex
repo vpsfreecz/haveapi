@@ -42,7 +42,7 @@ defmodule HaveAPI.Protocol do
       200,
       format_doc(
         HaveAPI.Doc.version(%{ctx |
-          user: conn.private.haveapi_user
+          user: HaveAPI.Authentication.user(conn)
         })
       )
     )
@@ -53,7 +53,7 @@ defmodule HaveAPI.Protocol do
       conn,
       200,
       format_doc(HaveAPI.Doc.action(%{ctx |
-        user: conn.private.haveapi_user
+        user: HaveAPI.Authentication.user(conn)
       }))
     )
   end

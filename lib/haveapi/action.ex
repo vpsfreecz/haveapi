@@ -332,7 +332,7 @@ defmodule HaveAPI.Action do
   end
 
   def execute(ctx, conn) do
-    ctx = %{ctx | conn: conn, user: conn.private.haveapi_user}
+    ctx = %{ctx | conn: conn, user: HaveAPI.Authentication.user(conn)}
     req = %HaveAPI.Request{context: ctx, conn: conn, user: ctx.user}
     res = %HaveAPI.Response{context: ctx, conn: conn}
 

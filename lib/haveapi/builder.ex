@@ -43,34 +43,13 @@ defmodule HaveAPI.Builder do
 
   defmacro mount(prefix \\ "/") do
     quote bind_quoted: [prefix: prefix] do
-      ctx = %HaveAPI.Context{prefix: prefix}
+      ctx = %HaveAPI.Context{api: __MODULE__, prefix: prefix}
       @haveapi_ctx ctx
       @haveapi_prefix prefix
 
       # Documentation of the whole API
       match prefix, via: :options do
-        conn = binding()[:conn]
-        def_v = default_version()
-
-        Plug.Conn.send_resp(
-          conn,
-          200,
-          HaveAPI.Protocol.send_doc(
-            case conn.query_params["describe"] do
-              "versions" ->
-                %{
-                  versions: Enum.map(versions(), &(&1.version)),
-                  default: def_v.version,
-                }
-
-              "default" ->
-                HaveAPI.Doc.version(%{@haveapi_ctx | version: def_v})
-
-              _ -> # TODO: report error on invalid values?
-                HaveAPI.Doc.api(@haveapi_ctx, @haveapi_versions, def_v)
-            end
-          )
-        )
+        HaveAPI.Protocol.describe_api(@haveapi_ctx, var!(conn))
       end
 
       # Setup Plug.Router per API version
@@ -113,18 +92,7 @@ defmodule HaveAPI.Builder do
         @haveapi_ctx ctx
 
         match "/", via: :options do
-          version = @haveapi_ctx.version
-
-          Plug.Conn.send_resp(
-            var!(conn),
-            200,
-            HaveAPI.Protocol.send_doc(
-              HaveAPI.Doc.version(%{@haveapi_ctx |
-                version: version,
-                user: var!(conn).private.haveapi_user
-              })
-            )
-          )
+          HaveAPI.Protocol.describe_version(@haveapi_ctx, var!(conn))
         end
 
         # Version auth
@@ -192,13 +160,7 @@ defmodule HaveAPI.Builder do
 
         # Action doc
         match Path.join([path, "method=#{a.method}"]), via: :options do
-          Plug.Conn.send_resp(
-            var!(conn),
-            200,
-            HaveAPI.Protocol.send_doc(HaveAPI.Doc.action(%{@current_action |
-              user: var!(conn).private.haveapi_user
-            }))
-          )
+          HaveAPI.Protocol.describe_action(@current_action, var!(conn))
         end
       end)
     end

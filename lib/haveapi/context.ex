@@ -1,5 +1,6 @@
 defmodule HaveAPI.Context do
   defstruct [
+    :api,
     :prefix,
     :version,
     :resource_path,

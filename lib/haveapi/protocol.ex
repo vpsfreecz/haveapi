@@ -12,7 +12,53 @@ defmodule HaveAPI.Protocol do
     })
   end
 
-  def send_doc(doc) do
+  def describe_api(ctx, conn) do
+    def_v = ctx.api.default_version
+
+    Plug.Conn.send_resp(
+      conn,
+      200,
+      format_doc(
+        case conn.query_params["describe"] do
+          "versions" ->
+            %{
+              versions: Enum.map(ctx.api.versions, &(&1.version)),
+              default: def_v.version,
+            }
+
+          "default" ->
+            HaveAPI.Doc.version(%{ctx | version: def_v})
+
+          _ -> # TODO: report error on invalid values?
+            HaveAPI.Doc.api(ctx, ctx.api.versions, def_v)
+        end
+      )
+    )
+  end
+
+  def describe_version(ctx, conn) do
+    Plug.Conn.send_resp(
+      conn,
+      200,
+      format_doc(
+        HaveAPI.Doc.version(%{ctx |
+          user: conn.private.haveapi_user
+        })
+      )
+    )
+  end
+
+  def describe_action(ctx, conn) do
+    Plug.Conn.send_resp(
+      conn,
+      200,
+      format_doc(HaveAPI.Doc.action(%{ctx |
+        user: conn.private.haveapi_user
+      }))
+    )
+  end
+
+  def format_doc(doc) do
     Poison.encode!(%{
       version: "1.2",
       status: true,

@@ -69,6 +69,11 @@ defmodule HaveAPI.Builder do
       end
 
       mount_version(%{ctx | version: def_v}, true)
+
+      # Default route
+      match _ do
+        HaveAPI.Protocol.not_found(var!(conn))
+      end
     end
   end
 
@@ -107,6 +112,11 @@ defmodule HaveAPI.Builder do
         Enum.each(ctx.version.resources, fn r ->
           mount_resource(%{ctx | prefix: "/", resource_path: [r], resource: r})
         end)
+
+        # Default route
+        match _ do
+          HaveAPI.Protocol.not_found(var!(conn))
+        end
       end
 
       # Forward to version router

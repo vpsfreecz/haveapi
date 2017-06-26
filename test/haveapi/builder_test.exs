@@ -145,7 +145,8 @@ defmodule HaveAPI.BuilderTest do
   test "responds on invalid version doc" do
     conn = call_api(MultiVersion, :options, "/vnope")
 
-    assert conn.status == 400
+    assert conn.status == 404
+    assert conn.resp_body["status"] === false
   end
 
   test "responds on per-action doc" do
@@ -170,5 +171,17 @@ defmodule HaveAPI.BuilderTest do
 
     assert conn.status == 200
     assert conn.resp_body["response"]["myresource"]["str"] == "hey"
+  end
+
+  test "responds on invalid action" do
+    conn = call_api(MultiVersion, :get, "/whatever")
+
+    assert conn.status == 404
+    assert conn.resp_body["status"] === false
+
+    conn = call_api(MultiVersion, :post, "/v1.0/whatever")
+
+    assert conn.status == 404
+    assert conn.resp_body["status"] === false
   end
 end

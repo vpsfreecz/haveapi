@@ -72,6 +72,13 @@ defmodule HaveAPI.Protocol do
     )
   end
 
+  def not_found(conn) do
+    Plug.Conn.send_resp(var!(conn), 404, format_data(
+      false,
+      message: "Action not found"
+    ))
+  end
+
   def format_doc(doc) do
     Poison.encode!(%{
       version: "1.2",

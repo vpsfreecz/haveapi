@@ -349,7 +349,11 @@ defmodule HaveAPI.Action do
          res <- filter_output_meta(res) do
       reply(res)
     else
-      {:error, msg} -> reply(%{res | status: false, message: msg})
+      {:error, msg} ->
+        reply(%{res | status: false, message: msg})
+
+      {:error, msg, opts} when is_list(opts) ->
+        reply(%{res | status: false, message: msg} |> Map.merge(Map.new(opts)))
     end
   end
 
@@ -373,7 +377,7 @@ defmodule HaveAPI.Action do
   end
 
   defp authenticated?(true, user) do
-    if user, do: true, else: {:error, "Access forbidden"}
+    if user, do: true, else: {:error, "Access forbidden", http_status: 403}
   end
 
   defp authenticated?(false, _user), do: true

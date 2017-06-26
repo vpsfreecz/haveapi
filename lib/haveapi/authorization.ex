@@ -8,7 +8,7 @@ defmodule HaveAPI.Authorization do
 
     case ret do
       {:error, msg} ->
-        {:error, msg}
+        {:error, msg, http_status: 403}
 
       data ->
         {:ok, %{req | input: data}}
@@ -24,7 +24,7 @@ defmodule HaveAPI.Authorization do
 
     case ret do
       {:error, msg} ->
-        {:error, msg}
+        {:error, msg, http_status: 403}
 
       data ->
         {:ok, %{res | output: data}}

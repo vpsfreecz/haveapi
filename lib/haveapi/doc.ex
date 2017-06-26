@@ -78,7 +78,7 @@ defmodule HaveAPI.Doc do
         help: Path.join([route, "method=#{ctx.action.method}"]),
       }
     else
-      {:error, _msg} ->
+      {:error, _msg, _opts} ->
         nil
     end
   end
@@ -123,8 +123,8 @@ defmodule HaveAPI.Doc do
 
     if is_nil(v) do
       case authorize_params(nil, ctx, dir, ctx.user) do
-        {:error, msg} ->
-          {:error, msg}
+        {:error, msg, opts} ->
+          {:error, msg, opts}
 
         {:ok, nil} ->
           {:ok, nil}
@@ -137,8 +137,8 @@ defmodule HaveAPI.Doc do
         |> authorize_params(ctx, dir, ctx.user)
 
       case authorized_params do
-        {:error, msg} ->
-          {:error, msg}
+        {:error, msg, opts} ->
+          {:error, msg, opts}
 
         {:ok, nil} ->
           {:ok, nil}
@@ -198,8 +198,8 @@ defmodule HaveAPI.Doc do
       {:ok, data} ->
         {:ok, data.input}
 
-      {:error, msg} ->
-        {:error, msg}
+      {:error, msg, opts} ->
+        {:error, msg, opts}
     end
   end
 
@@ -214,8 +214,8 @@ defmodule HaveAPI.Doc do
       {:ok, data} ->
         {:ok, data.output}
 
-      {:error, msg} ->
-        {:error, msg}
+      {:error, msg, opts} ->
+        {:error, msg, opts}
     end
   end
 end

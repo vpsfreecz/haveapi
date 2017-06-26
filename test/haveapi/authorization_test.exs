@@ -204,21 +204,21 @@ defmodule HaveAPI.AuthorizationTest do
   test "defaults to not authorized when authentication is enforced" do
     conn = call_action(Api, "myresource", "defaultwithauth")
 
-    assert conn.status == 400
+    assert conn.status == 403
     assert conn.resp_body["status"] === false
   end
 
   test "is denied by :deny" do
     conn = call_action(Api, "myresource", "denyatom", basic: {"user", "1234"})
 
-    assert conn.status == 400
+    assert conn.status == 403
     assert conn.resp_body["status"] === false
   end
 
   test "is denied with message" do
     conn = call_action(Api, "myresource", "denymsg", basic: {"user", "1234"})
 
-    assert conn.status == 400
+    assert conn.status == 403
     assert conn.resp_body["status"] === false
     assert conn.resp_body["message"] == "test"
   end

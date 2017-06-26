@@ -45,7 +45,7 @@ defmodule HaveAPI.AuthenticationTest do
   test "authentication is enforced by default" do
     conn = call_action(Auth, "myresource", "defauth")
 
-    assert conn.status == 400
+    assert conn.status == 403
     assert conn.resp_body["status"] === false
   end
 
@@ -59,7 +59,7 @@ defmodule HaveAPI.AuthenticationTest do
   test "authentication enforcing can be explicitly enabled" do
     conn = call_action(Auth, "myresource", "withauth")
 
-    assert conn.status == 400
+    assert conn.status == 403
     assert conn.resp_body["status"] === false
   end
 end

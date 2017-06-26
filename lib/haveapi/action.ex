@@ -440,10 +440,6 @@ defmodule HaveAPI.Action do
     %{res | status: true}
   end
 
-  defp build_output({:error, msg}, nil, res) when is_binary(msg) do
-    %{res | status: false, message: msg}
-  end
-
   defp build_output(data, :hash, res) when is_map(data) do
     %{res | status: true, output: data}
   end
@@ -454,10 +450,6 @@ defmodule HaveAPI.Action do
 
   defp build_output({:ok, data, meta}, :hash, res) when is_map(meta) do
     %{res | status: true, output: data, meta: meta}
-  end
-
-  defp build_output({:error, msg}, :hash, res) when is_binary(msg) do
-    %{res | status: false, message: msg}
   end
 
   defp build_output(data, :hash_list, res) when is_list(data) do
@@ -472,12 +464,20 @@ defmodule HaveAPI.Action do
     %{res | status: true, output: data, meta: meta}
   end
 
-  defp build_output({:error, msg}, :hash_list, res) when is_binary(msg) do
+  defp build_output({:error, msg}, nil, res) when is_binary(msg) do
     %{res | status: false, message: msg}
   end
 
+  defp build_output({:error, msg}, _layout, res) when is_binary(msg) do
+    %{res | status: false, message: msg}
+  end
+
+  defp build_output({:error, msg, opts}, _layout, res) when is_binary(msg) and is_list(opts) do
+    %{res | status: false, message: msg, errors: opts[:errors], http_status: opts[:http_status]}
+  end
+
   defp build_output(_, _, res) do
-    %{res | status: false, message: "Server error occurred."}
+    %{res | status: false, message: "Server error occurred.", http_status: 500}
   end
 
   defp filter_output(%HaveAPI.Response{output: nil} = res, _) do

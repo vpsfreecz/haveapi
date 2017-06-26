@@ -59,15 +59,15 @@ defmodule HaveAPI.Protocol do
   def send_data(%HaveAPI.Response{status: false} = res) do
     Plug.Conn.send_resp(
       res.conn,
-      400,
-      format_data(res.status, message: res.message)
+      res.http_status || 400,
+      format_data(res.status, message: res.message, errors: res.errors)
     )
   end
 
   def send_data(res) do
     Plug.Conn.send_resp(
       res.conn,
-      500,
+      res.http_status || 500,
       format_data(false, message: "Server error occurred.")
     )
   end

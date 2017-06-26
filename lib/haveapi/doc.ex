@@ -28,7 +28,7 @@ defmodule HaveAPI.Doc do
              resource_path: [&1],
              resource: &1,
            })})
-        |> Enum.filter(fn {name, desc} ->
+        |> Enum.filter(fn {_name, desc} ->
              !Enum.empty?(desc.actions) && Enum.empty?(desc.resources)
            end)
         |> Map.new,
@@ -40,14 +40,14 @@ defmodule HaveAPI.Doc do
     %{
       actions: ctx.resource.actions
         |> Enum.map(&{&1.name, action(%{ctx | action: &1})})
-        |> Enum.filter(fn {name, desc} -> not is_nil(desc) end)
+        |> Enum.filter(fn {_name, desc} -> not is_nil(desc) end)
         |> Map.new,
       resources: ctx.resource.resources
         |> Enum.map(&{&1.name, resource(%{ctx |
              resource_path: ctx.resource_path ++ [&1],
              resource: &1,
            })})
-        |> Enum.filter(fn {name, desc} ->
+        |> Enum.filter(fn {_name, desc} ->
              !Enum.empty?(desc.actions) && Enum.empty?(desc.resources)
            end)
         |> Map.new,
@@ -78,7 +78,7 @@ defmodule HaveAPI.Doc do
         help: Path.join([route, "method=#{ctx.action.method}"]),
       }
     else
-      {:error, msg} ->
+      {:error, _msg} ->
         nil
     end
   end
@@ -153,7 +153,7 @@ defmodule HaveAPI.Doc do
     end
   end
 
-  def params(ctx, param_list) do
+  def params(_ctx, param_list) do
     Enum.reduce(
       param_list,
       %{},

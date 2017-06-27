@@ -61,8 +61,10 @@ defmodule HaveAPI.Validator do
         [],
         fn {validator, opts}, acc ->
           case validator.validate(opts, data[p.name], data) do
-            :ok -> acc
-            {:error, errors} -> Enum.concat(acc, errors)
+            :ok ->
+              acc
+            {:error, errors} ->
+              Enum.concat(acc, Enum.map(errors, &(interpolate(&1, inspect(data[p.name])))))
           end
         end
       )
@@ -90,4 +92,6 @@ defmodule HaveAPI.Validator do
       :ok
     end
   end
+
+  defp interpolate(str, value), do: Regex.replace(~r/%{value}/, str, value)
 end

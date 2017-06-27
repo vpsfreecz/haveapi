@@ -133,6 +133,11 @@ defmodule HaveAPI.Parameters.Dsl do
     {HaveAPI.Validator.Inclusion, opts}
   end
 
+  # Exclusion
+  def mkvalidator(:exclude, opts) when is_list(opts) do
+    {HaveAPI.Validator.Exclusion, opts}
+  end
+
   def mkvalidator(k, v) do
     raise "Unknown validator '#{k}' with option '#{inspect(v)}'"
   end

@@ -138,6 +138,19 @@ defmodule HaveAPI.Parameters.Dsl do
     {HaveAPI.Validator.Exclusion, opts}
   end
 
+  # Format
+  def mkvalidator(:format, opts) when is_list(opts) do
+    {HaveAPI.Validator.Format, opts}
+  end
+  def mkvalidator(:format, rx) do
+    if Regex.regex?(rx) do
+      {HaveAPI.Validator.Format, [rx: rx]}
+
+    else
+      raise "#{inspect(rx)} is not a regex"
+    end
+  end
+
   def mkvalidator(k, v) do
     raise "Unknown validator '#{k}' with option '#{inspect(v)}'"
   end

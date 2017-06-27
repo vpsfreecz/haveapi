@@ -42,6 +42,14 @@ defmodule HaveAPI.Parameters do
     )
   end
 
+  def layout_aware(data, func) when is_list(data) do
+    Enum.map(data, func)
+  end
+
+  def layout_aware(data, func) when is_map(data) do
+    func.(data)
+  end
+
   defp format_param(ret, _ctx, nil, _value), do: ret
 
   defp format_param(ret, ctx, param, value) do

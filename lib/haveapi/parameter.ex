@@ -5,6 +5,7 @@ defmodule HaveAPI.Parameter do
     :description,
     :type,
     :default,
+    :validators,
     :resource_path,
     :value_id,
     :value_label,

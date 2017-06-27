@@ -340,6 +340,7 @@ defmodule HaveAPI.Action do
          req <- fetch_path_parameters(req),
          req <- fetch_input_parameters(req),
          {:ok, req} <- HaveAPI.Authorization.authorize(req),
+         :ok <- HaveAPI.Validator.validate(req),
          data <- do_exec(req),
          output = ctx.action.layout(:output),
          res <- build_output(data, output, res),

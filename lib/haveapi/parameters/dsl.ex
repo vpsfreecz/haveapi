@@ -1,7 +1,7 @@
 defmodule HaveAPI.Parameters.Dsl do
   defmacro __using__(opts) do
     quote do
-      import HaveAPI.Parameters.Dsl
+      import HaveAPI.Parameters.Dsl, only: :macros
 
       Module.register_attribute __MODULE__, :haveapi_params, accumulate: true
       @haveapi_layout unquote(opts[:layout])
@@ -57,29 +57,69 @@ defmodule HaveAPI.Parameters.Dsl do
       defmacro unquote(:"#{v}")(name, opts \\ []) do
         type = unquote(v)
 
-        quote bind_quoted: [name: name, opts: opts, type: type] do
-          @haveapi_params %HaveAPI.Parameter{
-            name: name,
-            type: type,
-            label: opts[:label],
-            description: opts[:description]
-          }
+        quote bind_quoted: [mod: __MODULE__, name: name, opts: opts, type: type] do
+          @haveapi_params mod.mkparam(type, name, opts)
         end
       end
     end
   )
 
   defmacro resource(resource_list, opts \\ []) do
-    quote bind_quoted: [resource_list: resource_list, opts: opts] do
-      @haveapi_params %HaveAPI.Parameter{
-        name: opts[:name] || String.to_atom(List.last(resource_list).name),
-        type: :resource,
-        label: opts[:label],
-        description: opts[:description],
-        resource_path: resource_list,
-        value_id: opts[:value_id],
-        value_label: opts[:value_label],
-      }
+    quote bind_quoted: [mod: __MODULE__, resource_list: resource_list, opts: opts] do
+      @haveapi_params mod.mkparam(:resource, resource_list, opts)
     end
+  end
+
+  def mkparam(:resource, resource_list, opts) do
+    %HaveAPI.Parameter{
+      name: opts[:name] || String.to_atom(List.last(resource_list).name),
+      type: :resource,
+      label: opts[:label],
+      description: opts[:description],
+      resource_path: resource_list,
+      value_id: opts[:value_id],
+      value_label: opts[:value_label],
+    }
+  end
+
+  def mkparam(type, name, opts) do
+    %HaveAPI.Parameter{
+      name: name,
+      type: type,
+      label: opts[:label],
+      description: opts[:description],
+      validators: mkvalidators(opts[:validate]),
+    }
+  end
+
+  def mkvalidators(nil), do: nil
+  def mkvalidators(opts) when is_list(opts) do
+    Enum.reduce(
+      opts,
+      [],
+      fn {k, v}, acc ->
+        case mkvalidator(k, v) do
+          {mod, opts} ->
+            [{mod, mod.init(opts)} | acc]
+
+          nil ->
+            acc
+        end
+      end
+    ) |> Enum.reverse
+  end
+
+  def mkvalidator(:required, true) do
+    {HaveAPI.Validator.Presence, []}
+  end
+  def mkvalidator(:required, false) do
+    nil
+  end
+  def mkvalidator(:required, opts) when is_list(opts) do
+    {HaveAPI.Validator.Presence, opts}
+  end
+
+  def mkvalidator(k, v) do
+    raise "Unknown validator '#{k}' with option '#{inspect(v)}'"
   end
 end

@@ -147,21 +147,21 @@ defmodule HaveAPI.Doc do
           {:ok, %{
             layout: apply(ctx.action.io(dir), :layout, []),
             namespace: ctx.resource.name(),
-            parameters: params(ctx, params),
+            parameters: params(dir, params),
           }}
       end
     end
   end
 
-  def params(_ctx, param_list) do
+  def params(dir, param_list) do
     Enum.reduce(
       param_list,
       %{},
-      fn {name, p}, acc -> Map.put(acc, name, param(p)) end
+      fn {name, p}, acc -> Map.put(acc, name, param(p, dir)) end
     )
   end
 
-  def param(p) do
+  def param(p, dir) do
     desc = %{
       label: p.label,
       description: p.description,
@@ -178,8 +178,23 @@ defmodule HaveAPI.Doc do
         })
 
       _ ->
-        desc
+        if dir == :input do
+          Map.put(desc, :validators, validators(p))
+
+        else
+          desc
+        end
     end
+  end
+
+  def validators(%HaveAPI.Parameter{validators: nil}), do: %{}
+  def validators(%HaveAPI.Parameter{validators: []}), do: %{}
+  def validators(p) do
+    Enum.reduce(
+      p.validators,
+      %{},
+      fn {mod, opts}, acc -> Map.put(acc, mod.name, mod.describe(opts)) end
+    )
   end
 
   defp authorize_params(params, _ctx, _dir, nil) do

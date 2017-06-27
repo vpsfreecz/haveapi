@@ -37,7 +37,7 @@ defmodule HaveAPI.Authorization do
   defp do_authorize(nil, {:allow, _opts}, _ignore), do: nil
 
   defp do_authorize(data, {:allow, opts}, ignore) when is_list(opts) do
-    layout_aware(data, fn item ->
+    HaveAPI.Parameters.layout_aware(data, fn item ->
       Enum.reduce(
         opts,
         item,
@@ -54,13 +54,5 @@ defmodule HaveAPI.Authorization do
 
   defp do_authorize_opts(data, :whitelist, list, ignore) when is_list(list) do
     Enum.filter(data, fn {k,v} -> not (k in ignore) && k in list end) |> Map.new
-  end
-
-  defp layout_aware(data, func) when is_list(data) do
-    Enum.map(data, func)
-  end
-
-  defp layout_aware(data, func) when is_map(data) do
-    func.(data)
   end
 end

@@ -109,6 +109,7 @@ defmodule HaveAPI.Parameters.Dsl do
     ) |> Enum.reverse
   end
 
+  # Presence
   def mkvalidator(:required, true) do
     {HaveAPI.Validator.Presence, []}
   end
@@ -117,6 +118,14 @@ defmodule HaveAPI.Parameters.Dsl do
   end
   def mkvalidator(:required, opts) when is_list(opts) do
     {HaveAPI.Validator.Presence, opts}
+  end
+
+  # Acceptance
+  def mkvalidator(:accept, opts) when is_list(opts) do
+    {HaveAPI.Validator.Acceptance, opts}
+  end
+  def mkvalidator(:accept, v) do
+    {HaveAPI.Validator.Acceptance, [value: v]}
   end
 
   def mkvalidator(k, v) do

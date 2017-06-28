@@ -151,6 +151,14 @@ defmodule HaveAPI.Parameters.Dsl do
     end
   end
 
+  # Confirmation
+  def mkvalidator(:confirm, param) when is_atom(param) do
+    {HaveAPI.Validator.Confirmation, [parameter: param]}
+  end
+  def mkvalidator(:confirm, opts) when is_list(opts) do
+    {HaveAPI.Validator.Confirmation, opts}
+  end
+
   def mkvalidator(k, v) do
     raise "Unknown validator '#{k}' with option '#{inspect(v)}'"
   end

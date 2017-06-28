@@ -3,7 +3,7 @@ defmodule HaveAPI.Validator.Exclusion do
 
   def init(opts) do
     %{
-      values: opts[:values],
+      values: Keyword.fetch!(opts, :values),
       message: opts[:message] || "%{value} cannot be used"
     }
   end

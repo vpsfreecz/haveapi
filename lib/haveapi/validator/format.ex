@@ -3,7 +3,7 @@ defmodule HaveAPI.Validator.Format do
 
   def init(opts) do
     %{
-      rx: opts[:rx],
+      rx: Keyword.fetch!(opts, :rx),
       match: Keyword.get(opts, :match, true),
       message: opts[:message] || "%{value} cannot be used"
     }

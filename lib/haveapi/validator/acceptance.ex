@@ -3,7 +3,7 @@ defmodule HaveAPI.Validator.Acceptance do
 
   def init(opts) do
     %{
-      value: opts[:value],
+      value: Keyword.fetch!(opts, :value),
       message: opts[:message] || "has to be '#{inspect(opts[:value])}'"
     }
   end

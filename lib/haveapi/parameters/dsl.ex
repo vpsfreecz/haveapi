@@ -159,6 +159,17 @@ defmodule HaveAPI.Parameters.Dsl do
     {HaveAPI.Validator.Confirmation, opts}
   end
 
+  # Length
+  def mkvalidator(:length, n) when is_integer(n) do
+    {HaveAPI.Validator.Length, [equals: n]}
+  end
+  def mkvalidator(:length, %Range{first: first, last: last}) do
+    {HaveAPI.Validator.Length, [min: first, max: last]}
+  end
+  def mkvalidator(:length, opts) when is_list(opts) do
+    {HaveAPI.Validator.Length, opts}
+  end
+
   def mkvalidator(k, v) do
     raise "Unknown validator '#{k}' with option '#{inspect(v)}'"
   end

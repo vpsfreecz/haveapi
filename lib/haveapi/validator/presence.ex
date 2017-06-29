@@ -1,6 +1,8 @@
 defmodule HaveAPI.Validator.Presence do
   use HaveAPI.Validator
 
+  def name, do: :present
+
   def init(opts) do
     empty = Keyword.get(opts, :empty, false)
 

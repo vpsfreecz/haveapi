@@ -51,6 +51,6 @@ defmodule HaveAPI.ValidatorTest do
         parameters
         str
         validators
-        presence)) |> is_map
+        present)) |> is_map
   end
 end

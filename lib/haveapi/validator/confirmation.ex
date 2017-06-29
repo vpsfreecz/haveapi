@@ -1,6 +1,8 @@
 defmodule HaveAPI.Validator.Confirmation do
   use HaveAPI.Validator
 
+  def name, do: :confirm
+
   def init(opts) do
     p = Keyword.fetch!(opts, :parameter)
     equal = Keyword.get(opts, :equal, true)

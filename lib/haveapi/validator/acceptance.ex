@@ -1,6 +1,8 @@
 defmodule HaveAPI.Validator.Acceptance do
   use HaveAPI.Validator
 
+  def name, do: :accept
+
   def init(opts) do
     %{
       value: Keyword.fetch!(opts, :value),

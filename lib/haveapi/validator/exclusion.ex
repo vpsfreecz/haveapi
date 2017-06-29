@@ -1,6 +1,8 @@
 defmodule HaveAPI.Validator.Exclusion do
   use HaveAPI.Validator
 
+  def name, do: :exclude
+
   def init(opts) do
     %{
       values: Keyword.fetch!(opts, :values),

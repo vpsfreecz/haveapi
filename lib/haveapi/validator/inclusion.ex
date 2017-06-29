@@ -1,6 +1,8 @@
 defmodule HaveAPI.Validator.Inclusion do
   use HaveAPI.Validator
 
+  def name, do: :include
+
   def init(opts) do
     %{
       values: Keyword.fetch!(opts, :values),

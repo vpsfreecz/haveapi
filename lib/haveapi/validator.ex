@@ -82,7 +82,7 @@ defmodule HaveAPI.Validator do
   end
 
   defp validate_missing(p) do
-    validator = Enum.find(p.validators, fn {mod, _opts} -> mod.name == :presence end)
+    validator = Enum.find(p.validators, fn {mod, _opts} -> mod.name == :present end)
 
     if validator do
       {presence, opts} = validator

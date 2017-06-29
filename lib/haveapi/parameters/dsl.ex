@@ -170,6 +170,20 @@ defmodule HaveAPI.Parameters.Dsl do
     {HaveAPI.Validator.Length, opts}
   end
 
+  # Numericality
+  def mkvalidator(:number, :even) do
+    {HaveAPI.Validator.Numericality, [even: true]}
+  end
+  def mkvalidator(:number, :odd) do
+    {HaveAPI.Validator.Numericality, [odd: true]}
+  end
+  def mkvalidator(:number, %Range{first: first, last: last}) do
+    {HaveAPI.Validator.Numericality, [min: first, max: last]}
+  end
+  def mkvalidator(:number, opts) when is_list(opts) do
+    {HaveAPI.Validator.Numericality, opts}
+  end
+
   def mkvalidator(k, v) do
     raise "Unknown validator '#{k}' with option '#{inspect(v)}'"
   end

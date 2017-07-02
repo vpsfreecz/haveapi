@@ -12,15 +12,22 @@ defmodule HaveAPI.Parameter do
     :value_label,
   ]
 
-  @spec value(map, map) :: {:ok, any} | :not_present
+  @spec value(map, map) :: {:ok, any} | {:error, String.t} | :not_present
   def value(p, data) do
     name = Atom.to_string(p.name)
-
-    if Map.has_key?(data, name) do
+    value = if Map.has_key?(data, name) do
       {:ok, data[name]}
 
     else
       default_value(p.default, p.fill)
+    end
+
+    case value do
+      {:ok, v} ->
+        HaveAPI.Parameter.Input.coerce(p.type, v)
+
+      other ->
+        other
     end
   end
 

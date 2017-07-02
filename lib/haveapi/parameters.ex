@@ -6,24 +6,34 @@ defmodule HaveAPI.Parameters do
   end
 
   @spec extract(nil | list(map), String.t, map) :: nil | map
-  def extract(nil, _ns, _data), do: nil
+  def extract(nil, _ns, _data), do: {:ok, nil}
 
   def extract(params, ns, data) do
     input = Map.get(data, ns, %{})
 
-    Enum.reduce(
+    {ret, errors} = Enum.reduce(
       params,
-      %{},
-      fn p, acc ->
+      {%{}, %{}},
+      fn p, {ret, errors} ->
         case HaveAPI.Parameter.value(p, input) do
           {:ok, v} ->
-            Map.put(acc, p.name, v)
+            {Map.put(ret, p.name, v), errors}
+
+          {:error, msg} ->
+            {ret, Map.put(errors, p.name, [msg])}
 
           :not_present ->
-            acc
+            {ret, errors}
         end
       end
     )
+
+    if Enum.empty?(errors) do
+      {:ok, ret}
+
+    else
+      {:error, errors}
+    end
   end
 
   def filter(ctx, out, data) do

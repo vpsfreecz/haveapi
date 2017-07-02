@@ -29,7 +29,9 @@ defmodule HaveAPI.Validator.InclusionTest do
             include: [values: [true]]
           ]
           datetime :datetime, validate: [
-            include: [values: ["2017-08-10T11:23:00Z"]]
+            include: [values: [
+              ({:ok, dt, _offset} = DateTime.from_iso8601("2017-08-10T11:23:00Z")) |> elem(1)
+            ]]
           ]
           custom :custom, validate: [
             include: [values: [%{"test" => 123}]]
@@ -47,6 +49,8 @@ defmodule HaveAPI.Validator.InclusionTest do
         route "%{action}"
 
         input do
+          {:ok, dt, _offset} = DateTime.from_iso8601("2017-08-10T11:23:00Z")
+
           string :string, validate: [
             include: [values: %{"one" => "One", "two" => "Two"}]
           ]
@@ -60,7 +64,7 @@ defmodule HaveAPI.Validator.InclusionTest do
             include: [values: %{true => "True"}]
           ]
           datetime :datetime, validate: [
-            include: [values: %{"2017-08-10T11:23:00Z" => "Some day"}]
+            include: [values: %{dt => "Some day"}]
           ]
           custom :custom, validate: [
             include: [values: %{%{"test" => 123} => "Very map"}]

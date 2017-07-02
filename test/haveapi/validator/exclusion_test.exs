@@ -16,6 +16,8 @@ defmodule HaveAPI.Validator.ExclusionTest do
         route "%{action}"
 
         input do
+          {:ok, dt, _offset} = DateTime.from_iso8601("2017-08-10T11:23:00Z")
+
           string :string, validate: [
             exclude: [values: ~w(one two three)]
           ]
@@ -29,7 +31,7 @@ defmodule HaveAPI.Validator.ExclusionTest do
             exclude: [values: [true]]
           ]
           datetime :datetime, validate: [
-            exclude: [values: ["2017-08-10T11:23:00Z"]]
+            exclude: [values: [dt]]
           ]
           custom :custom, validate: [
             exclude: [values: [%{"test" => 123}]]

@@ -34,7 +34,7 @@ defmodule HaveAPI.Action.Index do
   post_exec :add_local_metadata
 
   def add_total_count(req, res) do
-    if req.meta && req.meta.total_count do
+    if req.meta && req.meta[:total_count] do
       if res.meta do
         put_in(res.meta[:total_count], req.context.action.count(req))
 

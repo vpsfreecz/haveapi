@@ -338,7 +338,7 @@ defmodule HaveAPI.Action do
 
     with true <- authenticated?(ctx.action.auth, ctx.user),
          req <- fetch_path_parameters(req),
-         req <- fetch_input_parameters(req),
+         {:ok, req} <- fetch_input_parameters(req),
          {:ok, req} <- HaveAPI.Authorization.authorize(req),
          :ok <- HaveAPI.Validator.validate(req),
          data <- do_exec(req),
@@ -350,7 +350,7 @@ defmodule HaveAPI.Action do
          res <- filter_output_meta(res) do
       reply(res)
     else
-      {:error, msg} ->
+      {:error, msg} when is_binary(msg) ->
         reply(%{res | status: false, message: msg})
 
       {:error, msg, opts} when is_list(opts) ->
@@ -413,10 +413,14 @@ defmodule HaveAPI.Action do
   end
 
   defp fetch_input_parameters(req, data) do
-    %{req |
-      input: fetch_input_parameters(req, data, :input),
-      meta: fetch_input_parameters(req, data, :meta),
-    }
+    with {:ok, input} <- fetch_input_parameters(req, data, :input),
+         {:ok, meta} <- fetch_input_parameters(req, data, :meta) do
+      {:ok, %{req | input: input, meta: meta}}
+
+    else
+      {:error, errors} ->
+        {:error, "Input parameters not valid", errors: errors}
+    end
   end
 
   defp fetch_input_parameters(req, data, :input) do
@@ -434,6 +438,9 @@ defmodule HaveAPI.Action do
         Atom.to_string(HaveAPI.Meta.namespace),
         data
       )
+
+    else
+      {:ok, nil}
     end
   end
 

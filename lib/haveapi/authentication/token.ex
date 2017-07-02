@@ -24,13 +24,15 @@ defmodule HaveAPI.Authentication.Token do
           auth false
 
           input do
-            # TODO: validators, proper lifetime & inverval handling
-            string :login, label: "Login"
-            string :password, label: "Password"
-            string :lifetime, label: "Lifetime"
+            string :login, label: "Login", validate: [required: true]
+            string :password, label: "Password", validate: [required: true]
+            string :lifetime, label: "Lifetime", validate: [
+              required: true,
+              include: [values: ~w(fixed renewable_manual renewable_auto permanent)],
+            ]
             integer :interval, label: "Interval",
-              desc: "How long will requested token be valid, in seconds.",
-              default: 60*5
+              desc: "How long will the requested token be valid, in seconds.",
+              default: 60*5, fill: true
           end
 
           output do

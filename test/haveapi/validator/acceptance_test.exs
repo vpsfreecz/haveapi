@@ -16,11 +16,13 @@ defmodule HaveAPI.Validator.AcceptanceTest do
         route "%{action}"
 
         input do
+          {:ok, dt, _offset} = DateTime.from_iso8601("2017-08-10T11:23:00Z")
+
           string :string, validate: [accept: "test"]
           integer :integer, validate: [accept: 123]
           float :float, validate: [accept: 5.25]
           boolean :boolean, validate: [accept: false]
-          datetime :datetime, validate: [accept: "2017-08-10T11:23:00Z"]
+          datetime :datetime, validate: [accept: dt]
           custom :custom, validate: [accept: [value: %{"test" => 123}]]
         end
 

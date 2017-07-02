@@ -166,8 +166,7 @@ defmodule HaveAPI.Doc do
       label: p.label,
       description: p.description,
       type: p.type |> Atom.to_string |> String.capitalize,
-      default: p.default,
-    }
+    } |> param_default(p.default)
 
     case p.type do
       :resource ->
@@ -196,6 +195,9 @@ defmodule HaveAPI.Doc do
       fn {mod, opts}, acc -> Map.put(acc, mod.name, mod.describe(opts)) end
     )
   end
+
+  defp param_default(desc, :_none), do: desc
+  defp param_default(desc, any), do: Map.put(desc, :default, any)
 
   defp authorize_params(params, _ctx, _dir, nil) do
     {:ok, params}

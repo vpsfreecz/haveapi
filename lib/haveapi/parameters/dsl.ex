@@ -88,6 +88,8 @@ defmodule HaveAPI.Parameters.Dsl do
       type: type,
       label: opts[:label],
       description: opts[:description],
+      default: opts[:default] || :_none,
+      fill: opts[:fill],
       validators: mkvalidators(opts[:validate]),
     }
   end

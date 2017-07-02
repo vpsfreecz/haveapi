@@ -5,27 +5,25 @@ defmodule HaveAPI.Parameters do
     end
   end
 
+  @spec extract(nil | list(map), String.t, map) :: nil | map
   def extract(nil, _ns, _data), do: nil
 
-  def extract(_params, _ns, data) when map_size(data) == 0 do
-    nil
-  end
-
   def extract(params, ns, data) do
-    if data[ns] do
-      Enum.filter_map(
-        data[ns],
-        fn {k, v} ->
-          Enum.find(params, &(k == Atom.to_string(&1.name)))
-        end,
-        fn {k, v} ->
-          {String.to_atom(k), v}
-        end
-      ) |> Map.new
+    input = Map.get(data, ns, %{})
 
-    else
-      nil
-    end
+    Enum.reduce(
+      params,
+      %{},
+      fn p, acc ->
+        case HaveAPI.Parameter.value(p, input) do
+          {:ok, v} ->
+            Map.put(acc, p.name, v)
+
+          :not_present ->
+            acc
+        end
+      end
+    )
   end
 
   def filter(ctx, out, data) do

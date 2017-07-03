@@ -46,17 +46,18 @@ defmodule HaveAPI.Parameter do
 
     case ret do
       {:error, msg} ->
-        nil
+        {:error, msg}
+
       _ ->
-        HaveAPI.Meta.add(ret.output, %{
+        {:ok, HaveAPI.Meta.add(ret.output, %{
           resolved: true,
           url_params: value,
-        })
+        })}
     end
   end
 
   def format(ctx, p, _, value) do
-    value
+    HaveAPI.Parameter.Output.coerce(p.type, value)
   end
 
   defp default_value(:_none, _fill), do: :not_present

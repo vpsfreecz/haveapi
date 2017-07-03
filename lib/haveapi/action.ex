@@ -346,8 +346,8 @@ defmodule HaveAPI.Action do
          res <- build_output(data, output, res),
          res <- ctx.action.post_exec(req, res),
          {:ok, res} <- HaveAPI.Authorization.authorize(res),
-         res <- filter_output(res, output),
-         res <- filter_output_meta(res) do
+         {:ok, res} <- filter_output(res, output),
+         {:ok, res} <- filter_output_meta(res) do
       reply(res)
     else
       {:error, msg} when is_binary(msg) ->
@@ -373,7 +373,7 @@ defmodule HaveAPI.Action do
          output = ctx.action.layout(:output),
          res <- build_output(data, output, res),
          {:ok, res} <- HaveAPI.Authorization.authorize(res),
-         res <- filter_output(res, output),
+         {:ok, res} <- filter_output(res, output),
     do: res
   end
 
@@ -493,24 +493,52 @@ defmodule HaveAPI.Action do
   end
 
   defp filter_output(%HaveAPI.Response{output: nil} = res, _) do
-    res
+    {:ok, res}
   end
 
   defp filter_output(res, :hash) do
-    %{res |
-      output: HaveAPI.Parameters.filter(
-        res.context,
-        res.context.action.params(:output),
-        res.output
-      )
-    }
+    output = HaveAPI.Parameters.filter(
+      res.context,
+      res.context.action.params(:output),
+      res.output
+    )
+
+    case output do
+      {:ok, data} ->
+        {:ok, %{res | output: data}}
+
+      {:error, errors} ->
+        {:error, "Output parameters not valid", errors: errors, http_status: 500}
+    end
   end
 
   defp filter_output(res, :hash_list) do
-    %{res | output: Enum.map(
+    {ret, errors} = Enum.reduce_while(
       res.output,
-      &(HaveAPI.Parameters.filter(res.context, res.context.action.params(:output), &1))
-    )}
+      {[], %{}},
+      fn item, {ret, errors} ->
+        output = HaveAPI.Parameters.filter(
+          res.context,
+          res.context.action.params(:output),
+          item
+        )
+
+        case output do
+          {:ok, data} ->
+            {:cont, {[data | ret], errors}}
+
+          {:error, errors} ->
+            {:halt, {ret, errors}}
+        end
+      end
+    )
+
+    if Enum.empty?(errors) do
+      {:ok, %{res | output: Enum.reverse(ret)}}
+
+    else
+      {:error, "Output parameters not valid", errors: errors, http_status: 500}
+    end
   end
 
   defp filter_output_meta(res) do
@@ -518,14 +546,22 @@ defmodule HaveAPI.Action do
       params = res.context.action.meta(:global).params(:output)
 
       if params do
-        %{res | meta: HaveAPI.Parameters.filter(res.context, params, res.meta)}
+        meta = HaveAPI.Parameters.filter(res.context, params, res.meta)
+
+        case meta do
+          {:ok, meta} ->
+            {:ok, %{res | meta: meta}}
+
+          {:error, errors} ->
+            {:error, "Output metadata parameters not valid", errors: errors}
+        end
 
       else
-        %{res | meta: nil}
+        {:ok, %{res | meta: nil}}
       end
 
     else
-      res
+      {:ok, res}
     end
   end
 

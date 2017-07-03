@@ -39,15 +39,24 @@ defmodule HaveAPI.Parameters do
   def filter(ctx, out, data) do
     meta_ns = HaveAPI.Meta.namespace
 
-    Enum.reduce(
+    {ret, errors} = Enum.reduce(
       data,
-      %{},
+      {%{}, %{}},
       fn
-        {^meta_ns, params}, acc -> filter_meta(acc, ctx, :local, params)
-        {k, v}, acc ->
-          format_param(acc, ctx, Enum.find(out, &(&1.name == k)), v)
+        {^meta_ns, params}, {acc, errors} ->
+          filter_meta(acc, errors, ctx, :local, params)
+
+        {k, v}, {acc, errors} ->
+          format_param(acc, errors, ctx, Enum.find(out, &(&1.name == k)), v)
       end
     )
+
+    if Enum.empty?(errors) do
+      {:ok, ret}
+
+    else
+      {:error, errors}
+    end
   end
 
   def layout_aware(data, func) when is_list(data) do
@@ -58,40 +67,52 @@ defmodule HaveAPI.Parameters do
     func.(data)
   end
 
-  defp format_param(ret, _ctx, nil, _value), do: ret
+  defp format_param(ret, errors, _ctx, nil, _value), do: {ret, errors}
 
-  defp format_param(ret, ctx, param, value) do
-    Map.put(
-      ret,
-      param.name,
-      HaveAPI.Parameter.format(ctx, param, param.type, value)
-    )
+  defp format_param(ret, errors, ctx, param, value) do
+    case HaveAPI.Parameter.format(ctx, param, param.type, value) do
+      {:ok, v} ->
+        {Map.put(ret, param.name, v), errors}
+
+      {:error, msg} ->
+        {ret, Map.put(errors, param.name, [msg])}
+    end
   end
 
-  defp filter_meta(ret, ctx, type, params) do
+  defp filter_meta(ret, errors, ctx, type, params) do
     if ctx.action.has_meta?(type) do
-      meta = Enum.reduce(
-        params,
-        %{},
-        fn {k, v}, acc ->
-          format_param(
-            acc,
-            ctx,
-            Enum.find(ctx.action.meta(type).params(:output), &(&1.name == k)),
-            v
-          )
-        end
-      )
+      do_filter_meta(ret, errors, ctx, type, params)
 
+    else
+      {ret, errors}
+    end
+  end
+
+  defp do_filter_meta(ret, errors, ctx, type, params) do
+    {meta, my_errors} = Enum.reduce(
+      params,
+      {%{}, %{}},
+      fn {k, v}, {acc, errors} ->
+        format_param(
+          acc,
+          errors,
+          ctx,
+          Enum.find(ctx.action.meta(type).params(:output), &(&1.name == k)),
+          v
+        )
+      end
+    )
+
+    if Enum.empty?(my_errors) do
       if Enum.empty?(meta) do
-        ret
+        {ret, errors}
 
       else
-        Map.put(ret, HaveAPI.Meta.namespace, meta)
+        {Map.put(ret, HaveAPI.Meta.namespace, meta), errors}
       end
 
     else
-      ret
+      {ret, Map.put(errors, HaveAPI.Meta.namespace, my_errors)}
     end
   end
 end

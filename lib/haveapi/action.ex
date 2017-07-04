@@ -177,18 +177,6 @@ defmodule HaveAPI.Action do
     end
   end
 
-  defmacro post_exec(func) do
-    quote bind_quoted: [func: func] do
-      post_exec(__MODULE__, func)
-    end
-  end
-
-  defmacro post_exec(mod, func) do
-    quote bind_quoted: [mod: mod, func: func] do
-      @haveapi_post_exec {mod, func}
-    end
-  end
-
   defmacro __before_compile__(_env) do
     quote do
       if @haveapi_parent_input_layout && !@haveapi_input do
@@ -281,21 +269,6 @@ defmodule HaveAPI.Action do
 
       def template, do: @haveapi_parent
 
-      def post_exec(req, res) do
-        tpl = template()
-
-        res = if tpl do
-          apply(tpl, :post_exec, [req, res])
-
-        else
-          res
-        end
-
-        @haveapi_post_exec
-        |> Enum.reverse
-        |> Enum.reduce(res, fn {mod, func}, acc -> apply(mod, func, [req, acc]) end)
-      end
-
       def authorize(_req, _user), do: if auth(), do: :deny, else: :allow
 
       def use_template, do: nil
@@ -321,7 +294,6 @@ defmodule HaveAPI.Action do
       @haveapi_meta_global false
       @before_compile HaveAPI.Action
 
-      Module.register_attribute(__MODULE__, :haveapi_post_exec, accumulate: true)
       import HaveAPI.Action
     end
   end
@@ -339,7 +311,6 @@ defmodule HaveAPI.Action do
          data <- do_exec(req),
          output = ctx.action.layout(:output),
          res <- Output.build(data, output, res),
-         res <- ctx.action.post_exec(req, res),
          {:ok, res} <- HaveAPI.Authorization.authorize(res),
          {:ok, res} <- Output.filter(res, output),
          {:ok, res} <- Output.filter_meta(res) do

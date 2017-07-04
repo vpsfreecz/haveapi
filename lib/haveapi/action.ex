@@ -1,4 +1,7 @@
 defmodule HaveAPI.Action do
+  alias HaveAPI.Action.Input
+  alias HaveAPI.Action.Output
+
   defmacro __using__(_opts) do
     quote do
       @haveapi_parent nil
@@ -325,17 +328,17 @@ defmodule HaveAPI.Action do
     res = %HaveAPI.Response{context: ctx, conn: conn}
 
     with true <- authenticated?(ctx.action.auth, ctx.user),
-         req <- fetch_path_parameters(req),
-         {:ok, req} <- fetch_input_parameters(req),
+         req <- Input.fetch_path_parameters(req),
+         {:ok, req} <- Input.fetch_parameters(req),
          {:ok, req} <- HaveAPI.Authorization.authorize(req),
          :ok <- HaveAPI.Validator.validate(req),
          data <- do_exec(req),
          output = ctx.action.layout(:output),
-         res <- build_output(data, output, res),
+         res <- Output.build(data, output, res),
          res <- ctx.action.post_exec(req, res),
          {:ok, res} <- HaveAPI.Authorization.authorize(res),
-         {:ok, res} <- filter_output(res, output),
-         {:ok, res} <- filter_output_meta(res) do
+         {:ok, res} <- Output.filter(res, output),
+         {:ok, res} <- Output.filter_meta(res) do
       reply(res)
     else
       {:error, msg} when is_binary(msg) ->
@@ -359,9 +362,9 @@ defmodule HaveAPI.Action do
          data <- do_exec(req),
          res = %HaveAPI.Response{context: ctx, conn: conn},
          output = ctx.action.layout(:output),
-         res <- build_output(data, output, res),
+         res <- Output.build(data, output, res),
          {:ok, res} <- HaveAPI.Authorization.authorize(res),
-         {:ok, res} <- filter_output(res, output),
+         {:ok, res} <- Output.filter(res, output),
     do: res
   end
 
@@ -384,173 +387,8 @@ defmodule HaveAPI.Action do
     Enum.zip(path_params, params)
   end
 
-  defp fetch_path_parameters(req) do
-    %{req | params: Enum.map(
-      req.conn.path_params,
-      fn {k,v} -> {String.to_atom(k), v} end
-    )}
-  end
-
-  defp fetch_input_parameters(req) do
-    if req.context.action.method == :get do
-      fetch_input_parameters(req, req.conn.query_params)
-
-    else
-      fetch_input_parameters(req, req.conn.body_params)
-    end
-  end
-
-  defp fetch_input_parameters(req, data) do
-    with {:ok, input} <- fetch_input_parameters(req, data, :input),
-         {:ok, meta} <- fetch_input_parameters(req, data, :meta) do
-      {:ok, %{req | input: input, meta: meta}}
-
-    else
-      {:error, errors} ->
-        {:error, "Input parameters not valid", errors: errors}
-    end
-  end
-
-  defp fetch_input_parameters(req, data, :input) do
-    HaveAPI.Parameters.extract(
-      req.context.action.params(:input),
-      req.context.resource.name,
-      data
-    )
-  end
-
-  defp fetch_input_parameters(req, data, :meta) do
-    if req.context.action.has_meta?(:global) do
-      HaveAPI.Parameters.extract(
-        req.context.action.meta(:global).params(:input),
-        Atom.to_string(HaveAPI.Meta.namespace),
-        data
-      )
-
-    else
-      {:ok, nil}
-    end
-  end
-
   defp do_exec(req) do
     apply(req.context.action, :exec, [req])
-  end
-
-  defp build_output(:ok, nil, res) do
-    %{res | status: true}
-  end
-
-  defp build_output(data, :hash, res) when is_map(data) do
-    %{res | status: true, output: data}
-  end
-
-  defp build_output({:ok, data}, :hash, res) when is_map(data) do
-    %{res | status: true, output: data}
-  end
-
-  defp build_output({:ok, data, meta}, :hash, res) when is_map(meta) do
-    %{res | status: true, output: data, meta: meta}
-  end
-
-  defp build_output(data, :hash_list, res) when is_list(data) do
-    %{res | status: true, output: data}
-  end
-
-  defp build_output({:ok, data}, :hash_list, res) when is_list(data) do
-    %{res | status: true, output: data}
-  end
-
-  defp build_output({:ok, data, meta}, :hash_list, res) when is_map(meta) do
-    %{res | status: true, output: data, meta: meta}
-  end
-
-  defp build_output({:error, msg}, nil, res) when is_binary(msg) do
-    %{res | status: false, message: msg}
-  end
-
-  defp build_output({:error, msg}, _layout, res) when is_binary(msg) do
-    %{res | status: false, message: msg}
-  end
-
-  defp build_output({:error, msg, opts}, _layout, res) when is_binary(msg) and is_list(opts) do
-    %{res | status: false, message: msg, errors: opts[:errors], http_status: opts[:http_status]}
-  end
-
-  defp build_output(_, _, res) do
-    %{res | status: false, message: "Server error occurred.", http_status: 500}
-  end
-
-  defp filter_output(%HaveAPI.Response{output: nil} = res, _) do
-    {:ok, res}
-  end
-
-  defp filter_output(res, :hash) do
-    output = HaveAPI.Parameters.filter(
-      res.context,
-      res.context.action.params(:output),
-      res.output
-    )
-
-    case output do
-      {:ok, data} ->
-        {:ok, %{res | output: data}}
-
-      {:error, errors} ->
-        {:error, "Output parameters not valid", errors: errors, http_status: 500}
-    end
-  end
-
-  defp filter_output(res, :hash_list) do
-    {ret, errors} = Enum.reduce_while(
-      res.output,
-      {[], %{}},
-      fn item, {ret, errors} ->
-        output = HaveAPI.Parameters.filter(
-          res.context,
-          res.context.action.params(:output),
-          item
-        )
-
-        case output do
-          {:ok, data} ->
-            {:cont, {[data | ret], errors}}
-
-          {:error, errors} ->
-            {:halt, {ret, errors}}
-        end
-      end
-    )
-
-    if Enum.empty?(errors) do
-      {:ok, %{res | output: Enum.reverse(ret)}}
-
-    else
-      {:error, "Output parameters not valid", errors: errors, http_status: 500}
-    end
-  end
-
-  defp filter_output_meta(res) do
-    if res.context.action.has_meta?(:global) && res.meta do
-      params = res.context.action.meta(:global).params(:output)
-
-      if params do
-        meta = HaveAPI.Parameters.filter(res.context, params, res.meta)
-
-        case meta do
-          {:ok, meta} ->
-            {:ok, %{res | meta: meta}}
-
-          {:error, errors} ->
-            {:error, "Output metadata parameters not valid", errors: errors}
-        end
-
-      else
-        {:ok, %{res | meta: nil}}
-      end
-
-    else
-      {:ok, res}
-    end
   end
 
   defp reply(res), do: HaveAPI.Protocol.send_data(res)

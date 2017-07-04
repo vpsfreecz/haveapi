@@ -2,46 +2,14 @@ defmodule HaveAPI.Action do
   defmacro __using__(_opts) do
     quote do
       @haveapi_parent nil
-      @haveapi_method :get
-      @haveapi_route ""
-      @haveapi_desc ""
-      @haveapi_aliases []
-      @haveapi_auth true
-      @haveapi_input false
-      @haveapi_parent_input_layout nil
-      @haveapi_parent_input []
-      @haveapi_output false
-      @haveapi_parent_output_layout nil
-      @haveapi_parent_output []
-      @haveapi_meta_local false
-      @haveapi_meta_global false
-      @before_compile HaveAPI.Action
-
-      Module.register_attribute(__MODULE__, :haveapi_post_exec, accumulate: true)
-
-      import HaveAPI.Action
+      unquote(HaveAPI.Action.setup)
 
       defmacro __using__(_opts) do
         quote do
           parent = unquote(__MODULE__)
 
           @haveapi_parent parent
-          @haveapi_method :get
-          @haveapi_route ""
-          @haveapi_desc ""
-          @haveapi_aliases []
-          @haveapi_auth true
-          @haveapi_input false
-          @haveapi_parent_input_layout nil
-          @haveapi_parent_input []
-          @haveapi_output false
-          @haveapi_parent_output_layout nil
-          @haveapi_parent_output []
-          @haveapi_meta_local false
-          @haveapi_meta_global false
-          @before_compile HaveAPI.Action
-
-          Module.register_attribute(__MODULE__, :haveapi_post_exec, accumulate: true)
+          unquote(HaveAPI.Action.setup)
 
           Enum.each(
             [:method, :route, :aliases, :auth],
@@ -73,8 +41,6 @@ defmodule HaveAPI.Action do
               end
             end
           )
-
-          import HaveAPI.Action
         end
       end
     end
@@ -328,6 +294,28 @@ defmodule HaveAPI.Action do
       def authorize(_req, _user), do: if auth(), do: :deny, else: :allow
 
       defoverridable [authorize: 2]
+    end
+  end
+
+  def setup do
+    quote do
+      @haveapi_method :get
+      @haveapi_route ""
+      @haveapi_desc ""
+      @haveapi_aliases []
+      @haveapi_auth true
+      @haveapi_input false
+      @haveapi_parent_input_layout nil
+      @haveapi_parent_input []
+      @haveapi_output false
+      @haveapi_parent_output_layout nil
+      @haveapi_parent_output []
+      @haveapi_meta_local false
+      @haveapi_meta_global false
+      @before_compile HaveAPI.Action
+
+      Module.register_attribute(__MODULE__, :haveapi_post_exec, accumulate: true)
+      import HaveAPI.Action
     end
   end
 

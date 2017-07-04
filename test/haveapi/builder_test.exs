@@ -54,9 +54,11 @@ defmodule HaveAPI.BuilderTest do
           string :test
         end
 
-        def exec(_req) do
+        def items(_req) do
           [%{test: "hello"}, %{test: "world"}]
         end
+
+        def count(_req), do: 2
       end
 
       defmodule Show do
@@ -68,7 +70,7 @@ defmodule HaveAPI.BuilderTest do
           string :test
         end
 
-        def exec(_req) do
+        def item(_req) do
           %{test: "hello"}
         end
       end

@@ -18,7 +18,7 @@ defmodule HaveAPI.ResourceTest do
           string :str
         end
 
-        def exec(req) do
+        def item(req) do
           %{
             id: req.params[:topresource_id],
             str: "top-level #{req.params[:topresource_id]}"
@@ -42,9 +42,7 @@ defmodule HaveAPI.ResourceTest do
             integer :nested_id
           end
 
-          def exec(req) do
-            IO.puts "nestedresource.show"
-            IO.inspect req.params
+          def item(req) do
             %{nested_id: req.params[:nestedresource_id]}
           end
         end
@@ -65,7 +63,8 @@ defmodule HaveAPI.ResourceTest do
           resource [TopResource]
         end
 
-        def exec(_req), do: for n <- 1..10, do: %{topresource: [n]}
+        def items(_req), do: for n <- 1..10, do: %{topresource: [n]}
+        def count(_req), do: 10
       end
 
       defmodule Show do
@@ -77,7 +76,7 @@ defmodule HaveAPI.ResourceTest do
           resource [TopResource]
         end
 
-        def exec(_req), do: %{topresource: [10]}
+        def item(_req), do: %{topresource: [10]}
       end
 
       actions [Index, Show]
@@ -95,7 +94,7 @@ defmodule HaveAPI.ResourceTest do
           resource [TopResource, TopResource.NestedResource]
         end
 
-        def exec(_req), do: %{nestedresource: [10,20]}
+        def item(_req), do: %{nestedresource: [10,20]}
       end
 
       actions [Show]

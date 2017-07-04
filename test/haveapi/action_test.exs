@@ -19,6 +19,8 @@ defmodule HaveAPI.ActionTest do
         use HaveAPI.Action.Show
 
         auth false
+
+        def item(_req), do: :ok
       end
 
       defmodule Custom do
@@ -174,6 +176,8 @@ defmodule HaveAPI.ActionTest do
           use HaveAPI.Action.Show
 
           auth false
+
+          def item(_req), do: :ok
         end
 
         actions [Show]

@@ -3,7 +3,7 @@ defmodule HaveAPI.Action do
   alias HaveAPI.Action.Output
 
   defmacro __using__(_opts) do
-    quote do
+    quote location: :keep do
       @haveapi_parent nil
       unquote(HaveAPI.Action.setup)
 
@@ -44,6 +44,8 @@ defmodule HaveAPI.Action do
               end
             end
           )
+
+          unquote(__MODULE__.use_template)
         end
       end
     end
@@ -296,7 +298,9 @@ defmodule HaveAPI.Action do
 
       def authorize(_req, _user), do: if auth(), do: :deny, else: :allow
 
-      defoverridable [authorize: 2]
+      def use_template, do: nil
+
+      defoverridable [authorize: 2, use_template: 0]
     end
   end
 

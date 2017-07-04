@@ -1,7 +1,17 @@
 defmodule HaveAPI.Action.Output do
+  def build(%HaveAPI.Request{} = req, data) do
+    build(
+      data,
+      req.context.action.layout(:output),
+      %HaveAPI.Response{context: req.context, conn: req.conn}
+    )
+  end
+
   def build(:ok, nil, res) do
     %{res | status: true}
   end
+
+  def build(%HaveAPI.Response{} = res, _layout, _res), do: res
 
   def build(data, :hash, res) when is_map(data) do
     %{res | status: true, output: data}

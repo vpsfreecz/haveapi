@@ -1,6 +1,8 @@
 defmodule HaveAPI.Action.Show do
   use HaveAPI.Action
 
+  @callback item(map) :: any
+
   method :get
   route "/:%{resource}_id"
 
@@ -11,7 +13,26 @@ defmodule HaveAPI.Action.Show do
     end
   end
 
-  post_exec :add_local_metadata
+  def use_template do
+    quote do
+      @behaviour unquote(__MODULE__)
+
+      def exec(req) do
+        unquote(__MODULE__).exec(__MODULE__, req)
+      end
+    end
+  end
+
+  def exec(mod, req) do
+    res = HaveAPI.Action.Output.build(req, mod.item(req))
+
+    if res.status do
+      add_local_metadata(req, res)
+
+    else
+      res
+    end
+  end
 
   def add_local_metadata(req, res) do
     if res.output[:id] do

@@ -17,7 +17,7 @@ defmodule HaveAPI.Validator.ParameterInputTest do
           integer :id
         end
 
-        def exec(req), do: %{id: req.params[:association_id]}
+        def item(req), do: %{id: req.params[:association_id]}
       end
     end
 

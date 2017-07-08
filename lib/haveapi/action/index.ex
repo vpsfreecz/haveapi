@@ -48,7 +48,7 @@ defmodule HaveAPI.Action.Index do
 
     if res.status do
       res = add_total_count(mod, req, res)
-      res = add_local_metadata(mod, req, res)
+      add_local_metadata(mod, req, res)
 
     else
       res

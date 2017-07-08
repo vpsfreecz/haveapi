@@ -49,10 +49,10 @@ defmodule HaveAPI.Authorization do
   end
 
   defp do_authorize_opts(data, :blacklist, list, _ignore) when is_list(list) do
-    Enum.filter(data, fn {k,v} -> not (k in list) end) |> Map.new
+    Enum.filter(data, fn {k,_v} -> not (k in list) end) |> Map.new
   end
 
   defp do_authorize_opts(data, :whitelist, list, ignore) when is_list(list) do
-    Enum.filter(data, fn {k,v} -> not (k in ignore) && k in list end) |> Map.new
+    Enum.filter(data, fn {k,_v} -> not (k in ignore) && k in list end) |> Map.new
   end
 end

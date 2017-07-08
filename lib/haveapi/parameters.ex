@@ -1,6 +1,6 @@
 defmodule HaveAPI.Parameters do
   defmacro __using__(opts) do
-    quote do
+    quote bind_quoted: [opts: opts] do
       use HaveAPI.Parameters.Dsl, only: opts[:only], except: opts[:except]
     end
   end

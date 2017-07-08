@@ -56,11 +56,11 @@ defmodule HaveAPI.Parameter do
     end
   end
 
-  def format(ctx, p, _, value) do
+  def format(_ctx, p, _, value) do
     HaveAPI.Parameter.Output.coerce(p.type, value)
   end
 
   defp default_value(:_none, _fill), do: :not_present
   defp default_value(value, true), do: {:ok, value}
-  defp default_value(value, _fill), do: :not_present
+  defp default_value(_value, _fill), do: :not_present
 end

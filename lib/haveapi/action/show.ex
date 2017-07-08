@@ -24,13 +24,21 @@ defmodule HaveAPI.Action.Show do
   end
 
   def exec(mod, req) do
-    res = HaveAPI.Action.Output.build(req, mod.item(req))
+    v = mod.item(req)
 
-    if res.status do
-      add_local_metadata(req, res)
+    case v do
+      nil ->
+        {:error, "Object not found"}
 
-    else
-      res
+      other ->
+        res = HaveAPI.Action.Output.build(req, other)
+
+        if res.status do
+          add_local_metadata(req, res)
+
+        else
+          res
+        end
     end
   end
 

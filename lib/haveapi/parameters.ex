@@ -40,7 +40,7 @@ defmodule HaveAPI.Parameters do
     meta_ns = HaveAPI.Meta.namespace
 
     {ret, errors} = Enum.reduce(
-      data,
+      as_map(data),
       {%{}, %{}},
       fn
         {^meta_ns, params}, {acc, errors} ->
@@ -66,6 +66,11 @@ defmodule HaveAPI.Parameters do
   def layout_aware(data, func) when is_map(data) do
     func.(data)
   end
+
+  def as_map(%{__struct__: _} = v), do: Map.from_struct(v)
+  def as_map(v) when is_map(v), do: v
+
+  def as_map_list(v) when is_list(v), do: Enum.map(v, &as_map/1)
 
   defp format_param(ret, errors, _ctx, nil, _value), do: {ret, errors}
 

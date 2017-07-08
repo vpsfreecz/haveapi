@@ -1,4 +1,6 @@
 defmodule HaveAPI.Action.Output do
+  import HaveAPI.Parameters, only: [as_map: 1, as_map_list: 1]
+
   def build(%HaveAPI.Request{} = req, data) do
     build(
       data,
@@ -14,27 +16,27 @@ defmodule HaveAPI.Action.Output do
   def build(%HaveAPI.Response{} = res, _layout, _res), do: res
 
   def build(data, :hash, res) when is_map(data) do
-    %{res | status: true, output: data}
+    %{res | status: true, output: as_map(data)}
   end
 
   def build({:ok, data}, :hash, res) when is_map(data) do
-    %{res | status: true, output: data}
+    %{res | status: true, output: as_map(data)}
   end
 
   def build({:ok, data, meta}, :hash, res) when is_map(meta) do
-    %{res | status: true, output: data, meta: meta}
+    %{res | status: true, output: as_map(data), meta: as_map(meta)}
   end
 
   def build(data, :hash_list, res) when is_list(data) do
-    %{res | status: true, output: data}
+    %{res | status: true, output: as_map_list(data)}
   end
 
   def build({:ok, data}, :hash_list, res) when is_list(data) do
-    %{res | status: true, output: data}
+    %{res | status: true, output: as_map_list(data)}
   end
 
   def build({:ok, data, meta}, :hash_list, res) when is_map(meta) do
-    %{res | status: true, output: data, meta: meta}
+    %{res | status: true, output: as_map_list(data), meta: as_map(meta)}
   end
 
   def build({:error, msg}, nil, res) when is_binary(msg) do

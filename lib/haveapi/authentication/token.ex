@@ -152,18 +152,25 @@ defmodule HaveAPI.Authentication.Token do
     )
 
     if user do
-      token = provider.generate_token
+      token_str = provider.generate_token
+      ret = provider.save_token(
+        req.conn,
+        user,
+        token_str,
+        req.input[:lifetime],
+        req.input[:interval]
+      )
 
-      %{
-        token: token,
-        valid_to: provider.save_token(
-          req.conn,
-          user,
-          token,
-          req.input[:lifetime],
-          req.input[:interval]
-        ),
-      }
+      case ret do
+        {:ok, valid_to} ->
+          %{
+            token: token_str,
+            valid_to: valid_to,
+          }
+
+        {:error, _} ->
+          {:error, "unable to save the token"}
+      end
 
     else
       {:error, "bad login or password"}

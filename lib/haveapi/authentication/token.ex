@@ -12,7 +12,11 @@ defmodule HaveAPI.Authentication.Token do
     interval :: integer
   ) :: {:ok, DateTime.t} | {:error, any}
   @callback revoke_token(conn :: Plug.Conn.t, user :: any, token :: String.t) :: any
-  @callback renew_token(conn :: Plug.Conn.t, user :: any, token :: String.t) :: any
+  @callback renew_token(
+    conn :: Plug.Conn.t,
+    user :: any,
+    token :: String.t
+  ) :: {:ok, DateTime.t} | {:error, String.t}
   @callback find_user_by_token(conn :: Plug.Conn.t, token :: String.t) :: nil | any
 
   defmacro __using__(_opts) do
@@ -58,19 +62,19 @@ defmodule HaveAPI.Authentication.Token do
         defmodule Renew do
           use HaveAPI.Action
 
-          route "renew"
+          @haveapi_provider provider
+
+          route "%{action}"
           method :post
 
-          input do
-            # TODO
+          output do
+            datetime :valid_to
           end
 
-          output do
-            # TODO
-          end
+          def authorize(_req, _user), do: :allow
 
           def exec(req) do
-            # TODO
+            Provider.renew(@haveapi_provider, req)
           end
         end
 
@@ -184,6 +188,19 @@ defmodule HaveAPI.Authentication.Token do
 
     else
       {:error, "bad login or password"}
+    end
+  end
+
+  def renew(provider, req) do
+    case provider.renew_token(req.conn, req.user, get_token(provider, req.conn)) do
+      {:ok, valid_to} ->
+        %{valid_to: valid_to}
+
+      {:error, msg} when is_binary(msg) ->
+        {:error, msg}
+
+      _ ->
+        {:error, "unable to renew token", http_status: 500}
     end
   end
 end

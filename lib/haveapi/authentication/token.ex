@@ -11,7 +11,11 @@ defmodule HaveAPI.Authentication.Token do
     lifetime :: atom,
     interval :: integer
   ) :: {:ok, DateTime.t} | {:error, any}
-  @callback revoke_token(conn :: Plug.Conn.t, user :: any, token :: String.t) :: any
+  @callback revoke_token(
+    conn :: Plug.Conn.t,
+    user :: any,
+    token :: String.t
+  ) :: :ok | {:error, String.t}
   @callback renew_token(
     conn :: Plug.Conn.t,
     user :: any,
@@ -81,16 +85,15 @@ defmodule HaveAPI.Authentication.Token do
         defmodule Revoke do
           use HaveAPI.Action
 
-          input do
-            # TODO
-          end
+          @haveapi_provider provider
 
-          output do
-            # TODO
-          end
+          route "%{action}"
+          method :post
+
+          def authorize(_req, _user), do: :allow
 
           def exec(req) do
-            # TODO
+            Provider.revoke(@haveapi_provider, req)
           end
         end
 
@@ -201,6 +204,19 @@ defmodule HaveAPI.Authentication.Token do
 
       _ ->
         {:error, "unable to renew token", http_status: 500}
+    end
+  end
+
+  def revoke(provider, req) do
+    case provider.revoke_token(req.conn, req.user, get_token(provider, req.conn)) do
+      :ok ->
+        :ok
+
+      {:error, msg} when is_binary(msg) ->
+        {:error, msg}
+
+      _ ->
+        {:error, "unable to revoke token", http_status: 500}
     end
   end
 end

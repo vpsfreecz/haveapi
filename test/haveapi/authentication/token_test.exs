@@ -18,12 +18,15 @@ defmodule HaveAPI.Authentication.TokenTest do
     end
 
     def find_user_by_token(_conn, @token), do: "admin"
-    def find_user_by_token(_conn, token), do: nil
+    def find_user_by_token(_conn, _token), do: nil
 
     def renew_token(_conn, _user, _token) do
       now = DateTime.utc_now
       {:ok, %{now | year: now.year+1}}
     end
+
+    def revoke_token(_conn, _user, @token), do: :ok
+    def revoke_token(_conn, _user, _token), do: {:error, "nope"}
   end
 
   defmodule MyResource do
@@ -62,6 +65,7 @@ defmodule HaveAPI.Authentication.TokenTest do
     setup do
       [request: "/v1.0/_auth/token",
        renew: "/v1.0/_auth/token/renew",
+       revoke: "/v1.0/_auth/token/revoke",
        token: "abcd1234"]
     end
 
@@ -139,6 +143,18 @@ defmodule HaveAPI.Authentication.TokenTest do
 
     test "token cannot be renewed when not authenticated", context do
       conn = call_api(Api, :post, context[:renew], nil, nil, token: "invalidtoken")
+
+      assert conn.status === 403
+    end
+
+    test "token can be revoked when authenticated", context do
+      conn = call_api(Api, :post, context[:revoke], nil, nil, token: context[:token])
+
+      assert conn.status === 200
+    end
+
+    test "token cannot be revoked when not authenticated", context do
+      conn = call_api(Api, :post, context[:revoke], nil, nil, token: "invalidtoken")
 
       assert conn.status === 403
     end

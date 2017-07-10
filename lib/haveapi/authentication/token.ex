@@ -3,17 +3,17 @@ defmodule HaveAPI.Authentication.Token do
     conn :: Plug.Conn.t,
     username :: String.t,
     password :: String.t
-  ) :: any
+  ) :: nil | any
   @callback save_token(
     conn :: Plug.Conn.t,
     user :: any,
     token :: String.t,
     lifetime :: atom,
     interval :: integer
-  ) :: DateTime.t
+  ) :: {:ok, DateTime.t} | {:error, any}
   @callback revoke_token(conn :: Plug.Conn.t, user :: any, token :: String.t) :: any
   @callback renew_token(conn :: Plug.Conn.t, user :: any, token :: String.t) :: any
-  @callback find_user_by_token(conn :: Plug.Conn.t, token :: String.t) :: any
+  @callback find_user_by_token(conn :: Plug.Conn.t, token :: String.t) :: nil | any
 
   defmacro __using__(_opts) do
     quote do

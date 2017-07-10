@@ -1,9 +1,19 @@
 defmodule HaveAPI.Authentication.Token do
-  @callback find_user_by_credentials(%Plug.Conn{}, String.t, String.t) :: any
-  @callback save_token(%Plug.Conn{}, any, String.t, Integer, Integer) :: DateTime
-  @callback revoke_token(%Plug.Conn{}, any, String.t) :: any
-  @callback renew_token(%Plug.Conn{}, any, String.t) :: any
-  @callback find_user_by_token(%Plug.Conn{}, String.t) :: any
+  @callback find_user_by_credentials(
+    conn :: Plug.Conn.t,
+    username :: String.t,
+    password :: String.t
+  ) :: any
+  @callback save_token(
+    conn :: Plug.Conn.t,
+    user :: any,
+    token :: String.t,
+    lifetime :: atom,
+    interval :: integer
+  ) :: DateTime.t
+  @callback revoke_token(conn :: Plug.Conn.t, user :: any, token :: String.t) :: any
+  @callback renew_token(conn :: Plug.Conn.t, user :: any, token :: String.t) :: any
+  @callback find_user_by_token(conn :: Plug.Conn.t, token :: String.t) :: any
 
   defmacro __using__(_opts) do
     quote do

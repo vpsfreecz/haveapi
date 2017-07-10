@@ -62,16 +62,35 @@ defmodule HaveAPI.Test do
       conn
     end
 
-    conn = if opts[:basic] do
-      {user, pass} = opts[:basic]
+    conn = case opts[:basic] do
+      {user, pass} ->
+        put_req_header(
+          conn,
+          "authorization",
+          "basic " <> Base.encode64("#{user}:#{pass}")
+        )
 
-      put_req_header(
-        conn,
-        "authorization",
-        "basic " <> Base.encode64("#{user}:#{pass}")
-      )
-    else
-      conn
+      nil ->
+        conn
+    end
+
+    conn = case opts[:token] do
+      t when is_binary(t) ->
+        put_req_header(
+          conn,
+          "x-haveapi-auth-token",
+          t
+        )
+
+      {header, token} ->
+        put_req_header(
+          conn,
+          header,
+          token
+        )
+
+      nil ->
+        conn
     end
 
     conn

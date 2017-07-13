@@ -4,8 +4,18 @@ defmodule HaveAPI.Client.Protocol do
 
   @path_param_rx ~r{:[^/]+}
 
-  def describe(conn, :default) do
+  def describe(%Client.Conn{version: nil} = conn) do
     res = response(Http.options(conn.url, params: [{"describe", "default"}]))
+    res.body["response"]
+  end
+
+  def describe(conn) do
+    res = [conn.url, "v#{conn.version}"]
+      |> Path.join
+      |> Client.Conn.ensure_trailslash
+      |> Http.options([])
+      |> response
+    
     res.body["response"]
   end
 

@@ -6,7 +6,7 @@ defmodule HaveAPI.Client do
   end
 
   def setup(conn) do
-    %{conn | description: Client.Protocol.describe(conn, :default)}
+    %{conn | description: Client.Protocol.describe(conn)}
   end
 
   def connect(url, version \\ nil) do

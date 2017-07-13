@@ -54,7 +54,7 @@ defmodule HaveAPI.Client.Conn do
 
   # HTTPoison (or Hackney) seems to require the trailing slash, it doesn't
   # work without it (e.g. nxdomain error)
-  defp ensure_trailslash(url) do
+  def ensure_trailslash(url) do
     if String.last(url) == "/" do
       url
 

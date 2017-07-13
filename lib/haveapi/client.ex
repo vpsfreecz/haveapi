@@ -2,7 +2,7 @@ defmodule HaveAPI.Client do
   alias HaveAPI.Client
 
   def new(url, version \\ nil) when is_binary(url) do
-    %Client.Conn{url: url, version: version}
+    Client.Conn.new(url, version)
   end
 
   def setup(conn) do

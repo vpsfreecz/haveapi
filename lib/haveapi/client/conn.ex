@@ -11,6 +11,10 @@ defmodule HaveAPI.Client.Conn do
     :path_params
   ]
 
+  def new(url, version) when is_binary(url) do
+    %__MODULE__{url: ensure_trailslash(url), version: version}
+  end
+
   def scope(conn, :resource, path, path_params) when is_list(path) and is_list(path_params) do
     path = Enum.map(path, &to_string/1)
     desc = Enum.reduce(
@@ -46,5 +50,16 @@ defmodule HaveAPI.Client.Conn do
 
   def scoped?(conn, :action) do
     scoped?(conn, :resource) && !is_nil(conn.action_name)
+  end
+
+  # HTTPoison (or Hackney) seems to require the trailing slash, it doesn't
+  # work without it (e.g. nxdomain error)
+  defp ensure_trailslash(url) do
+    if String.last(url) == "/" do
+      url
+
+    else
+      url <> "/"
+    end
   end
 end

@@ -10,7 +10,7 @@ defmodule HaveAPI.Client.Conn do
     :action_desc,
     :path_params
   ]
-  
+
   defimpl Inspect do
     import Inspect.Algebra
 

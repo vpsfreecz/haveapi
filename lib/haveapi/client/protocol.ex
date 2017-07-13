@@ -15,7 +15,7 @@ defmodule HaveAPI.Client.Protocol do
       |> Client.Conn.ensure_trailslash
       |> Http.options([])
       |> response
-    
+
     res.body["response"]
   end
 

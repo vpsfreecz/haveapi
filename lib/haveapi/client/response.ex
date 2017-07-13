@@ -12,4 +12,8 @@ defmodule HaveAPI.Client.Response do
   end
 
   def ok?(resp), do: resp.status === true
+
+  def params(resp) do
+    resp.response[resp.conn.action_desc["output"]["namespace"]]
+  end
 end

@@ -4,6 +4,12 @@ defmodule HaveAPI.Client.Http do
   end
 
   def request(method, url, body \\ "", headers \\ [], options \\ []) do
-    HTTPoison.request(method, url, body, headers, options)
+    HTTPoison.request(
+      method |> String.downcase |> String.to_atom,
+      url,
+      body,
+      headers,
+      options
+    )
   end
 end

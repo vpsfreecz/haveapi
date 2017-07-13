@@ -32,13 +32,13 @@ defmodule HaveAPI.Client do
 
     conn
     |> Client.Conn.scope(:action, action, opts[:path_params] || [])
-    |> Client.Protocol.execute(opts)
+    |> Client.Request.execute(opts)
   end
 
   def call(conn, resource_path, action, opts) do
     conn
     |> Client.Conn.scope(:resource, resource_path, [])
     |> Client.Conn.scope(:action, action, opts[:path_params] || [])
-    |> Client.Protocol.execute(opts)
+    |> Client.Request.execute(opts)
   end
 end

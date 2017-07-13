@@ -22,18 +22,23 @@ defmodule HaveAPI.Client do
   end
 
   def resource(conn, path, path_params) when is_list(path) do
-    %{conn | resource_path: Enum.map(path, &to_string/1), path_params: path_params}
+    Client.Conn.scope(conn, :resource, path, path_params)
   end
 
   def call(conn, action, opts) do
-    if is_nil(conn.resource_path) || Enum.empty?(conn.resource_path) do
+    unless Client.Conn.scoped?(conn, :resource) do
       raise "set resource path first or use call/4"
     end
 
-    call(conn, conn.resource_path, action, opts)
+    conn
+    |> Client.Conn.scope(:action, action, opts[:path_params] || [])
+    |> Client.Protocol.execute(opts)
   end
 
   def call(conn, resource_path, action, opts) do
-    Client.Protocol.execute(conn, resource_path, action, opts)
+    conn
+    |> Client.Conn.scope(:resource, resource_path, [])
+    |> Client.Conn.scope(:action, action, opts[:path_params] || [])
+    |> Client.Protocol.execute(opts)
   end
 end

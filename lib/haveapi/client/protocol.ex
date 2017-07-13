@@ -1,4 +1,5 @@
 defmodule HaveAPI.Client.Protocol do
+  alias HaveAPI.Client
   alias HaveAPI.Client.Http
 
   @path_param_rx ~r{:[^/]+}
@@ -8,22 +9,15 @@ defmodule HaveAPI.Client.Protocol do
     res.body["response"]
   end
 
-  def execute(conn, resource_path, action, opts) do
-    r_desc = Enum.reduce(
-      resource_path,
-      conn.description,
-      fn r, acc -> acc["resources"][r] end
-    )
-
-    a_desc = r_desc["actions"][action]
-
-    Http.request(
-      a_desc["method"],
-      resolve_path_params(Path.join(conn.url, a_desc["url"]), conn.path_params),
+  def execute(conn, opts) do
+    data = Http.request(
+      conn.action_desc["method"],
+      resolve_path_params(Path.join(conn.url, conn.action_desc["url"]), conn.path_params),
       "",
       []
-    )
-    |> response()
+    ) |> response()
+
+    Client.Response.new(conn, data)
   end
 
   defp response({:ok, response}) do
@@ -37,7 +31,7 @@ defmodule HaveAPI.Client.Protocol do
       params,
       path,
       fn param, acc ->
-        Regex.replace(@path_param_rx, path, param, global: false)
+        Regex.replace(@path_param_rx, acc, to_string(param), global: false)
       end
     ) |> check_path_params()
   end

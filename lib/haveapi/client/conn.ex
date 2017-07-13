@@ -10,6 +10,38 @@ defmodule HaveAPI.Client.Conn do
     :action_desc,
     :path_params
   ]
+  
+  defimpl Inspect do
+    import Inspect.Algebra
+
+    def inspect(conn, opts) do
+      tldr = ~w(description resource_desc action_desc)a
+      map = conn
+        |> Map.from_struct
+
+      map = Enum.reduce(
+        tldr,
+        map,
+        fn k, acc ->
+          Map.get_and_update(acc, k, fn
+            nil -> {nil, nil}
+            v -> {v, :tldr}
+          end) |> elem(1)
+        end
+      )
+
+      entries =
+        for {k,v} <- map do
+          concat("#{k}: ", to_doc(v, opts))
+        end
+
+      concat([
+        "#HaveAPI.Client.Conn<",
+        concat(Enum.intersperse(entries, ", ")),
+        ">"
+      ])
+    end
+  end
 
   def new(url, version) when is_binary(url) do
     %__MODULE__{url: ensure_trailslash(url), version: version}

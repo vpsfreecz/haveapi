@@ -20,14 +20,42 @@ defmodule HaveAPI.Client.Protocol do
   end
 
   def execute(conn, opts) do
+    {query_params, body} = input(conn, opts[:input])
+
     data = Http.request(
       conn.action_desc["method"],
       resolve_path_params(Path.join(conn.url, conn.action_desc["url"]), conn.path_params),
-      "",
-      []
+      body,
+      params: query_params
     ) |> response()
 
     Client.Response.new(conn, data)
+  end
+
+  defp input(_conn, nil), do: {[], ""}
+  defp input(_conn, []), do: {[], ""}
+
+  defp input(conn, params) do
+    if conn.action_desc["input"] do
+      input(conn, conn.action_desc["method"], params)
+
+    else
+      {[], ""}
+    end
+  end
+
+  defp input(conn, :get, params) do
+    {
+      Enum.map(
+        params,
+        fn {k,v} -> {"#{conn.action_desc["input"]["namespace"]}[#{k}]", v} end
+      ),
+      ""
+    }
+  end
+
+  defp input(conn, _method, params) do
+    {[], Poison.encode!(%{conn.action_desc["input"]["namespace"] => params})}
   end
 
   defp response({:ok, response}) do

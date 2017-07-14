@@ -12,9 +12,13 @@ defmodule HaveAPI.Client.Authentication do
   end
 
   def setup(conn, module, opts) do
-    auth_opts = apply(module, :setup, [conn, opts])
+    case apply(module, :setup, [conn, opts]) do
+      {:ok, auth_opts} ->
+        {:ok, %{conn | auth: new(module, auth_opts)}}
 
-    %{conn | auth: new(module, auth_opts)}
+      {:error, msg} ->
+        {:error, msg}
+    end
   end
 
   def authenticate(%Client.Request{conn: %Client.Conn{auth: nil}} = req), do: req

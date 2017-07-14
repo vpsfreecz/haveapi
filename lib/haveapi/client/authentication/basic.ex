@@ -4,7 +4,7 @@ defmodule HaveAPI.Client.Authentication.Basic do
   @behaviour Client.Authentication
 
   def setup(_conn, opts) do
-    %{username: opts[:username], password: opts[:password]}
+    {:ok, %{username: opts[:username], password: opts[:password]}}
   end
 
   def authenticate(req, opts) do

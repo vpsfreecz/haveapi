@@ -21,8 +21,11 @@ defmodule HaveAPI.Client.Standalone do
       end
 
       @api_conn conn
+
+      @doc "Access API connection options."
       def conn, do: @api_conn
 
+      @doc "Returns a list of all top-level API resources."
       def resources, do: Client.resources(conn())
 
       for r <- Client.resources(conn) do
@@ -56,7 +59,10 @@ defmodule HaveAPI.Client.Standalone do
         @top_mod top_mod
         @resource_path path
         @resource_name resource_name
+        @moduledoc HaveAPI.Client.Standalone.doc(conn, path)
 
+        @doc "List actions of this resource."
+        @spec actions() :: list
         def actions do
           HaveAPI.Client.actions(
             @top_mod.conn,
@@ -64,29 +70,45 @@ defmodule HaveAPI.Client.Standalone do
           )
         end
 
+        @doc "List subresources of this resource."
+        @spec actions() :: list
         def resources do
           HaveAPI.Client.resources(@top_mod.conn, @resource_path)
         end
 
         for r <- HaveAPI.Client.resources(conn, path) do
-          @subresource_name r
+          name = (path ++ [r])
+            |> Enum.map(&Macro.camelize/1)
+            |> Enum.join(".")
+          @subresource_mod :"#{top_mod}.Resource.#{Macro.camelize(name)}"
 
+          @doc """
+          Access resource module `#{HaveAPI.Client.Standalone.doc(:mod, @subresource_mod)}.`
+          """
           def unquote(:"#{r}")() do
-            name = (@resource_path ++ [@subresource_name])
-              |> Enum.map(&Macro.camelize/1)
-              |> Enum.join(".")
-
-            :"#{@top_mod}.Resource.#{Macro.camelize(name)}"
+            @subresource_mod
           end
         end
 
         for a <- HaveAPI.Client.actions(conn, path) do
           @action_name a
 
+          @doc """
+          Call action `#{a}` with no additional parameters.
+
+          #{HaveAPI.Client.Standalone.doc(conn, path, a)}
+          """
           def unquote(:"#{a}")() do
             apply(__MODULE__, String.to_atom(@action_name), [[]])
           end
 
+          @doc """
+          Call action `#{a}` with custom connection options or additional parameters.
+
+          #{HaveAPI.Client.Standalone.doc(conn, path, a)}
+          """
+          @spec unquote(:"#{a}")(map | list) :: map
+          def unquote(:"#{a}")(conn_or_opts)
           def unquote(:"#{a}")(opts) when is_list(opts) do
             HaveAPI.Client.call(
               @top_mod.conn,
@@ -105,6 +127,11 @@ defmodule HaveAPI.Client.Standalone do
             )
           end
 
+          @doc """
+          Call action `#{a}` with custom connection options and additional parameters.
+
+          #{HaveAPI.Client.Standalone.doc(conn, path, a)}
+          """
           def unquote(:"#{a}")(conn, opts) when is_map(conn) and is_list(opts) do
             HaveAPI.Client.call(
               conn,
@@ -116,9 +143,24 @@ defmodule HaveAPI.Client.Standalone do
         end
       end
 
+      @doc "Access resource module `#{HaveAPI.Client.Standalone.doc(:mod, @resource_mod)}`"
       def unquote(:"#{resource_name}")() do
         @resource_mod
       end
     end
+  end
+
+  def doc(:mod, mod) do
+    mod
+    |> Atom.to_string
+    |> String.slice(String.length("Elixir.")..-1)
+  end
+
+  def doc(conn, resource_path) do
+    HaveAPI.Client.resource(conn, resource_path).resource_desc["description"]
+  end
+
+  def doc(conn, resource_path, action_name) do
+    HaveAPI.Client.action(conn, resource_path, action_name).action_desc["description"]
   end
 end

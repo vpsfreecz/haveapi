@@ -82,6 +82,12 @@ defmodule HaveAPI.Client do
     Client.Conn.scope(conn, :resource, path, path_params)
   end
 
+  def action(conn, path, name, path_params \\ []) do
+    conn
+    |> Client.Conn.scope(:resource, path, [])
+    |> Client.Conn.scope(:action, name, path_params)
+  end
+
   def call(conn, action, opts) do
     unless Client.Conn.scoped?(conn, :resource) do
       raise "set resource path first or use call/4"

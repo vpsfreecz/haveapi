@@ -19,7 +19,11 @@ defmodule HaveAPI.Client.Authentication.Token do
   end
 
   def authenticate(req, opts) do
-    do_authenticate(req, opts[:via], opts[:token])
+    do_authenticate(req, opts.via, opts.token)
+  end
+
+  def logout(conn, _opts) do
+    revoke(token_conn(conn))
   end
 
   def request(conn, opts) do
@@ -34,6 +38,17 @@ defmodule HaveAPI.Client.Authentication.Token do
       params = Client.Response.params(res)
 
       {:ok, params["token"], params["valid_to"]}
+
+    else
+      {:error, res.message}
+    end
+  end
+
+  def revoke(conn) do
+    res = Client.call(conn, "revoke", [])
+
+    if Client.Response.ok?(res) do
+      :ok
 
     else
       {:error, res.message}

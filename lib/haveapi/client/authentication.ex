@@ -1,8 +1,9 @@
 defmodule HaveAPI.Client.Authentication do
   alias HaveAPI.Client
 
-  @callback setup(conn :: map, opts :: list) :: any
+  @callback setup(conn :: map, opts :: list) ::  {:ok, map} | {:error, String.t}
   @callback authenticate(request :: map, opts :: any) :: map
+  @callback logout(conn :: map, opts :: any) :: :ok | {:error, String.t}
 
   @enforce_keys [:module, :opts]
   defstruct [:module, :opts]
@@ -25,5 +26,17 @@ defmodule HaveAPI.Client.Authentication do
 
   def authenticate(req) do
     apply(req.conn.auth.module, :authenticate, [req, req.conn.auth.opts])
+  end
+
+  def logout(%Client.Conn{auth: nil} = conn), do: conn
+
+  def logout(conn) do
+    case apply(conn.auth.module, :logout, [conn, conn.auth.opts]) do
+      :ok ->
+        %{conn | auth: nil}
+
+      {:error, msg} ->
+        {:error, msg}
+    end
   end
 end

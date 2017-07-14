@@ -40,6 +40,8 @@ defmodule HaveAPI.Client do
     )
   end
 
+  def logout(conn), do: Client.Authentication.logout(conn)
+
   def resource(_conn, name_or_path, path_params \\ [])
 
   def resource(conn, name, path_params) when is_binary(name) or is_atom(name) do

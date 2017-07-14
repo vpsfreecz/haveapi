@@ -14,4 +14,6 @@ defmodule HaveAPI.Client.Authentication.Basic do
       "basic " <> Base.encode64("#{opts.username}:#{opts.password}")
     )
   end
+
+  def logout(_conn, _opts), do: :ok
 end

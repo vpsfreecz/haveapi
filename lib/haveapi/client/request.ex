@@ -20,6 +20,10 @@ defmodule HaveAPI.Client.Request do
     %{req | headers: [{to_string(name), to_string(value)} | req.headers]}
   end
 
+  def add_query_param(req, name, value) do
+    %{req | query_params: [{to_string(name), query_param(value)} | req.query_params]}
+  end
+
   def add_input(req, nil), do: req
   def add_input(req, params) when is_map(params) and map_size(params) == 0, do: req
 
@@ -57,7 +61,10 @@ defmodule HaveAPI.Client.Request do
   end
 
   def finalize(req) do
-    %{req | headers: Enum.reverse(req.headers)}
+    %{req |
+      headers: Enum.reverse(req.headers),
+      query_params: Enum.reverse(req.query_params)
+    }
   end
 
   def execute(conn, opts) do
@@ -93,10 +100,13 @@ defmodule HaveAPI.Client.Request do
   end
 
   defp do_add_params(req, "GET", ns, params) do
-    %{req | query_params: req.query_params ++ Enum.map(
+    Enum.reduce(
       params,
-      fn {k,v} -> {"#{ns}[#{k}]", query_param(v)} end
-    )}
+      req,
+      fn {k, v}, acc ->
+        add_query_param(acc, "#{ns}[#{k}]", v)
+      end
+    )
   end
 
   defp do_add_params(req, _method, ns, params) do

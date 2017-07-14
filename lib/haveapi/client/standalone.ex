@@ -45,7 +45,7 @@ defmodule HaveAPI.Client.Standalone do
     quote bind_quoted: [conn: conn, path: path] do
       top_mod = __MODULE__
       mod_name = path |> Enum.map(&Macro.camelize/1) |> Enum.join(".")
-      resource_mod = :"#{__MODULE__}.Resource_#{mod_name}"
+      resource_mod = :"#{__MODULE__}.Resource.#{mod_name}"
       resource_name = List.last(path)
 
       @resource_path path
@@ -76,7 +76,7 @@ defmodule HaveAPI.Client.Standalone do
               |> Enum.map(&Macro.camelize/1)
               |> Enum.join(".")
 
-            :"#{@top_mod}.Resource_#{Macro.camelize(name)}"
+            :"#{@top_mod}.Resource.#{Macro.camelize(name)}"
           end
         end
 

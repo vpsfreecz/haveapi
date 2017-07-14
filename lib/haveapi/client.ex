@@ -15,6 +15,15 @@ defmodule HaveAPI.Client do
     |> setup
   end
 
+  def authenticate(conn, :basic, username, password) do
+    Client.Authentication.setup(
+      conn,
+      Client.Authentication.Basic,
+      username: username,
+      password: password
+    )
+  end
+
   def resource(_conn, name_or_path, path_params \\ [])
 
   def resource(conn, name, path_params) when is_binary(name) or is_atom(name) do

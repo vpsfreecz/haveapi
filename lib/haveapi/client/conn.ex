@@ -8,7 +8,8 @@ defmodule HaveAPI.Client.Conn do
     :resource_desc,
     :action_name,
     :action_desc,
-    :path_params
+    :path_params,
+    :auth,
   ]
 
   defimpl Inspect do

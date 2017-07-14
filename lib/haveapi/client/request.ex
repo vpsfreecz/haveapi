@@ -16,6 +16,10 @@ defmodule HaveAPI.Client.Request do
     }
   end
 
+  def add_header(req, name, value) do
+    %{req | headers: [{to_string(name), to_string(value)} | req.headers]}
+  end
+
   def add_input(req, nil), do: req
   def add_input(req, params) when is_map(params) and map_size(params) == 0, do: req
 
@@ -52,6 +56,10 @@ defmodule HaveAPI.Client.Request do
     end
   end
 
+  def finalize(req) do
+    %{req | headers: Enum.reverse(req.headers)}
+  end
+
   def execute(conn, opts) do
     conn
     |> new()
@@ -59,6 +67,8 @@ defmodule HaveAPI.Client.Request do
     |> check_path_params()
     |> add_input(opts[:input])
     |> add_meta(opts[:meta])
+    |> Client.Authentication.authenticate()
+    |> finalize()
     |> Client.Protocol.execute()
   end
 

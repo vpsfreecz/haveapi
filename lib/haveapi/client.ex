@@ -1,6 +1,10 @@
 defmodule HaveAPI.Client do
   alias HaveAPI.Client
 
+  defmacro __using__(opts) do
+    quote do: use HaveAPI.Client.Standalone, unquote(opts)
+  end
+
   def new(url, version \\ nil) when is_binary(url) do
     Client.Conn.new(url, version)
   end
@@ -24,6 +28,14 @@ defmodule HaveAPI.Client do
     )
   end
 
+  def authenticate(conn, :basic, opts) do
+    Client.Authentication.setup(
+      conn,
+      Client.Authentication.Basic,
+      opts
+    )
+  end
+
   def authenticate(conn, :token, token) when is_binary(token) do
     Client.Authentication.setup(
       conn,
@@ -41,6 +53,24 @@ defmodule HaveAPI.Client do
   end
 
   def logout(conn), do: Client.Authentication.logout(conn)
+
+  def resources(conn), do: resources(conn, [])
+
+  def resources(conn, []) do
+    Map.keys(conn.description["resources"])
+  end
+
+  def resources(conn, path) when is_list(path) do
+    Map.keys(resource(conn, path).resource_desc["resources"])
+  end
+
+  def actions(conn, resource) when is_binary(resource) do
+    Map.keys(conn.description["resources"][resource]["actions"])
+  end
+
+  def actions(conn, resource_path) when is_list(resource_path) do
+    Map.keys(resource(conn, resource_path).resource_desc["actions"])
+  end
 
   def resource(_conn, name_or_path, path_params \\ [])
 

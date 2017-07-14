@@ -1,4 +1,6 @@
 defmodule HaveAPI.Client.Http do
+  def start, do: HTTPoison.start
+
   def options(url, opts) do
     HTTPoison.options(url, opts[:headers] || [], params: opts[:params] || [])
   end

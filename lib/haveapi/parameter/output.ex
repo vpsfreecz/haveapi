@@ -20,6 +20,10 @@ defmodule HaveAPI.Parameter.Output do
 
   def coerce(:datetime, %DateTime{} = v), do: {:ok, DateTime.to_iso8601(v)}
   def coerce(:datetime, %Date{} = v), do: {:ok, Date.to_iso8601(v)}
+  def coerce(:datetime, %NaiveDateTime{} = v) do
+    {:ok, dt} = DateTime.from_naive(v, "Etc/UTC")
+    {:ok, DateTime.to_iso8601(dt)}
+  end
 
   def coerce(:custom, v), do: {:ok, v}
 

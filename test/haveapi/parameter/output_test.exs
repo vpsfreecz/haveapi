@@ -153,12 +153,14 @@ defmodule HaveAPI.Validator.ParameterOutputTest do
         output do
           datetime :d
           datetime :dt
+          datetime :naive_dt
         end
 
         def exec(_req) do
           {:ok, d} = Date.from_iso8601("2017-10-08")
           {:ok, dt, _offset} = DateTime.from_iso8601("2017-10-08T10:00:30Z")
-          %{d: d, dt: dt}
+          {:ok, naive_dt} = NaiveDateTime.from_iso8601("2017-10-08T10:00:30Z")
+          %{d: d, dt: dt, naive_dt: naive_dt}
         end
       end
 
@@ -342,6 +344,7 @@ defmodule HaveAPI.Validator.ParameterOutputTest do
       assert conn.resp_body["status"] === true
       assert conn.resp_body["response"]["myresource"]["d"] === "2017-10-08"
       assert conn.resp_body["response"]["myresource"]["dt"] === "2017-10-08T10:00:30Z"
+      assert conn.resp_body["response"]["myresource"]["naive_dt"] === "2017-10-08T10:00:30Z"
     end
 
     test "rejects other values" do

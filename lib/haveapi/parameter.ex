@@ -31,6 +31,8 @@ defmodule HaveAPI.Parameter do
     end
   end
 
+  def format(ctx, p, :resource, nil), do: {:ok, nil}
+
   def format(ctx, p, :resource, value) do
     assoc = List.last(p.resource_path)
     show = Enum.find(assoc.actions, &(&1.name == "show"))

@@ -9,6 +9,10 @@ defmodule HaveAPI.Validator.Format do
     }
   end
 
+  def describe(opts) do
+    %{opts | rx: Regex.source(opts.rx)}
+  end
+
   def validate(%{match: true} = opts, v, _params) do
     return(opts, Regex.match?(opts[:rx], v))
   end

@@ -3,6 +3,7 @@ defmodule HaveAPI.Builder do
     quote do
       import HaveAPI.Builder
       use Plug.Router
+      import Plug.Router, only: [match: 2, match: 3]
 
       plug :match
       plug :fetch_query_params

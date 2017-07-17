@@ -3,7 +3,7 @@ defmodule HaveAPI.Parameters.Dsl do
     quote do
       import HaveAPI.Parameters.Dsl, only: :macros
 
-      Module.register_attribute __MODULE__, :haveapi_params, accumulate: true
+      @haveapi_params []
       @haveapi_layout unquote(opts[:layout])
       @before_compile HaveAPI.Parameters.Dsl
 
@@ -14,7 +14,7 @@ defmodule HaveAPI.Parameters.Dsl do
           Enum.filter_map(
             unquote(__MODULE__).params,
             &(&1.name in only),
-            &(@haveapi_params &1)
+            &(@haveapi_params [&1 | @haveapi_params])
           )
         end
       end
@@ -26,14 +26,14 @@ defmodule HaveAPI.Parameters.Dsl do
           Enum.filter_map(
             unquote(__MODULE__).params,
             &(not (&1.name in except)),
-            &(@haveapi_params &1)
+            &(@haveapi_params [&1 | @haveapi_params])
           )
         end
       end
 
       defmacro __using__(_opts) do
         quote do
-          Enum.each(unquote(__MODULE__).params, &(@haveapi_params &1))
+          Enum.each(unquote(__MODULE__).params, &(@haveapi_params [&1 | @haveapi_params]))
         end
       end
     end
@@ -58,7 +58,7 @@ defmodule HaveAPI.Parameters.Dsl do
         type = unquote(v)
 
         quote bind_quoted: [mod: __MODULE__, name: name, opts: opts, type: type] do
-          @haveapi_params mod.mkparam(type, name, opts)
+          @haveapi_params [mod.mkparam(type, name, opts) | @haveapi_params]
         end
       end
     end
@@ -66,7 +66,20 @@ defmodule HaveAPI.Parameters.Dsl do
 
   defmacro resource(resource_list, opts \\ []) do
     quote bind_quoted: [mod: __MODULE__, resource_list: resource_list, opts: opts] do
-      @haveapi_params mod.mkparam(:resource, resource_list, opts)
+      @haveapi_params [mod.mkparam(:resource, resource_list, opts) | @haveapi_params]
+    end
+  end
+
+  defmacro patch(param, opts) do
+    quote bind_quoted: [mod: __MODULE__, param: param, opts: opts] do
+      @haveapi_params Enum.map(@haveapi_params, fn p ->
+        if p.name == param do
+          mod.patch_param(p, opts)
+
+        else
+          p
+        end
+      end)
     end
   end
 
@@ -101,11 +114,11 @@ defmodule HaveAPI.Parameters.Dsl do
       [],
       fn {k, v}, acc ->
         case mkvalidator(k, v) do
+          {nil, _mod} ->
+            acc
+
           {mod, opts} ->
             [{mod, mod.init(opts)} | acc]
-
-          nil ->
-            acc
         end
       end
     ) |> Enum.reverse
@@ -116,7 +129,7 @@ defmodule HaveAPI.Parameters.Dsl do
     {HaveAPI.Validator.Presence, []}
   end
   def mkvalidator(:required, false) do
-    nil
+    {nil, HaveAPI.Validator.Presence}
   end
   def mkvalidator(:required, opts) when is_list(opts) do
     {HaveAPI.Validator.Presence, opts}
@@ -188,5 +201,51 @@ defmodule HaveAPI.Parameters.Dsl do
 
   def mkvalidator(k, v) do
     raise "Unknown validator '#{k}' with option '#{inspect(v)}'"
+  end
+
+  def patch_param(p, opts) do
+    changeable = ~w(type label description default fill)a
+
+    changes = Enum.reduce(
+      changeable,
+      %{},
+      fn k, acc ->
+        if Keyword.has_key?(opts, k) do
+          Map.put(acc, k, opts[k])
+
+        else
+          acc
+        end
+      end
+    )
+
+    p
+    |> Map.merge(changes)
+    |> merge_validators(p.validators || [], opts[:validate] || [])
+  end
+
+  def merge_validators(p, _existing, []), do: p
+
+  def merge_validators(p, [], validators) do
+    %{p | validators: mkvalidators(validators)}
+  end
+
+  def merge_validators(p, existing, validators) do
+    merged = Enum.reduce(
+      validators,
+      existing,
+      fn {k,v}, acc ->
+        case mkvalidator(k, v) do
+          {nil, mod} ->
+            Keyword.delete(acc, mod)
+
+          {mod, opts} ->
+            built_opts = mod.init(opts)
+            Keyword.update(acc, mod, built_opts, fn _ -> built_opts end)
+        end
+      end
+    )
+
+    %{p | validators: merged}
   end
 end

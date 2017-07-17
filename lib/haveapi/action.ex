@@ -90,7 +90,7 @@ defmodule HaveAPI.Action do
 
         Enum.each(
           parent_in,
-          fn v -> @haveapi_params v end
+          fn v -> @haveapi_params [v | @haveapi_params] end
         )
 
         unquote(block)
@@ -117,7 +117,7 @@ defmodule HaveAPI.Action do
 
         Enum.each(
           parent_out,
-          fn v -> @haveapi_params v end
+          fn v -> @haveapi_params [v | @haveapi_params] end
         )
 
         unquote(block)

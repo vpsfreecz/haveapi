@@ -32,7 +32,7 @@ defmodule HaveAPI.Parameter.Input do
     )
   end
 
-  def coerce(:resource, v), do: v
+  def coerce(:resource, v), do: {:ok, v}
 
   def coerce(:custom, v), do: {:ok, v}
 

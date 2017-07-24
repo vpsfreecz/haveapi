@@ -28,7 +28,7 @@ defmodule HaveAPI.Action.Show do
 
     case v do
       nil ->
-        {:error, "Object not found"}
+        {:error, "Object not found", http_status: 404}
 
       other ->
         res = HaveAPI.Action.Output.build(req, other)

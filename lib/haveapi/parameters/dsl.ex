@@ -7,7 +7,7 @@ defmodule HaveAPI.Parameters.Dsl do
       @haveapi_layout unquote(opts[:layout])
       @before_compile HaveAPI.Parameters.Dsl
 
-      defmacro __using__(only: params) when is_list(params) do
+      defmacro __using__(only: params) do
         quote do
           only = unquote(params)
 
@@ -19,7 +19,7 @@ defmodule HaveAPI.Parameters.Dsl do
         end
       end
 
-      defmacro __using__(except: params) when is_list(params) do
+      defmacro __using__(except: params) do
         quote do
           except = unquote(params)
 

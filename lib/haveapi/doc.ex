@@ -29,7 +29,7 @@ defmodule HaveAPI.Doc do
              resource: &1,
            })})
         |> Enum.filter(fn {_name, desc} ->
-             !Enum.empty?(desc.actions) && Enum.empty?(desc.resources)
+             !Enum.empty?(desc.actions) || !Enum.empty?(desc.resources)
            end)
         |> Map.new,
       meta: %{namespace: HaveAPI.Meta.namespace}

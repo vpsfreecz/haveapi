@@ -70,11 +70,6 @@ defmodule HaveAPI.Builder do
       end
 
       mount_version(%{ctx | version: def_v}, true)
-
-      # Default route
-      match _ do
-        HaveAPI.Protocol.not_found(var!(conn))
-      end
     end
   end
 

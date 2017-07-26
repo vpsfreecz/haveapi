@@ -268,12 +268,6 @@ defmodule HaveAPI.Action do
       def meta(:global), do: Module.concat(__MODULE__, :GlobalMeta)
 
       def template, do: @haveapi_parent
-
-      def authorize(_req, _user), do: if auth(), do: :deny, else: :allow
-
-      def use_template, do: nil
-
-      defoverridable [authorize: 2, use_template: 0]
     end
   end
 
@@ -295,6 +289,12 @@ defmodule HaveAPI.Action do
       @before_compile HaveAPI.Action
 
       import HaveAPI.Action
+
+      def authorize(_req, _user), do: if auth(), do: :deny, else: :allow
+
+      def use_template, do: nil
+
+      defoverridable [authorize: 2, use_template: 0]
     end
   end
 

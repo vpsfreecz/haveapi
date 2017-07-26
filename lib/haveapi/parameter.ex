@@ -51,10 +51,14 @@ defmodule HaveAPI.Parameter do
         {:error, msg}
 
       _ ->
-        {:ok, HaveAPI.Meta.add(ret.output, %{
-          resolved: true,
-          url_params: value,
-        })}
+        if ret.output do
+          {:ok, HaveAPI.Meta.add(ret.output, %{
+            resolved: true,
+            url_params: value,
+          })}
+        else
+          raise "#{ctx.action} returned #{p.name}=#{inspect(value)}, but #{show} returned nil"
+        end
     end
   end
 

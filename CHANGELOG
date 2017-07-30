@@ -1,4 +1,5 @@
 - Client: accessor to communicator object
+- Basic authentication: add accessors to credentials
 - Token authentication: support for token renewal and revoking
 - Compatibility with Elixir server API
 - Relax dependency version requirements

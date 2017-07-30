@@ -81,6 +81,11 @@ class HaveAPI::Client::Client
     keys.empty? ? @opts.clone : @opts.select { |k, _| keys.include?(k) }
   end
 
+  # @return [HaveAPI::Client::Communicator]
+  def communicator
+    @api
+  end
+
   # Initialize the client if it is not yet initialized and call the resource
   # if it exists.
   def method_missing(symbol, *args)

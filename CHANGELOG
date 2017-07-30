@@ -1,3 +1,4 @@
+- Compatibility with Elixir server API
 - Relax dependency version requirements
 
 * Sat Apr 22 2017 - version 0.9.0

@@ -307,15 +307,17 @@ module HaveAPI::CLI
       @action_opt = OptionParser.new do |opts|
         opts.banner = ''
 
-        action.input[:parameters].each do |name, p|
-          opts.on(param_option(name, p), p[:description] || p[:label] || '') do |*args|
-            arg = args.first
+        if action.input
+          action.input[:parameters].each do |name, p|
+            opts.on(param_option(name, p), p[:description] || p[:label] || ' ') do |*args|
+              arg = args.first
 
-            if arg.nil?
-              options[name] = read_param(name, p)
+              if arg.nil?
+                options[name] = read_param(name, p)
 
-            else
-              options[name] = args.first
+              else
+                options[name] = args.first
+              end
             end
           end
         end
@@ -510,7 +512,7 @@ module HaveAPI::CLI
         return
       end
 
-      return if response.empty?
+      return if response.empty? || action.output.nil?
 
       namespace = action.namespace(:output).to_sym
 

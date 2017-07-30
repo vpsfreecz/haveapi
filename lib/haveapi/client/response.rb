@@ -44,7 +44,7 @@ class HaveAPI::Client::Response
 
   # Access namespaced params directly.
   def [](key)
-    return unless %i(object hash).include?(@action.layout.to_sym)
+    return unless %i(object hash).include?(@action.output_layout.to_sym)
 
     @response[:response][@action.namespace(:output).to_sym][key]
   end

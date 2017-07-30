@@ -105,9 +105,9 @@ module HaveAPI::Client
       end
     end
 
-    def call(action, params, raw: false)
+    def call(action, params = {}, raw: false)
       args = []
-      input_namespace = action.namespace(:input)
+      input_namespace = action.input && action.namespace(:input)
       meta = nil
 
       if params.is_a?(Hash) && params[:meta]
@@ -116,7 +116,8 @@ module HaveAPI::Client
       end
 
       if %w(POST PUT).include?(action.http_method)
-        ns = {input_namespace => params}
+        ns = {}
+        ns[input_namespace] = params if input_namespace
         ns[:_meta] = meta if meta
         ns.update(@auth.request_payload)
 

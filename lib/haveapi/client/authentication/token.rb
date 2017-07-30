@@ -34,6 +34,33 @@ module HaveAPI::Client::Authentication
       @valid_to = hash[:valid_to]
     end
 
+    def renew
+      a = HaveAPI::Client::Action.new(
+          nil,
+          @communicator,
+          :renew,
+          @desc[:resources][:token][:actions][:renew],
+          []
+      )
+      ret = HaveAPI::Client::Response.new(a, a.execute({}))
+      raise HaveAPI::Client::ActionFailed.new(ret) unless ret.ok?
+
+      @valid_to = ret[:valid_to]
+      @valid_to = @valid_to && DateTime.iso8601(@valid_to).to_time
+    end
+
+    def revoke
+      a = HaveAPI::Client::Action.new(
+          nil,
+          @communicator,
+          :revoke,
+          @desc[:resources][:token][:actions][:revoke],
+          []
+      )
+      ret = HaveAPI::Client::Response.new(a, a.execute({}))
+      raise HaveAPI::Client::ActionFailed.new(ret) unless ret.ok?
+    end
+
     protected
     def request_token
       a = HaveAPI::Client::Action.new(

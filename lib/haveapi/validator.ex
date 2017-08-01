@@ -25,13 +25,19 @@ defmodule HaveAPI.Validator do
   end
 
   # TODO: make it work with hash_list
-  def validate(req) do
-    validate(req.context.action.params(:input), req.input)
+  def validate(req, params) do
+    validate_data(
+      allowed_params(req.context.action.params(:input), params),
+      req.input
+    )
   end
 
-  defp validate(nil, _data), do: :ok
+  defp allowed_params(nil, _allowed), do: nil
+  defp allowed_params(params, allowed), do: Enum.filter(params, &(&1.name in allowed))
 
-  defp validate(params, data) do
+  defp validate_data(nil, _data), do: :ok
+
+  defp validate_data(params, data) do
     ret = Enum.reduce(
       params,
       %{},

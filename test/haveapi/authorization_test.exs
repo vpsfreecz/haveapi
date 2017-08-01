@@ -156,6 +156,23 @@ defmodule HaveAPI.AuthorizationTest do
         def authorize(_, _), do: :deny
       end
 
+      defmodule Validators do
+        use HaveAPI.Action
+
+        auth true
+        route "%{action}"
+
+        input do
+          string :str1, validate: [required: true]
+          string :str2, validate: [required: true]
+        end
+
+        def authorize(%HaveAPI.Request{}, "user"), do: {:allow, blacklist: [:str2]}
+        def authorize(_, _user), do: :allow
+
+        def exec(_req), do: :ok
+      end
+
       actions [
         DefaultNoAuth,
         DefaultWithAuth,
@@ -167,6 +184,7 @@ defmodule HaveAPI.AuthorizationTest do
         WhitelistInput,
         BlacklistInput,
         AdminOnly,
+        Validators,
       ]
     end
 
@@ -333,5 +351,26 @@ defmodule HaveAPI.AuthorizationTest do
     assert Map.has_key?(conn.resp_body["response"]["resources"], "myresource")
     assert Map.has_key?(conn.resp_body["response"]["resources"], "adminresource")
     assert Map.has_key?(conn.resp_body["response"]["resources"]["adminresource"]["actions"], "adminonly")
+  end
+
+  test "validators are not run on unauthorized parameters" do
+    conn = call_action(
+      Api, "myresource", "validators",
+      basic: {"user", "1234"},
+      input: %{str1: "test"}
+    )
+
+    assert conn.status == 200
+    assert conn.resp_body["status"] === true
+
+    conn = call_action(
+      Api, "myresource", "validators",
+      basic: {"admin", "1234"},
+      input: %{str1: "test"}
+    )
+
+    assert conn.status == 400
+    assert conn.resp_body["status"] === false
+    assert Map.has_key?(conn.resp_body["errors"], "str2")
   end
 end

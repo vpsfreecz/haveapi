@@ -306,8 +306,8 @@ defmodule HaveAPI.Action do
     with true <- authenticated?(ctx.action.auth, ctx.user),
          req <- Input.fetch_path_parameters(req),
          {:ok, req} <- Input.fetch_parameters(req),
-         {:ok, req} <- HaveAPI.Authorization.authorize(req),
-         :ok <- HaveAPI.Validator.validate(req),
+         {:ok, req, params} <- HaveAPI.Authorization.authorize(req),
+         :ok <- HaveAPI.Validator.validate(req, params),
          data <- do_exec(req),
          output = ctx.action.layout(:output),
          res <- Output.build(data, output, res),
@@ -333,7 +333,8 @@ defmodule HaveAPI.Action do
       input: opts[:input],
     }
 
-    with {:ok, req} <- HaveAPI.Authorization.authorize(req),
+    with {:ok, req, params} <- HaveAPI.Authorization.authorize(req),
+         :ok <- HaveAPI.Validator.validate(req, params),
          data <- do_exec(req),
          res = %HaveAPI.Response{context: ctx, conn: conn},
          output = ctx.action.layout(:output),

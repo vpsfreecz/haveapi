@@ -212,7 +212,7 @@ defmodule HaveAPI.Doc do
     })
 
     case ret do
-      {:ok, data} ->
+      {:ok, data, _params} ->
         {:ok, data.input}
 
       {:error, msg, opts} ->

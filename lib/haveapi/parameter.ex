@@ -50,6 +50,9 @@ defmodule HaveAPI.Parameter do
       {:error, msg} ->
         {:error, msg}
 
+      {:error, msg, _opts} ->
+        {:error, msg}
+
       _ ->
         if ret.output do
           {:ok, HaveAPI.Meta.add(ret.output, %{

@@ -114,7 +114,7 @@ module HaveAPI::Client
 
           raise ActionFailed.new(ret) unless ret.ok?
 
-          return_value = case action.output_layout
+          return_value = case action.output && action.output_layout
             when :object
               ResourceInstance.new(@client, @api, self, action: action, response: ret)
 

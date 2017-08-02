@@ -173,6 +173,18 @@ defmodule HaveAPI.AuthorizationTest do
         def exec(_req), do: :ok
       end
 
+      defmodule ActionDoc do
+        use HaveAPI.Action
+
+        auth true
+        route "%{action}"
+
+        def authorize(_, "admin"), do: :allow
+        def authorize(_, _user), do: :deny
+
+        def exec(_req), do: :ok
+      end
+
       actions [
         DefaultNoAuth,
         DefaultWithAuth,
@@ -185,6 +197,7 @@ defmodule HaveAPI.AuthorizationTest do
         BlacklistInput,
         AdminOnly,
         Validators,
+        ActionDoc,
       ]
     end
 
@@ -372,5 +385,23 @@ defmodule HaveAPI.AuthorizationTest do
     assert conn.status == 400
     assert conn.resp_body["status"] === false
     assert Map.has_key?(conn.resp_body["errors"], "str2")
+  end
+
+  test "action doc returns access forbidden when user is not authorized" do
+    conn = call_api(
+      Api, :options, "/v1.0/myresource/actiondoc/method=get",
+      nil, nil, basic: {"admin", "1234"}
+    )
+
+    assert conn.status == 200
+    assert conn.resp_body["status"] === true
+
+    conn = call_api(
+      Api, :options, "/v1.0/myresource/actiondoc/method=get",
+      nil, nil, basic: {"user", "1234"}
+    )
+
+    assert conn.status == 403
+    assert conn.resp_body["status"] === false
   end
 end

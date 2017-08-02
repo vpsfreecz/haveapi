@@ -36,13 +36,21 @@ defmodule HaveAPI.Protocol do
   end
 
   def describe_action(ctx, conn) do
-    Plug.Conn.send_resp(
-      conn,
-      200,
-      format_doc(HaveAPI.Doc.action(%{ctx |
-        user: HaveAPI.Authentication.user(conn)
-      }))
-    )
+    case HaveAPI.Doc.action(%{ctx | user: HaveAPI.Authentication.user(conn)}) do
+      nil ->
+        Plug.Conn.send_resp(
+          conn,
+          403,
+          format_doc(nil, status: false, message: "Access forbidden")
+        )
+
+      doc ->
+        Plug.Conn.send_resp(
+          conn,
+          200,
+          format_doc(doc)
+        )
+    end
   end
 
   def send_data(%HaveAPI.Response{status: true} = res) do
@@ -79,12 +87,12 @@ defmodule HaveAPI.Protocol do
     ))
   end
 
-  def format_doc(doc) do
+  def format_doc(doc, opts \\ []) do
     Poison.encode!(%{
       version: "1.2",
-      status: true,
+      status: Keyword.get(opts, :status, true),
       response: doc,
-      message: nil,
+      message: Keyword.get(opts, :message, nil),
       errors: nil,
     })
   end

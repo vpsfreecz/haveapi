@@ -6,6 +6,7 @@ defmodule HaveAPI.Action.Index do
 
   method :get
   route "/"
+  aliases [:list]
 
   input do
     integer :limit

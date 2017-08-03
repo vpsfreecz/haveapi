@@ -3,4 +3,5 @@ defmodule HaveAPI.Action.Create do
 
   method :post
   route ""
+  aliases [:new]
 end

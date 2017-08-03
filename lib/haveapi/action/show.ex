@@ -5,6 +5,7 @@ defmodule HaveAPI.Action.Show do
 
   method :get
   route "/:%{resource}_id"
+  aliases [:find]
 
   meta :local do
     output do

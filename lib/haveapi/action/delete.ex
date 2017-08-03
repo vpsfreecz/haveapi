@@ -3,4 +3,5 @@ defmodule HaveAPI.Action.Delete do
 
   method :delete
   route "/:%{resource}_id"
+  aliases [:destroy]
 end

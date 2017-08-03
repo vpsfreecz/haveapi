@@ -15,43 +15,53 @@ defmodule HaveAPI.Action.Output do
 
   def build(%HaveAPI.Response{} = res, _layout, _res), do: res
 
-  def build(data, :hash, res) when is_map(data) do
+  def build(data, layout, res) when layout in ~w(hash object)a do
+    do_build(data, :single, res)
+  end
+
+  def build(data, layout, res) when layout in ~w(hash_list object_list)a do
+    do_build(data, :list, res)
+  end
+
+  def build(data, nil, res), do: do_build(data, nil, res)
+
+  defp do_build(data, :single, res) when is_map(data) do
     %{res | status: true, output: as_map(data)}
   end
 
-  def build({:ok, data}, :hash, res) when is_map(data) do
+  defp do_build({:ok, data}, :single, res) when is_map(data) do
     %{res | status: true, output: as_map(data)}
   end
 
-  def build({:ok, data, meta}, :hash, res) when is_map(meta) do
+  defp do_build({:ok, data, meta}, :single, res) when is_map(meta) do
     %{res | status: true, output: as_map(data), meta: as_map(meta)}
   end
 
-  def build(data, :hash_list, res) when is_list(data) do
+  defp do_build(data, :list, res) when is_list(data) do
     %{res | status: true, output: as_map_list(data)}
   end
 
-  def build({:ok, data}, :hash_list, res) when is_list(data) do
+  defp do_build({:ok, data}, :list, res) when is_list(data) do
     %{res | status: true, output: as_map_list(data)}
   end
 
-  def build({:ok, data, meta}, :hash_list, res) when is_map(meta) do
+  defp do_build({:ok, data, meta}, :list, res) when is_map(meta) do
     %{res | status: true, output: as_map_list(data), meta: as_map(meta)}
   end
 
-  def build({:error, msg}, nil, res) when is_binary(msg) do
+  defp do_build({:error, msg}, nil, res) when is_binary(msg) do
     %{res | status: false, message: msg}
   end
 
-  def build({:error, msg}, _layout, res) when is_binary(msg) do
+  defp do_build({:error, msg}, _layout, res) when is_binary(msg) do
     %{res | status: false, message: msg}
   end
 
-  def build({:error, msg, opts}, _layout, res) when is_binary(msg) and is_list(opts) do
+  defp do_build({:error, msg, opts}, _layout, res) when is_binary(msg) and is_list(opts) do
     %{res | status: false, message: msg, errors: opts[:errors], http_status: opts[:http_status]}
   end
 
-  def build(_, _, res) do
+  defp do_build(_, _, res) do
     %{res | status: false, message: "Server error occurred.", http_status: 500}
   end
 
@@ -59,7 +69,7 @@ defmodule HaveAPI.Action.Output do
     {:ok, res}
   end
 
-  def filter(res, :hash) do
+  def filter(res, layout) when layout in ~w(hash object)a do
     output = HaveAPI.Parameters.filter(
       res.context,
       res.context.action.params(:output),
@@ -75,7 +85,7 @@ defmodule HaveAPI.Action.Output do
     end
   end
 
-  def filter(res, :hash_list) do
+  def filter(res, layout) when layout in ~w(hash_list object_list)a do
     {ret, errors} = Enum.reduce_while(
       res.output,
       {[], %{}},

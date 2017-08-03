@@ -171,7 +171,7 @@ defmodule HaveAPI.Doc do
     case p.type do
       :resource ->
         Map.merge(desc, %{
-          resource_path: Enum.map(p.resource_path, &(&1.name)),
+          resource: Enum.map(p.resource_path, &(&1.name)),
           value_id: p.value_id || "id",
           value_label: p.value_label || "label"
         })

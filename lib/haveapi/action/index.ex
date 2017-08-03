@@ -12,7 +12,7 @@ defmodule HaveAPI.Action.Index do
     integer :offset
   end
 
-  output :hash_list do
+  output :object_list do
 
   end
 

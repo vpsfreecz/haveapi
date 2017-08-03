@@ -77,7 +77,7 @@ defmodule HaveAPI.Action do
 
       layout = case unquote(layout) do
         nil ->
-          @haveapi_parent_input_layout || :hash
+          @haveapi_parent_input_layout || :object
 
         any ->
           any
@@ -104,7 +104,7 @@ defmodule HaveAPI.Action do
 
       layout = case unquote(layout) do
         nil ->
-          @haveapi_parent_output_layout || :hash
+          @haveapi_parent_output_layout || :object
 
         any ->
           any

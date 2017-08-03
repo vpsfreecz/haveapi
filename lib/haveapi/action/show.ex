@@ -7,7 +7,7 @@ defmodule HaveAPI.Action.Show do
   route "/:%{resource}_id"
   aliases [:find]
 
-  meta :local do
+  meta :global do
     output do
       custom :url_params
       boolean :resolved
@@ -45,10 +45,10 @@ defmodule HaveAPI.Action.Show do
 
   def add_local_metadata(req, res) do
     if res.output[:id] do
-      %{res | output: Map.put(res.output, :_meta, %{
+      %{res | meta: %{
           url_params: (req.params |> Keyword.delete_first(:glob) |> Keyword.values),
           resolved: true
-      })}
+      }}
 
     else
       res

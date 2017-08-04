@@ -7,6 +7,7 @@ defmodule HaveAPI.Builder do
 
       plug :access_control, api: __MODULE__
       plug :cors
+      plug :content_type
       plug :match
       plug :fetch_query_params
       plug Plug.Parsers,
@@ -228,6 +229,10 @@ defmodule HaveAPI.Builder do
     else
       _ -> conn
     end
+  end
+
+  def content_type(conn, _opts) do
+    Plug.Conn.put_resp_header(conn, "content-type", "application/json")
   end
 
   defp allowed_headers(api) do

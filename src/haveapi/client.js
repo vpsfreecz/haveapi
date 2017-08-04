@@ -412,7 +412,10 @@ Client.prototype.directInvoke = function(action, opts) {
 
 	} else {
 		var scopedParams = {};
-		scopedParams[ action.namespace('input') ] = opts.params;
+		var ns = action.namespace('input');
+
+		if (ns)
+			scopedParams[ns] = opts.params;
 
 		if (opts.meta)
 			scopedParams[metaNs] = opts.meta;

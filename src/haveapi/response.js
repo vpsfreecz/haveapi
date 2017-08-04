@@ -27,14 +27,14 @@ Response.prototype.response = function() {
 
         if (!this.envelope.response)
             return null;
-	
+
 	switch (this.action.layout('output')) {
 		case 'object':
 		case 'object_list':
 		case 'hash':
 		case 'hash_list':
 			return this.envelope.response[ this.action.namespace('output') ];
-		
+
 		default:
 			return this.envelope.response;
 	}
@@ -56,10 +56,10 @@ Response.prototype.message = function() {
  */
 Response.prototype.meta = function() {
 	var metaNs = this.action.client.apiSettings.meta.namespace;
-	
+
 	if (this.envelope.response && this.envelope.response.hasOwnProperty(metaNs))
 		return this.envelope.response[metaNs];
-	
+
 	return {};
 };
 

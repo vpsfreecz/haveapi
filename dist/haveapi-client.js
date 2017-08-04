@@ -421,7 +421,10 @@ Client.prototype.directInvoke = function(action, opts) {
 
 	} else {
 		var scopedParams = {};
-		scopedParams[ action.namespace('input') ] = opts.params;
+		var ns = action.namespace('input');
+
+		if (ns)
+			scopedParams[ns] = opts.params;
 
 		if (opts.meta)
 			scopedParams[metaNs] = opts.meta;
@@ -1114,7 +1117,10 @@ Action.prototype.httpMethod = function() {
  * @return {String}
  */
 Action.prototype.namespace = function(direction) {
-	return this.description[direction].namespace;
+	if (this.description[direction])
+		return this.description[direction].namespace;
+
+	return null;
 };
 
 /**
@@ -1124,7 +1130,10 @@ Action.prototype.namespace = function(direction) {
  * @return {String}
  */
 Action.prototype.layout = function(direction) {
-	return this.description[direction].layout;
+	if (this.description[direction])
+		return this.description[direction].layout;
+
+	return null;
 };
 
 /**
@@ -1642,14 +1651,14 @@ Response.prototype.response = function() {
 
         if (!this.envelope.response)
             return null;
-	
+
 	switch (this.action.layout('output')) {
 		case 'object':
 		case 'object_list':
 		case 'hash':
 		case 'hash_list':
 			return this.envelope.response[ this.action.namespace('output') ];
-		
+
 		default:
 			return this.envelope.response;
 	}
@@ -1671,10 +1680,10 @@ Response.prototype.message = function() {
  */
 Response.prototype.meta = function() {
 	var metaNs = this.action.client.apiSettings.meta.namespace;
-	
+
 	if (this.envelope.response && this.envelope.response.hasOwnProperty(metaNs))
 		return this.envelope.response[metaNs];
-	
+
 	return {};
 };
 
@@ -2128,6 +2137,10 @@ function Parameters (action, params) {
  */
 Parameters.prototype.coerceParams = function (params) {
 	var ret = {};
+
+	if (this.action.description.input === null)
+		return ret;
+
 	var input = this.action.description.input.parameters;
 
 	for (var p in params) {
@@ -2217,6 +2230,9 @@ Parameters.prototype.coerceParams = function (params) {
  * @return {Boolean}
  */
 Parameters.prototype.validate = function () {
+	if (this.action.description.input === null)
+		return true;
+
 	var input = this.action.description.input.parameters;
 
 	for (var name in input) {

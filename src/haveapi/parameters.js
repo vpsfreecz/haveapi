@@ -22,6 +22,10 @@ function Parameters (action, params) {
  */
 Parameters.prototype.coerceParams = function (params) {
 	var ret = {};
+
+	if (this.action.description.input === null)
+		return ret;
+
 	var input = this.action.description.input.parameters;
 
 	for (var p in params) {
@@ -111,6 +115,9 @@ Parameters.prototype.coerceParams = function (params) {
  * @return {Boolean}
  */
 Parameters.prototype.validate = function () {
+	if (this.action.description.input === null)
+		return true;
+
 	var input = this.action.description.input.parameters;
 
 	for (var name in input) {

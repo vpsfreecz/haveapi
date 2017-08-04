@@ -46,7 +46,10 @@ Action.prototype.httpMethod = function() {
  * @return {String}
  */
 Action.prototype.namespace = function(direction) {
-	return this.description[direction].namespace;
+	if (this.description[direction])
+		return this.description[direction].namespace;
+
+	return null;
 };
 
 /**
@@ -56,7 +59,10 @@ Action.prototype.namespace = function(direction) {
  * @return {String}
  */
 Action.prototype.layout = function(direction) {
-	return this.description[direction].layout;
+	if (this.description[direction])
+		return this.description[direction].layout;
+
+	return null;
 };
 
 /**

@@ -3,6 +3,7 @@ defmodule HaveAPI.Authentication.Basic do
 
   defmacro __using__(_opts) do
     quote do
+      @behaviour HaveAPI.Authentication
       @behaviour unquote(__MODULE__)
 
       def name, do: :basic
@@ -36,6 +37,8 @@ defmodule HaveAPI.Authentication.Basic do
       end
 
       def resources, do: []
+
+      def required_headers, do: []
     end
   end
 end

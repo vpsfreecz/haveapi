@@ -25,6 +25,7 @@ defmodule HaveAPI.Authentication.Token do
 
   defmacro __using__(_opts) do
     quote do
+      @behaviour HaveAPI.Authentication
       @behaviour unquote(__MODULE__)
       alias HaveAPI.Authentication.Token, as: Provider
 
@@ -132,6 +133,8 @@ defmodule HaveAPI.Authentication.Token do
       def authenticate(conn), do: Provider.authenticate(__MODULE__, conn)
 
       def resources, do: [Token]
+
+      def required_headers, do: [http_header()]
     end
   end
 

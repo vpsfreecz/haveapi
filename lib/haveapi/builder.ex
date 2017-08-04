@@ -5,6 +5,8 @@ defmodule HaveAPI.Builder do
       use Plug.Router
       import Plug.Router, only: [match: 2, match: 3]
 
+      plug :access_control, api: __MODULE__
+      plug :cors
       plug :match
       plug :fetch_query_params
       plug Plug.Parsers,
@@ -193,5 +195,49 @@ defmodule HaveAPI.Builder do
         Enum.find(@haveapi_versions, &(&1.version == version)).resources
       end
     end
+  end
+
+  def access_control(conn, [api: api]) do
+    import Plug.Conn
+
+    with [_] <- get_req_header(conn, "origin"),
+         [_] <- get_req_header(conn, "access-control-request-method") do
+
+      conn
+      |> put_resp_header("access-control-allow-origin", "*")
+      |> put_resp_header("access-control-allow-methods", "GET,POST,OPTIONS,PATCH,PUT,DELETE")
+      |> put_resp_header("access-control-allow-credentials", "false")
+      |> put_resp_header("access-control-allow-headers", allowed_headers(api))
+      |> put_resp_header("access-control-max-age", to_string(60*60))
+      |> send_resp(200, "")
+      |> halt()
+
+    else
+      _ -> conn
+    end
+  end
+
+  def cors(conn, _opts) do
+    import Plug.Conn
+
+    with [_] <- get_req_header(conn, "origin") do
+      conn
+      |> put_resp_header("access-control-allow-origin", "*")
+      |> put_resp_header("access-control-allow-credentials", "false")
+
+    else
+      _ -> conn
+    end
+  end
+
+  defp allowed_headers(api) do
+    for v <- api.versions do
+      for auth <- v.auth_chain do
+        auth.required_headers
+      end
+    end
+    |> List.flatten()
+    |> Enum.concat(["Content-Type"])
+    |> Enum.join(",")
   end
 end

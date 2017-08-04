@@ -42,7 +42,7 @@ defmodule HaveAPI.Authentication.Token do
           method :post
           auth false
 
-          input do
+          input :hash do
             string :login, label: "Login", validate: [required: true]
             string :password, label: "Password", validate: [required: true]
             string :lifetime, label: "Lifetime", validate: [
@@ -54,7 +54,7 @@ defmodule HaveAPI.Authentication.Token do
               default: 60*5, fill: true
           end
 
-          output do
+          output :hash do
             string :token
             datetime :valid_to
           end
@@ -72,7 +72,7 @@ defmodule HaveAPI.Authentication.Token do
           route "%{action}"
           method :post
 
-          output do
+          output :hash do
             datetime :valid_to
           end
 

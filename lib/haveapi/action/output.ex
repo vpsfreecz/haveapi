@@ -49,6 +49,10 @@ defmodule HaveAPI.Action.Output do
     %{res | status: true, output: as_map_list(data), meta: as_map(meta)}
   end
 
+  defp do_build({:ok, nil, meta}, nil, res) when is_map(meta) do
+    %{res | status: true, meta: as_map(meta)}
+  end
+
   defp do_build({:error, msg}, nil, res) when is_binary(msg) do
     %{res | status: false, message: msg}
   end

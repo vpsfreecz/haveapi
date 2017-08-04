@@ -59,8 +59,7 @@ defmodule HaveAPI.Protocol do
       200,
       format_data(res.status, response: %{
         res.context.resource.name() => res.output,
-        HaveAPI.Meta.namespace => res.meta,
-      })
+      } |> add_meta(res))
     )
   end
 
@@ -104,5 +103,10 @@ defmodule HaveAPI.Protocol do
       message: opts[:message] || nil,
       errors: opts[:errors] || nil,
     })
+  end
+
+  defp add_meta(data, %HaveAPI.Response{meta: nil}), do: data
+  defp add_meta(data, %HaveAPI.Response{meta: meta}) do
+    Map.put(data, HaveAPI.Meta.namespace, meta)
   end
 end

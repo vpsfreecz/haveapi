@@ -30,6 +30,7 @@ defmodule Haveapi.Mixfile do
   defp deps do
     [{:cowboy, "~> 1.0.0"},
      {:plug, "~> 1.0"},
-     {:poison, "~> 3.0"}]
+     {:poison, "~> 3.0"},
+     {:ex_doc, "~> 0.14", only: :dev, runtime: false}]
   end
 end

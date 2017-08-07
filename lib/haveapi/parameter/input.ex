@@ -4,8 +4,24 @@ defmodule HaveAPI.Parameter.Input do
 
   def coerce(:text, v), do: coerce(:string, v)
 
+  def coerce(:integer, v) when is_binary(v) do
+    try do
+      {:ok, String.to_integer(v)}
+
+    rescue
+      ArgumentError -> {:error, "#{inspect(v)} is not integer"}
+    end
+  end
   def coerce(:integer, v) when is_integer(v), do: {:ok, v}
 
+  def coerce(:float, v) when is_binary(v) do
+    try do
+      {:ok, String.to_float(v)}
+
+    rescue
+      ArgumentError -> {:error, "#{inspect(v)} is not float"}
+    end
+  end
   def coerce(:float, v) when is_float(v), do: {:ok, v}
 
   def coerce(:boolean, v) when is_boolean(v), do: {:ok, v}

@@ -17,7 +17,7 @@ defmodule HaveAPI.Validator.ParameterOutputTest do
           integer :id
         end
 
-        def item(req), do: %{id: req.params[:association_id]}
+        def find(req), do: %{id: req.params[:association_id]}
       end
     end
 

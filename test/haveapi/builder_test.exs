@@ -70,7 +70,7 @@ defmodule HaveAPI.BuilderTest do
           string :test
         end
 
-        def item(_req) do
+        def find(_req) do
           %{test: "hello"}
         end
       end

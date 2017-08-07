@@ -20,7 +20,7 @@ defmodule HaveAPI.ActionTest do
 
         auth false
 
-        def item(_req), do: :ok
+        def find(_req), do: :ok
       end
 
       defmodule Custom do
@@ -177,7 +177,7 @@ defmodule HaveAPI.ActionTest do
 
           auth false
 
-          def item(_req), do: :ok
+          def find(_req), do: :ok
         end
 
         actions [Show]

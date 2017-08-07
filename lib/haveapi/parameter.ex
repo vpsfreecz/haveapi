@@ -33,18 +33,16 @@ defmodule HaveAPI.Parameter do
 
   def format(ctx, p, :resource, nil), do: {:ok, nil}
 
-  def format(ctx, p, :resource, value) do
+  def format(ctx, p, :resource, value) when is_list(value) do
     assoc = List.last(p.resource_path)
     show = Enum.find(assoc.actions, &(&1.name == "show"))
+    action_ctx = %{ctx |
+      resource_path: p.resource_path,
+      resource: assoc,
+      action: show,
+    }
 
-    ret = HaveAPI.Action.internal(
-      %{ctx |
-        resource_path: p.resource_path,
-        resource: assoc,
-        action: show,
-      },
-      params: value
-    )
+    ret = HaveAPI.Action.internal(action_ctx, params: value)
 
     case ret do
       {:error, msg} ->
@@ -61,6 +59,37 @@ defmodule HaveAPI.Parameter do
           })}
         else
           raise "#{ctx.action} returned #{p.name}=#{inspect(value)}, but #{show} returned nil"
+        end
+    end
+
+  end
+
+  def format(ctx, p, :resource, {params, item}) when is_list(params) do
+    assoc = List.last(p.resource_path)
+    show = Enum.find(assoc.actions, &(&1.name == "show"))
+    action_ctx = %{ctx |
+      resource_path: p.resource_path,
+      resource: assoc,
+      action: show,
+    }
+
+    ret = HaveAPI.Action.show_assoc(action_ctx, params, item)
+
+    case ret do
+      {:error, msg} ->
+        {:error, msg}
+
+      {:error, msg, _opts} ->
+        {:error, msg}
+
+      _ ->
+        if ret.output do
+          {:ok, HaveAPI.Meta.add(ret.output, %{
+            resolved: true,
+            url_params: params,
+          })}
+        else
+          raise "#{ctx.action} returned #{p.name}=#{inspect({params, item})}, but #{show} returned nil"
         end
     end
   end

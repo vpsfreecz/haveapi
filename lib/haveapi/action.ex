@@ -344,6 +344,29 @@ defmodule HaveAPI.Action do
     do: res
   end
 
+  def show_assoc(%HaveAPI.Context{conn: conn} = ctx, params, item) do
+    req = %HaveAPI.Request{
+      context: ctx,
+      conn: conn,
+      user: ctx.user,
+      params: params && map_path_params(ctx, params),
+    }
+
+    with {:ok, req, params} <- HaveAPI.Authorization.authorize(req),
+         true <- ctx.action.check(req, item),
+         data <- ctx.action.return(req, item),
+         res = %HaveAPI.Response{context: ctx, conn: conn},
+         output = ctx.action.layout(:output),
+         res <- Output.build(data, output, res),
+         {:ok, res} <- HaveAPI.Authorization.authorize(res),
+         {:ok, res} <- Output.filter(res, output) do
+      res
+    else
+      false ->
+        {:error, "Access denied"}
+    end
+  end
+
   defp authenticated?(true, user) do
     if user, do: true, else: {:error, "Access forbidden", http_status: 403}
   end

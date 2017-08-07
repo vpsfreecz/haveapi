@@ -18,7 +18,7 @@ defmodule HaveAPI.ResourceTest do
           string :str
         end
 
-        def item(req) do
+        def find(req) do
           %{
             id: req.params[:topresource_id],
             str: "top-level #{req.params[:topresource_id]}"
@@ -42,7 +42,7 @@ defmodule HaveAPI.ResourceTest do
             integer :nested_id
           end
 
-          def item(req) do
+          def find(req) do
             %{nested_id: req.params[:nestedresource_id]}
           end
         end
@@ -76,7 +76,7 @@ defmodule HaveAPI.ResourceTest do
           resource [TopResource]
         end
 
-        def item(_req), do: %{topresource: [10]}
+        def find(_req), do: %{topresource: [10]}
       end
 
       actions [Index, Show]
@@ -94,14 +94,37 @@ defmodule HaveAPI.ResourceTest do
           resource [TopResource, TopResource.NestedResource]
         end
 
-        def item(_req), do: %{nestedresource: [10,20]}
+        def find(_req), do: %{nestedresource: [10,20]}
+      end
+
+      actions [Show]
+    end
+
+    defmodule PreFetchedAssoc do
+      use HaveAPI.Resource
+
+      defmodule Show do
+        use HaveAPI.Action.Show
+
+        auth false
+
+        output do
+          resource [TopResource]
+        end
+
+        def find(_req), do: %{topresource: {[10], %{id: 10, str: "optimized"}}}
       end
 
       actions [Show]
     end
 
     version "1.0" do
-      resources [TopResource, OneAssoc, SecondAssoc]
+      resources [
+        TopResource,
+        OneAssoc,
+        SecondAssoc,
+        PreFetchedAssoc,
+      ]
     end
 
     mount "/"
@@ -125,5 +148,13 @@ defmodule HaveAPI.ResourceTest do
 
     assert conn.status == 200
     assert conn.resp_body["response"]["secondassoc"]["nestedresource"]["nested_id"] == 20
+  end
+
+  test "supports pre-fetched associations" do
+    conn = call_action(Associations, "prefetchedassoc", "show", params: [10])
+
+    assert conn.status == 200
+    assert conn.resp_body["response"]["prefetchedassoc"]["topresource"]["id"] == 10
+    assert conn.resp_body["response"]["prefetchedassoc"]["topresource"]["str"] == "optimized"
   end
 end

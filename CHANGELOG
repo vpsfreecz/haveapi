@@ -1,0 +1,81 @@
+* Tue Sep 12 2017 - version 0.10.0
+- Client: accessor to communicator object
+- Basic authentication: add accessors to credentials
+- Token authentication: support for token renewal and revoking
+- Compatibility with Elixir server API
+- Relax dependency version requirements
+
+* Sat Apr 22 2017 - version 0.9.0
+- Resource.setup_from_clone: set also @description
+
+* Fri Feb 10 2017 - version 0.8.0
+- Fix coercion of Text parameters
+- Ask on input parameters on stdin if an argument isn't provided
+- Protocol version set to 1.2
+- CLI uses DateTime.iso8601 to parse dates
+- Datetime parameters accept Time, DateTime and Date objects
+
+* Fri Nov 25 2016 - version 0.7.1
+- Do not require a concrete version of json
+
+* Thu Nov 24 2016 - version 0.7.0
+- Client.initialize takes two arguments: url and options
+- Authenticate even for actions that do not require it
+- New CLI options --[no-]block and --timeout
+- CLI handles all interrupts
+- Add shortcut method HaveAPI::Client.new
+- Add method Action#meta
+- Fix access to nil associations in ResourceInstance
+- Handle 404 errors when fetching description
+- Handle RestClient::ResourceNotFound
+- Use DateTime.iso8601 to parse dates
+- Do not show examples on action error, just a hint
+
+* Tue Oct 18 2016 - version 0.6.0
+- No changes
+
+* Mon Apr 18 2016 - version 0.5.4
+- ActionFailed: add reader for response
+- Resource: save description and create a reader for it
+- Communicator: do not cache API description per version
+- ResourceInstance: id writer changes associated instance object
+- ResourceInstance.resolve: set @prepared_args
+
+* Fri Mar 25 2016 - version 0.5.3
+- Depend on rest-client 1.8
+
+* Thu Mar 03 2016 - version 0.5.2
+- No changes
+
+* Fri Feb 26 2016 - version 0.5.1
+- CLI
+  - Fix sorting of empty values
+  - Fetch action description only if it is fully resolved
+
+* Tue Feb 9 2016 - version 0.5.0
+- Fixed validation error reporting for Datetime parameters
+- Fixed resource object cloning
+
+* Sun Jan 24 2016 - version 0.4.2
+- No changes
+
+* Sat Jan 23 2016 - version 0.4.1
+- No changes
+
+* Web Jan 20 2016 - version 0.4.0
+- API for accessing authentication token
+- Client-side input parameter validators
+- Drop table_print in favor of custom output formatter
+- CLI
+  - switches -c, --columns, -r, --rows to select output mode
+  - option -o, --output to select parameters to print
+  - option -s, --sort to sort by specific parameter (on client-side)
+  - switch --timestamp, --utc and --localtime to select how to print Datetime
+    parameters
+  - switch --check-compatibility to determine whether the client is compatible
+    with given API server
+  - switch --protocol-version to print protocl version that this clients
+    implements
+- Check protocol version
+- Fixed check of invalid action
+- ResourceInstance passes on prepared_args correctly

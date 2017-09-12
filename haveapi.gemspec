@@ -5,7 +5,7 @@ require 'haveapi/version'
 Gem::Specification.new do |s|
   s.name        = 'haveapi'
   s.version     = HaveAPI::VERSION
-  s.date        = '2017-04-22'
+  s.date        = '2017-09-12'
   s.summary     =
   s.description = 'Framework for creating self-describing APIs'
   s.authors     = 'Jakub Skokan'

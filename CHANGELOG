@@ -1,0 +1,52 @@
+* Tue Sep 12 2017 - version 0.10.0
+- Compatibility with Elixir server implementation
+
+* Sat Apr 22 2017 - version 0.9.0
+- No changes
+
+* Fri Feb 10 2017 - version 0.8.0
+- Protocol v1.2
+
+* Fri Nov 25 2016 - version 0.7.1
+- No changes
+
+* Thu Nov 24 2016 - version 0.7.0
+- Action parameters and callbacks can be passed in an object
+- Fix checking of XMLHttpRequest presence to work in both browser and nodejs
+- Tracking of blocking actions
+- Fix message of exception UnresolvedArguments
+
+* Tue Oct 18 2016 - version 0.6.0
+- Client.availableVersions: fix callback arguments
+- Client.resources and BaseResource.resources contain objects
+- Client.authenticate: report if authentication has failed
+- Add method Authentication.Token.renewToken
+- Resources are aware of their parents
+- More thorough check to not require xmlhttprequest in browsers
+- Resource.actions does not contain aliases
+- Authenticate when fetching description
+- Fix Client.destroyResources
+- Client.fetchDescription: Handle errors when fetching/parsing fails
+- Client.setup: catch and report errors
+- Coercion of input parameters
+- Client-side validation of input parameters
+
+* Thu Mar 03 2016 - version 0.5.2
+- No changes
+
+* Fri Feb 26 2016 - version 0.5.1
+- No changes
+
+* Tue Feb 9 2016 - version 0.5.0
+- No changes
+
+* Sun Jan 24 2016 - version 0.4.2
+- No changes
+
+* Sat Jan 23 2016 - version 0.4.1
+- No changes
+
+* Wed Jan 20 2016 - version 0.4.0
+- Check protocol version
+- Source code split to multiple files and compiled into one using gulp
+- package.json for npm, bower.json for bower

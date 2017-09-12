@@ -13,3 +13,7 @@ indent_style = space
 [*.plantuml]
 indent_size = 2
 indent_style = tab
+
+[*.js]
+indent_size = 2
+indent_style = tab

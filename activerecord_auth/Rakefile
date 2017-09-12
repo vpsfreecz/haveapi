@@ -1,0 +1,29 @@
+require 'active_record'
+require 'sinatra/activerecord/rake'
+require 'haveapi'
+require 'rspec/core'
+require 'rspec/core/rake_task'
+require_relative 'lib/api'
+
+RSpec::Core::RakeTask.new(:spec) do |spec|
+  spec.pattern = FileList['spec/*_spec.rb', 'spec/**/*_spec.rb']
+  spec.rspec_opts = '--require spec_helper'
+end
+
+desc 'Create admin user'
+task :create_admin do
+  vals = {}
+
+  %i(username password).each do |v|
+    STDOUT.write("#{v.capitalize}: ")
+    STDOUT.flush
+
+    vals[v] = STDIN.readline.strip
+  end
+
+  ::User.create!(
+      username: vals[:username],
+      password: ::User.hash_password(vals[:password]),
+      is_admin: true,
+  )
+end

@@ -1,4 +1,18 @@
-.PHONY: version
+VERSION=$(shell cat VERSION)
+
+.PHONY: release version
+
+release:
+	mkdir -p dist
+	
+	cd servers/ruby && rake build
+	mv servers/ruby/pkg/haveapi-$(VERSION).gem dist/
+	
+	cd clients/ruby && rake build
+	mv clients/ruby/pkg/haveapi-client-$(VERSION).gem dist/
+	
+	cd clients/js && ./node_modules/.bin/gulp
+	cp clients/js/dist/haveapi-client.js dist/
 
 version:
 	@echo "$(VERSION)" > VERSION

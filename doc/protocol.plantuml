@@ -1,0 +1,226 @@
+@startuml
+
+class Version {
+	help : String
+}
+
+class Meta {
+	namespace : String
+}
+
+abstract class Authentication {
+
+}
+
+class Basic {
+	description : String
+}
+
+class Token {
+	description : String
+	http_header : String
+	query_parameter : String
+}
+
+class Resource {
+	name : String
+	description : String
+}
+
+class Action {
+	name : String
+	auth : Bool
+	description : String
+	aliases : Array<String>
+	blocking : Bool
+	url : String
+	method : String
+	help : String
+}
+
+class Example {
+	title : String
+	url_params : Array<Integer>
+	request : hash
+	response : hash
+	status : Bool
+	message : String
+	http_status : Integer
+	comment : String
+}
+
+class Parameters {
+	layout : String
+	namespace : String
+}
+
+abstract class Parameter {
+	required : Bool
+	label : String
+	description : String
+	type : String
+}
+
+class InputParameter {
+	default : any
+}
+
+class OutputParameter {
+
+}
+
+abstract class ResourceParameter {
+	value_id : String
+	value_label : String
+}
+
+class TypedInputParameter {
+
+}
+
+class ResourceInputParameter {
+}
+
+class TypedOutputParameter {
+
+}
+
+class ResourceOutputParameter {
+}
+
+class ResourceLink {
+	url : String
+	method : String
+	help : String
+}
+
+
+class ActionMeta {
+}
+
+abstract class Validator {
+	message : String
+}
+
+class AcceptanceValidator {
+	value : any
+}
+
+class ConfirmationValidator {
+	equal : Bool
+}
+
+class CustomValidator {
+	description : String
+}
+
+class ExclusionValidator {
+	values : list
+}
+
+class FormatValidator {
+	rx : RegExp
+	match : Bool
+	description : String
+}
+
+abstract class InclusionValidator {
+
+}
+
+class ArrayInclusionValidator {
+	values : list
+}
+
+class HashInclusionValidator {
+	values : hash
+}
+
+abstract class LengthValidator {
+
+}
+
+class EqualLengthValidator {
+	equals : Integer
+}
+
+class RangeLengthValidator {
+	min : Integer
+	max : Integer
+}
+
+class NumericalityValidator {
+	min : Number
+	max : Number
+	step : Number
+	mod : Integer
+	odd : Bool
+	even : Bool
+}
+
+class PresenceValidator {
+	empty : Bool
+}
+
+Version -- Meta
+Version *-- Authentication
+
+Authentication <|-- Basic
+Authentication <|-- Token
+
+Token *-- Resource
+
+Version *-- Resource
+
+Resource *-- Resource
+Resource *-- Action
+
+Action *-- Example
+Action -- Parameters : input
+Action -- Parameters : output
+Action -- ActionMeta : object
+Action -- ActionMeta : global
+
+ActionMeta -- Parameters : input
+ActionMeta -- Parameters : output
+
+Parameters *-- Parameter
+
+Parameter <|-- InputParameter
+Parameter <|-- OutputParameter
+Parameter <|-- ResourceParameter
+
+ResourceParameter <|-- ResourceInputParameter
+ResourceParameter <|-- ResourceOutputParameter
+ResourceParameter -- Resource : associated with
+
+InputParameter <|-- TypedInputParameter
+InputParameter <|-- ResourceInputParameter
+
+TypedInputParameter *-- Validator
+
+Validator <|-- AcceptanceValidator
+Validator <|-- ConfirmationValidator
+ConfirmationValidator -- InputParameter : confirms
+Validator <|-- CustomValidator
+Validator <|-- ExclusionValidator
+Validator <|-- FormatValidator
+Validator <|-- InclusionValidator
+InclusionValidator <|-- ArrayInclusionValidator
+InclusionValidator <|-- HashInclusionValidator
+Validator <|-- LengthValidator
+LengthValidator <|-- EqualLengthValidator
+LengthValidator <|-- RangeLengthValidator
+Validator <|-- NumericalityValidator
+Validator <|-- PresenceValidator
+
+OutputParameter <|-- TypedOutputParameter
+OutputParameter <|-- ResourceOutputParameter
+
+ResourceInputParameter -- ResourceLink : value
+ResourceInputParameter -- ResourceLink : choices
+
+ResourceOutputParameter -- ResourceLink : value
+ResourceOutputParameter -- ResourceLink : choices
+
+@enduml

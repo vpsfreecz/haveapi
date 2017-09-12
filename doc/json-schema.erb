@@ -1,0 +1,443 @@
+<%
+require 'json'
+
+DEFINITIONS = {
+    version: {
+        type: :object,
+        properties: {
+            authentication: {
+                type: :object,
+                properties: {
+                    basic: { '$ref' => '#/definitions/auth_basic' },
+                    token: { '$ref' => '#/definitions/auth_token' },
+                }
+            },
+            resources: {
+                type: :object,
+                '$ref' => '#/definitions/resources'
+            },
+            meta: {
+                type: :object,
+                properties: {
+                    namespace: {
+                        type: :string,
+                        default: '_meta'
+                    }
+                }
+            },
+            help: { type: :string }
+        }
+    },
+
+    auth_basic: {
+        type: :object,
+    },
+
+    auth_token: {
+        type: :object,
+        properties: {
+            http_header: {
+                type: :string,
+                default: 'X-HaveAPI-Auth-Token'
+            },
+            query_parameter: {
+                type: :string,
+                default: '_auth_token'
+            },
+            resources: {
+                type: :object,
+                '$ref' => '#/definitions/resources'
+            }
+        }
+    },
+
+    resources: {
+        type: :object,
+        patternProperties: {
+            '^[a-z_]+$' => {
+                type: :object,
+                properties: {
+                    description: { type: :string },
+                    actions: {
+                        '$ref' => '#/definitions/actions'
+                    },
+                    resources: {
+                        '$ref' => '#/definitions/resources'
+                    }
+                }
+            }
+        }
+    },
+
+    actions: {
+        type: :object,
+        patternProperties: {
+            '^[a-z_]+$' => {
+                type: :object,
+                properties: {
+                    auth: { type: :boolean },
+                    description: { type: :string },
+                    aliases: {
+                        type: :array,
+                        items: { type: :string }
+                    },
+                    blocking: { type: :boolean },
+                    input: { '$ref' => '#/definitions/input_parameters' },
+                    output: { '$ref' => '#/definitions/output_parameters' },
+          					meta: { '$ref' => '#/definitions/action_meta' },
+                    examples: {
+                        type: :object,
+                        properties: {
+                            title: { type: :string },
+                            url_params: { type: :array, items: { type: :integer } },
+                            request: { type: :object },
+                            response: { type: :object },
+                            status: { type: :boolean },
+                            message: { type: :string },
+                            errors: {
+                                type: :object,
+                                patternProperties: {
+                                    '^[a-z_]+$' => {
+                                        type: :array,
+                                        items: { type: :string },
+                                    }
+                                }
+                            },
+                            http_status: { type: :integer },
+                            comment: { type: :string },
+                        }
+                    },
+                    url: { type: :string },
+                    method: { type: :string },
+                    help: { type: :string }
+                }
+            }
+        }
+
+    },
+
+    input_parameters: {
+        type: :object,
+        properties: {
+            parameters: {
+                type: :object,
+                patternProperties: {
+                    '^[a-z_]+$' => {
+                        type: :object,
+                        oneOf: [
+                            {
+                                title: 'Data type',
+                                type: :object,
+                                properties: {
+                                    required: { type: :boolean },
+                                    label: { type: :string },
+                                    description: { type: :string },
+                                    type: {
+                                        type: :string,
+                                        enum: %w(String Text Integer Float Datetime Boolean)
+                                    },
+                                    validators: { '$ref' => '#/definitions/input_validators' },
+                                    default: {},
+                                    protected: { type: :boolean },
+                                }
+                            },
+                            {
+                                title: 'Resource',
+                                type: :object,
+                                properties: {
+                                    required: { type: :boolean },
+                                    label: { type: :string },
+                                    description: { type: :string },
+                                    type: {
+                                        type: :string,
+                                        enum: %w(Resource)
+                                    },
+                                    resource: { type: :array },
+                                    value_id: { type: :string },
+                                    value_label: { type: :string },
+                                    value: {
+                                        type: :object,
+                                        properties: {
+                                            url: { type: :string },
+                                            method: { type: :string },
+                                            help: { type: :string },
+                                        }
+                                    },
+                                    choices: {
+                                        type: :object,
+                                        properties: {
+                                            url: { type: :string },
+                                            method: { type: :string },
+                                            help: { type: :string },
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            layout: {
+                type: :string,
+                enum: %w(hash hash_list object object_list),
+            },
+            namespace: { type: :string }
+        }
+    },
+
+    input_validators: {
+        type: :object,
+        properties: {
+            accept: {
+                type: :object,
+                properties: {
+                    value: {},
+                    message: { type: :string }
+                }
+            },
+            confirm: {
+                type: :object,
+                properties: {
+                    equal: { type: :boolean },
+                    parameter: { type: :string },
+                    message: { type: :string }
+                }
+            },
+            custom: { type: :string },
+            exclude: {
+                type: :object,
+                properties: {
+                    values: { type: :array },
+                    message: { type: :string }
+                }
+            },
+            format: {
+                type: :object,
+                properties: {
+                    rx: { type: :string },
+                    match: { type: :boolean },
+                    description: { type: :string },
+                    message: { type: :string }
+                }
+            },
+            include: {
+                type: :object,
+                properties: {
+                    values: {
+                        oneOf: [
+                            {
+                                title: 'Array of allowed values',
+                                type: :array
+                            },
+                            {
+                                title: 'Hash of allowed values',
+                                type: :object
+                            }
+
+                        ]
+                    },
+                    message: { type: :string }
+                }
+            },
+            length: {
+                oneOf: [
+                    {
+                        title: 'Equality',
+                        type: :object,
+                        properties: {
+                            equals: { type: :integer },
+                            message: { type: :string },
+                        }
+                    },
+                    {
+                        title: 'Interval',
+                        type: :object,
+                        properties: {
+                            min: { type: :integer },
+                            max: { type: :integer },
+                            message: { type: :string },
+                        }
+                    }
+                ]
+            },
+            number: {
+                type: :object,
+                properties: {
+                    min: { type: :number },
+                    max: { type: :number },
+                    step: { type: :number },
+                    mod: { type: :integer },
+                    odd: { type: :boolean },
+                    even: { type: :boolean },
+                    message: { type: :string },
+                }
+            },
+            present: {
+                type: :object,
+                properties: {
+                    empty: { type: :boolean },
+                    message: { type: :string },
+                }
+            }
+        }
+    },
+
+    output_parameters: {
+        type: :object,
+        properties: {
+            parameters: {
+                type: :object,
+                patternProperties: {
+                    '^[a-z_]+$' => {
+                        type: :object,
+                        oneOf: [
+                            {
+                                title: 'Data type',
+                                type: :object,
+                                properties: {
+                                    label: { type: :string },
+                                    description: { type: :string },
+                                    type: {
+                                        type: :string,
+                                        enum: %w(String Text Integer Float Datetime Boolean)
+                                    },
+                                    protected: { type: :boolean },
+                                }
+                            },
+                            {
+                                title: 'Resource',
+                                type: :object,
+                                properties: {
+                                    label: { type: :string },
+                                    description: { type: :string },
+                                    type: {
+                                        type: :string,
+                                        enum: %w(Resource)
+                                    },
+                                    resource: { type: :array },
+                                    value_id: { type: :string },
+                                    value_label: { type: :string },
+                                    value: {
+                                        type: :object,
+                                        properties: {
+                                            url: { type: :string },
+                                            method: { type: :string },
+                                            help: { type: :string },
+                                        }
+                                    },
+                                    choices: {
+                                        type: :object,
+                                        properties: {
+                                            url: { type: :string },
+                                            method: { type: :string },
+                                            help: { type: :string },
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            layout: {
+                type: :string,
+                enum: %w(hash hash_list object object_list),
+            },
+            namespace: { type: :string },
+        }
+    },
+
+    action_meta: {
+        type: :object,
+        properties: {
+            object: {
+                input: { '$ref' => '#/definitions/input_parameters' },
+                output: { '$ref' => '#/definitions/output_parameters' },
+            },
+            global: {
+                input: { '$ref' => '#/definitions/input_parameters' },
+                output: { '$ref' => '#/definitions/output_parameters' },
+            }
+        }
+    }
+}
+
+ROOTS = {
+    all: {
+        title: 'Describe all API versions',
+        type: :object,
+        properties: {
+            default_version: {},
+            versions: {
+                type: :object,
+                patternProperties: {
+                    '^.+$' => { '$ref' => '#/definitions/version' }
+                },
+                properties: {
+                    default: { '$ref' => '#/definitions/version' }
+                },
+            }
+        },
+        required: %i(default_version versions)
+    },
+
+    versions: {
+        title: 'Show available API versions',
+        type: :object,
+        properties: {
+            versions: { type: :array },
+            default: {}
+        },
+        required: %i(versions default)
+    },
+
+    default: {
+        title: 'Describe only the default version of the API',
+		'$ref' => '#/definitions/version'
+	},
+
+	envelope: {
+        title: 'All response are wrapped in this envelope',
+		type: :object,
+        properties: {
+			version: {},
+			status: { type: :boolean },
+            response: { type: :object },
+            message: { type: :string },
+			errors: {
+                type: :object,
+				patternProperties: {
+                    '^.+$' => { type: :array }
+                },
+            },
+        },
+        required: ['status'],
+	}
+}
+
+urls = {
+    '/' => {
+        root: :all,
+        definitions: true
+    },
+    '/?describe=versions' => {
+        root: :versions
+    },
+    '/?describe=default' => {
+        root: :default,
+        definitions: true
+    },
+}
+%>
+
+<h1 id="envelope">Envelope</h1>
+<pre><code><%= JSON.pretty_generate(ROOTS[:envelope]) %></code></pre>
+
+<%
+urls.each do |url, opts|
+  hash = ROOTS[opts[:root]]
+  hash = hash.merge(DEFINITIONS) if opts[:definitions]
+%>
+<h1 id="<%= opts[:root] %>">OPTIONS <%= url %></h1>
+<pre><code><%= JSON.pretty_generate(hash) %></code></pre>
+<% end %>

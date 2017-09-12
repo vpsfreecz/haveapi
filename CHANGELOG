@@ -1,3 +1,4 @@
+* Tue Sep 12 2017 - version 0.10.0
 - Client: accessor to communicator object
 - Basic authentication: add accessors to credentials
 - Token authentication: support for token renewal and revoking

@@ -1,6 +1,6 @@
 VERSION=$(shell cat VERSION)
 
-.PHONY: release version
+.PHONY: publish release version
 
 release:
 	mkdir -p dist
@@ -13,6 +13,15 @@ release:
 	
 	cd clients/js && ./node_modules/.bin/gulp
 	cp clients/js/dist/haveapi-client.js dist/
+
+publish:
+	gem push dist/haveapi-$(VERSION).gem
+	gem push dist/haveapi-client-$(VERSION).gem
+	
+	mkdir -p tmp/haveapi-client-js
+	cd clients/js && cp -p --parents $(shell cd clients/js && git ls-files) ../../tmp/haveapi-client-js/
+	cd tmp/haveapi-client-js && npm publish
+	rm -rf tmp/haveapi-client-js
 
 version:
 	@echo "$(VERSION)" > VERSION

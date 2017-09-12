@@ -1,0 +1,36 @@
+* Tue Sep 12 2017 - version 0.10.0
+- No changes
+
+* Sat Apr 22 2017 - version 0.9.0
+- No changes
+
+* Fri Feb 10 2017 - version 0.8.0
+- Send client's IP address in HTTP header Client-IP
+- Protocol v1.2
+
+* Fri Nov 25 2016 - version 0.7.1
+- No changes
+
+* Thu Nov 24 2016 - version 0.7.0
+- Protocol v1.1
+
+* Tue Oct 18 2016 - version 0.6.0
+- Action: more meaningful message in exception UnresolvedArguments
+
+* Thu Mar 03 2016 - version 0.5.2
+- No changes
+
+* Fri Feb 26 2016 - version 0.5.1
+- No changes
+
+* Tue Feb 9 2016 - version 0.5.0
+- No changes
+
+* Sun Jan 24 2016 - version 0.4.2
+- Fixed method ActionFailed->getErrors()
+
+* Sat Jan 23 2016 - version 0.4.1
+- No changes
+
+* Wed Jan 20 2016 - version 0.4.0
+- Check protocol version

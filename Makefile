@@ -1,6 +1,9 @@
 VERSION=$(shell cat VERSION)
 
-.PHONY: publish release version
+.PHONY: doc publish release version
+
+doc:
+	./utils/copydoc.sh servers/*
 
 release:
 	mkdir -p dist

@@ -10,7 +10,7 @@ Gem::Specification.new do |s|
   s.description = 'Framework for creating self-describing APIs'
   s.authors     = 'Jakub Skokan'
   s.email       = 'jakub.skokan@vpsfree.cz'
-  s.files       = `git ls-files -z`.split("\x0")
+  s.files       = `git ls-files -z`.split("\x0") + ['doc/*']
   s.license     = 'MIT'
 
   s.required_ruby_version = '>= 2.0.0'

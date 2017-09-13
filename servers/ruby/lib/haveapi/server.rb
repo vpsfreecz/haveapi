@@ -264,7 +264,7 @@ module HaveAPI
       @sinatra.get "#{@root}doc/json-schema" do
         content_type 'text/html'
         erb :doc_layout, layout: :main_layout do
-          @content = erb :'../../../doc/json-schema'
+          @content = File.read(File.join(settings.root, '../../doc/json-schema.html'))
           @sidebar = erb :'doc_sidebars/json-schema'
         end
       end

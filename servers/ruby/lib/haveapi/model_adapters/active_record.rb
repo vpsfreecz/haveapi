@@ -49,11 +49,11 @@ module HaveAPI::ModelAdapters
             #   associations in AR.
             if inc.is_a?(::Hash)
               inc.each_key do |k|
-                next(false) unless self.class.model.reflections.has_key?(k)
+                next(false) unless self.class.model.reflections.has_key?(k.to_s)
               end
 
             else
-              next(false) unless self.class.model.reflections.has_key?(inc)
+              next(false) unless self.class.model.reflections.has_key?(inc.to_s)
             end
 
             true

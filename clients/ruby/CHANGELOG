@@ -1,3 +1,5 @@
+- Update RestClient to v2.0.2
+
 * Tue Sep 12 2017 - version 0.10.0
 - Client: accessor to communicator object
 - Basic authentication: add accessors to credentials

@@ -1,4 +1,6 @@
+* Mon Nov 27 2017 - version 0.11.0
 - Update RestClient to v2.0.2
+- Merged code repository
 
 * Tue Sep 12 2017 - version 0.10.0
 - Client: accessor to communicator object

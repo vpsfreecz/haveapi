@@ -1,6 +1,7 @@
 <?php
 
 namespace HaveAPI;
+use HaveAPI\Client\Action;
 
 /**
  * A client for a HaveAPI based API.
@@ -161,12 +162,15 @@ class Client extends Client\Resource {
 		
 		return $s;
 	}
-	
+
+
 	/**
 	 * Invoke action $action with $params and interpret the response.
 	 * @param Action $action
 	 * @param array $params
 	 * @return mixed response
+	 * @throws Client\Exception\AuthenticationFailed
+	 * @throws Client\Exception\ActionFailed
 	 */
 	public function call($action, $params = array()) {
 		$time = 0.0;
@@ -195,7 +199,7 @@ class Client extends Client\Resource {
 	 * @param float &$time set to time spent communicating with the API, if not null
 	 * @return \Httpful\Response response
 	 */
-	public function directCall($action, $params = array(), &$time = NULL) {
+	public function directCall(Action $action, $params = array(), &$time = NULL) {
 		$fn = strtolower($action->httpMethod());
 		
 // 		echo "execute {$action->httpMethod()} {$action->url()}\n<br>\n";

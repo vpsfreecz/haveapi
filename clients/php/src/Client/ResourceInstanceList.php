@@ -2,6 +2,8 @@
 
 namespace HaveAPI\Client;
 
+use HaveAPI\Client;
+
 /**
  * A list of resource object instances.
  */

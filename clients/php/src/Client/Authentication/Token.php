@@ -1,6 +1,8 @@
 <?php
 
 namespace HaveAPI\Client\Authentication;
+use HaveAPI\Client\Resource;
+use Httpful\Request;
 
 /**
  * Provider for token authentication.
@@ -12,59 +14,68 @@ namespace HaveAPI\Client\Authentication;
 class Token extends Base {
 	const HTTP_HEADER = 0;
 	const QUERY_PARAMETER = 1;
-	
+
+	/**
+	 * @var \HaveAPI\Client\Resource
+	 */
 	private $rs;
+
 	private $configured = false;
+
 	private $token;
+
 	private $validTo = null;
+
 	private $via;
-	
+
 	/**
 	 * Request a new token if it isn't in the options.
 	 */
 	protected function setup() {
 		$this->rs = new \HaveAPI\Client\Resource($this->client, 'token', $this->description->resources->token, array());
 		$this->via = isSet($this->opts['via']) ? $this->opts['via'] : self::HTTP_HEADER;
-		
+
 		if(isSet($this->opts['token'])) {
 			$this->configured = true;
 			$this->token = $this->opts['token'];
 			return;
 		}
-		
+
 		$this->requestToken();
 	}
-	
+
 	/**
 	 * Add token header if configured. Checks token validity.
+	 * @param Request $request
 	 */
-	public function authenticate($request) {
+	public function authenticate(Request $request) {
 		if(!$this->configured)
 			return;
-		
+
 		$this->checkValidity();
-		
-		if($this->via == self::HTTP_HEADER)
+
+		if($this->via == self::HTTP_HEADER){
 			$request->addHeader($this->description->http_header, $this->token);
+		}
 	}
-	
+
 	/**
 	 * Returns token query parameter if configured.
 	 */
 	public function queryParameters() {
 		if(!$this->configured || $this->via != self::QUERY_PARAMETER)
 			return array();
-		
+
 		return array($this->description->query_parameter => $this->token);
 	}
-	
+
 	/**
 	 * Revoke the token.
 	 */
 	public function logout() {
 		$this->rs->revoke();
 	}
-	
+
 	/**
 	 * Request a new token from the API.
 	 */
@@ -75,17 +86,17 @@ class Token extends Base {
 			'lifetime' => isSet($this->opts['lifetime']) ? $this->opts['lifetime'] : 'renewable_auto',
 			'interval' => isSet($this->opts['interval']) ? $this->opts['interval'] : 300
 		));
-		
+
 		$this->token = $ret->getResponse()->token;
-		
+
 		$v = $ret->getResponse()->valid_to;
-		
+
 		if($v)
 			$this->validTo = strtotime($v);
-		
+
 		$this->configured = true;
 	}
-	
+
 	/**
 	 * Get a new token if the current one expired.
 	 */
@@ -93,14 +104,14 @@ class Token extends Base {
 		if($this->validTo && $this->validTo < time() && isSet($this->opts['username']) && isSet($this->opts['password']))
 			$this->requestToken();
 	}
-	
+
 	/**
 	 * @return string the token
 	 */
 	public function getToken() {
 		return $this->token;
 	}
-	
+
 	/**
 	 * @return int expiration time
 	 */

@@ -2,6 +2,8 @@
 
 namespace HaveAPI\Client;
 
+use HaveAPI\Client;
+
 /**
  * Resource object instance.
  */
@@ -32,7 +34,8 @@ class ResourceInstance extends Resource {
 			
 			if($response instanceof Response) {
 				$this->attrs = (array) $response->getResponse();
-				$this->args = $response->getMeta()->url_params;
+				$meta = $response->getMeta();
+				$this->args = isset($meta->url_params) ? $meta->url_params : array();
 				
 			} else {
 				$ns = $client->getSettings('meta')->{'namespace'};

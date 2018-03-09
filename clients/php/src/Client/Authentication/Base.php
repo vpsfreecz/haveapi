@@ -2,12 +2,27 @@
 
 namespace HaveAPI\Client\Authentication;
 
+use HaveAPI\Client;
+use Httpful\Request;
+
 /**
  * Base class extended by all authentication providers.
  */
 abstract class Base {
+
+	/**
+	 * @var Client
+	 */
 	protected $client;
+
+	/**
+	 * @var \stdClass
+	 */
 	protected $description;
+
+	/**
+	 * @var array
+	 */
 	protected $opts;
 	
 	/**
@@ -15,7 +30,7 @@ abstract class Base {
 	 * @param \stdClass $description description of this auth provider
 	 * @param array $opts options passed on to the provider
 	 */
-	public function __construct($client, $description, $opts) {
+	public function __construct(Client $client, $description, array $opts) {
 		$this->client = $client;
 		$this->description = $description;
 		$this->opts = $opts;
@@ -37,7 +52,7 @@ abstract class Base {
 	 * Called for every request sent to the API.
 	 * @param \Httpful\Request $request
 	 */
-	abstract public function authenticate($request);
+	abstract public function authenticate(Request $request);
 	
 	/**
 	 * Return query parameters to be sent in the request.

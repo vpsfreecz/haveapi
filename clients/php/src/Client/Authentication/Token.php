@@ -1,6 +1,8 @@
 <?php
 
 namespace HaveAPI\Client\Authentication;
+use HaveAPI\Client\Resource;
+use Httpful\Request;
 
 /**
  * Provider for token authentication.
@@ -12,11 +14,18 @@ namespace HaveAPI\Client\Authentication;
 class Token extends Base {
 	const HTTP_HEADER = 0;
 	const QUERY_PARAMETER = 1;
-	
+
+	/**
+	 * @var \HaveAPI\Client\Resource
+	 */
 	private $rs;
+
 	private $configured = false;
+
 	private $token;
+
 	private $validTo = null;
+
 	private $via;
 	
 	/**
@@ -34,18 +43,21 @@ class Token extends Base {
 		
 		$this->requestToken();
 	}
-	
+
+
 	/**
 	 * Add token header if configured. Checks token validity.
+	 * @param Request $request
 	 */
-	public function authenticate($request) {
+	public function authenticate(Request $request) {
 		if(!$this->configured)
 			return;
 		
 		$this->checkValidity();
 		
-		if($this->via == self::HTTP_HEADER)
+		if($this->via == self::HTTP_HEADER){
 			$request->addHeader($this->description->http_header, $this->token);
+		}
 	}
 	
 	/**

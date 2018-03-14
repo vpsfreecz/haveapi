@@ -1,3 +1,6 @@
+- Downgrade require_all to v1.5
+
+* Mon Nov 27 2017 - version 0.11.0
 - Fix `ModelAdapter::ActiveRecord` for AR 4.2
 - AR 4.1 not supported anymore
 

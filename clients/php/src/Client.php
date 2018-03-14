@@ -6,7 +6,7 @@ namespace HaveAPI;
  * A client for a HaveAPI based API.
  */
 class Client extends Client\Resource {
-	const VERSION = '0.11.0';
+	const VERSION = '0.11.1';
 	const PROTOCOL_VERSION = '1.2';
 
 	private $uri;

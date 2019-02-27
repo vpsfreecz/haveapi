@@ -1,3 +1,4 @@
+- Authorization and parameter filtering for action examples
 - Downgrade require_all to v1.5
 
 * Mon Nov 27 2017 - version 0.11.0

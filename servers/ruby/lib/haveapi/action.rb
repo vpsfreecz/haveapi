@@ -167,7 +167,7 @@ module HaveAPI
       end
 
       def example(title = '', &block)
-        @examples ||= []
+        @examples ||= ExampleList.new
         e = Example.new(title)
         e.instance_eval(&block)
         @examples << e
@@ -209,7 +209,7 @@ module HaveAPI
             input: @input ? @input.describe(context) : {parameters: {}},
             output: @output ? @output.describe(context) : {parameters: {}},
             meta: @meta ? @meta.merge(@meta) { |_, v| v && v.describe(context) } : nil,
-            examples: @examples ? @examples.map { |e| e.describe } : [],
+            examples: @examples ? @examples.describe(context) : [],
             url: context.resolved_url,
             method: route_method,
             help: "#{context.url}?method=#{route_method}"

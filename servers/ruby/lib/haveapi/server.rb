@@ -1,5 +1,6 @@
 require 'erb'
 require 'redcarpet'
+require 'tilt'
 require 'cgi'
 require 'haveapi/hooks'
 
@@ -160,6 +161,10 @@ module HaveAPI
       @root = prefix
 
       @sinatra = Sinatra.new do
+        # Preload template engine for .md -- without this, tilt will not search
+        # for markdown files with extension .md, only .markdown
+        Tilt[:md]
+
         set :views, settings.root + '/views'
         set :public_folder, settings.root + '/public'
         set :bind, '0.0.0.0'

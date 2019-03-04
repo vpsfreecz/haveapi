@@ -1,3 +1,5 @@
+require 'haveapi/client/resource'
+
 module HaveAPI::Client
   # Instance of an object from the API.
   # An instance of this class may be in three states:

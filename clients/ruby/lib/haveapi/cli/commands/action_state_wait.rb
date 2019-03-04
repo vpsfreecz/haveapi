@@ -1,3 +1,5 @@
+require 'haveapi/cli/command'
+
 module HaveAPI::CLI::Commands
   class ActionStateWait < HaveAPI::CLI::Command
     cmd :action_state, :wait

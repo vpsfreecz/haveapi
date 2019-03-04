@@ -10,4 +10,7 @@ module HaveAPI
   end
 end
 
-require_rel 'client'
+require_rel 'client/*.rb'
+require_rel 'client/authentication/'
+require_rel 'client/parameters/'
+require_rel 'client/validators/'

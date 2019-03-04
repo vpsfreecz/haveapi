@@ -1,3 +1,5 @@
+require 'haveapi/client/validator'
+
 module HaveAPI::Client
   class Validators::Presence < Validator
     name :present

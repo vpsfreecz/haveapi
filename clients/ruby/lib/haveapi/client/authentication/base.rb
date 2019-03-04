@@ -1,3 +1,5 @@
+require 'haveapi/client/communicator'
+
 module HaveAPI::Client
   module Authentication
     # Raise this exception when authentication process fails somewhere

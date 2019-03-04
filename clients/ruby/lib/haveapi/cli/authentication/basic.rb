@@ -1,3 +1,5 @@
+require 'haveapi/cli/authentication/base'
+
 module HaveAPI::CLI::Authentication
   class Basic < Base
     register :basic

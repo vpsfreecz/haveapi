@@ -1,4 +1,4 @@
-require_relative 'client'
+require 'haveapi/client'
 
 module HaveAPI
   module CLI
@@ -6,5 +6,6 @@ module HaveAPI
   end
 end
 
-require_rel 'cli'
-require_rel 'cli/commands'
+require_rel 'cli/*.rb'
+require_rel 'cli/authentication/'
+require_rel 'cli/commands/'

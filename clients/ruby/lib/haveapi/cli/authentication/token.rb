@@ -1,3 +1,5 @@
+require 'haveapi/cli/authentication/base'
+
 module HaveAPI::CLI::Authentication
   class Token < Base
     register :token

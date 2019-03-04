@@ -1,6 +1,8 @@
 source 'https://rubygems.org'
 gemspec
 
+gem 'haveapi-client', path: '../../clients/ruby'
+
 group :test do
   gem 'rspec'
   gem 'rack-test'

@@ -275,7 +275,7 @@ module HaveAPI
         end
       end
 
-      @sinatra.get %r{#{@root}doc/([^\.]+)[\.md]?} do |f|
+      @sinatra.get %r{#{@root}doc/([^\.]+)(\.md)?} do |f, _|
         content_type 'text/html'
         erb :doc_layout, layout: :main_layout do
           begin

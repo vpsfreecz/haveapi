@@ -551,9 +551,6 @@ module HaveAPI
                 self.class.model_adapter(self.class.input.layout).input(@safe_params[input.namespace]))
         end
 
-        # Remove duplicit key
-        @safe_params.delete(input.namespace.to_s)
-
         # Now check required params, convert types and set defaults
         input.validate(@safe_params)
       end

@@ -3,7 +3,7 @@ defmodule HaveAPI.Client.Mixfile do
 
   def project do
     [app: :haveapi_client,
-     version: "0.11.0",
+     version: "0.12.0",
      elixir: "~> 1.4",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,

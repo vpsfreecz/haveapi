@@ -1,3 +1,6 @@
+require 'haveapi/action'
+require 'haveapi/actions/paginable'
+
 module HaveAPI
   module Actions
     module Default

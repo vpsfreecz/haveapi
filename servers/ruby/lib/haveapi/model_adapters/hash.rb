@@ -1,3 +1,5 @@
+require 'haveapi/model_adapter'
+
 module HaveAPI::ModelAdapters
   # Simple hash adapter. Model is just a hash of parameters
   # and their values.

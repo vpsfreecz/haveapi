@@ -1,3 +1,5 @@
+require 'haveapi/client_example'
+
 module HaveAPI::ClientExamples
   class JsClient < HaveAPI::ClientExample
     label 'JavaScript'

@@ -1,3 +1,6 @@
+require 'haveapi/resource'
+require 'haveapi/action'
+
 module HaveAPI::Authentication::Token
   module Resources
     class Token < HaveAPI::Resource

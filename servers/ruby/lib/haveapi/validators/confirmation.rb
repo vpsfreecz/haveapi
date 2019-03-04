@@ -1,3 +1,5 @@
+require 'haveapi/validator'
+
 module HaveAPI
   # Checks that two parameters are equal or not equal.
   #

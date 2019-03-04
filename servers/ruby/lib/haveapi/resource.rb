@@ -1,3 +1,5 @@
+require 'haveapi/common'
+
 module HaveAPI
   class Resource < Common
     obj_type :resource

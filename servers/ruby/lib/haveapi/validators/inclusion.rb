@@ -1,3 +1,5 @@
+require 'haveapi/validator'
+
 module HaveAPI
   # Checks that the value is from given set of allowed values.
   #

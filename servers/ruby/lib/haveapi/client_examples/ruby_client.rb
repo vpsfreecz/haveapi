@@ -1,4 +1,5 @@
 require 'pp'
+require 'haveapi/client_example'
 
 module HaveAPI::ClientExamples
   class RubyClient < HaveAPI::ClientExample

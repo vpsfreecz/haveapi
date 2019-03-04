@@ -1,3 +1,7 @@
+require 'haveapi/common'
+require 'haveapi/hooks'
+require 'haveapi/metadata'
+
 module HaveAPI
   class Action < Common
     obj_type :action

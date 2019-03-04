@@ -1,5 +1,6 @@
 require 'net/smtp'
 require 'mail'
+require 'haveapi/extensions/base'
 
 module HaveAPI::Extensions
   # This extension mails exceptions raised during action execution and description

@@ -1,3 +1,5 @@
+require 'haveapi/authentication/base'
+
 module HaveAPI::Authentication
   module Token
     # Exception that has to be raised when generated token already exists.

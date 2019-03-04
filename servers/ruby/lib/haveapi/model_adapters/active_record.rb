@@ -1,3 +1,5 @@
+require 'haveapi/model_adapter'
+
 module HaveAPI::ModelAdapters
   # Adapter for ActiveRecord models.
   class ActiveRecord < ::HaveAPI::ModelAdapter

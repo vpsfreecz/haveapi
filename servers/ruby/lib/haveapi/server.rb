@@ -1,6 +1,7 @@
 require 'erb'
 require 'redcarpet'
 require 'cgi'
+require 'haveapi/hooks'
 
 module HaveAPI
   class Server

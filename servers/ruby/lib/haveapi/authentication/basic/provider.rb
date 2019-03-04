@@ -1,3 +1,5 @@
+require 'haveapi/authentication/base'
+
 module HaveAPI::Authentication
   module Basic
     # HTTP basic authentication provider.

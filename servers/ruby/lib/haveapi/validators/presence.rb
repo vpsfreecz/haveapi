@@ -1,3 +1,5 @@
+require 'haveapi/validator'
+
 module HaveAPI
   # Checks the value is present and not empty.
   #

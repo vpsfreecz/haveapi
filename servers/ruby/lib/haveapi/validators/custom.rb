@@ -1,3 +1,5 @@
+require 'haveapi/validator'
+
 module HaveAPI
   # Custom validator. It has only a short form, taking the description
   # of the validator. This validator passes every value. It is up to the

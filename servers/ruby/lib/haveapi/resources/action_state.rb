@@ -1,3 +1,5 @@
+require 'haveapi/resource'
+
 module HaveAPI::Resources
   class ActionState < HaveAPI::Resource
     desc 'Browse states of blocking actions'

@@ -1,3 +1,5 @@
+require 'haveapi/validator'
+
 module HaveAPI
   # Checks the value is a number or a string containing only digits.
   #
@@ -8,7 +10,7 @@ module HaveAPI
   #     step: 2,
   #     message: 'the error message'
   #   }
-  # 
+  #
   # Will allow values +3+, +5+, +7+ and +9+.
   #
   #   string :param, number: {
@@ -16,7 +18,7 @@ module HaveAPI
   #     max: 10,
   #     mod: 2,
   #   }
-  # 
+  #
   # Will allow values +4+, +6+, +8+ and +10+.
   class Validators::Numericality < Validator
     name :number
@@ -47,17 +49,17 @@ module HaveAPI
         msg += '; ' unless msg.empty?
         msg += "in steps of #{@step}"
       end
-      
+
       if @mod
         msg += '; ' unless msg.empty?
         msg += "mod #{@step} must equal zero"
       end
-      
+
       if @odd
         msg += '; ' unless msg.empty?
         msg += "odd"
       end
-      
+
       if @even
         msg += '; ' unless msg.empty?
         msg += "even"

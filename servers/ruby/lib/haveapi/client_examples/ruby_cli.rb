@@ -3,6 +3,7 @@ module HaveAPI
 end
 
 require 'haveapi/cli/output_formatter'
+require 'haveapi/client_example'
 
 module HaveAPI::ClientExamples
   class RubyCli < HaveAPI::ClientExample

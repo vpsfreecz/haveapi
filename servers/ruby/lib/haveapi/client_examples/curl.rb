@@ -1,4 +1,5 @@
 require 'pp'
+require 'haveapi/client_examples/http'
 
 module HaveAPI::ClientExamples
   class Curl < Http

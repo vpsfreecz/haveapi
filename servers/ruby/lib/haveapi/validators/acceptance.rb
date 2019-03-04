@@ -1,3 +1,5 @@
+require 'haveapi/validator'
+
 module HaveAPI
   # Accepts a single configured value.
   #

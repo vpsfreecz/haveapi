@@ -1,3 +1,5 @@
+require 'haveapi/validator'
+
 module HaveAPI
   # Checks the length of a string. It does not have a short form.
   #

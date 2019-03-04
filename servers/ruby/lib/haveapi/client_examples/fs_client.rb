@@ -1,3 +1,5 @@
+require 'haveapi/client_example'
+
 module HaveAPI::ClientExamples
   class FsClient < HaveAPI::ClientExample
     label 'File system'

@@ -1,3 +1,5 @@
+require 'haveapi/client_example'
+
 module HaveAPI::ClientExamples
   class PhpClient < HaveAPI::ClientExample
     label 'PHP'

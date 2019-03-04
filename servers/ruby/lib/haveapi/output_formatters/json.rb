@@ -1,3 +1,5 @@
+require 'haveapi/output_formatters/base'
+
 module HaveAPI::OutputFormatters
   class Json < BaseFormatter
     handle 'application/json'

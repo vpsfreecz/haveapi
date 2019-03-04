@@ -1,3 +1,5 @@
+require 'haveapi/extensions/base'
+
 module HaveAPI::Extensions
   class ActionExceptions < Base
     class << self

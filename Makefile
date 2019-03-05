@@ -8,11 +8,12 @@ doc:
 release:
 	mkdir -p dist
 	
-	cd servers/ruby && rake build
-	mv servers/ruby/pkg/haveapi-$(VERSION).gem dist/
-	
 	cd clients/ruby && rake build
 	mv clients/ruby/pkg/haveapi-client-$(VERSION).gem dist/
+	gem install dist/haveapi-client-$(VERSION).gem
+	
+	cd servers/ruby && rake build
+	mv servers/ruby/pkg/haveapi-$(VERSION).gem dist/
 	
 	cd clients/js && ./node_modules/.bin/gulp
 	cp clients/js/dist/haveapi-client.js dist/

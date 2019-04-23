@@ -25,7 +25,7 @@ module HaveAPI::GoClient
     # @return [String]
     attr_reader :go_namespace
 
-    def initialize(action, direction, desc)
+    def initialize(action, direction, desc, prefix: nil)
       @action = action
       @direction = direction
       @layout = desc[:layout]
@@ -33,7 +33,7 @@ module HaveAPI::GoClient
       @parameters = desc[:parameters].map do |k, v|
         Parameter.new(self, k, v)
       end.reject { |p| p.type == 'Custom' }
-      @go_type = action.go_type + direction.to_s.capitalize
+      @go_type = action.go_type + (prefix ? prefix : '') + direction.to_s.capitalize
       @go_namespace = camelize(desc[:namespace])
     end
 

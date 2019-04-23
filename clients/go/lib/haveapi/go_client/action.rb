@@ -27,6 +27,9 @@ module HaveAPI::GoClient
     # @return [String]
     attr_reader :go_type
 
+    # @return [Metadata]
+    attr_reader :metadata
+
     # @return [InputOutput]
     attr_reader :input
 
@@ -66,6 +69,8 @@ module HaveAPI::GoClient
       @output = desc[:output] && InputOutput.new(self, :output, desc[:output])
       @http_method = desc[:method]
       @path = desc[:url]
+      @metadata = desc[:meta] && Metadata.new(self, desc[:meta])
+      @blocking = desc[:blocking]
     end
 
     # Return action name with all aliases, camelized
@@ -96,10 +101,16 @@ module HaveAPI::GoClient
       end.map { |v| send(v) }
     end
 
+    def blocking?
+      @blocking
+    end
+
     def resolve_associations
       input_output.each do |io|
         io.resolve_associations
       end
+
+      metadata && metadata.resolve_associations
     end
 
     protected

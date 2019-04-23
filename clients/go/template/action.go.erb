@@ -47,14 +47,28 @@ type <%= action.output.go_type %> struct {
 }
 <% end -%>
 
+<% if action.blocking? -%>
+// <%= action.metadata.global.output.go_type %> is a type for global output metadata parameters
+type <%= action.metadata.global.output.go_type %> struct {
+<% action.metadata.global.output.parameters.each do |p| -%>
+	<%= p.go_name %> <%= p.go_out_type %> `json:"<%= p.name %>"`
+<% end -%>
+}
+<% end -%>
+
 // Type for action response, including envelope
 type <%= action.go_response_type %> struct {
+	Action *<%= action.go_type %> `json:"-"`
 	*Envelope
 <% if action.has_output? -%>
 <% if %w(hash object).include?(action.output.layout) -%>
 	// Action output encapsulated within a namespace
 	Response *struct {
 		<%= action.output.go_namespace %> *<%= action.output.go_type %> `json:"<%= action.output.namespace %>"`
+<% if action.blocking? -%>
+		// Global output metadata
+		Meta *<%= action.metadata.global.output.go_type %> `json:"<%= action.resource.api_version.metadata_namespace %>"`
+<% end -%>
 	}
 
 	// Action output without the namespace
@@ -63,11 +77,21 @@ type <%= action.go_response_type %> struct {
 	// Action output encapsulated within a namespace
 	Response *struct {
 		<%= action.output.go_namespace %> []*<%= action.output.go_type %> `json:"<%= action.output.namespace %>"`
+<% if action.blocking? -%>
+		// Global output metadata
+		Meta *<%= action.metadata.global.output.go_type %> `json:"<%= action.resource.api_version.metadata_namespace %>"`
+<% end -%>
 	}
 
 	// Action output without the namespace
 	Output []*<%= action.output.go_type %>
 <% end -%>
+<% elsif action.blocking? -%>
+	// Action output encapsulated within a namespace
+	Response *struct {
+		// Global output metadata
+		Meta *<%= action.metadata.global.output.go_type %> `json:"<%= action.resource.api_version.metadata_namespace %>"`
+	}
 <% end -%>
 }
 
@@ -155,7 +179,7 @@ func (inv *<%= action.go_invocation_type %>) Call() (*<%= action.go_response_typ
 <% else -%>
 	queryParams := make(map[string]string)
 <% end -%>
-	resp := &<%= action.go_response_type %>{}
+	resp := &<%= action.go_response_type %>{Action: inv.Action}
 	err := inv.Action.Client.DoQueryStringRequest(inv.Path, queryParams, resp)
 <% if action.has_output? -%>
 	if err == nil && resp.Status {
@@ -169,7 +193,7 @@ func (inv *<%= action.go_invocation_type %>) Call() (*<%= action.go_response_typ
 <% else -%>
 	input := make(map[string]interface{})
 <% end -%>
-	resp := &<%= action.go_response_type %>{}
+	resp := &<%= action.go_response_type %>{Action: inv.Action}
 	err := inv.Action.Client.DoBodyRequest("<%= action.http_method %>", inv.Path, input, resp)
 <% if action.has_output? -%>
 	if err == nil && resp.Status {
@@ -179,6 +203,84 @@ func (inv *<%= action.go_invocation_type %>) Call() (*<%= action.go_response_typ
 	return resp, err
 <% end -%>
 }
+
+<% if action.blocking? -%>
+// IsBlocking checks whether the current invocation resulted in a blocking operation
+func (resp *<%= action.go_response_type %>) IsBlocking() bool {
+	return resp.Response.Meta != nil && resp.Response.Meta.ActionStateId > 0
+}
+
+// OperationStatus queries the current state of the blocking operation
+func (resp *<%= action.go_response_type %>) OperationStatus() (*ActionActionStateShowResponse, error) {
+	req := resp.Action.Client.ActionState.Show.Prepare()
+	req.SetPathParamInt("action_state_id", resp.Response.Meta.ActionStateId)
+	return req.Call()
+}
+
+// WaitForOperation waits for a blocking operation to finish
+func (resp *<%= action.go_response_type %>) WaitForOperation(timeout float64) (*ActionActionStatePollResponse, error) {
+	req := resp.Action.Client.ActionState.Poll.Prepare()
+	req.SetPathParamInt("action_state_id", resp.Response.Meta.ActionStateId)
+	req.SetInput(&ActionActionStatePollInput{
+		Timeout: timeout,
+	})
+	req.SelectParameters("Timeout")
+	return req.Call()
+}
+
+// WatchOperation waits for a blocking operation to finish and calls a callback
+// function with progress updates
+func (resp *<%= action.go_response_type %>) WatchOperation(timeout float64, updateIn float64, callback OperationProgressCallback) (*ActionActionStatePollResponse, error) {
+	req := resp.Action.Client.ActionState.Poll.Prepare()
+	req.SetPathParamInt("action_state_id", resp.Response.Meta.ActionStateId)
+	req.SetInput(&ActionActionStatePollInput{
+		Timeout: timeout,
+		UpdateIn: updateIn,
+	})
+	req.SelectParameters("Timeout", "UpdateIn")
+	pollResp, err := req.Call()
+
+	if err != nil {
+		return pollResp, err
+	} else if pollResp.Output.Finished {
+		return pollResp, nil
+	}
+
+	if callback(pollResp.Output) == StopWatching {
+		return pollResp, nil
+	}
+
+	for {
+		req = resp.Action.Client.ActionState.Poll.Prepare()
+		req.SetPathParamInt("action_state_id", resp.Response.Meta.ActionStateId)
+		req.SetInput(&ActionActionStatePollInput{
+			Timeout: timeout,
+			UpdateIn: updateIn,
+			Status: pollResp.Output.Status,
+			Current: pollResp.Output.Current,
+			Total: pollResp.Output.Total,
+		})
+		pollResp, err = req.Call()
+
+		if err != nil {
+			return pollResp, err
+		} else if pollResp.Output.Finished {
+			return pollResp, nil
+		}
+
+		if callback(pollResp.Output) == StopWatching {
+			return pollResp, nil
+		}
+	}
+}
+
+// CancelOperation cancels the current blocking operation
+func (resp *<%= action.go_response_type %>) CancelOperation() (*ActionActionStateCancelResponse, error) {
+	req := resp.Action.Client.ActionState.Cancel.Prepare()
+	req.SetPathParamInt("action_state_id", resp.Response.Meta.ActionStateId)
+	return req.Call()
+}
+<% end -%>
 
 <% if action.http_method == 'GET' && action.has_input? -%>
 func (inv *<%= action.go_invocation_type %>) convertInputToQueryParams() map[string]string {

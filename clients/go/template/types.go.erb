@@ -4,6 +4,15 @@ import (
 	"strconv"
 )
 
+type ProgressCallbackReturn int
+
+const (
+	ContinueWatching = iota
+	StopWatching = iota
+)
+
+type OperationProgressCallback func(*ActionActionStatePollOutput) ProgressCallbackReturn
+
 func convertInt64ToString(v int64) string {
 	return strconv.FormatInt(v, 10)
 }

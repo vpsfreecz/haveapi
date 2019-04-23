@@ -73,9 +73,8 @@ type <%= action.go_response_type %> struct {
 
 <% if !action.has_path_params? && !action.has_input? -%>
 // Call the action directly without any path or input parameters
-func (action *<%= action.go_type %>) Call() {
-	action.Prepare().Call()
-	return
+func (action *<%= action.go_type %>) Call() (*<%= action.go_response_type %>, error) {
+	return action.Prepare().Call()
 }
 <% end -%>
 

@@ -4,7 +4,7 @@ module HaveAPI::GoClient
   class Authentication::Basic < Authentication::Base
     register :basic
 
-    def initialize(name, desc)
+    def initialize(api_version, name, desc)
 
     end
 

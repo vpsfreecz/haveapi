@@ -11,9 +11,9 @@ module HaveAPI::GoClient
       @methods[name.to_sym]
     end
 
-    def self.new(name, *args)
+    def self.new(api_version, name, *args)
       klass = get(name) || Authentication::Unsupported
-      klass.new(name, *args)
+      klass.new(api_version, name, *args)
     end
   end
 end

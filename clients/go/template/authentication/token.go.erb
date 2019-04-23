@@ -1,0 +1,85 @@
+package <%= package %>
+
+import (
+	"errors"
+	"net/http"
+)
+
+type Mode int
+
+const (
+	HttpHeader Mode = iota
+	QueryParameter = iota
+)
+
+type TokenAuth struct {
+	Resource *AuthTokenResourceToken
+	Token string
+	Mode Mode
+}
+
+func (auth *TokenAuth) Authenticate(request *http.Request) {
+	switch auth.Mode {
+	case HttpHeader:
+		request.Header.Set("<%= auth.http_header %>", auth.Token)
+
+	case QueryParameter:
+		q := request.URL.Query()
+		q.Add("<%= auth.query_parameter %>", auth.Token)
+		request.URL.RawQuery = q.Encode()
+	}
+}
+
+func (client *Client) SetNewTokenAuth(username string, password string, lifetime string, interval int) error {
+	resource := NewAuthTokenResourceToken(client)
+
+	request := resource.Request.Prepare()
+	request.SetInput(&AuthTokenActionTokenRequestInput{
+		Login: username,
+		Password: password,
+		Lifetime: lifetime,
+		Interval: int64(interval),
+	})
+
+	resp, err := request.Call()
+
+	if err != nil {
+		return err
+	} else if !resp.Status {
+		return errors.New("Unable to request token: " + resp.Message)
+	}
+
+	client.Authentication = &TokenAuth{
+		Resource: resource,
+		Token: resp.Output.Token,
+		Mode: HttpHeader,
+	}
+
+	return nil
+}
+
+func (client *Client) SetExistingTokenAuth(token string) {
+	client.Authentication = &TokenAuth{
+		Resource: NewAuthTokenResourceToken(client),
+		Token: token,
+		Mode: HttpHeader,
+	}
+}
+
+func (client *Client) SetTokenAuthMode(mode Mode) {
+	client.Authentication.(*TokenAuth).Mode = mode
+}
+
+func (client *Client) RevokeAuthToken() error {
+	revoke := client.Authentication.(*TokenAuth).Resource.Revoke.Prepare()
+	resp, err := revoke.Call()
+
+	if err != nil {
+		return err
+	} else if !resp.Status {
+		return errors.New("Unable to revoke token: " + resp.Message)
+	}
+
+	client.Authentication = nil
+	return nil
+}

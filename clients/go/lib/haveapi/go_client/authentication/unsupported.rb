@@ -2,7 +2,7 @@ require 'haveapi/go_client/authentication/base'
 
 module HaveAPI::GoClient
   class Authentication::Unsupported < Authentication::Base
-    def initialize(name, desc)
+    def initialize(api_version, name, desc)
       warn "Ignoring unsupported authentication method #{name}"
     end
 

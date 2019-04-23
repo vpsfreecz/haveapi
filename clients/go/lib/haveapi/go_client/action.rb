@@ -7,9 +7,10 @@ module HaveAPI::GoClient
     attr_reader :resource, :name, :aliases, :go_name, :go_type, :input, :output,
       :http_method, :url, :go_invocation_type, :go_request_type, :go_response_type
 
-    def initialize(resource, name, desc)
+    def initialize(resource, name, desc, prefix: nil)
       @resource = resource
       @name = name.to_s
+      @prefix = prefix
       @aliases = desc[:aliases]
       @go_name = camelize(name)
       @go_type = full_go_type
@@ -52,8 +53,12 @@ module HaveAPI::GoClient
     end
 
     protected
+    attr_reader :prefix
+
     def full_go_type
-      names = ['Action']
+      names = []
+      names << camelize(prefix) if prefix
+      names << 'Action'
       names.concat(resource.resource_path.map(&:go_name))
       names << go_name
       names.join('')

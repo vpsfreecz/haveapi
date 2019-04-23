@@ -15,6 +15,10 @@ module HaveAPI::GoClient
     # @return [Array<String>]
     attr_reader :aliases
 
+    # Full action name, including resource
+    # @return [String]
+    attr_reader :full_dot_name
+
     # Name for usage in Go
     # @return [String]
     attr_reader :go_name
@@ -52,6 +56,7 @@ module HaveAPI::GoClient
       @name = name.to_s
       @prefix = prefix
       @aliases = desc[:aliases]
+      @full_dot_name = resource.full_dot_name + '#' + @name.capitalize
       @go_name = camelize(name)
       @go_type = full_go_type
       @go_invocation_type = go_type + 'Invocation'

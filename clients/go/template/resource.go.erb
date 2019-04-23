@@ -1,12 +1,17 @@
 package <%= package %>
 
+// Type for resource <%= resource.full_dot_name %>
 type <%= resource.go_type %> struct {
+	// Pointer to client
 	Client *Client
+
 <% resource.resources.each do |r| -%>
+	// Resource <%= r.full_dot_name %>
 	<%= r.go_name %> *<%= r.go_type %>
 <% end -%>
 <% resource.actions.each do |a| -%>
 <% a.all_names do |go_name| -%>
+	// Action <%= a.full_dot_name %>
 	<%= go_name %> *<%= a.go_type %>
 <% end -%>
 <% end -%>

@@ -16,6 +16,10 @@ module HaveAPI::GoClient
     # @return [String]
     attr_reader :full_name
 
+    # Full name with dots
+    # @return [String]
+    attr_reader :full_dot_name
+
     # Name in Go
     # @return [String]
     attr_reader :go_name
@@ -37,6 +41,7 @@ module HaveAPI::GoClient
       @name = name.to_s
       @prefix = prefix
       @full_name = resource_path.map(&:name).join('_')
+      @full_dot_name = resource_path.map(&:name).map(&:capitalize).join('.')
       @go_name = camelize(name)
       @go_type = full_go_type
       @resources = desc[:resources].map { |k, v| Resource.new(self, k, v) }

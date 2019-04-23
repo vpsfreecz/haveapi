@@ -8,13 +8,21 @@ import (
 type Mode int
 
 const (
+	// Send the token via HTTP header <%= auth.http_header %>
 	HttpHeader Mode = iota
+
+	// Send the token via query parameter <%= auth.query_parameter %>
 	QueryParameter = iota
 )
 
 type TokenAuth struct {
+	// Resource for token manipulation
 	Resource *AuthTokenResourceToken
+
+	// The authentication token
 	Token string
+
+	// Mode determines how is the authentication token sent to the API
 	Mode Mode
 }
 
@@ -30,6 +38,10 @@ func (auth *TokenAuth) Authenticate(request *http.Request) {
 	}
 }
 
+// SetNewTokenAuth obtains a new authentication token with username and password
+//
+// lifetime can be one of: fixed, renewable_auto, renewable_manual or permanent
+// interval determines how many seconds will the token be valid
 func (client *Client) SetNewTokenAuth(username string, password string, lifetime string, interval int) error {
 	resource := NewAuthTokenResourceToken(client)
 
@@ -58,6 +70,7 @@ func (client *Client) SetNewTokenAuth(username string, password string, lifetime
 	return nil
 }
 
+// SetExistingTokenAuth will use a previously acquired token
 func (client *Client) SetExistingTokenAuth(token string) {
 	client.Authentication = &TokenAuth{
 		Resource: NewAuthTokenResourceToken(client),
@@ -66,10 +79,13 @@ func (client *Client) SetExistingTokenAuth(token string) {
 	}
 }
 
+// SetTokenAuthMode can be used to change the way the token is sent to the API
 func (client *Client) SetTokenAuthMode(mode Mode) {
 	client.Authentication.(*TokenAuth).Mode = mode
 }
 
+// RevokeAuthToken will revoke the authentication token and remove authentication
+// from the client
 func (client *Client) RevokeAuthToken() error {
 	revoke := client.Authentication.(*TokenAuth).Resource.Revoke.Prepare()
 	resp, err := revoke.Call()

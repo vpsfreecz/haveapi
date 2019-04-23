@@ -6,7 +6,9 @@ import (
 <% end -%>
 )
 
+// <%= action.go_type %> is a type for action <%= action.full_dot_name %>
 type <%= action.go_type %> struct {
+	// Pointer to client
 	Client *Client
 }
 
@@ -17,6 +19,7 @@ func New<%= action.go_type %>(client *Client) *<%= action.go_type %> {
 }
 
 <% if action.has_input? -%>
+// <%= action.input.go_type %> is a type for action input parameters
 type <%= action.input.go_type %> struct {
 <% action.input.parameters.each do |p| -%>
 	<%= p.go_name %> <%= p.go_in_type %> `json:"<%= p.name %>"`
@@ -24,6 +27,7 @@ type <%= action.input.go_type %> struct {
 }
 
 <% if action.http_method != 'GET' -%>
+// <%= action.go_request_type %> is a type for the entire action request
 type <%= action.go_request_type %> struct {
 	<%= action.input.go_namespace %> map[string]interface{} `json:"<%= action.input.namespace %>"`
 }
@@ -31,6 +35,7 @@ type <%= action.go_request_type %> struct {
 <% end -%>
 
 <% if action.has_output? -%>
+// <%= action.output.go_type %> is a type for action output parameters
 type <%= action.output.go_type %> struct {
 <% action.output.parameters.each do |p| -%>
 <% if p.association -%>
@@ -42,30 +47,39 @@ type <%= action.output.go_type %> struct {
 }
 <% end -%>
 
+// Type for action response, including envelope
 type <%= action.go_response_type %> struct {
 	*Envelope
 <% if action.has_output? -%>
 <% if %w(hash object).include?(action.output.layout) -%>
+	// Action output encapsulated within a namespace
 	Response *struct {
 		<%= action.output.go_namespace %> *<%= action.output.go_type %> `json:"<%= action.output.namespace %>"`
 	}
+
+	// Action output without the namespace
 	Output *<%= action.output.go_type %>
 <% elsif %w(hash_list object_list).include?(action.output.layout) -%>
+	// Action output encapsulated within a namespace
 	Response *struct {
 		<%= action.output.go_namespace %> []*<%= action.output.go_type %> `json:"<%= action.output.namespace %>"`
 	}
+
+	// Action output without the namespace
 	Output []*<%= action.output.go_type %>
 <% end -%>
 <% end -%>
 }
 
 <% if !action.has_path_params? && !action.has_input? -%>
+// Call the action directly without any path or input parameters
 func (action *<%= action.go_type %>) Call() {
 	action.Prepare().Call()
 	return
 }
 <% end -%>
 
+// Prepare the action for invocation
 func (action *<%= action.go_type %>) Prepare() *<%= action.go_invocation_type%> {
 	return &<%= action.go_invocation_type %>{
 		Action: action,
@@ -73,20 +87,29 @@ func (action *<%= action.go_type %>) Prepare() *<%= action.go_invocation_type%> 
 	}
 }
 
+// <%= action.go_invocation_type %> is used to configure action for invocation
 type <%= action.go_invocation_type %> struct {
+	// Pointer to the action
 	Action *<%= action.go_type %>
+
+	// Path which may contain parameters that need to be set
 	Path string
 <% if action.has_input? -%>
+	// Input parameters
 	Input *<%= action.input.go_type %>
+
+	// Only selected parameters are sent to the API. Ignored if empty.
 	SelectedParameters []string
 <% end -%>
 }
 
 <% if action.has_path_params? -%>
+// SetPathParamInt sets integer path parameter
 func (inv *<%= action.go_invocation_type %>) SetPathParamInt(param string, value int64) *<%= action.go_invocation_type %> {
 	return inv.SetPathParamString(param, convertInt64ToString(value))
 }
 
+// SetPathParamString sets string path parameter
 func (inv *<%= action.go_invocation_type %>) SetPathParamString(param string, value string) *<%= action.go_invocation_type %> {
 	inv.Path = strings.Replace(inv.Path, ":"+param, value, 1)
 	return inv
@@ -94,11 +117,13 @@ func (inv *<%= action.go_invocation_type %>) SetPathParamString(param string, va
 <% end -%>
 
 <% if action.has_input? -%>
+// SetInput provides input parameters to send to the API
 func (inv *<%= action.go_invocation_type %>) SetInput(input *<%= action.input.go_type %>) *<%= action.go_invocation_type %> {
 	inv.Input = input
 	return inv
 }
 
+// IsParameterSelected returns true if param is to be sent to the API
 func (inv *<%= action.go_invocation_type %>) IsParameterSelected(param string) bool {
 	for _, v := range inv.SelectedParameters {
 		if v == param {
@@ -108,6 +133,9 @@ func (inv *<%= action.go_invocation_type %>) IsParameterSelected(param string) b
 	return false
 }
 
+// SelectParameters sets parameters from <%= action.input.go_type %>
+// that will be sent to the API.
+// SelectParameters can be called multiple times.
 func (inv *<%= action.go_invocation_type %>) SelectParameters(params ...string) *<%= action.go_invocation_type %> {
 	for _, param := range params {
 		if inv.IsParameterSelected(param) {
@@ -120,6 +148,7 @@ func (inv *<%= action.go_invocation_type %>) SelectParameters(params ...string) 
 }
 <% end -%>
 
+// Call() invokes the action and returns a response from the API server
 func (inv *<%= action.go_invocation_type %>) Call() (*<%= action.go_response_type %>, error) {
 <% if action.http_method == 'GET' -%>
 <% if action.has_input? -%>

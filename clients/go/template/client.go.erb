@@ -1,13 +1,20 @@
 package <%= package %>
 
+// Client represents a connection to an API server
 type Client struct {
+	// API URL
 	Url string
+
+	// Options for authentication method
 	Authentication Authenticator
+
 <% api.resources.each do |r| -%>
+	// Resource <%= r.full_dot_name %>
 	<%= r.go_name %> *<%= r.go_type %>
 <% end -%>
 }
 
+// Create a new client for API at url
 func New(url string) *Client {
 	c := &Client{Url: url}
 

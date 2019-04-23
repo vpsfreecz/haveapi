@@ -13,6 +13,7 @@ func (auth *BasicAuth) Authenticate(request *http.Request) {
 	request.SetBasicAuth(auth.Username, auth.Password)
 }
 
+// SetBasicAuthentication enables HTTP basic auth on the client
 func (client *Client) SetBasicAuthentication(username string, password string) {
 	client.Authentication = &BasicAuth{
 		Username: username,

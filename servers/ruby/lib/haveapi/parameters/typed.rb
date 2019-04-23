@@ -113,6 +113,18 @@ module HaveAPI::Parameters
       if @type == ::Datetime && v.is_a?(Time)
         v.iso8601
 
+      elsif @type == Boolean
+        v ? true : false
+
+      elsif @type == Integer
+        v.to_i
+
+      elsif @type == Float
+        v.to_f
+
+      elsif @type == String
+        v.to_s
+
       else
         v
       end

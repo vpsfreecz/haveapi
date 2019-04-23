@@ -4,7 +4,17 @@ module HaveAPI::GoClient
   class Authentication::Token < Authentication::Base
     register :token
 
-    attr_reader :http_header, :query_parameter, :resource
+    # HTTP header the token is sent in
+    # @return [String]
+    attr_reader :http_header
+
+    # Query parameter the token is sent in
+    # @return [String]
+    attr_reader :query_parameter
+
+    # Resource for token manipulation
+    # @return [Resource]
+    attr_reader :resource
 
     def initialize(api_version, name, desc)
       @http_header = desc[:http_header]

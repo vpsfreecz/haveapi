@@ -4,7 +4,20 @@ module HaveAPI::GoClient
   class Association
     include Utils
 
-    attr_reader :parameter, :go_type, :go_value_id, :go_value_label, :resource
+    # @return [Parameter]
+    attr_reader :parameter
+
+    # @return [String]
+    attr_reader :go_type
+
+    # @return [String]
+    attr_reader :go_value_id
+
+    # @return [String]
+    attr_reader :go_value_label
+
+    # @return [Resource]
+    attr_reader :resource
 
     def initialize(param, desc)
       @parameter = param

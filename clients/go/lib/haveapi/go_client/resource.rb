@@ -4,8 +4,33 @@ module HaveAPI::GoClient
   class Resource
     include Utils
 
-    attr_reader :name, :parent, :full_name, :go_name, :go_type
-    attr_reader :resources, :actions
+    # Resource name as returned by the API
+    # @return [String]
+    attr_reader :name
+
+    # Parent resource or API version
+    # @return [ApiServer, Resource]
+    attr_reader :parent
+
+    # Full name with underscores
+    # @return [String]
+    attr_reader :full_name
+
+    # Name in Go
+    # @return [String]
+    attr_reader :go_name
+
+    # Type in Go
+    # @return [String]
+    attr_reader :go_type
+
+    # Child resources
+    # @return [Array<Resource>]
+    attr_reader :resources
+
+    # Resource actions
+    # @return [Array<Action>]
+    attr_reader :actions
 
     def initialize(parent, name, desc, prefix: nil)
       @parent = parent
@@ -18,12 +43,14 @@ module HaveAPI::GoClient
       @actions = desc[:actions].map { |k, v| Action.new(self, k, v, prefix: prefix) }
     end
 
+    # @return [ApiVersion]
     def api_version
       tmp = parent
       tmp = tmp.parent until tmp.is_a?(ApiVersion)
       tmp
     end
 
+    # @return [Array<Resource>]
     def parent_resources
       parents = []
       tmp = parent
@@ -36,6 +63,7 @@ module HaveAPI::GoClient
       parents.reverse
     end
 
+    # @return [Array<Resource>]
     def resource_path
       parent_resources + [self]
     end

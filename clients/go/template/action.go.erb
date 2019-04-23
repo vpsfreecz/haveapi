@@ -1,7 +1,7 @@
 package <%= package %>
 
 import (
-<% if action.has_url_params? -%>
+<% if action.has_path_params? -%>
 	"strings"
 <% end -%>
 )
@@ -59,7 +59,7 @@ type <%= action.go_response_type %> struct {
 <% end -%>
 }
 
-<% if !action.has_url_params? && !action.has_input? -%>
+<% if !action.has_path_params? && !action.has_input? -%>
 func (action *<%= action.go_type %>) Call() {
 	action.Prepare().Call()
 	return
@@ -69,7 +69,7 @@ func (action *<%= action.go_type %>) Call() {
 func (action *<%= action.go_type %>) Prepare() *<%= action.go_invocation_type%> {
 	return &<%= action.go_invocation_type %>{
 		Action: action,
-		Path: "<%= action.url %>",
+		Path: "<%= action.path %>",
 	}
 }
 
@@ -82,7 +82,7 @@ type <%= action.go_invocation_type %> struct {
 <% end -%>
 }
 
-<% if action.has_url_params? -%>
+<% if action.has_path_params? -%>
 func (inv *<%= action.go_invocation_type %>) SetPathParamInt(param string, value int64) *<%= action.go_invocation_type %> {
 	return inv.SetPathParamString(param, convertInt64ToString(value))
 }

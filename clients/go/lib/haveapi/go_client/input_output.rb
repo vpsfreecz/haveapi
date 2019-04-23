@@ -4,8 +4,26 @@ module HaveAPI::GoClient
   class InputOutput
     include Utils
 
-    attr_reader :action, :direction, :layout, :namespace, :parameters, :go_type,
-      :go_namespace
+    # @return [Action]
+    attr_reader :action
+
+    # @return [Symbol]
+    attr_reader :direction
+
+    # @return [String]
+    attr_reader :layout
+
+    # @return [String]
+    attr_reader :namespace
+
+    # @return [Array<Parameter>]
+    attr_reader :parameters
+
+    # @return [String]
+    attr_reader :go_type
+
+    # @return [String]
+    attr_reader :go_namespace
 
     def initialize(action, direction, desc)
       @action = action

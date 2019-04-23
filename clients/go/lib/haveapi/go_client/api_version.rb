@@ -1,6 +1,10 @@
 module HaveAPI::GoClient
   class ApiVersion
-    attr_reader :auth_methods, :resources
+    # @return [Array<Authentication::Base>]
+    attr_reader :auth_methods
+
+    # @return [Array<Resource>]
+    attr_reader :resources
 
     def initialize(desc)
       @resources = desc[:resources].map { |k, v| Resource.new(self, k, v) }

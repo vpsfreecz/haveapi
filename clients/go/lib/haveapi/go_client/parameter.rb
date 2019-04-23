@@ -4,7 +4,32 @@ module HaveAPI::GoClient
   class Parameter
     include Utils
 
-    attr_reader :io, :name, :type, :go_name, :go_in_type, :go_out_type, :association
+    # @return [InputOutput]
+    attr_reader :io
+
+    # Parameter name in the API
+    # @return [String]
+    attr_reader :name
+
+    # HaveAPI data type
+    # @return [String]
+    attr_reader :type
+
+    # Parameter name in Go
+    # @return [String]
+    attr_reader :go_name
+
+    # Go type for action input
+    # @return [String]
+    attr_reader :go_in_type
+
+    # Go type for action output
+    # @return [String]
+    attr_reader :go_out_type
+
+    # Pointer to associated resource
+    # @return [Association, nil]
+    attr_reader :association
 
     def initialize(io, name, desc)
       @io = io

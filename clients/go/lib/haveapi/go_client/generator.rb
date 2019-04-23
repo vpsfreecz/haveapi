@@ -3,8 +3,24 @@ require 'haveapi/client'
 
 module HaveAPI::GoClient
   class Generator
-    attr_reader :dst, :module, :package
+    # Destination directory
+    # @return [String]
+    attr_reader :dst
 
+    # Go module name
+    # @return [String]
+    attr_reader :module
+
+    # Go package name
+    # @return [String]
+    attr_reader :package
+
+    # @param url [String] API URL
+    # @param dst [String] destination directory
+    # @param opts [Hash]
+    # @option opts [String] :version
+    # @option opts [String] :module
+    # @option opts [String] :package
     def initialize(url, dst, opts)
       @dst = dst
       @module = opts[:module]

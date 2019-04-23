@@ -1,0 +1,3 @@
+#!/usr/bin/env ruby
+require 'haveapi/go_client/cli'
+HaveAPI::GoClient::Cli.run

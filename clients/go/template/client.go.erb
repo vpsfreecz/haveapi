@@ -1,0 +1,19 @@
+package <%= package %>
+
+type Client struct {
+	Url string
+	Authentication Authenticator
+<% api.resources.each do |r| -%>
+	<%= r.go_name %> *<%= r.go_type %>
+<% end -%>
+}
+
+func New(url string) *Client {
+	c := &Client{Url: url}
+
+<% api.resources.each do |r| -%>
+	c.<%= r.go_name %> = New<%= r.go_type %>(c)
+<% end -%>
+
+	return c
+}

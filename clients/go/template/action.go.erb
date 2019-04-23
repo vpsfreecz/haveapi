@@ -1,0 +1,191 @@
+package <%= package %>
+
+import (
+<% if action.has_url_params? -%>
+	"strings"
+<% end -%>
+)
+
+type <%= action.go_type %> struct {
+	Client *Client
+}
+
+func New<%= action.go_type %>(client *Client) *<%= action.go_type %> {
+	return &<%= action.go_type %>{
+		Client: client,
+	}
+}
+
+<% if action.has_input? -%>
+type <%= action.input.go_type %> struct {
+<% action.input.parameters.each do |p| -%>
+	<%= p.go_name %> <%= p.go_in_type %> `json:"<%= p.name %>"`
+<% end -%>
+}
+
+<% if action.http_method != 'GET' -%>
+type <%= action.go_request_type %> struct {
+	<%= action.input.go_namespace %> map[string]interface{} `json:"<%= action.input.namespace %>"`
+}
+<% end -%>
+<% end -%>
+
+<% if action.has_output? -%>
+type <%= action.output.go_type %> struct {
+<% action.output.parameters.each do |p| -%>
+<% if p.association -%>
+	<%= p.go_name %> *<%= p.go_out_type %> `json:"<%= p.name %>"`
+<% else -%>
+	<%= p.go_name %> <%= p.go_out_type %> `json:"<%= p.name %>"`
+<% end -%>
+<% end -%>
+}
+<% end -%>
+
+type <%= action.go_response_type %> struct {
+	*Envelope
+<% if action.has_output? -%>
+<% if %w(hash object).include?(action.output.layout) -%>
+	Response *struct {
+		<%= action.output.go_namespace %> *<%= action.output.go_type %> `json:"<%= action.output.namespace %>"`
+	}
+	Output *<%= action.output.go_type %>
+<% elsif %w(hash_list object_list).include?(action.output.layout) -%>
+	Response *struct {
+		<%= action.output.go_namespace %> []*<%= action.output.go_type %> `json:"<%= action.output.namespace %>"`
+	}
+	Output []*<%= action.output.go_type %>
+<% end -%>
+<% end -%>
+}
+
+<% if !action.has_url_params? && !action.has_input? -%>
+func (action *<%= action.go_type %>) Call() {
+	action.Prepare().Call()
+	return
+}
+<% end -%>
+
+func (action *<%= action.go_type %>) Prepare() *<%= action.go_invocation_type%> {
+	return &<%= action.go_invocation_type %>{
+		Action: action,
+		Path: "<%= action.url %>",
+	}
+}
+
+type <%= action.go_invocation_type %> struct {
+	Action *<%= action.go_type %>
+	Path string
+<% if action.has_input? -%>
+	Input *<%= action.input.go_type %>
+	SelectedParameters []string
+<% end -%>
+}
+
+<% if action.has_url_params? -%>
+func (inv *<%= action.go_invocation_type %>) SetPathParamInt(param string, value int64) *<%= action.go_invocation_type %> {
+	return inv.SetPathParamString(param, convertInt64ToString(value))
+}
+
+func (inv *<%= action.go_invocation_type %>) SetPathParamString(param string, value string) *<%= action.go_invocation_type %> {
+	inv.Path = strings.Replace(inv.Path, ":"+param, value, 1)
+	return inv
+}
+<% end -%>
+
+<% if action.has_input? -%>
+func (inv *<%= action.go_invocation_type %>) SetInput(input *<%= action.input.go_type %>) *<%= action.go_invocation_type %> {
+	inv.Input = input
+	return inv
+}
+
+func (inv *<%= action.go_invocation_type %>) IsParameterSelected(param string) bool {
+	for _, v := range inv.SelectedParameters {
+		if v == param {
+			return true
+		}
+	}
+	return false
+}
+
+func (inv *<%= action.go_invocation_type %>) SelectParameters(params ...string) *<%= action.go_invocation_type %> {
+	for _, param := range params {
+		if inv.IsParameterSelected(param) {
+			continue
+		}
+
+		inv.SelectedParameters = append(inv.SelectedParameters, param)
+	}
+	return inv
+}
+<% end -%>
+
+func (inv *<%= action.go_invocation_type %>) Call() (*<%= action.go_response_type %>, error) {
+<% if action.http_method == 'GET' -%>
+<% if action.has_input? -%>
+	queryParams := inv.convertInputToQueryParams()
+<% else -%>
+	queryParams := make(map[string]string)
+<% end -%>
+	resp := &<%= action.go_response_type %>{}
+	err := inv.Action.Client.DoQueryStringRequest(inv.Path, queryParams, resp)
+<% if action.has_output? -%>
+	if err == nil && resp.Status {
+		resp.Output = resp.Response.<%= action.output.go_namespace %>
+	}
+<% end -%>
+	return resp, err
+<% else -%>
+<% if action.has_input? -%>
+	input := inv.makeInputParams()
+<% else -%>
+	input := make(map[string]interface{})
+<% end -%>
+	resp := &<%= action.go_response_type %>{}
+	err := inv.Action.Client.DoBodyRequest("<%= action.http_method %>", inv.Path, input, resp)
+<% if action.has_output? -%>
+	if err == nil && resp.Status {
+		resp.Output = resp.Response.<%= action.output.go_namespace %>
+	}
+<% end -%>
+	return resp, err
+<% end -%>
+}
+
+<% if action.http_method == 'GET' && action.has_input? -%>
+func (inv *<%= action.go_invocation_type %>) convertInputToQueryParams() map[string]string {
+	ret := make(map[string]string)
+
+	if inv.Input != nil {
+		noSelection := len(inv.SelectedParameters) == 0
+
+<% action.input.parameters.each do |p| -%>
+		if noSelection || inv.IsParameterSelected("<%= p.go_name %>") {
+			ret["<%= action.input.namespace %>[<%= p.name %>]"] = <% if p.go_in_type == 'string' %>inv.Input.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.Input.<%= p.go_name %>)<% end %>
+		}
+<% end -%>
+	}
+
+	return ret
+}
+<% end -%>
+
+<% if action.http_method != 'GET' && action.has_input? -%>
+func (inv *<%= action.go_invocation_type %>) makeInputParams() interface{} {
+	top := <%= action.go_request_type %>{
+		<%= action.input.go_namespace %>: make(map[string]interface{}),
+	}
+
+	if inv.Input != nil {
+		noSelection := len(inv.SelectedParameters) == 0
+
+<% action.input.parameters.each do |p| -%>
+		if noSelection || inv.IsParameterSelected("<%= p.go_name %>") {
+			top.<%= action.input.go_namespace %>["<%= p.name %>"] = inv.Input.<%= p.go_name %>
+		}
+<% end -%>
+	}
+
+	return top
+}
+<% end -%>

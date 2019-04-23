@@ -1,0 +1,41 @@
+require 'haveapi/go_client/utils'
+
+module HaveAPI::GoClient
+  class Association
+    include Utils
+
+    attr_reader :parameter, :go_type, :go_value_id, :go_value_label, :resource
+
+    def initialize(param, desc)
+      @parameter = param
+      @resource = find_resource(desc[:resource])
+      @go_type = resource.actions.detect { |a| a.name == 'show' }.output.go_type
+      @go_value_id = camelize(desc[:value_id])
+      @go_value_label = camelize(desc[:value_label])
+    end
+
+    protected
+    def find_resource(path)
+      root = parameter.io.action.resource.api_version
+      path = path.clone
+
+      loop do
+        name = path.shift
+        resource = root.resources.detect { |r| r.name == name }
+
+        if resource.nil?
+          fail "associated resource '#{name}' not found in "+
+                (root.is_a?(ApiVersion) ? 'root' : root.resource_path.map(&:name).join('.'))
+
+        elsif path.empty?
+          return resource
+
+        else
+          root = resource
+        end
+      end
+
+      fail 'programming error'
+    end
+  end
+end

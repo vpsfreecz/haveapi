@@ -1,0 +1,9 @@
+package <%= package %>
+
+import (
+	"net/http"
+)
+
+type Authenticator interface {
+	Authenticate(request *http.Request)
+}

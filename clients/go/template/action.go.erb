@@ -136,14 +136,14 @@ type <%= action.go_invocation_type %> struct {
 	Input *<%= action.input.go_type %>
 
 	// Only selected parameters are sent to the API. Ignored if empty.
-	SelectedParameters []string
+	SelectedParameters map[string]interface{}
 <% end -%>
 <% if action.metadata.has_global_input? -%>
 	// Global meta input parameters
 	MetaInput *<%= action.metadata.global.input.go_type %>
 
 	// Only selected parameters are sent to the API. Ignored if empty.
-	SelectedMetaParameters []string
+	SelectedMetaParameters map[string]interface{}
 <% end -%>
 }
 
@@ -169,25 +169,26 @@ func (inv *<%= action.go_invocation_type %>) SetInput(input *<%= action.input.go
 
 // IsParameterSelected returns true if param is to be sent to the API
 func (inv *<%= action.go_invocation_type %>) IsParameterSelected(param string) bool {
-	for _, v := range inv.SelectedParameters {
-		if v == param {
-			return true
-		}
+	if inv.SelectedParameters == nil {
+		return true
 	}
-	return false
+
+	_, exists := inv.SelectedParameters[param]
+	return exists
 }
 
 // SelectParameters sets parameters from <%= action.input.go_type %>
 // that will be sent to the API.
 // SelectParameters can be called multiple times.
 func (inv *<%= action.go_invocation_type %>) SelectParameters(params ...string) *<%= action.go_invocation_type %> {
-	for _, param := range params {
-		if inv.IsParameterSelected(param) {
-			continue
-		}
-
-		inv.SelectedParameters = append(inv.SelectedParameters, param)
+	if inv.SelectedParameters == nil {
+		inv.SelectedParameters = make(map[string]interface{})
 	}
+
+	for _, param := range params {
+		inv.SelectedParameters[param] = nil
+	}
+
 	return inv
 }
 <% end -%>
@@ -200,25 +201,26 @@ func (inv *<%= action.go_invocation_type %>) SetMetaInput(input *<%= action.meta
 
 // IsMetaParameterSelected returns true if global meta param is to be sent to the API
 func (inv *<%= action.go_invocation_type %>) IsMetaParameterSelected(param string) bool {
-	for _, v := range inv.SelectedMetaParameters {
-		if v == param {
-			return true
-		}
+	if inv.SelectedMetaParameters == nil {
+		return true
 	}
-	return false
+
+	_, exists := inv.SelectedMetaParameters[param]
+	return exists
 }
 
 // SelectMetaParameters sets parameters from <%= action.metadata.global.input.go_type %>
 // that will be sent to the API.
 // SelectMetaParameters can be called multiple times.
 func (inv *<%= action.go_invocation_type %>) SelectMetaParameters(params ...string) *<%= action.go_invocation_type %> {
-	for _, param := range params {
-		if inv.IsMetaParameterSelected(param) {
-			continue
-		}
-
-		inv.SelectedMetaParameters = append(inv.SelectedMetaParameters, param)
+	if inv.SelectedMetaParameters == nil {
+		inv.SelectedMetaParameters = make(map[string]interface{})
 	}
+
+	for _, param := range params {
+		inv.SelectedMetaParameters[param] = nil
+	}
+
 	return inv
 }
 <% end -%>
@@ -351,10 +353,8 @@ func (resp *<%= action.go_response_type %>) CancelOperation() (*ActionActionStat
 <% if action.http_method == 'GET' && action.has_input? -%>
 func (inv *<%= action.go_invocation_type %>) convertInputToQueryParams(ret map[string]string) {
 	if inv.Input != nil {
-		noSelection := len(inv.SelectedParameters) == 0
-
 <% action.input.parameters.each do |p| -%>
-		if noSelection || inv.IsParameterSelected("<%= p.go_name %>") {
+		if inv.IsParameterSelected("<%= p.go_name %>") {
 			ret["<%= action.input.namespace %>[<%= p.name %>]"] = <% if p.go_in_type == 'string' %>inv.Input.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.Input.<%= p.go_name %>)<% end %>
 		}
 <% end -%>
@@ -365,10 +365,8 @@ func (inv *<%= action.go_invocation_type %>) convertInputToQueryParams(ret map[s
 <% if action.http_method == 'GET' && action.metadata.has_global_input? -%>
 func (inv *<%= action.go_invocation_type %>) convertMetaInputToQueryParams(ret map[string]string) {
 	if inv.MetaInput != nil {
-		noSelection := len(inv.SelectedMetaParameters) == 0
-
 <% action.metadata.global.input.parameters.each do |p| -%>
-		if noSelection || inv.IsMetaParameterSelected("<%= p.go_name %>") {
+		if inv.IsMetaParameterSelected("<%= p.go_name %>") {
 			ret["<%= action.resource.api_version.metadata_namespace %>[<%= p.name %>]"] = <% if p.go_in_type == 'string' %>inv.MetaInput.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.MetaInput.<%= p.go_name %>)<% end %>
 		}
 <% end -%>
@@ -393,10 +391,8 @@ func (inv *<%= action.go_invocation_type %>) makeInputParams() map[string]interf
 	ret := make(map[string]interface{})
 
 	if inv.Input != nil {
-		noSelection := len(inv.SelectedParameters) == 0
-
 <% action.input.parameters.each do |p| -%>
-		if noSelection || inv.IsParameterSelected("<%= p.go_name %>") {
+		if inv.IsParameterSelected("<%= p.go_name %>") {
 			ret["<%= p.name %>"] = inv.Input.<%= p.go_name %>
 		}
 <% end -%>
@@ -411,10 +407,8 @@ func (inv *<%= action.go_invocation_type %>) makeMetaInputParams() map[string]in
 	ret := make(map[string]interface{})
 
 	if inv.MetaInput != nil {
-		noSelection := len(inv.SelectedMetaParameters) == 0
-
 <% action.metadata.global.input.parameters.each do |p| -%>
-		if noSelection || inv.IsMetaParameterSelected("<%= p.go_name %>") {
+		if inv.IsMetaParameterSelected("<%= p.go_name %>") {
 			ret["<%= p.name %>"] = inv.MetaInput.<%= p.go_name %>
 		}
 <% end -%>

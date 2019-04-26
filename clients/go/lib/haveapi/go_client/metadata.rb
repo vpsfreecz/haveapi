@@ -43,5 +43,19 @@ module HaveAPI::GoClient
       global && global.resolve_associations
       object && object.resolve_associations
     end
+
+    %i(global object).each do |type|
+      %i(input output).each do |dir|
+        define_method(:"has_#{type}_#{dir}?") do
+          t = send(type)
+          next(false) unless t
+
+          io = t.send(dir)
+          next(false) unless io
+
+          io.parameters.any?
+        end
+      end
+    end
   end
 end

@@ -13,6 +13,13 @@ const (
 
 type OperationProgressCallback func(*ActionActionStatePollOutput) ProgressCallbackReturn
 
+type BlockingOperationWatcher interface {
+	IsBlocking() bool
+	OperationStatus() (*ActionActionStateShowResponse, error)
+	WaitForOperation(timeout float64) (*ActionActionStatePollResponse, error)
+	WatchOperation(timeout float64, updateIn float64, callback OperationProgressCallback) (*ActionActionStatePollResponse, error)
+}
+
 func convertInt64ToString(v int64) string {
 	return strconv.FormatInt(v, 10)
 }

@@ -1,7 +1,7 @@
 require 'haveapi/go_client/utils'
 
 module HaveAPI::GoClient
-  class Association
+  class Parameters::Association
     include Utils
 
     # @return [Parameter]

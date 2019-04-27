@@ -10,12 +10,14 @@ module HaveAPI::GoClient
       def initialize(action, type, desc)
         @input = desc[:input] && InputOutput.new(
           action,
+          :"#{type}_meta",
           :input,
           desc[:input],
           prefix: "Meta#{type.to_s.capitalize}"
         )
         @output = desc[:output] && InputOutput.new(
           action,
+          :"#{type}_meta",
           :output,
           desc[:output],
           prefix: "Meta#{type.to_s.capitalize}"

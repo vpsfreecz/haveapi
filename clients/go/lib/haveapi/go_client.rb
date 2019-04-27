@@ -18,3 +18,4 @@ end
 
 require_rel 'go_client/*.rb'
 require_rel 'go_client/authentication'
+require_rel 'go_client/parameters'

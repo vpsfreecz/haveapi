@@ -52,7 +52,7 @@ type <%= action.go_request_type %> struct {
 // <%= action.output.go_type %> is a type for action output parameters
 type <%= action.output.go_type %> struct {
 <% action.output.parameters.each do |p| -%>
-<% if p.association -%>
+<% if p.respond_to?(:association) -%>
 	<%= p.go_name %> *<%= p.go_out_type %> `json:"<%= p.name %>"`
 <% else -%>
 	<%= p.go_name %> <%= p.go_out_type %> `json:"<%= p.name %>"`

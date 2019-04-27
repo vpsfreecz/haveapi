@@ -65,8 +65,8 @@ module HaveAPI::GoClient
       @go_invocation_type = go_type + 'Invocation'
       @go_request_type = go_type + 'Request'
       @go_response_type = go_type + 'Response'
-      @input = desc[:input] && InputOutput.new(self, :input, desc[:input])
-      @output = desc[:output] && InputOutput.new(self, :output, desc[:output])
+      @input = desc[:input] && InputOutput.new(self, :io, :input, desc[:input])
+      @output = desc[:output] && InputOutput.new(self, :io, :output, desc[:output])
       @http_method = desc[:method]
       @path = desc[:url]
       @metadata = desc[:meta] && Metadata.new(self, desc[:meta])

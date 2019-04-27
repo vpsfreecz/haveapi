@@ -24,6 +24,37 @@ type <%= action.metadata.global.input.go_type %> struct {
 <% action.metadata.global.input.parameters.each do |p| -%>
 	<%= p.go_name %> <%= p.go_in_type %> `json:"<%= p.name %>"`
 <% end -%>
+	// Only selected parameters are sent to the API. Ignored if empty.
+	_selectedParameters map[string]interface{}
+}
+
+<% action.metadata.global.input.parameters.each do |p| -%>
+// Set<%= p.go_name %> sets parameter <%= p.go_name %> to value and selects it for sending
+func (in *<%= action.metadata.global.input.go_type %>) Set<%= p.go_name %>(value <%= p.go_in_type %>) *<%= action.metadata.global.input.go_type %> {
+	in.<%= p.go_name %> = value
+
+	if in._selectedParameters == nil {
+		in._selectedParameters = make(map[string]interface{})
+	}
+
+	in._selectedParameters["<%= p.go_name %>"] = nil
+	return in
+}
+<% end -%>
+
+// SelectParameters sets parameters from <%= action.metadata.global.input.go_type %>
+// that will be sent to the API.
+// SelectParameters can be called multiple times.
+func (in *<%= action.metadata.global.input.go_type %>) SelectParameters(params ...string) *<%= action.metadata.global.input.go_type %> {
+	if in._selectedParameters == nil {
+		in._selectedParameters = make(map[string]interface{})
+	}
+
+	for _, param := range params {
+		in._selectedParameters[param] = nil
+	}
+
+	return in
 }
 <% end -%>
 
@@ -33,6 +64,37 @@ type <%= action.input.go_type %> struct {
 <% action.input.parameters.each do |p| -%>
 	<%= p.go_name %> <%= p.go_in_type %> `json:"<%= p.name %>"`
 <% end -%>
+	// Only selected parameters are sent to the API. Ignored if empty.
+	_selectedParameters map[string]interface{}
+}
+
+<% action.input.parameters.each do |p| -%>
+// Set<%= p.go_name %> sets parameter <%= p.go_name %> to value and selects it for sending
+func (in *<%= action.input.go_type %>) Set<%= p.go_name %>(value <%= p.go_in_type %>) *<%= action.input.go_type %> {
+	in.<%= p.go_name %> = value
+
+	if in._selectedParameters == nil {
+		in._selectedParameters = make(map[string]interface{})
+	}
+
+	in._selectedParameters["<%= p.go_name %>"] = nil
+	return in
+}
+<% end -%>
+
+// SelectParameters sets parameters from <%= action.input.go_type %>
+// that will be sent to the API.
+// SelectParameters can be called multiple times.
+func (in *<%= action.input.go_type %>) SelectParameters(params ...string) *<%= action.input.go_type %> {
+	if in._selectedParameters == nil {
+		in._selectedParameters = make(map[string]interface{})
+	}
+
+	for _, param := range params {
+		in._selectedParameters[param] = nil
+	}
+
+	return in
 }
 <% end -%>
 
@@ -134,16 +196,10 @@ type <%= action.go_invocation_type %> struct {
 <% if action.has_input? -%>
 	// Input parameters
 	Input *<%= action.input.go_type %>
-
-	// Only selected parameters are sent to the API. Ignored if empty.
-	SelectedParameters map[string]interface{}
 <% end -%>
 <% if action.metadata.has_global_input? -%>
 	// Global meta input parameters
 	MetaInput *<%= action.metadata.global.input.go_type %>
-
-	// Only selected parameters are sent to the API. Ignored if empty.
-	SelectedMetaParameters map[string]interface{}
 <% end -%>
 }
 
@@ -169,27 +225,12 @@ func (inv *<%= action.go_invocation_type %>) SetInput(input *<%= action.input.go
 
 // IsParameterSelected returns true if param is to be sent to the API
 func (inv *<%= action.go_invocation_type %>) IsParameterSelected(param string) bool {
-	if inv.SelectedParameters == nil {
+	if inv.Input._selectedParameters == nil {
 		return true
 	}
 
-	_, exists := inv.SelectedParameters[param]
+	_, exists := inv.Input._selectedParameters[param]
 	return exists
-}
-
-// SelectParameters sets parameters from <%= action.input.go_type %>
-// that will be sent to the API.
-// SelectParameters can be called multiple times.
-func (inv *<%= action.go_invocation_type %>) SelectParameters(params ...string) *<%= action.go_invocation_type %> {
-	if inv.SelectedParameters == nil {
-		inv.SelectedParameters = make(map[string]interface{})
-	}
-
-	for _, param := range params {
-		inv.SelectedParameters[param] = nil
-	}
-
-	return inv
 }
 <% end -%>
 <% if action.metadata.has_global_input? -%>
@@ -201,27 +242,12 @@ func (inv *<%= action.go_invocation_type %>) SetMetaInput(input *<%= action.meta
 
 // IsMetaParameterSelected returns true if global meta param is to be sent to the API
 func (inv *<%= action.go_invocation_type %>) IsMetaParameterSelected(param string) bool {
-	if inv.SelectedMetaParameters == nil {
+	if inv.MetaInput._selectedParameters == nil {
 		return true
 	}
 
-	_, exists := inv.SelectedMetaParameters[param]
+	_, exists := inv.MetaInput._selectedParameters[param]
 	return exists
-}
-
-// SelectMetaParameters sets parameters from <%= action.metadata.global.input.go_type %>
-// that will be sent to the API.
-// SelectMetaParameters can be called multiple times.
-func (inv *<%= action.go_invocation_type %>) SelectMetaParameters(params ...string) *<%= action.go_invocation_type %> {
-	if inv.SelectedMetaParameters == nil {
-		inv.SelectedMetaParameters = make(map[string]interface{})
-	}
-
-	for _, param := range params {
-		inv.SelectedMetaParameters[param] = nil
-	}
-
-	return inv
 }
 <% end -%>
 
@@ -292,7 +318,7 @@ func (resp *<%= action.go_response_type %>) WaitForOperation(timeout float64) (*
 	req.SetInput(&ActionActionStatePollInput{
 		Timeout: timeout,
 	})
-	req.SelectParameters("Timeout")
+	req.Input.SelectParameters("Timeout")
 	return req.Call()
 }
 
@@ -305,7 +331,7 @@ func (resp *<%= action.go_response_type %>) WatchOperation(timeout float64, upda
 		Timeout: timeout,
 		UpdateIn: updateIn,
 	})
-	req.SelectParameters("Timeout", "UpdateIn")
+	req.Input.SelectParameters("Timeout", "UpdateIn")
 	pollResp, err := req.Call()
 
 	if err != nil {

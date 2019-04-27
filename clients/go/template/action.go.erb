@@ -56,6 +56,14 @@ func (in *<%= action.metadata.global.input.go_type %>) SelectParameters(params .
 
 	return in
 }
+
+func (in *<%= action.metadata.global.input.go_type %>) AnySelected() bool {
+	if in._selectedParameters == nil {
+		return false
+	}
+
+	return len(in._selectedParameters) > 0
+}
 <% end -%>
 
 <% if action.has_input? -%>
@@ -95,6 +103,14 @@ func (in *<%= action.input.go_type %>) SelectParameters(params ...string) *<%= a
 	}
 
 	return in
+}
+
+func (in *<%= action.input.go_type %>) AnySelected() bool {
+	if in._selectedParameters == nil {
+		return false
+	}
+
+	return len(in._selectedParameters) > 0
 }
 <% end -%>
 

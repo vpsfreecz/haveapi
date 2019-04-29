@@ -1,3 +1,7 @@
+# Mon Apr 29 2019 - version 0.12.1
+## Ruby server
+- Proper coercion of typed output parameters
+
 # Thu Mar 07 2019 - version 0.12.0
 ## All
 - Unified changelog file

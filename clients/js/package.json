@@ -1,6 +1,6 @@
 {
 	"name": "haveapi-client",
-	"version": "0.12.0",
+	"version": "0.12.1",
 	"description": "Client for HaveAPI based APIs",
 	"license": "MIT",
 	"author": {"name": "Jakub Skokan", "email": "jakub.skokan@vpsfree.cz"},

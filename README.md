@@ -36,6 +36,7 @@ Available clients:
 - Ruby client library and CLI at [clients/ruby](clients/ruby)
 - PHP client at [clients/php](clients/php)
 - JavaScript client at [clients/js](clients/js)
+- Go client generator at [clients/go](clients/go)
 - Elixir client at [clients/elixir](clients/elixir)
 
 Complex applications can be built on top of these basic clients, e.g.:

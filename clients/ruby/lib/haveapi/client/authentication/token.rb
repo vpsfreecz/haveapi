@@ -78,7 +78,9 @@ module HaveAPI::Client::Authentication
                           lifetime: @opts[:lifetime],
                           interval: @opts[:interval] || 300})
 
-      raise AuthenticationFailed.new('bad username or password') unless ret[:status]
+      unless ret[:status]
+        raise AuthenticationFailed.new(ret[:message] || 'bad username or password')
+      end
 
       @token = ret[:response][:token][:token]
 

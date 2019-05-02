@@ -22,7 +22,11 @@ module HaveAPI::Authentication
 
         auth = Rack::Auth::Basic::Request.new(request.env)
         if auth.provided? && auth.basic? && auth.credentials
-          user = find_user(request, *auth.credentials)
+          begin
+            user = find_user(request, *auth.credentials)
+          rescue HaveAPI::AuthenticationError
+            user = nil
+          end
         end
 
         user

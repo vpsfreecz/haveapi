@@ -43,12 +43,17 @@ END
         def exec
           klass = self.class.resource.token_instance[@version]
 
-          user = klass.send(
-              :find_user_by_credentials,
-              request,
-              input[:login],
-              input[:password]
-          )
+          begin
+            user = klass.send(
+                :find_user_by_credentials,
+                request,
+                input[:login],
+                input[:password]
+            )
+          rescue HaveAPI::AuthenticationError => e
+            error(e.message)
+          end
+
           error('bad login or password') unless user
 
           token = expiration = nil

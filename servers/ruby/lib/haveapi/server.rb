@@ -533,7 +533,7 @@ module HaveAPI
       #puts JSON.pretty_generate(@routes)
 
       @routes[context.version][:resources].each do |resource, children|
-        r_name = resource.to_s.demodulize.underscore
+        r_name = resource.resource_name.underscore
         r_desc = describe_resource(resource, children, context)
 
         unless r_desc[:actions].empty? && r_desc[:resources].empty?

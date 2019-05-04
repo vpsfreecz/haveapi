@@ -49,14 +49,20 @@ module HaveAPI
     end
 
     def self.resource_name
-      ret = self.to_s.demodulize
+      (@resource_name ? @resource_name.to_s : to_s).demodulize
+    end
 
-      singular ? ret.singularize.underscore : ret.tableize
+    def self.resource_name=(name)
+      @resource_name = name
+    end
+
+    def self.rest_name
+      singular ? resource_name.singularize.underscore : resource_name.tableize
     end
 
     def self.routes(prefix='/')
       ret = []
-      prefix = "#{prefix}#{@route || resource_name}/"
+      prefix = "#{prefix}#{@route || rest_name}/"
 
       actions do |a|
         # Call used_by for selected model adapters. It is safe to do
@@ -82,15 +88,14 @@ module HaveAPI
         context.action = action
         context.url = url
 
-        a_name = action.to_s.demodulize.underscore
-
+        a_name = action.action_name.underscore
         a_desc = action.describe(context)
 
         ret[:actions][a_name] = a_desc if a_desc
       end
 
       hash[:resources].each do |resource, children|
-        ret[:resources][resource.to_s.demodulize.underscore] = resource.describe(children, context)
+        ret[:resources][resource.resource_name.underscore] = resource.describe(children, context)
       end
 
       ret
@@ -100,7 +105,8 @@ module HaveAPI
       return false if const_defined?(name)
 
       cls = Class.new(superclass)
-      const_set(name, cls)
+      const_set(name, cls) if self != HaveAPI::Resource
+      cls.resource_name = name
       cls.class_exec(&block) if block
       cls
     end
@@ -110,6 +116,8 @@ module HaveAPI
 
       cls = Class.new(superclass)
       const_set(name, cls)
+      cls.resource = self
+      cls.action_name = name
       superclass.delayed_inherited(cls)
       cls.class_exec(&block)
     end

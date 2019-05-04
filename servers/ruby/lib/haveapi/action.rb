@@ -31,7 +31,8 @@ module HaveAPI
     attr_accessor :flags
 
     class << self
-      attr_reader :resource, :authorization, :examples
+      attr_accessor :resource
+      attr_reader :authorization, :examples
 
       def inherited(subclass)
         # puts "Action.inherited called #{subclass} from #{to_s}"
@@ -45,7 +46,7 @@ module HaveAPI
       end
 
       def delayed_inherited(subclass)
-        resource = Kernel.const_get(subclass.to_s.deconstantize)
+        resource = subclass.resource || Kernel.const_get(subclass.to_s.deconstantize)
 
         inherit_attrs(subclass)
         inherit_attrs_from_resource(subclass, resource, [:auth])
@@ -177,14 +178,29 @@ module HaveAPI
         @examples << e
       end
 
+      def action_name
+        (@action_name ? @action_name.to_s : to_s).demodulize
+      end
+
+      def action_name=(name)
+        @action_name = name
+      end
+
       def build_route(prefix)
-        route = @route || to_s.demodulize.underscore
+        route = @route || action_name.underscore
+          if @route
+            @route
+          elsif action_name
+            action_name.to_s.demodulize.underscore
+          else
+            to_s.demodulize.underscore
+          end
 
         if !route.is_a?(String) && route.respond_to?(:call)
           route = route.call(self.resource)
         end
 
-        prefix + route % {resource: self.resource.to_s.demodulize.underscore}
+        prefix + route % {resource: self.resource.resource_name.underscore}
       end
 
       def describe(context)

@@ -8,8 +8,8 @@ module HaveAPI::Parameters
         db_name: nil, fetch: nil)
       @resource = resource
       @resource_path = build_resource_path(resource)
-      @name = name || resource.to_s.demodulize.underscore.to_sym
-      @label = label || (name && name.to_s.capitalize) || resource.to_s.demodulize
+      @name = name || resource.resource_name.underscore.to_sym
+      @label = label || (name && name.to_s.capitalize) || resource.resource_name
       @desc = desc
       @choices = choices || @resource::Index
       @value_id = value_id

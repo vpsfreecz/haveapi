@@ -50,17 +50,17 @@ module HaveAPI::Authentication
 
     def describe(context)
       ret = {}
-      
+
       return ret unless @instances[context.version]
 
       @instances[context.version].each do |provider|
         ret[provider.name] = provider.describe
 
-        if provider.resources
+        if provider.resource_module
           ret[provider.name][:resources] = {}
 
           @server.routes[context.version][:authentication][provider.name][:resources].each do |r, children|
-            ret[provider.name][:resources][r.to_s.demodulize.underscore.to_sym] = r.describe(children, context)
+            ret[provider.name][:resources][r.resource_name.underscore.to_sym] = r.describe(children, context)
           end
         end
       end
@@ -103,11 +103,13 @@ module HaveAPI::Authentication
 
       @instances[v] << instance
 
-      provider = Kernel.const_get(parts[0..-2].join('::'))
-
-      if provider.const_defined?('Resources')
-        instance.resources = provider.const_get('Resources')
-        @server.add_auth_module(v, instance.name, instance.resources, prefix: parts[-2].underscore)
+      if resource_module = instance.resource_module
+        @server.add_auth_module(
+          v,
+          instance.name,
+          resource_module,
+          prefix: parts[-2].underscore
+        )
       end
     end
   end

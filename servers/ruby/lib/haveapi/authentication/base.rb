@@ -2,12 +2,17 @@ module HaveAPI
   module Authentication
     # Base class for authentication providers.
     class Base
-      attr_accessor :name, :resources
+      attr_accessor :name
 
       def initialize(server, v)
         @server = server
         @version = v
         setup
+      end
+
+      # @return [Module, nil]
+      def resource_module
+        nil
       end
 
       # Reimplement this method in your authentication provider.

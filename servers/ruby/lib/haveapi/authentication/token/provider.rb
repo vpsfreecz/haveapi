@@ -1,4 +1,6 @@
 require 'haveapi/authentication/base'
+require 'haveapi/resource'
+require 'haveapi/action'
 
 module HaveAPI::Authentication
   module Token
@@ -82,10 +84,16 @@ module HaveAPI::Authentication
     #   api.auth_chain << MyTokenAuth
     class Provider < Base
       def setup
-        Resources::Token.token_instance ||= {}
-        Resources::Token.token_instance[@version] = self
-
         @server.allow_header(http_header)
+      end
+
+      def resource_module
+        return @module if @module
+        provider = self
+
+        @module = Module.new do
+          const_set(:Token, provider.send(:token_resource))
+        end
       end
 
       def authenticate(request)
@@ -167,6 +175,130 @@ module HaveAPI::Authentication
       private
       def header_to_env
         "HTTP_#{http_header.upcase.gsub(/\-/, '_')}"
+      end
+
+      def token_resource
+        provider = self
+
+        HaveAPI::Resource.define_resource(:Token) do
+          define_singleton_method(:token_instance) { provider }
+
+          auth false
+          version :all
+
+          define_action(:Request) do
+            route ''
+            http_method :post
+
+            input(:hash) do
+              string :login, label: 'Login', required: true
+              password :password, label: 'Password', required: true
+              string :lifetime, label: 'Lifetime', required: true,
+                      choices: %i(fixed renewable_manual renewable_auto permanent),
+                      desc: <<END
+fixed - the token has a fixed validity period, it cannot be renewed
+renewable_manual - the token can be renewed, but it must be done manually via renew action
+renewable_auto - the token is renewed automatically to now+interval every time it is used
+permanent - the token will be valid forever, unless deleted
+END
+              integer :interval, label: 'Interval',
+                      desc: 'How long will requested token be valid, in seconds.',
+                      default: 60*5, fill: true
+            end
+
+            output(:hash) do
+              string :token
+              datetime :valid_to
+            end
+
+            authorize do
+              allow
+            end
+
+            def exec
+              klass = self.class.resource.token_instance
+
+              begin
+                user = klass.send(
+                  :find_user_by_credentials,
+                  request,
+                  input[:login],
+                  input[:password]
+                )
+              rescue HaveAPI::AuthenticationError => e
+                error(e.message)
+              end
+
+              error('bad login or password') unless user
+
+              token = expiration = nil
+
+              loop do
+                begin
+                  token = klass.send(:generate_token)
+                  expiration = klass.send(
+                    :save_token,
+                    @request,
+                    user,
+                    token,
+                    input[:lifetime],
+                    input[:interval]
+                  )
+                  break
+
+                rescue TokenExists
+                  next
+                end
+              end
+
+              {token: token, valid_to: expiration}
+            end
+          end
+
+          define_action(:Revoke) do
+            http_method :post
+            auth true
+
+            authorize do
+              allow
+            end
+
+            def exec
+              klass = self.class.resource.token_instance
+              klass.send(
+                :revoke_token,
+                request,
+                current_user,
+                klass.token(request)
+              )
+            end
+          end
+
+          define_action(:Renew) do
+            http_method :post
+            auth true
+
+            output(:hash) do
+              datetime :valid_to
+            end
+
+            authorize do
+              allow
+            end
+
+            def exec
+              klass = self.class.resource.token_instance
+              {
+                valid_to: klass.send(
+                  :renew_token,
+                  request,
+                  current_user,
+                  klass.token(request)
+                ),
+              }
+            end
+          end
+        end
       end
     end
   end

@@ -83,6 +83,19 @@ module HaveAPI::Authentication
     #   ...
     #   api.auth_chain << MyTokenAuth
     class Provider < Base
+      class << self
+        def request_input(&block)
+          if block.nil?
+            @request_input || Proc.new do
+              string :login, label: 'User', required: true
+              password :password, label: 'Password', required: true
+            end
+          else
+            @request_input = block
+          end
+        end
+      end
+
       def setup
         @server.allow_header(http_header)
       end
@@ -96,12 +109,22 @@ module HaveAPI::Authentication
         end
       end
 
+      # @param params [HaveAPI::Params]
+      def request_input(params)
+        params.instance_exec(&self.class.request_input)
+      end
+
+      # Authenticate request
+      # @param request [Sinatra::Request]
       def authenticate(request)
         t = token(request)
 
         t && find_user_by_token(request, t)
       end
 
+      # Extract token from HTTP request
+      # @param request [Sinatra::Request]
+      # @return [String]
       def token(request)
         request[query_parameter] || request.env[header_to_env]
       end
@@ -120,16 +143,19 @@ module HaveAPI::Authentication
 
       protected
       # HTTP header that is searched for token.
+      # @return [String]
       def http_header
         'X-HaveAPI-Auth-Token'
       end
 
       # Query parameter searched for token.
+      # @return [Symbol]
       def query_parameter
         :_auth_token
       end
 
       # Generate token. Implicit implementation returns token of 100 chars.
+      # @param [String]
       def generate_token
         SecureRandom.hex(50)
       end
@@ -140,12 +166,20 @@ module HaveAPI::Authentication
       # It is up to the implementation of this method to remember
       # token lifetime and interval.
       # Must be implemented.
+      # @param request [Sinatra::Request]
+      # @param user [Object]
+      # @param token [String]
+      # @param lifetime [String]
+      # @param interval [Integer]
       def save_token(request, user, token, lifetime, interval)
 
       end
 
       # Revoke existing +token+ for +user+.
       # Must be implemented.
+      # @param request [Sinatra::Request]
+      # @param user [Object]
+      # @param token [String]
       def revoke_token(request, user, token)
 
       end
@@ -153,6 +187,9 @@ module HaveAPI::Authentication
       # Renew existing +token+ for +user+.
       # Returns a date time which is token expiration.
       # Must be implemented.
+      # @param request [Sinatra::Request]
+      # @param user [Object]
+      # @param token [String]
       def renew_token(request, user, token)
 
       end
@@ -160,7 +197,10 @@ module HaveAPI::Authentication
       # Used by action Resources::Token::Request when the user is requesting
       # a token. This method returns user object or nil.
       # Must be implemented.
-      def find_user_by_credentials(request, username, password)
+      # @param request [Sinatra::Request]
+      # @param input [Hash]
+      # @return [Object]
+      def find_user_by_credentials(request, input)
 
       end
 
@@ -168,6 +208,9 @@ module HaveAPI::Authentication
       # If the token was created as auto-renewable, this method
       # is responsible for its renewal.
       # Must be implemented.
+      # @param request [Sinatra::Request]
+      # @param token [String]
+      # @return [Object]
       def find_user_by_token(request, token)
 
       end
@@ -191,8 +234,7 @@ module HaveAPI::Authentication
             http_method :post
 
             input(:hash) do
-              string :login, label: 'Login', required: true
-              password :password, label: 'Password', required: true
+              provider.request_input(self)
               string :lifetime, label: 'Lifetime', required: true,
                       choices: %i(fixed renewable_manual renewable_auto permanent),
                       desc: <<END

@@ -2,9 +2,22 @@ module HaveAPI
   module Authentication
     # Base class for authentication providers.
     class Base
-      attr_accessor :name
+      # Get or set auth method name
+      # @param v [Symbol, nil]
+      # @return [Symbol]
+      def self.auth_method(v = nil)
+        if v
+          @auth_method = v
+        else
+          @auth_method || name.split('::')[-2].underscore.to_sym
+        end
+      end
+
+      # @return [Symbol]
+      attr_reader :name
 
       def initialize(server, v)
+        @name = self.class.auth_method
         @server = server
         @version = v
         setup

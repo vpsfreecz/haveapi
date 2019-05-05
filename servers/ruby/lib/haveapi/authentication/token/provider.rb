@@ -124,7 +124,7 @@ module HaveAPI::Authentication
       # @param params [HaveAPI::Params]
       def request_input(params)
         block = config.class.request_input || Proc.new do
-          string :login, label: 'User', required: true
+          string :user, label: 'User', required: true
           password :password, label: 'Password', required: true
         end
 

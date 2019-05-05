@@ -12,7 +12,7 @@ module HaveAPI::ClientExamples
     end
 
     def auth(method, desc)
-      login = {login: 'user', password: 'password', lifetime: 'fixed'}
+      login = {user: 'user', password: 'password', lifetime: 'fixed'}
 
       case method
       when :basic

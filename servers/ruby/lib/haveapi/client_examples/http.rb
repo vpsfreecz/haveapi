@@ -33,7 +33,7 @@ POST /_auth/token/tokens HTTP/1.1
 Host: #{host}
 Content-Type: application/json
 
-#{JSON.pretty_generate({token: {login: 'user', password: 'secret', lifetime: 'fixed'}})}
+#{JSON.pretty_generate({token: {user: 'user', password: 'secret', lifetime: 'fixed'}})}
 END
       end
     end

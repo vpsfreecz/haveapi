@@ -12,9 +12,9 @@ module HaveAPI::CLI
         end
       end
 
-      attr_accessor :communicator
-
-      def initialize(opts = {})
+      def initialize(communicator, desc, opts = {})
+        @communicator = communicator
+        @desc = desc
         opts ||= {}
 
         opts.each do |k, v|
@@ -47,6 +47,9 @@ module HaveAPI::CLI
       def save
         @communicator.auth_save
       end
+
+      protected
+      attr_reader :communicator, :desc
     end
   end
 end

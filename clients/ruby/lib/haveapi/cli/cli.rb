@@ -1,9 +1,9 @@
 require 'optparse'
 require 'pp'
-require 'highline/import'
 require 'yaml'
 require 'time'
 require 'date'
+require 'haveapi/cli/utils'
 
 module HaveAPI::CLI
   class Cli
@@ -29,12 +29,13 @@ module HaveAPI::CLI
       end
     end
 
+    include Utils
+
     def initialize
       @config = read_config || {}
       args, @opts = options
 
-      @api = HaveAPI::Client::Communicator.new(api_url, @opts[:version])
-      @api.identity = $0.split('/').last
+      connect_api unless @api
 
       if @action
         method(@action.first).call( * @action[1..-1] )
@@ -53,7 +54,7 @@ module HaveAPI::CLI
       if cmd = find_command(resources, args[1])
         authenticate if @auth
         c = cmd.new(@opts, HaveAPI::Client::Client.new(nil, communicator: @api))
-          
+
         cmd_opt = OptionParser.new do |opts|
           opts.banner = "\nCommand options:"
           c.options(opts)
@@ -64,13 +65,13 @@ module HaveAPI::CLI
             end
           end
         end
-        
+
         if @opts[:help]
           show_help do
             puts cmd_opt.help
           end
         end
-        
+
         if sep = ARGV.index('--')
           cmd_opt.parse!(ARGV[sep+1..-1])
         end
@@ -106,7 +107,7 @@ module HaveAPI::CLI
       @selected_params = @opts[:output] ? @opts[:output].split(',').uniq
                                         : nil
 
-      @input_params = parameters(action)      
+      @input_params = parameters(action)
 
       includes = build_includes(action) if @selected_params
       @input_params[:meta] = { includes: includes } if includes
@@ -174,7 +175,13 @@ module HaveAPI::CLI
 
         opts.on('-a', '--auth METHOD', Cli.auth_methods.keys, 'Authentication method') do |m|
           options[:auth] = m
-          @auth = Cli.auth_methods[m].new(server_config(options[:client])[:auth][m])
+          connect_api(url: options[:client], version: options[:version])
+
+          @auth = Cli.auth_methods[m].new(
+            @api,
+            @api.describe_api(options[:version])[:authentication][m],
+            server_config(options[:client])[:auth][m]
+          )
           @auth.options(opts)
         end
 
@@ -217,7 +224,7 @@ module HaveAPI::CLI
         opts.on('-r', '--rows', 'Print output in rows') do
           options[:layout] = :rows
         end
-        
+
         opts.on('-s', '--sort PARAMETER', 'Sort output by parameter') do |p|
           options[:sort] = p
         end
@@ -225,7 +232,7 @@ module HaveAPI::CLI
         opts.on('--save', 'Save credentials to config file for later use') do
           options[:save] = true
         end
-        
+
         opts.on('--raw', 'Print raw response as is') do
           options[:raw] = true
         end
@@ -249,7 +256,7 @@ module HaveAPI::CLI
         opts.on('--[no-]block', 'Toggle action blocking mode') do |v|
           options[:block] = v
         end
-        
+
         opts.on(
             '--timeout SEC',
             Float,
@@ -265,11 +272,11 @@ module HaveAPI::CLI
         opts.on('--client-version', 'Show client version') do
           @action = [:show_version]
         end
-        
+
         opts.on('--protocol-version', 'Show protocol version') do
           @action = [:protocol_version]
         end
-        
+
         opts.on('--check-compatibility', 'Check compatibility with API server') do
           @action = [:check_compat]
         end
@@ -354,29 +361,6 @@ module HaveAPI::CLI
       @action_opt.parse!(ARGV[sep+1..-1])
 
       options
-    end
-
-    def param_option(name, p)
-      ret = '--'
-      name = name.to_s.dasherize
-
-      if p[:type] == 'Boolean'
-        ret += "[no-]#{name}"
-
-      else
-        ret += "#{name} [#{name.underscore.upcase}]"
-      end
-
-      ret
-    end
-
-    def read_param(name, p)
-      prompt = "#{p[:label] || name}: "
-
-      ask(prompt) do |q|
-        q.default = nil
-        q.echo = !p[:protected]
-      end
     end
 
     def list_versions
@@ -521,7 +505,7 @@ module HaveAPI::CLI
       end
 
       cols = []
-      
+
       (@selected_params || action.params.keys).each do |raw_name|
         col = {}
         name = nil
@@ -536,7 +520,7 @@ module HaveAPI::CLI
 
           parts.each do |part|
             fail "'#{part}' not found" unless top.has_key?(part)
-          
+
             if top[part][:type] == 'Resource'
               param = top[part]
               top = @api.get_action(top[part][:resource], :show, []).params
@@ -556,7 +540,7 @@ module HaveAPI::CLI
               break if top[part].nil?
               top = top[part]
             end
-          
+
             case param[:type]
             when 'Resource'
               "#{top[ param[:value_label].to_sym ]} (##{top[ param[:value_id].to_sym ]})"
@@ -570,12 +554,12 @@ module HaveAPI::CLI
           end
 
           col[:label] = raw_name
-          
+
         else # directly accessible parameter
           name = raw_name.to_sym
           param = action.params[name]
           fail "parameter '#{name}' does not exist" if param.nil?
-          
+
           if param[:type] == 'Resource'
             col[:display] = Proc.new do |r|
               next '' unless r
@@ -591,9 +575,9 @@ module HaveAPI::CLI
             name: name,
             align: %w(Integer Float).include?(param[:type]) ? 'right' : 'left',
         })
-        
+
         col[:label] ||= param[:label] && !param[:label].empty? ? param[:label] : name.upcase
-        
+
         cols << col
       end
 
@@ -618,7 +602,6 @@ module HaveAPI::CLI
 
     def authenticate(action = nil)
       if @auth
-        @auth.communicator = @api
         @auth.validate
         @auth.authenticate
 
@@ -669,6 +652,14 @@ module HaveAPI::CLI
       @config[:servers].last
     end
 
+    def connect_api(url: nil, version: nil)
+      @api = HaveAPI::Client::Communicator.new(
+        url || api_url,
+        version || (@opts && @opts[:version])
+      )
+      @api.identity = $0.split('/').last
+    end
+
     def format_errors(action, msg, errors)
       warn "Action failed: #{msg}"
 
@@ -701,7 +692,7 @@ module HaveAPI::CLI
     #   node.name => node
     def build_includes(action)
       ret = []
-      
+
       @selected_params.each do |param|
         next unless param.index('.')
 
@@ -710,8 +701,8 @@ module HaveAPI::CLI
 
         param.split('.').map! { |v| v.to_sym }.each do |part|
           next unless top.has_key?(part)
-          next if top[part][:type] != 'Resource' 
-         
+          next if top[part][:type] != 'Resource'
+
           includes << part
           top = @api.get_action(top[part][:resource], :show, []).params
         end

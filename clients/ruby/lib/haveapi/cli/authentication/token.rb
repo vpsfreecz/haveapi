@@ -1,16 +1,20 @@
 require 'haveapi/cli/authentication/base'
+require 'haveapi/cli/utils'
 
 module HaveAPI::CLI::Authentication
   class Token < Base
     register :token
 
-    def options(opts)
-      opts.on('--username USER', 'User name') do |u|
-        @user = u
-      end
+    include HaveAPI::CLI::Utils
 
-      opts.on('--password PASSWORD', 'Password') do |p|
-        @password = p
+    def options(opts)
+      @credentials = {}
+
+      request_credentials.each do |name, desc|
+        opts.on(
+          param_option(name, desc),
+          desc[:label] || name.to_s
+        ) { |v| @credentials[name] = v }
       end
 
       opts.on('--token TOKEN', 'Token') do |t|
@@ -44,31 +48,32 @@ module HaveAPI::CLI::Authentication
     def validate
       return if @token
 
-      @user ||= ask('User name: ') { |q| q.default = nil }
-
-      @password ||= ask('Password: ') do |q|
-        q.default = nil
-        q.echo = false
+      request_credentials.each do |name, desc|
+        if !@credentials.has_key?(name)
+          @credentials[name] = read_param(name, desc)
+        end
       end
     end
 
     def authenticate
       @communicator.authenticate(:token, {
-          user: @user,
-          password: @password,
-          token: @token,
-          lifetime: @lifetime || :renewable_auto,
-          interval: @interval,
-          valid_to: @valid_to,
-          via: @via
-      })
+        token: @token,
+        lifetime: @lifetime || :renewable_auto,
+        interval: @interval,
+        valid_to: @valid_to,
+        via: @via,
+      }.merge(@credentials))
     end
 
     def save
-      super.update({
-                       via: @via,
-                       interval: @interval
-                   })
+      super.update({via: @via, interval: @interval})
+    end
+
+    protected
+    def request_credentials
+      desc[:resources][:token][:actions][:request][:input][:parameters].reject do |name, _|
+        %i(lifetime interval).include?(name)
+      end
     end
   end
 end

@@ -41,32 +41,52 @@ module HaveAPI::Authentication
     #
     # Authentication provider configuration:
     #   class MyTokenAuthConfig < HaveAPI::Authentication::Token::Config
-    #     protected
-    #     def save_token(request, user, token, lifetime, interval)
-    #       user.tokens << ::Token.new(
-    #         token: token, lifetime: lifetime,
-    #         valid_to: (lifetime != 'permanent' ? Time.now + interval : nil),
-    #         interval: interval,
-    #         label: request.user_agent
-    #       )
-    #     end
+    #     request do
+    #       handle do |req, res|
+    #         user = ::User.find_by(login: input[:user], password: input[:password])
+    #         next(nil) if user.nil?
     #
-    #     def revoke_token(request, user, token)
-    #       user.tokens.delete(token: token)
-    #     end
+    #         token = SecureRandom.hex(50)
+    #         valid_to =
+    #           if req.input[:lifetime] == 'permanent'
+    #             nil
+    #           else
+    #             Time.now + req.input[:interval]
     #
-    #     def renew_token(request, user, token)
-    #       t = ::Token.find_by(user: user, token: token)
+    #         user.tokens << ::Token.new(
+    #           token: token,
+    #           lifetime: req.input[:lifetime],
+    #           valid_to: valid_to,
+    #           interval: req.input[:interval],
+    #           label: req.request.user_agent,
+    #         )
     #
-    #       if t.lifetime.start_with('renewable')
-    #         t.renew
-    #         t.save
-    #         t.valid_to
+    #         res.token = token
+    #         res.ok
     #       end
     #     end
     #
-    #     def find_user_by_credentials(request, input)
-    #       ::User.find_by(login: input[:login], password: input[:password])
+    #     renew do
+    #       handle do |req, res|
+    #         t = ::Token.find_by(user: req.user, token: req.token)
+    #
+    #         if t && t.lifetime.start_with('renewable')
+    #           t.renew
+    #           t.save
+    #           res.valid_to = t.valid_to
+    #           res.ok
+    #         else
+    #           res.error = 'unable to renew token'
+    #           res
+    #         end
+    #       end
+    #     end
+    #
+    #     revoke do
+    #       handle do |req, res|
+    #         req.user.tokens.delete(token: req.token)
+    #         res.ok
+    #       end
     #     end
     #
     #     def find_user_by_token(request, token)
@@ -109,7 +129,7 @@ module HaveAPI::Authentication
       end
 
       def setup
-        @server.allow_header(config.http_header)
+        @server.allow_header(config.class.http_header)
       end
 
       def resource_module
@@ -119,16 +139,6 @@ module HaveAPI::Authentication
         @module = Module.new do
           const_set(:Token, provider.send(:token_resource))
         end
-      end
-
-      # @param params [HaveAPI::Params]
-      def request_input(params)
-        block = config.class.request_input || Proc.new do
-          string :user, label: 'User', required: true
-          password :password, label: 'Password', required: true
-        end
-
-        params.instance_exec(&block)
       end
 
       # Authenticate request
@@ -143,13 +153,13 @@ module HaveAPI::Authentication
       # @param request [Sinatra::Request]
       # @return [String]
       def token(request)
-        request[config.query_parameter] || request.env[header_to_env]
+        request[config.class.query_parameter] || request.env[header_to_env]
       end
 
       def describe
         {
-          http_header: config.http_header,
-          query_parameter: config.query_parameter,
+          http_header: config.class.http_header,
+          query_parameter: config.class.query_parameter,
           description: "The client authenticates with credentials, usually "+
                        "username and password, and gets a token. "+
                        "From this point, the credentials can be forgotten and "+
@@ -161,7 +171,7 @@ module HaveAPI::Authentication
 
       private
       def header_to_env
-        "HTTP_#{config.http_header.upcase.gsub(/\-/, '_')}"
+        "HTTP_#{config.class.http_header.upcase.gsub(/\-/, '_')}"
       end
 
       def token_resource
@@ -178,7 +188,10 @@ module HaveAPI::Authentication
             http_method :post
 
             input(:hash) do
-              provider.request_input(self)
+              if block = provider.config.class.request.input
+                instance_exec(&block)
+              end
+
               string :lifetime, label: 'Lifetime', required: true,
                       choices: %i(fixed renewable_manual renewable_auto permanent),
                       desc: <<END
@@ -205,33 +218,22 @@ END
               config = self.class.resource.token_instance.config
 
               begin
-                user = config.find_user_by_credentials(request, input)
+                result = config.class.request.handle.call(ActionRequest.new(
+                  request: request,
+                  input: input,
+                ), ActionResult.new)
               rescue HaveAPI::AuthenticationError => e
                 error(e.message)
               end
 
-              error('invalid authentication credentials') unless user
-
-              token = expiration = nil
-
-              loop do
-                begin
-                  token = config.generate_token
-                  expiration = config.save_token(
-                    @request,
-                    user,
-                    token,
-                    input[:lifetime],
-                    input[:interval]
-                  )
-                  break
-
-                rescue TokenExists
-                  next
-                end
+              unless result.ok?
+                error(result.error || 'invalid authentication credentials')
               end
 
-              {token: token, valid_to: expiration}
+              {
+                token: result.token,
+                valid_to: result.valid_to,
+              }
             end
           end
 
@@ -245,11 +247,17 @@ END
 
             def exec
               provider = self.class.resource.token_instance
-              provider.config.revoke_token(
-                request,
-                current_user,
-                provider.token(request)
-              )
+              result = provider.config.class.revoke.handle.call(ActionRequest.new(
+                request: request,
+                user: current_user,
+                token: provider.token(request),
+              ), ActionResult.new)
+
+              if result.ok?
+                ok
+              else
+                error(result.error || 'revoke failed')
+              end
             end
           end
 
@@ -267,13 +275,17 @@ END
 
             def exec
               provider = self.class.resource.token_instance
-              {
-                valid_to: provider.config.renew_token(
-                  request,
-                  current_user,
-                  provider.token(request)
-                ),
-              }
+              result = provider.config.renew_token(ActionRequest.new(
+                request: request,
+                user: current_user,
+                token: provider.token(request),
+              ), ActionResult.new)
+
+              if result.ok?
+                {valid_to: result.valid_to}
+              else
+                error(result.error || 'renew failed')
+              end
             end
           end
         end

@@ -182,6 +182,8 @@ module HaveAPI::CLI
             @api.describe_api(options[:version])[:authentication][m],
             server_config(options[:client])[:auth][m]
           )
+
+          opts.separator "\nAuthentication options:"
           @auth.options(opts)
         end
 

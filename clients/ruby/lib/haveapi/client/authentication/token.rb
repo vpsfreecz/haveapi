@@ -72,14 +72,17 @@ module HaveAPI::Client::Authentication
           @desc[:resources][:token][:actions][:request],
           []
       )
-      ret = a.execute({
-                          login: @opts[:user],
-                          password: @opts[:password],
-                          lifetime: @opts[:lifetime],
-                          interval: @opts[:interval] || 300})
+      input = {
+        lifetime: @opts[:lifetime],
+        interval: @opts[:interval] || 300,
+      }
+
+      request_credentials.each { |name| input[name] = @opts[name] }
+
+      ret = a.execute(input)
 
       unless ret[:status]
-        raise AuthenticationFailed.new(ret[:message] || 'bad username or password')
+        raise AuthenticationFailed.new(ret[:message] || 'invalid credentials')
       end
 
       @token = ret[:response][:token][:token]
@@ -95,6 +98,12 @@ module HaveAPI::Client::Authentication
         else
           raise AuthenticationFailed.new('token expired')
         end
+      end
+    end
+
+    def request_credentials
+      @desc[:resources][:token][:actions][:request][:input][:parameters].each_key.reject do |name|
+        %i(interval lifetime).include?(name)
       end
     end
   end

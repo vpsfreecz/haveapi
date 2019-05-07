@@ -29,10 +29,11 @@ module HaveAPI::Client
         end
       end
 
-      def initialize(communicator, description, opts)
+      def initialize(communicator, description, opts, &block)
         @communicator = communicator
         @desc = description
         @opts = opts
+        @block = block
 
         setup
       end

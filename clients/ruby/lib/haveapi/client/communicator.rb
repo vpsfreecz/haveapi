@@ -41,10 +41,15 @@ module HaveAPI::Client
     # Authenticate user with selected +auth_method+.
     # +auth_method+ is a name of registered authentication provider.
     # +options+ are specific for each authentication provider.
-    def authenticate(auth_method, options = {})
+    def authenticate(auth_method, options = {}, &block)
       desc = describe_api(@version)
 
-      @auth = self.class.auth_methods[auth_method].new(self, desc[:authentication][auth_method], options)
+      @auth = self.class.auth_methods[auth_method].new(
+        self,
+        desc[:authentication][auth_method],
+        options,
+        &block
+      )
       @rest = @auth.resource || @rest
     end
 
@@ -187,11 +192,11 @@ module HaveAPI::Client
           params: @auth.request_payload.update(@auth.request_url_params).update(query_params),
           user_agent: @identity
       }.update(@auth.request_headers)))
-      
+
       @proto_version = ret[:version]
       p_v = HaveAPI::Client::PROTOCOL_VERSION
       return ret[:response] if ret[:version] == p_v
-      
+
       unless ret[:version]
         raise ProtocolError,
             "Incompatible protocol version: the client uses v#{p_v} "+

@@ -65,30 +65,50 @@ module HaveAPI::Client::Authentication
 
     protected
     def request_token
-      a = HaveAPI::Client::Action.new(
-          nil,
-          @communicator,
-          :request,
-          @desc[:resources][:token][:actions][:request],
-          []
-      )
       input = {
         lifetime: @opts[:lifetime],
         interval: @opts[:interval] || 300,
       }
-
       request_credentials.each { |name| input[name] = @opts[name] }
 
-      ret = a.execute(input)
+      cont, next_action, token = login_step(:request, input)
+      return if cont == :done
 
-      unless ret[:status]
-        raise AuthenticationFailed.new(ret[:message] || 'invalid credentials')
+      if @block.nil?
+        raise AuthenticationFailed.new('implement multi-factor authentication')
       end
 
-      @token = ret[:response][:token][:token]
+      loop do
+        input = {token: token}
+        input.update(@block.call(next_action, auth_action_input(next_action)))
 
-      @valid_to = ret[:response][:token][:valid_to]
-      @valid_to = @valid_to && DateTime.iso8601(@valid_to).to_time
+        cont, next_action, token = login_step(next_action, input)
+        return if cont == :done
+      end
+    end
+
+    def login_step(name, input)
+      a = HaveAPI::Client::Action.new(
+        nil,
+        @communicator,
+        name,
+        @desc[:resources][:token][:actions][name],
+        []
+      )
+
+      resp = HaveAPI::Client::Response.new(a, a.execute(input))
+
+      if resp.failed?
+        raise AuthenticationFailed.new(resp.message || 'invalid credentials')
+      end
+
+      if resp[:complete]
+        @token = resp[:token]
+        @valid_to = resp[:valid_to] && DateTime.iso8601(resp[:valid_to]).to_time
+        :done
+      else
+        [:continue, resp[:next_action].to_sym, resp[:token]]
+      end
     end
 
     def check_validity
@@ -104,6 +124,12 @@ module HaveAPI::Client::Authentication
     def request_credentials
       @desc[:resources][:token][:actions][:request][:input][:parameters].each_key.reject do |name|
         %i(interval lifetime).include?(name)
+      end
+    end
+
+    def auth_action_input(name)
+      @desc[:resources][:token][:actions][name][:input][:parameters].reject do |k, _|
+        %i(token).include?(k)
       end
     end
   end

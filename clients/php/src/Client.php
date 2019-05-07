@@ -8,7 +8,7 @@ use HaveAPI\Client\Action;
  */
 class Client extends Client\Resource {
 	const VERSION = '0.12.0';
-	const PROTOCOL_VERSION = '1.2';
+	const PROTOCOL_VERSION = '2.0';
 
 	private $uri;
 	private $version;

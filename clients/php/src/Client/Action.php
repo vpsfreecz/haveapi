@@ -114,7 +114,7 @@ class Action {
 	/**
 	 * Set action URL.
 	 */
-	public function preparePath($[ath) {
+	public function preparePath($path) {
 		$this->prepared_path = $path;
 	}
 

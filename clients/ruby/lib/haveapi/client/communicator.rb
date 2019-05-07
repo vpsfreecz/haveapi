@@ -141,11 +141,11 @@ module HaveAPI::Client
 
         end if meta
 
-        args << {params: get_params.update(@auth.request_url_params), accept: :json, user_agent: @identity}.update(@auth.request_headers)
+        args << {params: get_params.update(@auth.request_query_params), accept: :json, user_agent: @identity}.update(@auth.request_headers)
       end
 
       begin
-        response = parse(@rest[action.prepared_url].method(action.http_method.downcase.to_sym).call(*args))
+        response = parse(@rest[action.prepared_path].method(action.http_method.downcase.to_sym).call(*args))
 
       rescue RestClient::Forbidden
         return error('Access forbidden. Bad user name or password? Not authorized?')
@@ -189,7 +189,7 @@ module HaveAPI::Client
 
     def description_for(path, query_params={})
       ret = parse(@rest[path].get_options({
-          params: @auth.request_payload.update(@auth.request_url_params).update(query_params),
+          params: @auth.request_payload.update(@auth.request_query_params).update(query_params),
           user_agent: @identity
       }.update(@auth.request_headers)))
 

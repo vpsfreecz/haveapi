@@ -49,7 +49,7 @@ module HaveAPI::Client
       end
 
       # Called for each request. Returns a hash of query parameters.
-      def request_url_params
+      def request_query_params
         {}
       end
 

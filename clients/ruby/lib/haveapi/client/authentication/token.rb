@@ -15,7 +15,7 @@ module HaveAPI::Client::Authentication
       @configured = true
     end
 
-    def request_url_params
+    def request_query_params
       return {} unless @configured
       check_validity
       @via == :query_param ? {@desc[:query_parameter] => @token} : {}

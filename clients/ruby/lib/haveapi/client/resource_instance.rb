@@ -23,13 +23,13 @@ module HaveAPI::Client
       if response
         if response.is_a?(Hash)
           @params = response
-          @prepared_args = response[:_meta][:url_params]
+          @prepared_args = response[:_meta][:path_params]
           @meta = response[:_meta] unless @meta
 
         else
           @response = response
           @params = response.response
-          @prepared_args = response.meta[:url_params]
+          @prepared_args = response.meta[:path_params]
           @meta = response.meta unless @meta
         end
 
@@ -81,14 +81,14 @@ module HaveAPI::Client
     def resolve
       return self if @resolved
 
-      @action.provide_args(*@meta[:url_params])
+      @action.provide_args(*@meta[:path_params])
       @response = Response.new(@action, @action.execute({}))
       @params = @response.response
 
       setup_from_clone(@resource)
       define_attributes
 
-      @prepared_args = @response.meta[:url_params]
+      @prepared_args = @response.meta[:path_params]
       @resolved = true
       self
     end
@@ -133,7 +133,7 @@ module HaveAPI::Client
                           resolved: false,
                           # TODO: this will not work for nested resources, as they have
                           # multiple IDs
-                          url_params: [id],
+                          path_params: [id],
                       },
                   }
               )

@@ -14,10 +14,10 @@ module HaveAPI::Client
 
     def execute(data, *_)
       args = [self]
-      
+
       if input
         params = Params.new(self, data)
-        
+
         unless params.valid?
           raise ValidationError.new(self, params.errors)
         end
@@ -98,8 +98,8 @@ module HaveAPI::Client
       @spec[:meta][scope]
     end
 
-    def url
-      @spec[:url]
+    def path
+      @spec[:path]
     end
 
     def help
@@ -107,8 +107,8 @@ module HaveAPI::Client
     end
 
     # Url with resolved parameters.
-    def prepared_url
-      @prepared_url || @spec[:url]
+    def prepared_path
+      @prepared_path || @spec[:path]
     end
 
     def prepared_help
@@ -120,27 +120,27 @@ module HaveAPI::Client
     end
 
     def unresolved_args?
-      prepared_url =~ /:[a-zA-Z\-_]+/
+      prepared_path =~ /:[a-zA-Z\-_]+/
     end
 
     def provide_args(*args)
       apply_args(args)
     end
 
-    def provide_url(url, help)
-      @prepared_url = url
+    def provide_path(path, help)
+      @prepared_path = path
       @prepared_help = help
     end
 
     def reset
-      @prepared_url = nil
+      @prepared_path = nil
       @prepared_help = nil
     end
 
     def update_description(spec)
       @spec = spec
     end
-  
+
     # Block until the action is completed or timeout occurs. If the block is given,
     # it is regularly called with the action's state.
     # @param interval [Float] how often should the action state be checked
@@ -185,7 +185,7 @@ module HaveAPI::Client
           cancel_block = state.cancel_block
 
           ret = cancel(client, id)
-          
+
           if ret.is_a?(Response)
             # The cancel is not a blocking operation, return immediately
             raise ActionFailed, ret unless ret.ok?
@@ -203,7 +203,7 @@ module HaveAPI::Client
                 &cancel_block
             )
           end
-          
+
           return ret
         end
 
@@ -232,11 +232,11 @@ module HaveAPI::Client
 
     private
     def apply_args(args)
-      @prepared_url ||= @spec[:url].dup
+      @prepared_path ||= @spec[:path].dup
       @prepared_help ||= @spec[:help].dup
 
       args.each do |arg|
-        @prepared_url.sub!(/:[a-zA-Z\-_]+/, arg.to_s)
+        @prepared_path.sub!(/:[a-zA-Z\-_]+/, arg.to_s)
         @prepared_help.sub!(/:[a-zA-Z\-_]+/, arg.to_s)
       end
     end

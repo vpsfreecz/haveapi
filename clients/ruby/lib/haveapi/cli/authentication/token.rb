@@ -62,7 +62,15 @@ module HaveAPI::CLI::Authentication
         interval: @interval,
         valid_to: @valid_to,
         via: @via,
-      }.merge(@credentials))
+      }.merge(@credentials)) do |action, params|
+        ret = {}
+
+        params.each do |name, desc|
+          ret[name] = read_param(name, desc)
+        end
+
+        ret
+      end
     end
 
     def save

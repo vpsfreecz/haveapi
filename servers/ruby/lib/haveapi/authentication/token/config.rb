@@ -36,6 +36,17 @@ module HaveAPI::Authentication
           end
         end
 
+        # @param name [Symbol]
+        def action(name, &block)
+          @actions ||= {}
+          @actions[name] = ActionConfig.new(block)
+        end
+
+        # @return [Hash]
+        def actions
+          @actions || {}
+        end
+
         # HTTP header that is searched for token
         # @param header [String, nil]
         # @return [String]

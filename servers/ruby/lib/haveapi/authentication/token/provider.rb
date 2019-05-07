@@ -62,6 +62,8 @@ module HaveAPI::Authentication
     #         )
     #
     #         res.token = token
+    #         res.valid_to = valid_to
+    #         res.complete = true
     #         res.ok
     #       end
     #     end
@@ -208,6 +210,8 @@ END
             output(:hash) do
               string :token
               datetime :valid_to
+              bool :complete
+              string :next_action
             end
 
             authorize do
@@ -233,6 +237,8 @@ END
               {
                 token: result.token,
                 valid_to: result.valid_to,
+                complete: result.complete?,
+                next_action: result.next_action,
               }
             end
           end
@@ -285,6 +291,47 @@ END
                 {valid_to: result.valid_to}
               else
                 error(result.error || 'renew failed')
+              end
+            end
+          end
+
+          provider.config.class.actions.each do |name, config|
+            define_action(:"#{name.to_s.capitalize}") do
+              http_method :post
+              auth false
+
+              input(:hash) do
+                instance_exec(&config.input) if config.input
+              end
+
+              output(:hash) do
+                string :token
+                datetime :valid_to
+                bool :complete
+                string :next_action
+              end
+
+              authorize do
+                allow
+              end
+
+              define_method(:exec) do
+                result = config.handle.call(ActionRequest.new(
+                  request: request,
+                  input: input,
+                  token: input[:token],
+                ), ActionResult.new)
+
+                unless result.ok?
+                  error(result.error || 'authentication failed')
+                end
+
+                {
+                  token: result.token,
+                  valid_to: result.valid_to,
+                  complete: result.complete?,
+                  next_action: result.next_action,
+                }
               end
             end
           end

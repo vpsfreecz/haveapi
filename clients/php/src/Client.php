@@ -201,9 +201,9 @@ class Client extends Client\Resource {
 	public function directCall(Action $action, $params = array(), &$time = NULL) {
 		$fn = strtolower($action->httpMethod());
 
-// 		echo "execute {$action->httpMethod()} {$action->url()}\n<br>\n";
+// 		echo "execute {$action->httpMethod()} {$action->path()}\n<br>\n";
 
-		$request = $this->getRequest($fn, $this->uri . $action->url());
+		$request = $this->getRequest($fn, $this->uri . $action->path());
 		$res = array();
 
 		if (array_key_exists('meta', $params)) {

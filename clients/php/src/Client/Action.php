@@ -17,7 +17,7 @@ class Action {
 	private $client;
 
 	private $resource;
-	private $prepared_url;
+	private $prepared_path;
 	private $args;
 	private $lastArgs = array();
 
@@ -52,7 +52,7 @@ class Action {
 
 		$ret = $this->client->call($this, $params);
 
-		$this->prepared_url = null;
+		$this->prepared_path = null;
 
 		return $ret;
 	}
@@ -67,7 +67,7 @@ class Action {
 
 		$ret = $this->client->directCall($this, $params);
 
-		$this->prepared_url = null;
+		$this->prepared_path = null;
 
 		return $ret;
 	}
@@ -76,8 +76,8 @@ class Action {
 	 * Prepare parameters for the action invocation.
 	 */
 	protected function prepareCall($func_args) {
-		if(!$this->prepared_url)
-			$this->prepared_url = $this->url();
+		if(!$this->prepared_path)
+			$this->prepared_path = $this->path();
 
 		$args = array_merge($this->args, $func_args);
 
@@ -94,7 +94,7 @@ class Action {
 				break;
 			}
 
-			$this->prepared_url = preg_replace("/:[a-zA-Z\-_]+/", $arg, $this->prepared_url, 1, $replaced_cnt);
+			$this->prepared_path = preg_replace("/:[a-zA-Z\-_]+/", $arg, $this->prepared_path, 1, $replaced_cnt);
 
 			if($replaced_cnt) {
 				$this->lastArgs[] = $arg;
@@ -105,7 +105,7 @@ class Action {
 			}
 		}
 
-		if(preg_match("/:[a-zA-Z\-_]+/", $this->prepared_url))
+		if(preg_match("/:[a-zA-Z\-_]+/", $this->prepared_path))
 			throw new Exception\UnresolvedArguments("Cannot call action '{$this->resource->getName()}#{$this->m_name}': unresolved arguments.");
 
 		return $params;
@@ -114,8 +114,8 @@ class Action {
 	/**
 	 * Set action URL.
 	 */
-	public function prepareUrl($url) {
-		$this->prepared_url = $url;
+	public function preparePath($[ath) {
+		$this->prepared_path = $path;
 	}
 
 	/**
@@ -128,11 +128,11 @@ class Action {
 	/**
 	 * @return string raw or prepared URL
 	 */
-	public function url() {
-		if($this->prepared_url)
-			return $this->prepared_url;
+	public function path() {
+		if($this->prepared_path)
+			return $this->prepared_path;
 
-		return $this->description->url;
+		return $this->description->path;
 	}
 
 	/**

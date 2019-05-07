@@ -387,7 +387,7 @@ module HaveAPI
           )
 
         else
-          hash[resource][:actions][route.action] = route.url
+          hash[resource][:actions][route.action] = route.path
           mount_action(v, route)
         end
       end
@@ -401,7 +401,7 @@ module HaveAPI
           ret[:resources][route.keys.first] = mount_nested_resource(v, route.values.first)
 
         else
-          ret[:actions][route.action] = route.url
+          ret[:actions][route.action] = route.path
           mount_action(v, route)
         end
       end
@@ -410,7 +410,7 @@ module HaveAPI
     end
 
     def mount_action(v, route)
-      @sinatra.method(route.http_method).call(route.url) do
+      @sinatra.method(route.http_method).call(route.path) do
         if route.action.auth
           authenticate!(v)
         else
@@ -437,7 +437,7 @@ module HaveAPI
             version: v,
             request: self,
             action: route.action,
-            url: route.url,
+            path: route.path,
             params: params,
             user: current_user,
             endpoint: true
@@ -462,7 +462,7 @@ module HaveAPI
         ]
       end
 
-      @sinatra.options route.url do |*args|
+      @sinatra.options route.path do |*args|
         access_control
         route_method = route.http_method.to_s.upcase
 
@@ -479,7 +479,7 @@ module HaveAPI
             version: v,
             request: self,
             action: route.action,
-            url: route.url,
+            path: route.path,
             args: args,
             params: params,
             user: current_user,

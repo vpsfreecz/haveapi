@@ -230,9 +230,9 @@ module HaveAPI
             output: @output ? @output.describe(context) : {parameters: {}},
             meta: @meta ? @meta.merge(@meta) { |_, v| v && v.describe(context) } : nil,
             examples: @examples ? @examples.describe(context) : [],
-            url: context.resolved_url,
+            path: context.resolved_path,
             method: route_method,
-            help: "#{context.url}?method=#{route_method}"
+            help: "#{context.path}?method=#{route_method}"
         }
       end
 
@@ -261,7 +261,7 @@ module HaveAPI
         ret
       end
 
-      def resolve_url_params(object)
+      def resolve_path_params(object)
         if self.resolve
           self.resolve.call(object)
 

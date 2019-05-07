@@ -84,9 +84,9 @@ module HaveAPI
 
       context.resource = self
 
-      hash[:actions].each do |action, url|
+      hash[:actions].each do |action, path|
         context.action = action
-        context.url = url
+        context.path = path
 
         a_name = action.action_name.underscore
         a_desc = action.describe(context)

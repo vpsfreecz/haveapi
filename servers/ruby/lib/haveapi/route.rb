@@ -1,9 +1,9 @@
 module HaveAPI
   class Route
-    attr_reader :url, :action
+    attr_reader :path, :action
 
-    def initialize(url, action)
-      @url = url
+    def initialize(path, action)
+      @path = path
       @action = action
     end
 

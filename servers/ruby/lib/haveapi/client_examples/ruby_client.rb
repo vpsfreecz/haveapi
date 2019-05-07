@@ -42,7 +42,7 @@ END
     def example(sample)
       args = []
 
-      args.concat(sample[:url_params]) if sample[:url_params]
+      args.concat(sample[:path_params]) if sample[:path_params]
 
       if sample[:request] && !sample[:request].empty?
         args << PP.pp(sample[:request], '').strip

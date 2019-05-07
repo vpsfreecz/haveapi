@@ -47,7 +47,7 @@ END
       cmd = [init]
       cmd << resource_path.join('.')
       cmd << action_name
-      cmd.concat(sample[:url_params]) if sample[:url_params]
+      cmd.concat(sample[:path_params]) if sample[:path_params]
 
       if sample[:request] && !sample[:request].empty?
         cmd << "-- \\\n"

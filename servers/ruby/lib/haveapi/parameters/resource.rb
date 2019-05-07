@@ -42,15 +42,15 @@ module HaveAPI::Parameters
     end
 
     def describe(context)
-      val_url = context.url_for(
+      val_path = context.path_for(
           @resource::Show,
-          context.endpoint && context.action_prepare && context.layout == :object && context.call_url_params(context.action, context.action_prepare)
+          context.endpoint && context.action_prepare && context.layout == :object && context.call_path_params(context.action, context.action_prepare)
       )
       val_method = @resource::Index.http_method.to_s.upcase
 
-      choices_url = context.url_for(
+      choices_path = context.path_for(
           @choices,
-          context.endpoint && context.layout == :object && context.call_url_params(context.action, context.action_prepare)
+          context.endpoint && context.layout == :object && context.call_path_params(context.action, context.action_prepare)
       )
       choices_method = @choices.http_method.to_s.upcase
 
@@ -63,14 +63,14 @@ module HaveAPI::Parameters
           value_id: @value_id,
           value_label: @value_label,
           value: context.action_prepare && {
-              url: val_url,
+              path: val_path,
               method: val_method,
-              help: "#{val_url}?method=#{val_method}",
+              help: "#{val_path}?method=#{val_method}",
           },
           choices: {
-              url: choices_url,
+              path: choices_path,
               method: choices_method,
-              help: "#{choices_url}?method=#{choices_method}"
+              help: "#{choices_path}?method=#{choices_method}"
           }
       }
     end

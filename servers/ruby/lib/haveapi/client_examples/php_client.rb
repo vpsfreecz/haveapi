@@ -39,7 +39,7 @@ END
     def example(sample)
       args = []
 
-      args.concat(sample[:url_params]) if sample[:url_params]
+      args.concat(sample[:path_params]) if sample[:path_params]
 
       if sample[:request] && !sample[:request].empty?
         args << format_parameters(:input, sample[:request])

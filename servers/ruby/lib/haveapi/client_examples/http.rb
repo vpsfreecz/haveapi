@@ -41,8 +41,8 @@ END
     def request(sample)
       path = resolve_path(
           action[:method],
-          action[:url],
-          sample[:url_params] || [],
+          action[:path],
+          sample[:path_params] || [],
           sample[:request]
       )
 
@@ -74,10 +74,10 @@ END
       res
     end
 
-    def resolve_path(method, url, url_params, input_params)
-      ret = url.clone
+    def resolve_path(method, path, path_params, input_params)
+      ret = path.clone
 
-      url_params.each do |v|
+      path_params.each do |v|
         ret.sub!(/:[a-zA-Z\-_]+/, v.to_s)
       end
 

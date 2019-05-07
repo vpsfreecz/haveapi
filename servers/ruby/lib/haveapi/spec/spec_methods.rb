@@ -26,7 +26,7 @@ module HaveAPI::Spec
     # This method is a wrapper for Rack::Test::Methods. Input parameters
     # are encoded into JSON and sent with a correct Content-Type.
     # Two modes:
-    #   http_method, url, params = {}
+    #   http_method, path, params = {}
     #   [resource], action, params, &block
     def call_api(*args, &block)
       if args[0].is_a?(::Array) || args[1].is_a?(::Symbol)
@@ -34,22 +34,22 @@ module HaveAPI::Spec
 
         app
 
-        action, url = find_action(
+        action, path = find_action(
             (params && params[:version]) || @api.default_version,
             r_name, a_name
         )
 
         method(action.http_method).call(
-            url,
+            path,
             params && params.to_json,
             {'Content-Type' => 'application/json'}
         )
 
       else
-        http_method, url, params = args
+        http_method, path, params = args
 
         method(http_method).call(
-            url,
+            path,
             params && params.to_json,
             {'Content-Type' => 'application/json'}
         )
@@ -77,8 +77,8 @@ module HaveAPI::Spec
     def mock_action(r_name, a_name, params, version: nil, user: nil, &block)
       app
       v = version || @api.default_version
-      action, url = find_action(v, r_name, a_name)
-      m = MockAction.new(self, @api, action, url, v)
+      action, path = find_action(v, r_name, a_name)
+      m = MockAction.new(self, @api, action, path, v)
       m.call(params, user: user, &block)
     end
 
@@ -106,7 +106,7 @@ module HaveAPI::Spec
       resources = r_name.is_a?(::Array) ? r_name : [r_name]
 
       top = @api.routes[v]
-      
+
       resources.each do |r|
         top = top[:resources].detect do |k, _|
           k.resource_name.to_sym == r

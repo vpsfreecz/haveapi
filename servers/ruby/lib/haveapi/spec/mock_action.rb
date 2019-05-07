@@ -1,10 +1,10 @@
 module HaveAPI::Spec
   class MockAction
-    def initialize(test, server, action, url, v)
+    def initialize(test, server, action, path, v)
       @test = test
       @server = server
       @action = action
-      @url = url
+      @path = path
       @v = v
     end
 
@@ -13,7 +13,7 @@ module HaveAPI::Spec
           @server,
           version: @v,
           action: @action,
-          url: @url,
+          path: @path,
           params: input,
           user: user,
           endpoint: true

@@ -43,13 +43,13 @@ END
       path = [mountpoint].concat(resource_path)
 
       unless class_action?
-        if !sample[:url_params] || sample[:url_params].empty?
+        if !sample[:path_params] || sample[:path_params].empty?
           fail "example {#{sample}} of action #{resource_path.join('.')}"+
                ".#{action_name} is for an instance action but does not include "+
                "URL parameters"
         end
 
-        path << sample[:url_params].first.to_s
+        path << sample[:path_params].first.to_s
       end
 
       path << 'actions' << action_name
@@ -112,7 +112,7 @@ END
     end
 
     def class_action?
-      action[:url].index(/:[a-zA-Z\-_]+/).nil?
+      action[:path].index(/:[a-zA-Z\-_]+/).nil?
     end
   end
 end

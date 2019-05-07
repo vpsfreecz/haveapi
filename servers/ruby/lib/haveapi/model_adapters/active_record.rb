@@ -114,7 +114,7 @@ module HaveAPI::ModelAdapters
       def self.used_by(action)
         action.meta(:object) do
           output do
-            custom :url_params, label: 'URL parameters',
+            custom :path_params, label: 'URL parameters',
                    desc: 'An array of parameters needed to resolve URL to this object'
             bool :resolved, label: 'Resolved', desc: 'True if the association is resolved'
           end
@@ -172,14 +172,14 @@ END
         if @context.action.name.demodulize == 'Index' \
            && !@context.action.resolve \
            && res.const_defined?(:Show)
-          params = res::Show.resolve_url_params(@object)
+          params = res::Show.resolve_path_params(@object)
 
         else
-          params = @context.action.resolve_url_params(@object)
+          params = @context.action.resolve_path_params(@object)
         end
 
         {
-            url_params: params.is_a?(Array) ? params : [params],
+            path_params: params.is_a?(Array) ? params : [params],
             resolved: true
         }
       end
@@ -195,7 +195,7 @@ END
         res_show = param.show_action
         res_output = res_show.output
 
-        args = res_show.resolve_url_params(val)
+        args = res_show.resolve_path_params(val)
 
         if includes_include?(param.name)
           push_cls = @context.action
@@ -234,7 +234,7 @@ END
               param.value_id => val.send(res_output[param.value_id].db_name),
               param.value_label => val.send(res_output[param.value_label].db_name),
               _meta: {
-                :url_params => args.is_a?(Array) ? args : [args],
+                :path_params => args.is_a?(Array) ? args : [args],
                 :resolved => false
               }
           }

@@ -8,8 +8,8 @@ module HaveAPI
       @authorization = block
     end
 
-    def url_params(*params)
-      @url_params = params
+    def path_params(*params)
+      @path_params = params
     end
 
     def request(f)
@@ -60,7 +60,7 @@ module HaveAPI
         {
             title: @title,
             comment: @comment,
-            url_params: @url_params,
+            path_params: @path_params,
             request: filter_input_params(context, @request),
             response: filter_output_params(context, @response),
             status: @status.nil? ? true : @status,

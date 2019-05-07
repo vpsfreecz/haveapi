@@ -1,18 +1,18 @@
 module HaveAPI
   class Context
-    attr_accessor :server, :version, :request, :resource, :action, :url, :args,
+    attr_accessor :server, :version, :request, :resource, :action, :path, :args,
                   :params, :current_user, :authorization, :endpoint,
                   :action_instance, :action_prepare, :layout
 
     def initialize(server, version: nil, request: nil, resource: [], action: nil,
-                  url: nil, args: nil, params: nil, user: nil,
+                  path: nil, args: nil, params: nil, user: nil,
                   authorization: nil, endpoint: nil)
       @server = server
       @version = version
       @request = request
       @resource = resource
       @action = action
-      @url = url
+      @path = path
       @args = args
       @params = params
       @current_user = user
@@ -20,10 +20,10 @@ module HaveAPI
       @endpoint = endpoint
     end
 
-    def resolved_url
-      return @url unless @args
+    def resolved_path
+      return @path unless @args
 
-      ret = @url.dup
+      ret = @path.dup
 
       @args.each do |arg|
         resolve_arg!(ret, arg)
@@ -32,7 +32,7 @@ module HaveAPI
       ret
     end
 
-    def url_for(action, args=nil)
+    def path_for(action, args=nil)
       top_module = Kernel
       top_route = @server.routes[@version]
 
@@ -60,20 +60,20 @@ module HaveAPI
       ret
     end
 
-    def call_url_params(action, obj)
-      ret = params && action.resolve_url_params(obj)
+    def call_path_params(action, obj)
+      ret = params && action.resolve_path_params(obj)
 
       return [ret] if ret && !ret.is_a?(Array)
       ret
     end
 
-    def url_with_params(action, obj)
-      url_for(action, call_url_params(action, obj))
+    def path_with_params(action, obj)
+      path_for(action, call_path_params(action, obj))
     end
 
     private
-    def resolve_arg!(url, arg)
-      url.sub!(/:[a-zA-Z\-_]+/, arg.to_s)
+    def resolve_arg!(path, arg)
+      path.sub!(/:[a-zA-Z\-_]+/, arg.to_s)
     end
   end
 end

@@ -50,8 +50,8 @@ END
           base_url,
           resolve_path(
               action[:method],
-              action[:url],
-              sample[:url_params] || [],
+              action[:path],
+              sample[:path_params] || [],
               sample[:request]
           )
       )

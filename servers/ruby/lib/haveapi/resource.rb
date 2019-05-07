@@ -102,7 +102,7 @@ module HaveAPI
     end
 
     def self.define_resource(name, superclass: Resource, &block)
-      return false if const_defined?(name)
+      return false if const_defined?(name) && self != HaveAPI::Resource
 
       cls = Class.new(superclass)
       const_set(name, cls) if self != HaveAPI::Resource

@@ -10,7 +10,7 @@ trim_trailing_whitespace = true
 indent_size = 2
 indent_style = space
 
-[*.go.erb]
+[*.{go.erb,php}]
 indent_size = 4
 indent_style = tab
 

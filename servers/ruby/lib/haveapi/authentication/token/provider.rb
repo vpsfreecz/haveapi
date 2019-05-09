@@ -301,6 +301,7 @@ END
               auth false
 
               input(:hash) do
+                string :token, required: true
                 instance_exec(&config.input) if config.input
               end
 

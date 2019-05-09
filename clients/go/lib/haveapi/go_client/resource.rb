@@ -45,7 +45,9 @@ module HaveAPI::GoClient
       @go_name = camelize(name)
       @go_type = full_go_type
       @resources = desc[:resources].map { |k, v| Resource.new(self, k, v) }
-      @actions = desc[:actions].map { |k, v| Action.new(self, k, v, prefix: prefix) }
+      @actions = desc[:actions].map do |k, v|
+        Action.new(self, k.to_s, v, prefix: prefix)
+      end
     end
 
     # @return [ApiVersion]

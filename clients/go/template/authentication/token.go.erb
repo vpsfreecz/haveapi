@@ -1,7 +1,7 @@
 package <%= package %>
 
 import (
-	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -38,19 +38,25 @@ func (auth *TokenAuth) Authenticate(request *http.Request) {
 	}
 }
 
-// SetNewTokenAuth obtains a new authentication token with username and password
-//
-// lifetime can be one of: fixed, renewable_auto, renewable_manual or permanent
-// interval determines how many seconds will the token be valid
-func (client *Client) SetNewTokenAuth(username string, password string, lifetime string, interval int) error {
+type TokenAuthOptions struct {
+<% auth.request_action.input.parameters.each do |p| -%>
+	<%= p.go_name %> <%= p.go_in_type %>
+<% end -%>
+<% auth.custom_actions.each do |a| -%>
+	<%= "#{a.go_name}Callback" %> func(input *<%= a.input.go_type %>) error
+<% end -%>
+}
+
+// SetNewTokenAuth obtains a new authentication token with login credentials
+func (client *Client) SetNewTokenAuth(options *TokenAuthOptions) error {
 	resource := NewAuthTokenResourceToken(client)
+	auth := &TokenAuth{Resource: resource, Mode: HttpHeader}
 
 	request := resource.Request.Prepare()
 	request.SetInput(&AuthTokenActionTokenRequestInput{
-		Login: username,
-		Password: password,
-		Lifetime: lifetime,
-		Interval: int64(interval),
+<% auth.request_action.input.parameters.each do |p| -%>
+		<%= p.go_name %>: options.<%= p.go_name %>,
+<% end -%>
 	})
 
 	resp, err := request.Call()
@@ -58,16 +64,62 @@ func (client *Client) SetNewTokenAuth(username string, password string, lifetime
 	if err != nil {
 		return err
 	} else if !resp.Status {
-		return errors.New("Unable to request token: " + resp.Message)
+		return fmt.Errorf("Unable to request token: %v", resp.Message)
 	}
 
-	client.Authentication = &TokenAuth{
-		Resource: resource,
-		Token: resp.Output.Token,
-		Mode: HttpHeader,
+	if resp.Output.Complete {
+		auth.Token = resp.Output.Token
+		client.Authentication = auth
+		return nil
 	}
 
-	return nil
+	return auth.nextAuthenticationStep(
+		options,
+		resp.Output.NextAction,
+		resp.Output.Token,
+	);
+}
+
+// nextAuthenticationStep performs authentication steps recursively, until
+// the authentication is completed
+func (auth *TokenAuth) nextAuthenticationStep(options *TokenAuthOptions, action string, token string) error {
+<% auth.custom_actions.each do |a| -%>
+	if action == "<%= a.name %>" {
+		action := auth.Resource.<%= a.go_name %>.Prepare()
+		input := action.NewInput()
+		input.SetToken(token)
+
+		if options.<%= "#{a.go_name}Callback" %> == nil {
+			return fmt.Errorf("Implement callback <%= "#{a.go_name}Callback" %>")
+		}
+
+		if err := options.<%= "#{a.go_name}Callback" %>(input); err != nil {
+			return fmt.Errorf("<%= "#{a.go_name}Callback" %> failed: %v", err)
+		}
+
+		resp, err := action.Call()
+
+		if err != nil {
+			return err
+		} else if !resp.Status {
+			return fmt.Errorf("Failed at authentication step '%s': %v", action, resp.Message)
+		}
+
+		if resp.Output.Complete {
+			auth.Token = resp.Output.Token
+			auth.Resource.Client.Authentication = auth
+			return nil
+		}
+
+		return auth.nextAuthenticationStep(
+			options,
+			resp.Output.NextAction,
+			resp.Output.Token,
+		);
+	}
+<% end -%>
+
+	return fmt.Errorf("Unsupported authentication action '%s'", action)
 }
 
 // SetExistingTokenAuth will use a previously acquired token
@@ -93,7 +145,7 @@ func (client *Client) RevokeAuthToken() error {
 	if err != nil {
 		return err
 	} else if !resp.Status {
-		return errors.New("Unable to revoke token: " + resp.Message)
+		return fmt.Errorf("Unable to revoke token: %v", resp.Message)
 	}
 
 	client.Authentication = nil

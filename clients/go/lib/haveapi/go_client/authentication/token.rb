@@ -40,5 +40,17 @@ module HaveAPI::GoClient
 
       resource.generate(gen)
     end
+
+    # @return [Action]
+    def request_action
+      @request_action ||= resource.actions.detect { |a| a.name == 'request' }
+    end
+
+    # @return [Array<Action>]
+    def custom_actions
+      @custom_actions ||= resource.actions.reject do |a|
+        %w(request renew revoke).include?(a.name)
+      end
+    end
   end
 end

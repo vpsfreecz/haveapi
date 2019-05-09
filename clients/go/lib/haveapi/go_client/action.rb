@@ -68,7 +68,7 @@ module HaveAPI::GoClient
       @input = desc[:input] && InputOutput.new(self, :io, :input, desc[:input])
       @output = desc[:output] && InputOutput.new(self, :io, :output, desc[:output])
       @http_method = desc[:method]
-      @path = desc[:url]
+      @path = desc[:path]
       @metadata = desc[:meta] && Metadata.new(self, desc[:meta])
       @blocking = desc[:blocking]
     end

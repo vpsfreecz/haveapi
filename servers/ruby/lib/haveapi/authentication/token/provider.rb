@@ -317,11 +317,15 @@ END
               end
 
               define_method(:exec) do
-                result = config.handle.call(ActionRequest.new(
-                  request: request,
-                  input: input,
-                  token: input[:token],
-                ), ActionResult.new)
+                begin
+                  result = config.handle.call(ActionRequest.new(
+                    request: request,
+                    input: input,
+                    token: input[:token],
+                  ), ActionResult.new)
+                rescue HaveAPI::AuthenticationError => e
+                  error(e.message)
+                end
 
                 unless result.ok?
                   error(result.error || 'authentication failed')

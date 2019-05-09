@@ -1245,7 +1245,7 @@ Action.prototype.invoke = function() {
 	var prep = this.prepareInvoke(arguments);
 
 	if (!prep.params.validate()) {
-		prep.callback(this.client, new LocalResponse(
+		prep.onReply(this.client, new LocalResponse(
 			this,
 			false,
 			'invalid input parameters',

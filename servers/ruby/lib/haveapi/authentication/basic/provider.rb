@@ -17,6 +17,8 @@ module HaveAPI::Authentication
     #   ...
     #   api.auth_chain << MyBasicAuth
     class Provider < Base
+      auth_method :basic
+
       def authenticate(request)
         user = nil
 

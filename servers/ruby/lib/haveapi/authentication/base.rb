@@ -9,7 +9,7 @@ module HaveAPI
         if v
           @auth_method = v
         else
-          @auth_method || name.split('::')[-2].underscore.to_sym
+          @auth_method || name.split('::').last.underscore.to_sym
         end
       end
 

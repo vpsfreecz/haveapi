@@ -51,6 +51,7 @@ type TokenAuthOptions struct {
 func (client *Client) SetNewTokenAuth(options *TokenAuthOptions) error {
 	resource := NewAuthTokenResourceToken(client)
 	auth := &TokenAuth{Resource: resource, Mode: HttpHeader}
+	auth.setDefaultOptions(options)
 
 	request := resource.Request.Prepare()
 	request.SetInput(&AuthTokenActionTokenRequestInput{
@@ -78,6 +79,16 @@ func (client *Client) SetNewTokenAuth(options *TokenAuthOptions) error {
 		resp.Output.NextAction,
 		resp.Output.Token,
 	);
+}
+
+func (auth *TokenAuth) setDefaultOptions(options *TokenAuthOptions) {
+	if options.Lifetime == "" {
+		options.Lifetime = "renewable_auto"
+	}
+
+	if options.Interval == 0 {
+		options.Interval = 300
+	}
 }
 
 // nextAuthenticationStep performs authentication steps recursively, until

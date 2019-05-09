@@ -302,8 +302,15 @@ module HaveAPI::CLI
 
       unless options[:auth]
         cfg = server_config(options[:client])
+        connect_api(url: options[:client], version: options[:version]) unless @api
 
-        @auth = Cli.auth_methods[cfg[:last_auth]].new(cfg[:auth][cfg[:last_auth]]) if cfg[:last_auth]
+        if m = cfg[:last_auth]
+          @auth = Cli.auth_methods[m].new(
+            @api,
+            @api.describe_api(options[:version])[:authentication][m],
+            cfg[:auth][m],
+          )
+        end
       end
 
       [args, options]

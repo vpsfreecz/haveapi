@@ -56,13 +56,17 @@ module HaveAPI::CLI::Authentication
     end
 
     def authenticate
-      @communicator.authenticate(:token, {
+      opts = {
         token: @token,
         lifetime: @lifetime || :renewable_auto,
         interval: @interval,
         valid_to: @valid_to,
         via: @via,
-      }.merge(@credentials)) do |action, params|
+      }
+
+      opts.update(@credentials) if @credentials
+
+      @communicator.authenticate(:token, opts) do |action, params|
         ret = {}
 
         params.each do |name, desc|

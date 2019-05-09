@@ -94,14 +94,29 @@ HTTP basic authentication needs no other configuration, only informs about its p
 
     "basic": {}
 
+HTTP basic authentication does not support multi-factor authentication.
+
 ### Token authentication
-Token authentication contains a resource ``token``, that is used
-to acquire and revoke token.
+Token authentication contains resource ``token``, that is used to acquire
+and revoke tokens.
 
-Token is acquired by action ``request``. The client provides login and password and gets a token
-that is used afterwards. Token has a validity period, which may also be infinity.
+Tokens are acquired by action ``request``, in which the client provides arbitrary
+login credentials. If the login credentials match, the server either concludes
+the authentication process, or multiple authentication steps may be necessary.
 
-Token can be revoked by calling the ``revoke`` action.
+For single-step authentication processses, action ``request`` returns the
+token and its validity period. If multiple authentication steps are necessary,
+the server signals this by returning ``complete = true``. The client then has
+to call the next authentication step, which is an action on the ``token``
+resource, as returned in ``next_action``.
+
+Tokens are returned in both cases. If the authentication is finished, the token
+is then used for authenticating further requests. If the authentication continues,
+the token is used to authenticate the next authentication request, which then
+returns another token.
+
+After the authentication is complete, acquired tokens can be renewed using action
+``renew`` and revoked by calling the ``revoke`` action.
 
     "token": {
         "http_header": "<name of HTTP header to transfer token in, by default X-HaveAPI-Auth-Token>",
@@ -113,7 +128,7 @@ Token can be revoked by calling the ``revoke`` action.
                     "input": {
                         ...
                         "parameters": {
-                            "login": ...
+                            "user": ...
                             "password": ...
                             "lifetime": ...
                             "interval": ...
@@ -125,6 +140,8 @@ Token can be revoked by calling the ``revoke`` action.
                         "parameters": {
                             "token": ...
                             "valid_to": ...
+			    "complete": true/false
+			    "next_action": ...
                         },
                         ...
                     },

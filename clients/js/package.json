@@ -3,8 +3,13 @@
 	"version": "0.12.0",
 	"description": "Client for HaveAPI based APIs",
 	"license": "MIT",
-	"author": {"name": "Jakub Skokan", "email": "jakub.skokan@vpsfree.cz"},
-	"files": ["dist"],
+	"author": {
+		"name": "Jakub Skokan",
+		"email": "jakub.skokan@vpsfree.cz"
+	},
+	"files": [
+		"dist"
+	],
 	"main": "dist/haveapi-client.js",
 	"repository": {
 		"type": "git",
@@ -17,7 +22,7 @@
 		"gulp": "latest",
 		"gulp-concat": "latest",
 		"gulp-umd": "latest",
-		"gulp-jsdoc3": "latest"
+		"gulp-jsdoc3": "2.0.0"
 	},
 	"keywords": [
 		"rest",

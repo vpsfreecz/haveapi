@@ -33,8 +33,8 @@ function ResourceInstance (client, parent, action, response, shell, item) {
 			var that = this;
 
 			action.directInvoke(function(c, response) {
-				that.attachResources(that._private.action.resource._private.description, response.meta().url_params);
-				that.attachActions(that._private.action.resource._private.description, response.meta().url_params);
+				that.attachResources(that._private.action.resource._private.description, response.meta().path_params);
+				that.attachActions(that._private.action.resource._private.description, response.meta().path_params);
 				that.attachAttributes(response.response());
 
 				that._private.resolved = true;
@@ -61,7 +61,7 @@ function ResourceInstance (client, parent, action, response, shell, item) {
 		this._private.persistent = true;
 
 		var metaNs = client.apiSettings.meta.namespace;
-		var idArgs = item ? response[metaNs].url_params : response.meta().url_params;
+		var idArgs = item ? response[metaNs].path_params : response.meta().path_params;
 
 		this.attachResources(this._private.action.resource._private.description, idArgs);
 		this.attachActions(this._private.action.resource._private.description, idArgs);
@@ -164,17 +164,17 @@ ResourceInstance.prototype.defaultParams = function(action) {
  * @private
  * @return {HaveAPI.Client.ResourceInstance}
  */
-ResourceInstance.prototype.resolveAssociation = function(attr, path, url) {
+ResourceInstance.prototype.resolveAssociation = function(attr, resourcePath, path) {
 	var tmp = this._private.client;
 
-	for(var i = 0; i < path.length; i++) {
-		tmp = tmp[ path[i] ];
+	for(var i = 0; i < resourcePath.length; i++) {
+		tmp = tmp[ resourcePath[i] ];
 	}
 
 	var obj = this._private.attributes[ attr ];
 	var metaNs = this._private.client.apiSettings.meta.namespace;
 	var action = tmp.show;
-	action.provideIdArgs(obj[metaNs].url_params);
+	action.provideIdArgs(obj[metaNs].path_params);
 
 	if (obj[metaNs].resolved)
 		return new Client.ResourceInstance(
@@ -278,7 +278,7 @@ ResourceInstance.prototype.createAttribute = function(attr, desc) {
 						return that._private.associations[ attr ] = that.resolveAssociation(
 							attr,
 							desc.resource,
-							that._private.attributes[ attr ].url
+							that._private.attributes[ attr ].path
 						);
 					},
 				set: function(v) {

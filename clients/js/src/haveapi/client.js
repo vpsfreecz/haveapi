@@ -359,14 +359,14 @@ Client.prototype.logout = function(callback) {
  */
 Client.prototype.directInvoke = function(action, opts) {
 	if (this._private.debug > 5)
-		console.log("Executing", action, "with opts", opts, "at", action.preparedUrl);
+		console.log("Executing", action, "with opts", opts, "at", action.preparedPath);
 
 	var that = this;
 	var block = opts.block === undefined ? true : opts.block;
 
 	var httpOpts = {
 		method: action.httpMethod(),
-		url: this._private.url + action.preparedUrl,
+		url: this._private.url + action.preparedPath,
 		credentials: this.authProvider.credentials(),
 		headers: this.authProvider.headers(),
 		queryParameters: this.authProvider.queryParameters(),

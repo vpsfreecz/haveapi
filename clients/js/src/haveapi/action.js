@@ -12,7 +12,7 @@ function Action (client, resource, name, description, args) {
 	this.description = description;
 	this.args = args;
 	this.providedIdArgs = [];
-	this.preparedUrl = null;
+	this.preparedPath = null;
 
 	var that = this;
 	var fn = function() {
@@ -66,8 +66,8 @@ Action.prototype.layout = function(direction) {
 };
 
 /**
- * Set action URL. This method should be used to set fully resolved
- * URL.
+ * Set action path. This method should be used to set fully resolved
+ * path.
  * @method HaveAPI.Client.Action#provideIdArgs
  */
 Action.prototype.provideIdArgs = function(args) {
@@ -75,18 +75,18 @@ Action.prototype.provideIdArgs = function(args) {
 };
 
 /**
- * Set action URL. This method should be used to set fully resolved
- * URL.
- * @method HaveAPI.Client.Action#provideUrl
+ * Set action path. This method should be used to set fully resolved
+ * path.
+ * @method HaveAPI.Client.Action#providePath
  */
-Action.prototype.provideUrl = function(url) {
-	this.preparedUrl = url;
+Action.prototype.providePath = function(path) {
+	this.preparedPath = path;
 };
 
 /**
  * Invoke the action.
  * This method has a variable number of arguments. Arguments are first applied
- * as object IDs in action URL. Then there are two ways in which input parameters
+ * as object IDs in action path. Then there are two ways in which input parameters
  * can and other options be given to the action.
  *
  * The new-style is to pass {@link HaveAPI.Client~ActionCall} object that contains
@@ -222,29 +222,29 @@ Action.prototype.prepareInvoke = function(new_args) {
 	var args = this.args.concat(Array.prototype.slice.call(new_args));
 	var rx = /(:[a-zA-Z\-_]+)/;
 
-	if (!this.preparedUrl)
-		this.preparedUrl = this.description.url;
+	if (!this.preparedPath)
+		this.preparedPath = this.description.path;
 
 	// First, apply ids returned from the API
 	for (var i = 0; i < this.providedIdArgs.length; i++) {
-		if (this.preparedUrl.search(rx) == -1)
+		if (this.preparedPath.search(rx) == -1)
 			break;
 
-		this.preparedUrl = this.preparedUrl.replace(rx, this.providedIdArgs[i]);
+		this.preparedPath = this.preparedPath.replace(rx, this.providedIdArgs[i]);
 	}
 
 	// Apply ids passed as arguments
 	while (args.length > 0) {
-		if (this.preparedUrl.search(rx) == -1)
+		if (this.preparedPath.search(rx) == -1)
 			break;
 
 		var arg = args.shift();
 		this.providedIdArgs.push(arg);
 
-		this.preparedUrl = this.preparedUrl.replace(rx, arg);
+		this.preparedPath = this.preparedPath.replace(rx, arg);
 	}
 
-	if (args.length == 0 && this.preparedUrl.search(rx) != -1) {
+	if (args.length == 0 && this.preparedPath.search(rx) != -1) {
 		console.log("UnresolvedArguments", "Unable to execute action '"+ this.name +"': unresolved arguments");
 
 		throw new Client.Exceptions.UnresolvedArguments(this);
@@ -272,7 +272,7 @@ Action.prototype.prepareInvoke = function(new_args) {
 	return Object.assign({}, params, {
 		params: new Parameters(this, params.params),
 		onReply: function(c, response) {
-			that.preparedUrl = null;
+			that.preparedPath = null;
 
 			if (params.onReply)
 				params.onReply(c, response);

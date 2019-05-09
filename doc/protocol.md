@@ -193,9 +193,9 @@ Every action is described as:
             ... list of examples ...
         ],
 	"meta": ... metadata ...,
-        "url": "URL for this action",
+        "path": "Path for this action",
         "method": "HTTP method to be used",
-        "help": "URL to get this very description of the action"
+        "help": "Path to get this very description of the action"
     }
 
 ### Layouts
@@ -382,14 +382,14 @@ This is used for associations between resources, e.g. car has a wheel.
         "value_id": "<name of a parameter that is used as an id>",
         "value_label": "<name of a parameter that is used as a value>",
         "value": {
-            "url": "URL to 'show' action of associated resource",
+            "path": "Path to 'show' action of associated resource",
             "method": "HTTP method to use",
-            "help": "URL to get the associated resource's 'show' description"
+            "help": "Path to get the associated resource's 'show' description"
         },
         "choices": {
-            "url": "URL to action that returns a list of possible associations",
+            "path": "Path to action that returns a list of possible associations",
             "method": "HTTP method to use",
-            "help": "URL to description of the list action"
+            "help": "Path to description of the list action"
         }
     }
 
@@ -408,7 +408,7 @@ render them according to its syntax.
 
     {
         "title": "A title",
-        "url_params: [ ... array of integers ... ],
+        "path_params: [ ... array of integers ... ],
         "request": {
             ... a hash of request parameters ...
         },
@@ -495,7 +495,7 @@ Output format can be chosen by a client. However, no other format than JSON is b
 The output format can be chosen with HTTP header ``Accept``.
 
 # Request
-Action URL and HTTP method the client learns from the self-description.
+Action path and HTTP method the client learns from the self-description.
 
 Example request:
 

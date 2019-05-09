@@ -63,7 +63,7 @@ api.setup(function() {
 	console.log("The client is ready to roll");
 
 	api.authenticate('token', {
-			username: 'yourname',
+			user: 'yourname',
 			password: 'yourpassword'
 		}, function(c, status) {
 		console.log("Are we authenticated?", status);
@@ -95,6 +95,33 @@ api.authenticate('token', {
 	}, function(c, status) {
 	console.log("The client is set up");
 	console.log("Are we authenticated?", status);
+});
+```
+
+## Multi-factor token authentication
+The token authentication also supports multi-factor authentication, i.e. the
+API server may require clients to call multiple authentication actions with
+different credentials. It is necessary to implement a callback function which
+is called when additional authentication steps are needed. The function
+either returns input parameters to use for authentication, or invokes the
+callback which it gets as an argument.
+
+```js
+api.authenticate('token', {
+		username: 'yourname',
+		password: 'yourpassword',
+		callback: function (action, params, cont) {
+			console.log("The server requires additional authentication", action);
+
+			// Either call the callback whenever ready
+			cont({"code": 123456});
+
+			// Or return the parameters immediately
+			return {"code": 123456};
+		}
+	}, function(c, status) {
+	console.log("Are we authenticated?", status);
+	console.log("Auth token is:", api.authProvider.token);
 });
 ```
 

@@ -58,6 +58,13 @@ module HaveAPI::Extensions
 
       env = context.request.env
 
+      user =
+        if context.current_user.respond_to?(:id)
+          context.current_user.id
+        else
+          context.current_user
+        end
+
       mail(context, exception, TEMPLATE.result(binding))
     end
 
@@ -222,7 +229,7 @@ module HaveAPI::Extensions
           </tr>
           <tr>
             <th>User</th>
-            <td><%=h context.request.current_user %></td>
+            <td><%=h user %></td>
           </tr>
         </table>
         <div class="clear"></div>

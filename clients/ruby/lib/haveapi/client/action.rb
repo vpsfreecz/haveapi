@@ -236,8 +236,8 @@ module HaveAPI::Client
       @prepared_help ||= @spec[:help].dup
 
       args.each do |arg|
-        @prepared_path.sub!(/:[a-zA-Z\-_]+/, arg.to_s)
-        @prepared_help.sub!(/:[a-zA-Z\-_]+/, arg.to_s)
+        @prepared_path.sub!(/\{[a-zA-Z\-_]+\}/, arg.to_s)
+        @prepared_help.sub!(/\{[a-zA-Z\-_]+\}/, arg.to_s)
       end
     end
   end

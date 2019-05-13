@@ -1395,7 +1395,7 @@ Action.prototype.directInvoke = function() {
  */
 Action.prototype.prepareInvoke = function(new_args) {
 	var args = this.args.concat(Array.prototype.slice.call(new_args));
-	var rx = /(:[a-zA-Z\-_]+)/;
+	var rx = /(\{[a-zA-Z\-_]+\})/;
 
 	if (!this.preparedPath)
 		this.preparedPath = this.description.path;

@@ -87,7 +87,7 @@ module HaveAPI::Resources
 
       desc 'Returns when the action is completed or timeout occurs'
       http_method :get
-      route ':%{resource}_id/poll'
+      route '{%{resource}_id}/poll'
 
       input(:hash) do
         float :timeout, label: 'Timeout', desc: 'in seconds', default: 15, fill: true
@@ -159,7 +159,7 @@ module HaveAPI::Resources
 
     class Cancel < HaveAPI::Action
       http_method :post
-      route ':%{resource}_id/cancel'
+      route '{%{resource}_id}/cancel'
       blocking true
 
       output(:hash) {}

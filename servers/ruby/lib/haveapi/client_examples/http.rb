@@ -78,7 +78,7 @@ END
       ret = path.clone
 
       path_params.each do |v|
-        ret.sub!(/:[a-zA-Z\-_]+/, v.to_s)
+        ret.sub!(/\{[a-zA-Z\-_]+\}/, v.to_s)
       end
 
       return ret if method != 'GET' || !input_params || input_params.empty?

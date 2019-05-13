@@ -38,18 +38,18 @@ module HaveAPI
       end
 
       class Show < Action
-        route ->(r){ r.singular ? '' : ':%{resource}_id' }
+        route ->(r){ r.singular ? '' : '{%{resource}_id}' }
         http_method :get
         aliases %i(find)
       end
 
       class Update < Action
-        route ->(r){ r.singular ? '' : ':%{resource}_id' }
+        route ->(r){ r.singular ? '' : '{%{resource}_id}' }
         http_method :put
       end
 
       class Delete < Action
-        route ->(r){ r.singular ? '' : ':%{resource}_id' }
+        route ->(r){ r.singular ? '' : '{%{resource}_id}' }
         http_method :delete
         aliases %i(destroy)
       end

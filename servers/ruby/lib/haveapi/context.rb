@@ -73,7 +73,7 @@ module HaveAPI
 
     private
     def resolve_arg!(path, arg)
-      path.sub!(/:[a-zA-Z\-_]+/, arg.to_s)
+      path.sub!(/\{[a-zA-Z\-_]+\}/, arg.to_s)
     end
   end
 end

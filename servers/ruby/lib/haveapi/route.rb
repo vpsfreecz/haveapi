@@ -1,9 +1,10 @@
 module HaveAPI
   class Route
-    attr_reader :path, :action
+    attr_reader :path, :sinatra_path, :action
 
     def initialize(path, action)
       @path = path
+      @sinatra_path = path.gsub(/:([a-zA-Z\-_]+)/, '{\1}')
       @action = action
     end
 

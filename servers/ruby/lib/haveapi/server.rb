@@ -410,7 +410,7 @@ module HaveAPI
     end
 
     def mount_action(v, route)
-      @sinatra.method(route.http_method).call(route.path) do
+      @sinatra.method(route.http_method).call(route.sinatra_path) do
         if route.action.auth
           authenticate!(v)
         else
@@ -462,7 +462,7 @@ module HaveAPI
         ]
       end
 
-      @sinatra.options route.path do |*args|
+      @sinatra.options route.sinatra_path do |*args|
         access_control
         route_method = route.http_method.to_s.upcase
 

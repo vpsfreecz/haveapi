@@ -94,7 +94,7 @@ class Action {
 				break;
 			}
 
-			$this->prepared_path = preg_replace("/:[a-zA-Z\-_]+/", $arg, $this->prepared_path, 1, $replaced_cnt);
+			$this->prepared_path = preg_replace("/\{[a-zA-Z\-_]+\}/", $arg, $this->prepared_path, 1, $replaced_cnt);
 
 			if($replaced_cnt) {
 				$this->lastArgs[] = $arg;
@@ -105,7 +105,7 @@ class Action {
 			}
 		}
 
-		if(preg_match("/:[a-zA-Z\-_]+/", $this->prepared_path))
+		if(preg_match("/\{[a-zA-Z\-_]+\}/", $this->prepared_path))
 			throw new Exception\UnresolvedArguments("Cannot call action '{$this->resource->getName()}#{$this->m_name}': unresolved arguments.");
 
 		return $params;

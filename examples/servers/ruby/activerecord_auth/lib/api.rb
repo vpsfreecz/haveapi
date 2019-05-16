@@ -22,7 +22,7 @@ module API
 
     # Register authentication backends
     api.auth_chain << Authentication::Basic
-    api.auth_chain << Authentication::Token
+    api.auth_chain << HaveAPI::Authentication::Token.with_config(Authentication::Token)
 
     # Register routes for all actions
     api.mount('/')

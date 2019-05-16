@@ -14,13 +14,11 @@ class User < ActiveRecord::Base
     return unless user
 
     begin
-      ::BCrypt::Password.new(user.password) == password
-      
+      return user if ::BCrypt::Password.new(user.password) == password
     rescue BCrypt::Errors::InvalidHash
-      return false
     end
 
-    user
+    false
   end
 
   def self.hash_password(pwd)

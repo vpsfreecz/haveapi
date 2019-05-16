@@ -24,6 +24,6 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'rake'
   s.add_runtime_dependency 'github-markdown'
   s.add_runtime_dependency 'nesty', '~> 1.0'
-  s.add_runtime_dependency 'haveapi-client', '~> 0.12.0'
+  s.add_runtime_dependency 'haveapi-client', '~> 0.13.0'
   s.add_runtime_dependency 'mail'
 end

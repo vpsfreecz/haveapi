@@ -44,7 +44,11 @@ module HaveAPI::Authentication
     #     request do
     #       handle do |req, res|
     #         user = ::User.find_by(login: input[:user], password: input[:password])
-    #         next(nil) if user.nil?
+    #
+    #         if user.nil?
+    #           res.error = 'invalid user or password'
+    #           next res
+    #         end
     #
     #         token = SecureRandom.hex(50)
     #         valid_to =

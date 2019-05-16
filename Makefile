@@ -15,7 +15,7 @@ release:
 	cd servers/ruby && bundle install && bundle exec rake build
 	mv servers/ruby/pkg/haveapi-$(VERSION).gem dist/
 	
-	cd clients/go && bundle exec && rake build
+	cd clients/go && bundle install && bundle exec rake build
 	mv clients/go/pkg/haveapi-go-client-$(VERSION).gem dist/
 	
 	cd clients/js && ./node_modules/.bin/gulp

@@ -12,8 +12,7 @@ of available resources, actions, their input/output parameters, labels, text
 notes, data types, validators and example usage.
 
 Clients use the self-description to learn how to communicate with the API,
-which they otherwise know nothing about. Using the HaveAPI protocol, it is
-possible to create generic servers and clients that can work i
+which they otherwise know nothing about.
 
 ## Motivation
 Whenever you create an API server, you need to implement clients in various

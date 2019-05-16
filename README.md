@@ -28,7 +28,7 @@ the [protocol](doc/protocol.md) on your own.
 Available server frameworks:
 
 - Ruby server at [servers/ruby](servers/ruby)
-- Elixir server at [servers/elixir](servers/elixir)
+- Elixir server at [servers/elixir](servers/elixir) (outdated)
 
 Available clients:
 
@@ -36,7 +36,7 @@ Available clients:
 - PHP client at [clients/php](clients/php)
 - JavaScript client at [clients/js](clients/js)
 - Go client generator at [clients/go](clients/go)
-- Elixir client at [clients/elixir](clients/elixir)
+- Elixir client at [clients/elixir](clients/elixir) (outdated)
 
 Complex applications can be built on top of these basic clients, e.g.:
 

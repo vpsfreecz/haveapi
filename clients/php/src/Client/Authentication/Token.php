@@ -228,8 +228,21 @@ class Token extends Base {
 	 * Get a new token if the current one expired.
 	 */
 	protected function checkValidity() {
-		if($this->validTo && $this->validTo < time() && isSet($this->opts['username']) && isSet($this->opts['password']))
+		if ($this->validTo && $this->validTo < time() && $this->hasRequestCredentials())
 			$this->requestToken();
+	}
+
+	/**
+	 * Check if all request credentials are provided
+	 * @return boolean
+	 */
+	protected function hasRequestCredentials() {
+		foreach ($this->getRequestCredentials() as $name) {
+			if (!isSet($this->opts[$name]))
+				return false;
+		}
+
+		return true;
 	}
 
 	/**

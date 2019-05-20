@@ -245,4 +245,12 @@ class Token extends Base {
 	public function getValidTo() {
 		return $this->validTo;
 	}
+
+	/**
+	 * Return true if the authentication process is complete
+	 * @return boolean
+	 */
+	public function isComplete() {
+		return $this->configured;
+	}
 }

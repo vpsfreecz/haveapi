@@ -233,6 +233,14 @@ class Token extends Base {
 	}
 
 	/**
+	 * Return the token resource
+	 * @return \HaveAPI\Client\Resource
+	 */
+	public function getResource() {
+		return $this->rs;
+	}
+
+	/**
 	 * @return string the token
 	 */
 	public function getToken() {

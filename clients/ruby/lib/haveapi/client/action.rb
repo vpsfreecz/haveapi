@@ -120,7 +120,7 @@ module HaveAPI::Client
     end
 
     def unresolved_args?
-      prepared_path =~ /:[a-zA-Z\-_]+/
+      prepared_path =~ /\{[a-zA-Z\-_]+\}/
     end
 
     def provide_args(*args)

@@ -1,3 +1,14 @@
+# Mon May 20 2019 - version 0.13.1
+## Ruby client
+- Fix `Action#unresolved_args?` to check for path parameters using curly brackets
+
+## PHP client
+- Token authentication
+  - Add methods `isComplete()` and `getResource()`
+  - Fix `checkValidity()` to check for custom action credentials
+  - Authentication callbacks get description of action credential parameters
+    in addition to their names
+
 # Thu May 16 2019 - version 0.13.0
 - Protocol version set to 2.0, making it incompatible with previous versions
 - Redesigned token authentication now supports multi-step authentication

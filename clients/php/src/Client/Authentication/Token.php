@@ -207,8 +207,8 @@ class Token extends Base {
 	}
 
 	/**
-	 * Return names of parameters used as credentials for custom authentication
-	 * action
+	 * Return name and description of parameters used as credentials for custom
+	 * authentication action
 	 * @param string action
 	 * @return array
 	 */
@@ -218,7 +218,7 @@ class Token extends Base {
 
 		foreach ($params as $name => $desc) {
 			if ($name != 'token')
-				$ret[] = $name;
+				$ret[$name] = $desc;
 		}
 
 		return $ret;

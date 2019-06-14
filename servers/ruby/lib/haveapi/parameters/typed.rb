@@ -110,7 +110,10 @@ module HaveAPI::Parameters
     end
 
     def format_output(v)
-      if @type == ::Datetime && v.is_a?(Time)
+      if v.nil?
+        nil
+
+      elsif @type == ::Datetime && v.is_a?(Time)
         v.iso8601
 
       elsif @type == Boolean

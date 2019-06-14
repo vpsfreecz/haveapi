@@ -1,3 +1,7 @@
+# Fri Jun 14 2019 - version 0.13.2
+## Ruby server
+- Do not coerce types of nil output parameters
+
 # Mon May 20 2019 - version 0.13.1
 ## Ruby client
 - Fix `Action#unresolved_args?` to check for path parameters using curly brackets

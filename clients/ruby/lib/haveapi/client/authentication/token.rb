@@ -112,12 +112,8 @@ module HaveAPI::Client::Authentication
     end
 
     def check_validity
-      if @valid_to && @valid_to < Time.now
-        if @opts[:user] && @opts[:password]
-          request_token
-        else
-          raise AuthenticationFailed.new('token expired')
-        end
+      if @valid_to && @valid_to < Time.now && @opts[:user] && @opts[:password]
+        request_token
       end
     end
 

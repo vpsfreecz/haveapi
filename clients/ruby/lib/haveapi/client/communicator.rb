@@ -153,6 +153,9 @@ module HaveAPI::Client
       rescue RestClient::ResourceNotFound => e
         response = parse(e.http_body)
 
+      rescue RestClient::BadRequest => e
+        response = parse(e.http_body)
+
       rescue => e
         return error("Fatal API error: #{e.inspect}")
       end

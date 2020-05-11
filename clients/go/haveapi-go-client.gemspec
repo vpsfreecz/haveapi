@@ -21,5 +21,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'bundler'
   spec.add_development_dependency 'rake'
 
-  spec.add_runtime_dependency 'haveapi-client', '~> 0.13.2'
+  spec.add_runtime_dependency 'haveapi-client', '~> 0.13.3'
 end

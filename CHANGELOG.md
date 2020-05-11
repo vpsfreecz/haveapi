@@ -1,3 +1,8 @@
+# Mon May 11 2020 - version 0.13.3
+## Ruby client
+- Parse error message when the server returns bad request
+- Do not fail prematurely if the token expired, try it
+
 # Fri Jun 14 2019 - version 0.13.2
 ## Ruby server
 - Do not coerce types of nil output parameters

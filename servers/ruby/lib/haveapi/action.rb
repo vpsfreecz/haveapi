@@ -72,6 +72,7 @@ module HaveAPI
         begin
           subclass.instance_variable_set(:@resource, resource)
           subclass.instance_variable_set(:@model, resource.model)
+          resource.action_defined(subclass)
         rescue NoMethodError
           return
         end

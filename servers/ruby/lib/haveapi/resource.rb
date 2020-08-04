@@ -14,6 +14,11 @@ module HaveAPI
       subclass.instance_variable_set(:@obj_type, obj_type)
     end
 
+    def self.action_defined(klass)
+      @actions ||= []
+      @actions << klass
+    end
+
     def self.params(name, &block)
       if block
         @params ||= {}
@@ -23,14 +28,8 @@ module HaveAPI
       end
     end
 
-    def self.actions
-      constants.select do |c|
-        obj = const_get(c)
-
-        if obj.respond_to?(:obj_type) && obj.obj_type == :action
-          yield obj
-        end
-      end
+    def self.actions(&block)
+      (@actions || []).each(&block)
     end
 
     def self.resources

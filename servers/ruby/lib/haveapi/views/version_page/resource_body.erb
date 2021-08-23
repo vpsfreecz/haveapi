@@ -1,0 +1,163 @@
+<% name ||= resource.humanize %>
+<% resource_path = path.clone << resource %>
+<% resource_info = info %>
+<h2 class="resource" id="<%= "#{prefix}-#{resource}" %>"><%= resource.humanize %></h2>
+<hr>
+<div class="resource-body">
+  <p><%= info[:description] %></p>
+
+  <div class="actions">
+    <% sort_hash(info[:actions]).each do |action, info| %>
+      <h3 id="<%= "#{prefix}-#{resource}-#{action}" %>"><%= name %> # <%= action.capitalize %></h3>
+      <div class="action">
+        <dl>
+          <dt>Path:</dt>
+          <dd><%= info[:method] %> <%= info[:path] %></dd>
+          <dt>Description:</dt>
+          <dd><%= info[:description] %></dd>
+          <dt>Authentication required:</dt>
+          <dd><%= info[:auth] ? 'yes' : 'no' %></dd>
+          <dt>Aliases:</dt>
+          <dd><%= info[:aliases].join(', ') %></dd>
+          <dt>Blocking:</dt>
+          <dd><%= info[:blocking] ? 'yes' : 'no' %></dd>
+        </dl>
+
+        <h4>Input parameters</h4>
+        <div class="parameters">
+          <% if info[:input][:parameters].empty? %>
+            <p>No parameters.</p>
+          <% else %>
+            <dl>
+              <dt>Layout:</dt>
+              <dd><%= info[:input][:layout] %></dd>
+              <dt>Namespace:</dt>
+              <dd><%= info[:input][:namespace] %></dd>
+            </dl>
+
+            <table class="table table-striped table-hover table-bordered">
+              <tr>
+                <th>Label</th>
+                <th>Name</th>
+                <th>Required</th>
+                <th>Type</th>
+                <th>Validators</th>
+                <th>Default</th>
+                <th>Description</th>
+              </tr>
+              <% info[:input][:parameters].each do |param, info| %>
+                <tr>
+                  <td><%= info[:label] %></td>
+                  <td><%= param %></td>
+                  <td><%= info[:required] ? 'yes' : 'no' %></td>
+                  <td><%= format_param_type(info) %></td>
+                  <td><%= format_validators(info[:validators]) %></td>
+                  <td><%= info[:default] == :_nil ? '' : info[:default] %></td>
+                  <td><%= info[:description] %></td>
+                </tr>
+              <% end %>
+            </table>
+          <% end %>
+        </div>
+
+        <h4>Output parameters</h4>
+        <div class="parameters">
+          <% if info[:output][:parameters].empty? && info[:output][:format].nil? %>
+            <p>No parameters.</p>
+          <% else %>
+            <dl>
+              <dt>Layout:</dt>
+              <dd><%= info[:output][:layout] %></dd>
+              <dt>Namespace:</dt>
+              <dd><%= info[:output][:namespace] %></dd>
+            </dl>
+
+            <table class="table table-striped table-hover table-bordered">
+              <tr>
+                <th>Label</th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Description</th>
+              </tr>
+              <% info[:output][:parameters].each do |param, info| %>
+                <tr>
+                  <td><%= info[:label] %></td>
+                  <td><%= param %></td>
+                  <td><%= format_param_type(info) %></td>
+                  <td><%= info[:description] %></td>
+                </tr>
+              <% end %>
+            </table>
+          <% end %>
+        </div>
+
+        <div class="action-self-description">
+          <h4>Self-description</h4>
+          <pre><code><%= JSON.pretty_generate(info) %></code></pre>
+        </div>
+
+        <% unless info[:examples].empty? %>
+          <h4>Examples</h4>
+          <% info[:examples].each_with_index do |example, i| %>
+              <h5><%= example[:title].empty? ? "Example ##{i}" : example[:title] %></h5>
+              <p><%= example[:comment] %></p>
+
+              <% baseid = "example-#{resource_path.join('.')}-#{action}-#{i}" %>
+              <%# placeholder for tabs %>
+              <div id="<%= "#{baseid}-tabbar" %>"></div>
+
+              <div id="<%= "#{baseid}-examples" %>">
+                <% HaveAPI::ClientExample.clients.each_with_index do |client, j| %>
+                  <div id="<%= "#{baseid}-#{j}" %>">
+                    <%=
+                      erb :"version_page/client_example", locals: {
+                        client: client,
+                        r_name: resource_path,
+                        resource: resource_info,
+                        a_name: action,
+                        action: info,
+                        example: example,
+                      }
+                    %>
+                  </div>
+                <% end %>
+              </div>
+
+              <script type="text/javascript">
+              nojsTabs({
+                tabs: document.getElementById('<%= "#{baseid}-examples" %>'),
+                titleSelector: 'h6',
+                tabBar: document.getElementById('<%= "#{baseid}-tabbar" %>'),
+                hiddenClass: 'tab-hidden',
+                activeClass: 'active',
+                createElement: function (el) {
+                  if (el.tagName == 'UL')
+                    el.classList.add('nav', 'nav-tabs');
+
+                  else if (el.tagName == 'LI')
+                    el.setAttribute('role', 'presentation');
+                }
+              });
+              </script>
+          <% end %>
+        <% end %>
+
+      </div>
+    <% end %>
+  </div>
+
+  <% unless info[:resources].empty? %>
+    <% sort_hash(info[:resources]).each do |r, i| %>
+      <%=
+        erb :"version_page/resource_body", locals: {
+          resource: r,
+          info: i,
+          path: resource_path,
+          prefix: "#{prefix}-#{resource}",
+          name: "#{name}.#{r.humanize}",
+        }
+      %>
+    <% end %>
+  <% end %>
+
+</div> <!-- resource -->

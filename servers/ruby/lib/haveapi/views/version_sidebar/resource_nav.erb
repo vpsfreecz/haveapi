@@ -1,0 +1,21 @@
+<li>
+  <a href="#<%= "#{prefix}-#{resource}" %>">.<%= resource.humanize %></a>
+
+  <ul>
+    <% sort_hash(info[:actions]).each do |action, info| %>
+      <li>
+        <a href="#<%= "#{prefix}-#{resource}-#{action}" %>">#<%= action.capitalize %></a>
+      </li>
+    <% end %>
+
+    <% sort_hash(info[:resources]).each do |r, i| %>
+      <%=
+        erb :"version_sidebar/resource_nav", locals: {
+          resource: r,
+          info: i,
+          prefix: "#{prefix}-#{resource}",
+        }
+      %>
+    <% end %>
+  </ul>
+</li>

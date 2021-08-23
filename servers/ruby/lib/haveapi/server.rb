@@ -121,6 +121,29 @@ module HaveAPI
       end
     end
 
+    module DocHelpers
+      def format_param_type(param)
+        return param[:type] if param[:type] != 'Resource'
+        "<a href=\"#root-#{param[:resource].join('-')}-show\">#{param[:type]}</a>"
+      end
+
+      def format_validators(validators)
+        ret = ''
+        return ret if validators.nil?
+
+        validators.each do |name, opts|
+          ret += "<h5>#{name.to_s.capitalize}</h5>"
+          ret += '<dl>'
+          opts.each do |k, v|
+            ret += "<dt>#{k}</dt><dd>#{v}</dd>"
+          end
+          ret += '</dl>'
+        end
+
+        ret
+      end
+    end
+
     def initialize(module_name = HaveAPI.module_name)
       @module_name = module_name
       @allowed_headers = ['Content-Type']
@@ -176,6 +199,7 @@ module HaveAPI
         end
 
         helpers ServerHelpers
+        helpers DocHelpers
 
         before do
           @formatter = OutputFormatter.new

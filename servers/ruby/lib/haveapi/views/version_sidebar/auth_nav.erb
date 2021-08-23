@@ -1,0 +1,20 @@
+<ul>
+  <% methods.each do |method, info| %>
+    <li>
+      <a href="#auth-<%= method %>"><%= method.to_s.humanize %></a>
+      <% if info[:resources] %>
+        <ul>
+          <% sort_hash(info[:resources]).each do |resource, info| %>
+            <%=
+              erb :"version_sidebar/resource_nav", locals: {
+                resource: resource.to_s,
+                info: info,
+                prefix: "auth-#{method}",
+              }
+            %>
+          <% end %>
+        </ul>
+      <% end %>
+    </li>
+  <% end %>
+</ul>

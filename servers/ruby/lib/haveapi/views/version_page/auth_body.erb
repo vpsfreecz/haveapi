@@ -1,0 +1,48 @@
+<h2 id="auth-<%= name %>"><%= name.to_s.humanize %></h2>
+<hr>
+
+<p><%= info[:description] %></p>
+
+<% if name == :token %>
+  <dl>
+    <dt>HTTP header:</dt>
+    <dd><%= info[:http_header] %></dd>
+    <dt>Query parameter:</dt>
+    <dd><%= info[:query_parameter] %></dd>
+  </dl>
+<% end %>
+
+<% if info[:resources] %>
+  <h2>Resources</h2>
+  <% sort_hash(info[:resources]).each do |resource, desc| %>
+    <%= erb :"version_page/resource_body", locals: {resource: resource.to_s, info: desc, path: [], prefix: 'root', name: nil} %>
+  <% end %>
+<% end %>
+
+<% baseid = "auth-#{name}" %>
+<div id="<%= baseid %>-tabbar"></div>
+
+<div id="<%= baseid %>-examples">
+  <% HaveAPI::ClientExample.clients.each_with_index do |client, i| %>
+    <div id="<%= "#{baseid}-#{i}" %>">
+      <%= erb :"version_page/client_auth", locals: {client: client, method: name, desc: info} %>
+    </div>
+  <% end %>
+</div>
+
+<script type="text/javascript">
+nojsTabs({
+  tabs: document.getElementById('<%= "#{baseid}-examples" %>'),
+  titleSelector: 'h4',
+  tabBar: document.getElementById('<%= "#{baseid}-tabbar" %>'),
+  hiddenClass: 'tab-hidden',
+  activeClass: 'active',
+  createElement: function (el) {
+    if (el.tagName == 'UL')
+      el.classList.add('nav', 'nav-tabs');
+
+    else if (el.tagName == 'LI')
+      el.setAttribute('role', 'presentation');
+  }
+});
+</script>

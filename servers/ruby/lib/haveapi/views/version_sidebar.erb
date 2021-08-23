@@ -1,38 +1,3 @@
-<% def render_auth_nav(methods) %>
-  <ul>
-    <% methods.each do |method, info| %>
-      <li>
-        <a href="#auth-<%= method %>"><%= method.to_s.humanize %></a>
-        <% if info[:resources] %>
-          <ul>
-            <% sort_hash(info[:resources]).each do |resource, info| %>
-              <% render_resource_nav(resource.to_s, info, "auth-#{method}") %>
-            <% end %>
-          </ul>
-        <% end %>
-      </li>
-    <% end %>
-  </ul>
-<% end %>
-
-<% def render_resource_nav(resource, info, prefix='root') %>
-    <li>
-      <a href="#<%= "#{prefix}-#{resource}" %>">.<%= resource.humanize %></a>
-
-      <ul>
-        <% sort_hash(info[:actions]).each do |action, info| %>
-            <li>
-              <a href="#<%= "#{prefix}-#{resource}-#{action}" %>">#<%= action.capitalize %></a>
-            </li>
-        <% end %>
-
-        <% sort_hash(info[:resources]).each do |r, i| %>
-            <% render_resource_nav(r, i, "#{prefix}-#{resource}") %>
-        <% end %>
-      </ul>
-    </li>
-<% end %>
-
 <h1>Authentication</h1>
 <p class="authentication">
   <% if current_user %>
@@ -54,11 +19,17 @@
   <li><a href="#api">API v<%= @v %></a></li>
   <li>
     <a href="#auth">Authentication</a>
-    <% render_auth_nav(@help[:authentication]) %>
+    <%= erb :"version_sidebar/auth_nav", locals: {methods: @help[:authentication]} %>
   </li>
   <li><a href="#resources">Resources</a></li>
-  <% sort_hash(@help[:resources]).each do |resource, info| %>
-      <% render_resource_nav(resource, info) %>
+    <% sort_hash(@help[:resources]).each do |resource, info| %>
+      <%=
+        erb :"version_sidebar/resource_nav", locals: {
+          resource: resource,
+          info: info,
+          prefix: 'root',
+        }
+      %>
   <% end %>
 </ul>
 

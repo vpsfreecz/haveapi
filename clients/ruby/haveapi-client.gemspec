@@ -23,8 +23,8 @@ Gem::Specification.new do |spec|
 
   spec.add_runtime_dependency 'activesupport', '>= 4.0'
   spec.add_runtime_dependency 'require_all', '~> 2.0.0'
-  spec.add_runtime_dependency 'rest-client', '~> 2.0.2'
+  spec.add_runtime_dependency 'rest-client', '~> 2.1.0'
   spec.add_runtime_dependency 'json'
-  spec.add_runtime_dependency 'highline', '~> 1.7.8'
-  spec.add_runtime_dependency 'ruby-progressbar', '~> 1.7.5'
+  spec.add_runtime_dependency 'highline', '~> 2.0.3'
+  spec.add_runtime_dependency 'ruby-progressbar', '~> 1.11.0'
 end

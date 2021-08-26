@@ -52,4 +52,4 @@ gulp.task('watch', function() {
 	gulp.watch('src/**/*.js', ['scripts', 'doc']);
 });
 
-gulp.task('default', ['scripts']);
+gulp.task('default', gulp.series('scripts'));

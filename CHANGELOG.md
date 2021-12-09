@@ -1,3 +1,7 @@
+# Thu Dec 09 2021 - version 0.14.1
+## Ruby client
+- Improve compatibility with Ruby 3.0
+
 # Thu Aug 26 2021 - version 0.14.0
 ## Ruby server
 - Updated dependencies

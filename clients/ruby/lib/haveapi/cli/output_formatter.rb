@@ -5,8 +5,8 @@ module HaveAPI::CLI
       f.format
     end
 
-    def self.print(*args)
-      f = new(*args)
+    def self.print(*args, **kwargs)
+      f = new(*args, **kwargs)
       f.print
     end
 
@@ -84,7 +84,7 @@ module HaveAPI::CLI
     def generate
       return if @cols.empty?
       prepare
-      
+
       case @layout
       when :columns
         columns
@@ -113,7 +113,7 @@ module HaveAPI::CLI
         i += 1
         ret
       end.join('  ')
-      
+
       line sprintf(formatters, * @cols.map { |c| c[:label] }) if @header
 
       @str_objects.each do |o|
@@ -128,7 +128,7 @@ module HaveAPI::CLI
       @str_objects.each do |o|
         @cols.each_index do |i|
           c = @cols[i]
-        
+
           if o[i].is_a?(::String) && o[i].index("\n")
             lines = o[i].split("\n")
             v = ([lines.first] + lines[1..-1].map { |l| (' ' * (w+3)) + l }).join("\n")
@@ -139,7 +139,7 @@ module HaveAPI::CLI
 
           line sprintf("%#{w}s:  %s", c[:label], v)
         end
-        
+
         line
       end
     end
@@ -155,10 +155,10 @@ module HaveAPI::CLI
 
     def prepare
       @str_objects = []
-      
+
       each_object do |o|
         arr = []
-        
+
         @cols.each do |c|
           v = o[ c[:name] ]
           str = (c[:display] ? c[:display].call(v) : v)
@@ -190,7 +190,7 @@ module HaveAPI::CLI
 
     def col_width(i, c)
       w = c[:label].to_s.length
-      
+
       @str_objects.each do |o|
         len = o[i].to_s.length
         w = len if len > w

@@ -13,7 +13,7 @@ module HaveAPI::Client
     end
 
     def execute(data, *_)
-      args = [self]
+      params_arg = {}
 
       if input
         params = Params.new(self, data)
@@ -22,10 +22,10 @@ module HaveAPI::Client
           raise ValidationError.new(self, params.errors)
         end
 
-        args << params.to_api << {}
+        params_arg = params.to_api
       end
 
-      ret = @api.call(*args)
+      ret = @api.call(self, params_arg)
       reset
       ret
     end

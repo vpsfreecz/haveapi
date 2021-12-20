@@ -1,3 +1,8 @@
+# Thu Dec 20 2021 - version 0.14.2
+## PHP client
+- Require PHP >= 7.2
+- Update httpful to 0.3.2
+
 # Thu Dec 09 2021 - version 0.14.1
 ## Ruby client
 - Improve compatibility with Ruby 3.0

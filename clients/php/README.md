@@ -5,7 +5,7 @@ haveapi-client-php is a PHP client for [HaveAPI](https://github.com/vpsfreecz/ha
 
 Requirements
 ------------
- - PHP >= 5.3
+ - PHP >= 7.4
  - [Httpful](http://phphttpclient.com/)
 
 Installation
@@ -103,7 +103,7 @@ Create a new instance:
 List of resources:
 
 	$vpses = $api->vps->list();
-	
+
 	foreach($vpses as $vps) {
 		echo $vps->id ." = ". $vps->hostname ."<br>";
 	}
@@ -113,7 +113,7 @@ If the action does not return object or object list, `\HaveAPI\Client\Response` 
 
 	$vps = $api->vps->find(101);
 	$response = $vps->custom_action();
-	
+
 	print_r($response->getResponse());
 
 Parameters can be accessed directly as:
@@ -126,7 +126,7 @@ result in exception `\HaveAPI\Client\Exception\AuthenticationFailed`.
 
 	try {
 		$api->vps->create();
-		
+
 	} catch(\HaveAPI\Client\Exception\ActionFailed $e) {
 		echo $e->getMessage();
 		print_r($e->getErrors());

@@ -2,6 +2,7 @@
 - Action input parameters can be given either as a hash using a positional
   argument, or keyword arguments, but not both
 - `HaveAPI::Response#wait_for_completion` now accepts keyword arguments
+- `HaveAPI::Client#authenticate` now accepts keyword arguments
 
 ## PHP client
 - Requires PHP >= 7.4

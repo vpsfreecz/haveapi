@@ -49,8 +49,8 @@ class HaveAPI::Client::Client
   end
 
   # See Communicator#authenticate.
-  def authenticate(*args, &block)
-    @api.authenticate(*args, &block)
+  def authenticate(auth_method, **options, &block)
+    @api.authenticate(auth_method, options, &block)
   end
 
   # Get uthentication provider

@@ -78,52 +78,47 @@ module HaveAPI
       @namespace = n.to_sym if n
     end
 
-    def requires(*args)
-      add_param(*apply(args, required: true))
+    def requires(name, **kwargs)
+      add_param(name, apply(kwargs, required: true))
     end
 
-    def optional(*args)
-      add_param(*apply(args, required: false))
+    def optional(name, **kwargs)
+      add_param(name, apply(kwargs, required: false))
     end
 
-    def string(*args)
-      add_param(*apply(args, type: String))
+    def string(name, **kwargs)
+      add_param(name, apply(kwargs, type: String))
     end
 
-    def text(*args)
-      add_param(*apply(args, type: Text))
+    def text(name, **kwargs)
+      add_param(name, apply(kwargs, type: Text))
     end
 
-    def password(*args)
-      add_param(*apply(args, type: String, protected: true))
+    def password(name, **kwargs)
+      add_param(name, apply(kwargs, type: String, protected: true))
     end
 
-    def id(*args)
-      integer(*args)
+    def bool(name, **kwargs)
+      add_param(name, apply(kwargs, type: Boolean))
     end
 
-    def foreign_key(*args)
-      integer(*args)
+    def integer(name, **kwargs)
+      add_param(name, apply(kwargs, type: Integer))
     end
 
-    def bool(*args)
-      add_param(*apply(args, type: Boolean))
+    alias_method :id, :integer
+    alias_method :foreign_key, :integer
+
+    def float(name, **kwargs)
+      add_param(name, apply(kwargs, type: Float))
     end
 
-    def integer(*args)
-      add_param(*apply(args, type: Integer))
+    def datetime(name, **kwargs)
+      add_param(name, apply(kwargs, type: Datetime))
     end
 
-    def float(*args)
-      add_param(*apply(args, type: Float))
-    end
-
-    def datetime(*args)
-      add_param(*apply(args, type: Datetime))
-    end
-
-    def param(*args)
-      add_param(*args)
+    def param(name, **kwargs)
+      add_param(name, kwargs)
     end
 
     def use(name, include: nil, exclude: nil)
@@ -153,20 +148,20 @@ module HaveAPI
       end
     end
 
-    def resource(*args)
-      add_resource(*args)
+    def resource(name, **kwargs)
+      add_resource(name, **kwargs)
     end
 
     alias_method :references, :resource
     alias_method :belongs_to, :resource
 
-    def patch(name, changes = {})
+    def patch(name, **changes)
       @params.detect { |p| p.name == name }.patch(changes)
     end
 
     # Action returns custom data.
-    def custom(*args, &block)
-      add_param(*apply(args, type: Custom, clean: block))
+    def custom(name, **kwargs, &block)
+      add_param(name, apply(kwargs, type: Custom, clean: block))
     end
 
     def describe(context)
@@ -274,8 +269,8 @@ module HaveAPI
     end
 
     private
-    def add_param(*args)
-      p = Parameters::Typed.new(*args)
+    def add_param(name, kwargs)
+      p = Parameters::Typed.new(name, kwargs)
 
       return if @include && !@include.include?(p.name)
       return if @exclude && @exclude.include?(p.name)
@@ -283,8 +278,8 @@ module HaveAPI
       @params << p unless param_exists?(p.name)
     end
 
-    def add_resource(*args)
-      r = Parameters::Resource.new(*args)
+    def add_resource(name, kwargs)
+      r = Parameters::Resource.new(name, kwargs)
 
       return if @include && !@include.include?(r.name)
       return if @exclude && @exclude.include?(r.name)
@@ -296,10 +291,9 @@ module HaveAPI
       !@params.detect { |p| p.name == name }.nil?
     end
 
-    def apply(args, default)
-      args << {} unless args.last.is_a?(Hash)
-      args.last.update(default)
-      args
+    def apply(kwargs, **default)
+      kwargs.update(default)
+      kwargs
     end
 
     def valid_layout?(params)

@@ -1,3 +1,7 @@
+## PHP client
+- Requires PHP >= 7.4
+- Updated dependencies
+
 # Thu Aug 26 2021 - version 0.14.0
 ## Ruby server
 - Updated dependencies

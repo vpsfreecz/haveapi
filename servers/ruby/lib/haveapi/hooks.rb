@@ -84,7 +84,8 @@ module HaveAPI
     # +opts+ is a hash and can have following keys:
     #   - desc - why this hook exists, when it's called
     #   - context - the context in which given blocks are called
-    #   - args - hash of block arguments
+    #   - args - hash of block positional arguments
+    #   - kwargs - hash of block keyword arguments
     #   - initial - hash of initial values
     #   - ret - hash of return values
     def self.register_hook(klass, name, opts = {})
@@ -138,6 +139,7 @@ module HaveAPI
     # @param name [Symbol] hook name
     # @param where [Class instance] class in whose context hooks are executed
     # @param args [Array] an array of arguments passed to hooks
+    # @param kwargs [Hash] an array of arguments passed to hooks
     # @param initial [Hash] initial return value
     # @param instance [Boolean] call instance hooks or not; nil means auto-detect
     def self.call_for(
@@ -145,6 +147,7 @@ module HaveAPI
         name,
         where = nil,
         args: [],
+        kwargs: {},
         initial: {},
         instance: nil
     )
@@ -165,10 +168,10 @@ module HaveAPI
 
         hooks.each do |hook|
           if where
-            ret = where.instance_exec(initial, *args, &hook)
+            ret = where.instance_exec(initial, *args, **kwargs, &hook)
 
           else
-            ret = hook.call(initial, *args)
+            ret = hook.call(initial, *args, **kwargs)
           end
 
           initial.update(ret) if ret
@@ -201,48 +204,46 @@ module HaveAPI
       end
 
       # Call all hooks for +name+. see Hooks.call_for.
-      def call_hooks(*args)
-        Hooks.call_for(self.to_s, *args)
+      def call_hooks(*args, **kwargs)
+        Hooks.call_for(self.to_s, *args, **kwargs)
       end
     end
 
     module InstanceMethods
       # Call all instance and class hooks.
-      def call_hooks_for(*args)
-        ret = call_instance_hooks_for(*args)
+      def call_hooks_for(*args, **kwargs)
+        ret = call_instance_hooks_for(*args, **kwargs)
 
-        if args.last.is_a?(::Hash)
-          args.last.update(initial: ret)
-          call_class_hooks_for(*args)
-        else
-          call_class_hooks_for(*args, initial: ret)
-        end
+        kwargs[:initial] = ret
+        call_class_hooks_for(*args, **kwargs)
       end
 
       # Call only instance hooks.
-      def call_instance_hooks_for(name, where = nil, args: [], initial: {})
-        Hooks.call_for(self, name, where, args: args, initial: initial)
+      def call_instance_hooks_for(name, where = nil, args: [], kwargs: {}, initial: {})
+        Hooks.call_for(self, name, where, args: args, kwargs: kwargs, initial: initial)
       end
 
       # Call only class hooks.
-      def call_class_hooks_for(name, where  = nil, args: [], initial: {})
-        Hooks.call_for(self.class, name, where, args: args, initial: initial)
+      def call_class_hooks_for(name, where  = nil, args: [], kwargs: {}, initial: {})
+        Hooks.call_for(self.class, name, where, args: args, kwargs: kwargs, initial: initial)
       end
 
       # Call hooks for different +klass+.
-      def call_hooks_as_for(klass, *args)
-        ret = call_instance_hooks_as_for(klass, *args)
-        call_class_hooks_as_for(klass.class, *args, initial: ret)
+      def call_hooks_as_for(klass, *args, **kwargs)
+        ret = call_instance_hooks_as_for(klass, *args, **kwargs)
+
+        kwargs[:initial] = ret
+        call_class_hooks_as_for(klass.class, *args, **kwargs)
       end
 
       # Call only instance hooks for different +klass+.
-      def call_instance_hooks_as_for(klass, *args)
-        Hooks.call_for(klass, *args)
+      def call_instance_hooks_as_for(klass, *args, **kwargs)
+        Hooks.call_for(klass, *args, **kwargs)
       end
 
       # Call only class hooks for different +klass+.
-      def call_class_hooks_as_for(klass, *args)
-        Hooks.call_for(klass, *args)
+      def call_class_hooks_as_for(klass, *args, **kwargs)
+        Hooks.call_for(klass, *args, **kwargs)
       end
 
       # Connect instance level hook +name+ to +block+.

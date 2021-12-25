@@ -146,7 +146,7 @@ module HaveAPI::Client
               wait_opts[v] = client_opts[k] if client_opts.has_key?(k)
             end
 
-            ret.wait_for_completion(wait_opts) do |state|
+            ret.wait_for_completion(**wait_opts) do |state|
               block.call(return_value, state) if block
             end
           end

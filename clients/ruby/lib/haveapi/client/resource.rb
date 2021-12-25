@@ -76,7 +76,7 @@ module HaveAPI::Client
       action.aliases(true).each do |name|
         next unless define_method?(action, name)
 
-        define_singleton_method(name) do |*args, &block|
+        define_singleton_method(name) do |*args, **kwargs, &block|
           client_opts = @client.opts(:block, :block_interval, :block_timeout)
           all_args = @prepared_args + args
 
@@ -89,25 +89,33 @@ module HaveAPI::Client
             end
 
             if action.unresolved_args?
-              raise ArgumentError.new('One or more object ids missing')
+              raise ArgumentError, 'one or more object ids missing'
             end
           end
 
-          if all_args.empty?
+          params =
+            if kwargs.any? && all_args.last.is_a?(::Hash)
+              raise ArgumentError,
+                    'pass the input parameters either as a hash or keyword arguments'
+            elsif kwargs.any?
+              kwargs
+            elsif all_args.last.is_a?(::Hash)
+              all_args.pop
+            end
+
+          if params.nil?
             all_args << default_action_input_params(action)
 
-          elsif all_args.last.is_a?(Hash)
-            last = all_args.pop
-
-            if last.has_key?(:meta)
-              meta = last[:meta]
+          else
+            if params.has_key?(:meta)
+              meta = params[:meta]
 
               %i(block block_interval block_timeout).each do |p|
                 client_opts[p] = meta.delete(p) if meta.has_key?(p)
               end
             end
 
-            all_args << default_action_input_params(action).update(last)
+            all_args << default_action_input_params(action).update(params)
           end
 
           ret = Response.new(action, action.execute(*all_args))
@@ -137,7 +145,7 @@ module HaveAPI::Client
             }.each do |k, v|
               wait_opts[v] = client_opts[k] if client_opts.has_key?(k)
             end
-            
+
             ret.wait_for_completion(wait_opts) do |state|
               block.call(return_value, state) if block
             end

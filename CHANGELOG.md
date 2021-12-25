@@ -1,3 +1,7 @@
+## Ruby client
+- Action input parameters can be given either as a hash using a positional
+  argument, or keyword arguments, but not both
+
 ## PHP client
 - Requires PHP >= 7.4
 - Updated dependencies

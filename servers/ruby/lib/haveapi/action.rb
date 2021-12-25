@@ -464,11 +464,11 @@ module HaveAPI
     end
 
     protected
-    def with_restricted(*args)
-      if args.empty?
+    def with_restricted(**kwargs)
+      if kwargs.empty?
         @authorization.restrictions
       else
-        args.first.update(@authorization.restrictions)
+        kwargs.update(@authorization.restrictions)
       end
     end
 

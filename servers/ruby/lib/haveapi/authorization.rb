@@ -17,8 +17,8 @@ module HaveAPI
 
     # Apply restrictions on query which selects objects from database.
     # Most common usage is restrict user to access only objects he owns.
-    def restrict(*args)
-      @restrict << args.first
+    def restrict(**kwargs)
+      @restrict << kwargs
     end
 
     # Restrict parameters client can set/change.

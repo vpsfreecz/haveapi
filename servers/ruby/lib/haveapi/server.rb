@@ -40,7 +40,7 @@ module HaveAPI
         return @current_user if @current_user
 
         @current_user = settings.api_server.send(:do_authenticate, v, request)
-        settings.api_server.call_hooks_for(:post_authenticated, args: @current_user)
+        settings.api_server.call_hooks_for(:post_authenticated, args: [@current_user])
         @current_user
       end
 

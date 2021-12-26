@@ -93,32 +93,38 @@ module HaveAPI::Client
             end
           end
 
-          params =
-            if kwargs.any? && all_args.last.is_a?(::Hash)
+          if all_args.length > 1 || (kwargs.any? && all_args.any?)
+            raise ArgumentError, "too many arguments for action #{@name}##{action.name}"
+          end
+
+          arg = all_args.shift
+
+          user_params =
+            if kwargs.any? && arg
               raise ArgumentError,
                     'pass the input parameters either as a hash or keyword arguments'
             elsif kwargs.any?
               kwargs
-            elsif all_args.last.is_a?(::Hash)
-              all_args.pop
+            elsif arg
+              arg
             end
 
-          if params.nil?
-            all_args << default_action_input_params(action)
+          if user_params.nil?
+            input_params = default_action_input_params(action)
 
           else
-            if params.has_key?(:meta)
-              meta = params[:meta]
+            if user_params.has_key?(:meta)
+              meta = user_params[:meta]
 
               %i(block block_interval block_timeout).each do |p|
                 client_opts[p] = meta.delete(p) if meta.has_key?(p)
               end
             end
 
-            all_args << default_action_input_params(action).update(params)
+            input_params = default_action_input_params(action).update(user_params)
           end
 
-          ret = Response.new(action, action.execute(*all_args))
+          ret = Response.new(action, action.execute(input_params))
 
           raise ActionFailed.new(ret) unless ret.ok?
 

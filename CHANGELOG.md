@@ -1,3 +1,10 @@
+## Ruby server
+- Improved compabitility with Ruby >= 3.0
+- Input parameter options are given as keyword arguments
+- Input parameter restrictions (`restrict() and ``with_restricted()`) accept
+  only keyword arguments
+- `HaveAPI::Hooks` supports keyword arguments
+
 ## Ruby client
 - Action input parameters can be given either as a hash using a positional
   argument, or keyword arguments, but not both

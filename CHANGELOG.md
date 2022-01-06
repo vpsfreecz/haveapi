@@ -1,3 +1,6 @@
+## Ruby client
+- Fix action invocations in CLI
+
 # Mon Dec 27 2021 - version 0.15.0
 ## Ruby server
 - Improved compabitility with Ruby >= 3.0

@@ -12,7 +12,7 @@ module HaveAPI::Client
       apply_args(args)
     end
 
-    def execute(data)
+    def execute(data, raw: false)
       params_arg = {}
 
       if input
@@ -25,7 +25,7 @@ module HaveAPI::Client
         params_arg = params.to_api
       end
 
-      ret = @api.call(self, params_arg, **{})
+      ret = @api.call(self, params_arg, raw: raw)
       reset
       ret
     end

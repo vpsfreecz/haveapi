@@ -1,3 +1,4 @@
+# Fri Jan 07 2022 - version 0.15.1
 ## Ruby client
 - Fix action invocations in CLI
 

@@ -113,6 +113,10 @@ module HaveAPI::GoClient
       metadata && metadata.resolve_associations
     end
 
+    def <=>(other)
+      go_name <=> other.go_name
+    end
+
     protected
     attr_reader :prefix
 

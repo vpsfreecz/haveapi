@@ -10,11 +10,16 @@ module HaveAPI::GoClient
     attr_reader :resources
 
     def initialize(desc)
-      @resources = desc[:resources].map { |k, v| Resource.new(self, k, v) }
+      @resources = desc[:resources].map do |k, v|
+        Resource.new(self, k, v)
+      end.sort!
+
       @resources.each { |r| r.resolve_associations }
+
       @auth_methods = desc[:authentication].map do |k, v|
         AuthenticationMethods.new(self, k, v)
       end
+
       @metadata_namespace = desc[:meta][:namespace]
     end
   end

@@ -44,10 +44,12 @@ module HaveAPI::GoClient
       @full_dot_name = resource_path.map(&:name).map(&:capitalize).join('.')
       @go_name = camelize(name)
       @go_type = full_go_type
-      @resources = desc[:resources].map { |k, v| Resource.new(self, k, v) }
+      @resources = desc[:resources].map do |k, v|
+        Resource.new(self, k, v)
+      end.sort!
       @actions = desc[:actions].map do |k, v|
         Action.new(self, k.to_s, v, prefix: prefix)
-      end
+      end.sort!
     end
 
     # @return [ApiVersion]
@@ -102,6 +104,10 @@ module HaveAPI::GoClient
           File.join(gen.dst, prefix_underscore("resource_#{full_name}_action_#{a.name}.go"))
         )
       end
+    end
+
+    def <=>(other)
+      go_name <=> other.go_name
     end
 
     protected

@@ -55,6 +55,10 @@ module HaveAPI::GoClient
       @desc = nil
     end
 
+    def <=>(other)
+      go_name <=> other
+    end
+
     protected
     # @return [Hash]
     attr_reader :desc

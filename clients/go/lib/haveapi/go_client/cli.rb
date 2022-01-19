@@ -34,6 +34,7 @@ module HaveAPI::GoClient
 
       g = Generator.new(ARGV[0], ARGV[1], options)
       g.generate
+      g.go_fmt
     end
   end
 end

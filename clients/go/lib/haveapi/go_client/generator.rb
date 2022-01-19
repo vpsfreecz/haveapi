@@ -59,6 +59,12 @@ module HaveAPI::GoClient
       api.auth_methods.each { |v| v.generate(self) }
     end
 
+    def go_fmt
+      unless system('go', 'fmt', chdir: dst)
+        fail "go fmt failed"
+      end
+    end
+
     protected
     attr_reader :api
   end

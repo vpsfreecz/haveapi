@@ -395,7 +395,7 @@ module HaveAPI::CLI
     def list_resources(v=nil)
       desc = @api.describe_api(v)
 
-      desc[:resources].each do |resource, children|
+      sort_by_key(desc[:resources]).each do |resource, children|
         nested_resource(resource, children, false)
       end
     end
@@ -403,7 +403,7 @@ module HaveAPI::CLI
     def list_actions(v=nil)
       desc = @api.describe_api(v)
 
-      desc[:resources].each do |resource, children|
+      sort_by_key(desc[:resources]).each do |resource, children|
         nested_resource(resource, children, true)
       end
     end
@@ -443,7 +443,7 @@ module HaveAPI::CLI
       unless desc[:resources].empty?
         puts 'Resources:'
 
-        desc[:resources].each_key do |r|
+        desc[:resources].keys.sort.each do |r|
           puts "  #{r}"
         end
       end
@@ -453,7 +453,7 @@ module HaveAPI::CLI
       unless desc[:actions].empty?
         puts 'Actions:'
 
-        desc[:actions].each_key do |a|
+        desc[:actions].keys.sort.each do |a|
           puts "  #{a}"
         end
       end
@@ -461,14 +461,14 @@ module HaveAPI::CLI
 
     def nested_resource(prefix, children, actions=false)
       if actions
-        children[:actions].each do |action, _|
+        children[:actions].keys.sort.each do |action|
           puts "#{prefix}##{action}"
         end
       else
         puts prefix
       end
 
-      children[:resources].each do |resource, children|
+      sort_by_key(children[:resources]).each do |resource, children|
         nested_resource("#{prefix}.#{resource}", children, actions)
       end
     end
@@ -742,6 +742,12 @@ module HaveAPI::CLI
       end
 
       @opts[:date_format] ? ret.strftime(@opts[:date_format]) : ret
+    end
+
+    def sort_by_key(hash)
+      hash.sort do |a, b|
+        a[0]<=> b[0]
+      end
     end
   end
 end

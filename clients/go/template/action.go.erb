@@ -26,6 +26,8 @@ type <%= action.metadata.global.input.go_type %> struct {
 <% end -%>
 	// Only selected parameters are sent to the API. Ignored if empty.
 	_selectedParameters map[string]interface{}
+	// Parameters that are set to nil instead of value
+	_nilParameters map[string]interface{}
 }
 
 <% action.metadata.global.input.parameters.each do |p| -%>
@@ -37,9 +39,32 @@ func (in *<%= action.metadata.global.input.go_type %>) Set<%= p.go_name %>(value
 		in._selectedParameters = make(map[string]interface{})
 	}
 
+<% if p.nillable? -%>
+	in.Set<%= p.go_name %>Nil(false)
+<% end -%>
 	in._selectedParameters["<%= p.go_name %>"] = nil
 	return in
 }
+<% if p.nillable? -%>
+
+// Set<%= p.go_name %>Nil sets parameter <%= p.go_name %> to nil and selects it for sending
+func (in *<%= action.metadata.global.input.go_type %>) Set<%= p.go_name %>Nil(set bool) *<%= action.metadata.global.input.go_type %> {
+	if in._nilParameters == nil {
+		if !set {
+			return in
+		}
+		in._nilParameters = make(map[string]interface{})
+	}
+
+	if set {
+		in._nilParameters["<%= p.go_name %>"] = nil
+		in.SelectParameters("<%= p.go_name %>")
+	} else {
+		delete(in._nilParameters, "<%= p.go_name %>")
+	}
+	return in
+}
+<% end -%>
 <% end -%>
 
 // SelectParameters sets parameters from <%= action.metadata.global.input.go_type %>
@@ -74,6 +99,8 @@ type <%= action.input.go_type %> struct {
 <% end -%>
 	// Only selected parameters are sent to the API. Ignored if empty.
 	_selectedParameters map[string]interface{}
+	// Parameters that are set to nil instead of value
+	_nilParameters map[string]interface{}
 }
 
 <% action.input.parameters.each do |p| -%>
@@ -85,9 +112,32 @@ func (in *<%= action.input.go_type %>) Set<%= p.go_name %>(value <%= p.go_in_typ
 		in._selectedParameters = make(map[string]interface{})
 	}
 
+<% if p.nillable? -%>
+	in.Set<%= p.go_name %>Nil(false)
+<% end -%>
 	in._selectedParameters["<%= p.go_name %>"] = nil
 	return in
 }
+<% if p.nillable? -%>
+
+// Set<%= p.go_name %>Nil sets parameter <%= p.go_name %> to nil and selects it for sending
+func (in *<%= action.input.go_type %>) Set<%= p.go_name %>Nil(set bool) *<%= action.input.go_type %> {
+	if in._nilParameters == nil {
+		if !set {
+			return in
+		}
+		in._nilParameters = make(map[string]interface{})
+	}
+
+	if set {
+		in._nilParameters["<%= p.go_name %>"] = nil
+		in.SelectParameters("<%= p.go_name %>")
+	} else {
+		delete(in._nilParameters, "<%= p.go_name %>")
+	}
+	return in
+}
+<% end -%>
 <% end -%>
 
 // SelectParameters sets parameters from <%= action.input.go_type %>
@@ -100,6 +150,21 @@ func (in *<%= action.input.go_type %>) SelectParameters(params ...string) *<%= a
 
 	for _, param := range params {
 		in._selectedParameters[param] = nil
+	}
+
+	return in
+}
+
+// UnselectParameters unsets parameters from <%= action.input.go_type %>
+// that will be sent to the API.
+// UnsSelectParameters can be called multiple times.
+func (in *<%= action.input.go_type %>) UnselectParameters(params ...string) *<%= action.input.go_type %> {
+	if in._selectedParameters == nil {
+		return in
+	}
+
+	for _, param := range params {
+		delete(in._selectedParameters, param)
 	}
 
 	return in
@@ -254,6 +319,16 @@ func (inv *<%= action.go_invocation_type %>) IsParameterSelected(param string) b
 	_, exists := inv.Input._selectedParameters[param]
 	return exists
 }
+
+// IsParameterNil returns true if param is to be sent to the API as nil
+func (inv *<%= action.go_invocation_type %>) IsParameterNil(param string) bool {
+	if inv.Input._nilParameters == nil {
+		return false
+	}
+
+	_, exists := inv.Input._nilParameters[param]
+	return exists
+}
 <% end -%>
 <% if action.metadata.has_global_input? -%>
 // NewMetaInput returns a new struct for global meta input parameters and sets
@@ -276,6 +351,16 @@ func (inv *<%= action.go_invocation_type %>) IsMetaParameterSelected(param strin
 	}
 
 	_, exists := inv.MetaInput._selectedParameters[param]
+	return exists
+}
+
+// IsMetaParameterNil returns true if global meta param is to be sent to the API as nil
+func (inv *<%= action.go_invocation_type %>) IsMetaParameterNil(param string) bool {
+	if inv.MetaInput._nilParameters == nil {
+		return false
+	}
+
+	_, exists := inv.MetaInput._nilParameters[param]
 	return exists
 }
 <% end -%>
@@ -448,7 +533,15 @@ func (inv *<%= action.go_invocation_type %>) makeInputParams() map[string]interf
 	if inv.Input != nil {
 <% action.input.parameters.each do |p| -%>
 		if inv.IsParameterSelected("<%= p.go_name %>") {
+<% if p.nillable? -%>
+			if inv.IsParameterNil("<%= p.go_name %>") {
+				ret["<%= p.name %>"] = nil
+			} else {
+				ret["<%= p.name %>"] = inv.Input.<%= p.go_name %>
+			}
+<% else -%>
 			ret["<%= p.name %>"] = inv.Input.<%= p.go_name %>
+<% end -%>
 		}
 <% end -%>
 	}

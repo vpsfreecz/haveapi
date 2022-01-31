@@ -10,6 +10,10 @@ module HaveAPI::GoClient
     # @return [Parameters::Association]
     attr_reader :association
 
+    def nillable?
+      true
+    end
+
     protected
     def do_resolve
       @association = Parameters::Association.new(self, desc)

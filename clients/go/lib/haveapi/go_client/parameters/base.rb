@@ -55,6 +55,10 @@ module HaveAPI::GoClient
       @desc = nil
     end
 
+    def nillable?
+      false
+    end
+
     def <=>(other)
       go_name <=> other
     end

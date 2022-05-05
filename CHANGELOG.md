@@ -1,5 +1,15 @@
+# Thu May 5 2022 - version 0.16.0
+## Ruby server
+- Sinatra 2.2.0, ActiveRecord >= 6.0
+
 ## Ruby client
 - Fix action invocations in CLI
+- Sort resources, actions and parameters by name
+
+## Go client
+- Sort resources, actions and parameters by name
+- Use go fmt on the generated code
+- Support for sending resource parameters as nil
 
 # Mon Dec 27 2021 - version 0.15.0
 ## Ruby server

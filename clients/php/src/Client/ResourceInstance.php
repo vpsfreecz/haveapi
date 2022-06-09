@@ -94,8 +94,11 @@ class ResourceInstance extends Resource {
 
 		switch($param->type) {
 			case 'Resource':
-				if($id)
-					return $this->attrs[$name]->{ $param->value_id };
+				if($id) {
+					if ($this->attrs[$name])
+						return $this->attrs[$name]->{ $param->value_id };
+					else return $this->attrs[$name];
+				}
 
 				if(isSet($this->associations[$name]))
 					return $this->associations[$name];

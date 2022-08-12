@@ -149,7 +149,7 @@ module HaveAPI
     end
 
     def resource(name, **kwargs)
-      add_resource(name, **kwargs)
+      add_resource(name, kwargs)
     end
 
     alias_method :references, :resource
@@ -279,7 +279,7 @@ module HaveAPI
     end
 
     def add_resource(name, kwargs)
-      r = Parameters::Resource.new(name, kwargs)
+      r = Parameters::Resource.new(name, **kwargs)
 
       return if @include && !@include.include?(r.name)
       return if @exclude && @exclude.include?(r.name)

@@ -1,3 +1,10 @@
+# Mon Aug 15 2022 - version 0.16.1
+## Ruby server
+- Improve compatibility with Ruby 3.0
+
+## PHP Client
+- Fix some warnings
+
 # Thu May 5 2022 - version 0.16.0
 ## Ruby server
 - Sinatra 2.2.0, ActiveRecord >= 6.0

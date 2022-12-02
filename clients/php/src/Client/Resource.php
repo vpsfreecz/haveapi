@@ -74,8 +74,8 @@ class Resource implements \ArrayAccess {
 		return $this->description;
 	}
 
-	public function offsetExists($offset) {
-
+	public function offsetExists($offset): bool {
+		return false;
 	}
 
 	/**
@@ -84,7 +84,7 @@ class Resource implements \ArrayAccess {
 	 * @return mixed
 	 * @throws \Exception
 	 */
-	public function offsetGet($offset) {
+	public function offsetGet($offset): mixed {
 		if (strpos($offset, '.') === false) {
 			return $this->findObject($offset);
 		} else {
@@ -92,11 +92,11 @@ class Resource implements \ArrayAccess {
 		}
 	}
 
-	public function offsetSet($offset, $value) {
+	public function offsetSet($offset, $value): void {
 
 	}
 
-	public function offsetUnset($offset) {
+	public function offsetUnset($offset): void {
 
 	}
 

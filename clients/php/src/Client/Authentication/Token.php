@@ -184,7 +184,7 @@ class Token extends Base {
 				$this->validTo = strtotime($ret['valid_to']);
 
 			$this->configured = true;
-			return ['done'];
+			return ['done', null, null];
 		}
 
 		return ['continue', $ret['next_action'], $ret['token']];

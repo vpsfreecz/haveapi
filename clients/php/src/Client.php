@@ -279,7 +279,7 @@ class Client extends Client\Resource {
 					$first = false;
 				} else $url .= '&';
 
-				$url .= $k.'='.urlencode($v);
+				$url .= $k.'='.(is_null($v) ? '' : urlencode($v));
 			}
 
 			$request->uri = $url;

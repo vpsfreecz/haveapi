@@ -1,4 +1,4 @@
 module HaveAPI
   PROTOCOL_VERSION = '2.0'
-  VERSION = '0.16.1'
+  VERSION = '0.16.2'
 end

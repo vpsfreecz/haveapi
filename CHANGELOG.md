@@ -1,3 +1,11 @@
+# Sat Dec 03 2022 - version 0.16.2
+## Ruby server
+- Sinatra 3.0
+
+## PHP client
+- Compatibility with PHP 8.1
+- Switch to vpsfreecz/httpful
+
 # Mon Aug 15 2022 - version 0.16.1
 ## Ruby server
 - Improve compatibility with Ruby 3.0

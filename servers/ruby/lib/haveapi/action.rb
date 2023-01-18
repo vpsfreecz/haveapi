@@ -355,7 +355,7 @@ module HaveAPI
     # to what user can see.
     # Return array +[status, data|error, errors]+
     def safe_exec
-      ret = catch(:return) do
+      exec_ret = catch(:return) do
         begin
           validate!
           prepare
@@ -376,7 +376,23 @@ module HaveAPI
         end
       end
 
-      safe_output(ret)
+      begin
+        output_ret = safe_output(exec_ret)
+      rescue Exception => e
+        tmp = call_class_hooks_as_for(Action, :exec_exception, args: [@context, e])
+
+        p e.message
+        puts e.backtrace
+
+        return [
+          tmp[:status] || false,
+          tmp[:message] || 'Server error occurred',
+          {},
+          tmp[:http_status] || 500,
+        ]
+      end
+
+      output_ret
     end
 
     def v?(v)

@@ -1,3 +1,10 @@
+# Mon Feb 13 2023 - version 0.16.3
+## Ruby server
+- Pass exceptions from Action.safe\_output to exec\_exception hook
+
+## PHP client
+- Further compatibility fixes with PHP 8.1
+
 # Sat Dec 03 2022 - version 0.16.2
 ## Ruby server
 - Sinatra 3.0

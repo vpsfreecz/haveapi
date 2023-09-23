@@ -26,7 +26,7 @@ END
 #{init}
 
 // Get token using username and password
-$api->authenticate("token", ["username" => "user", "password" => "secret"]);
+$api->authenticate("token", [#{auth_token_credentials(desc).map { |k, v| "\"#{k}\" => \"#{v}\"" }.join(', ')}]);
 
 echo "Token = ".$api->getAuthenticationProvider()->getToken();
 

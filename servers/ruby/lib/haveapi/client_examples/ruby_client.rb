@@ -29,7 +29,7 @@ END
 #{init}
 
 # Get token using username and password
-client.authenticate(:token, username: "user", password: "secret")
+client.authenticate(:token, #{auth_token_credentials(desc).map { |k, v| "#{k}: \"#{v}\"" }.join(', ')})
 
 puts "Token = \#{client.auth.token}"
 

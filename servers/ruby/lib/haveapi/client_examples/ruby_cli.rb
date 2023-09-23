@@ -33,7 +33,7 @@ END
 # Note that the client always has to call some action. APIs should provide
 # an action to get information about the current user, so that's what we're
 # calling now.
-#{init} --auth token --username user --save user current
+#{init} --auth token #{auth_token_credentials(desc, password: false).map { |k, v| "--#{k} #{v}" }.join(' ')} --save user current
 Password: secret
 
 # Now the token is read from disk and the user does not have to provide username

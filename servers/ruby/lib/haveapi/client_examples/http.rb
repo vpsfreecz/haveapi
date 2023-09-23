@@ -28,12 +28,14 @@ Authorization: Basic dXNlcjpzZWNyZXQ=
 END
 
       when :token
+        login = auth_token_credentials(desc).merge(lifetime: 'fixed')
+
         <<END
 POST /_auth/token/tokens HTTP/1.1
 Host: #{host}
 Content-Type: application/json
 
-#{JSON.pretty_generate({token: {user: 'user', password: 'secret', lifetime: 'fixed'}})}
+#{JSON.pretty_generate({token: login})}
 END
       end
     end

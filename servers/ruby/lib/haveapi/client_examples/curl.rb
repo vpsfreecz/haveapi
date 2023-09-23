@@ -12,8 +12,6 @@ module HaveAPI::ClientExamples
     end
 
     def auth(method, desc)
-      login = {user: 'user', password: 'password', lifetime: 'fixed'}
-
       case method
       when :basic
         <<END
@@ -30,6 +28,8 @@ $ curl --request OPTIONS \\
 END
 
       when :token
+        login = auth_token_credentials(desc).merge(lifetime: 'fixed')
+
         <<END
 # Acquire the token
 $ curl --request POST \\

@@ -79,5 +79,28 @@ module HaveAPI
     def version_url
       File.join(base_url, "v#{version}", '/')
     end
+
+    protected
+    # @param password [Boolean] include password parameter
+    # @return [Hash<String, String>] parameter => example value
+    def auth_token_credentials(desc, password: true)
+      passwords = %i(password pass passwd)
+      params = desc[:resources][:token][:actions]['request'][:input][:parameters].keys - %i(lifetime interval)
+
+      unless password
+        params.reject! { |param| passwords.include?(param) }
+      end
+
+      Hash[params.map do |param|
+        value =
+          if passwords.include?(param)
+            'secret'
+          else
+            param
+          end
+
+        [param, value]
+      end]
+    end
   end
 end

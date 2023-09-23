@@ -34,8 +34,7 @@ END
 
 // Request a new token
 api.authenticate("token", {
-  username: "user",
-  password: "secret"
+  #{auth_token_credentials(desc).map { |k, v| "#{k}: \"#{v}\"" }.join(",\n  ")}
 }, function (client, status) {
   console.log("Authenticated?", status);
 

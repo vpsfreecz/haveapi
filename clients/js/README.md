@@ -108,7 +108,7 @@ callback which it gets as an argument.
 
 ```js
 api.authenticate('token', {
-		username: 'yourname',
+		user: 'yourname',
 		password: 'yourpassword',
 		callback: function (action, params, cont) {
 			console.log("The server requires additional authentication", action);

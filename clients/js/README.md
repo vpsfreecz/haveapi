@@ -47,7 +47,7 @@ api.setup(function() {
 	console.log("The client is ready to roll");
 
 	api.authenticate('basic', {
-			username: 'yourname',
+			user: 'yourname',
 			password: 'yourpassword'
 		}, function(c, status) {
 		console.log("Are we authenticated?", status);

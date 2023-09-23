@@ -34,7 +34,7 @@ Create a client instance:
 
 Authenticate with HTTP basic:
 
-	$api->authenticate('basic', ['username' => 'yourname', 'password' => 'password']);
+	$api->authenticate('basic', ['user' => 'yourname', 'password' => 'password']);
 
 Authenticate with token:
 

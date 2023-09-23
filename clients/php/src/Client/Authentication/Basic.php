@@ -5,12 +5,12 @@ use Httpful\Request;
 
 /**
  * Provider for HTTP basic authentication.
- * 
- * It accepts `username` and `password` as options.
+ *
+ * It accepts `user` and `password` as options.
  */
 class Basic extends Base {
 
 	public function authenticate(Request $request) {
-		$request->authenticateWith($this->opts['username'], $this->opts['password']);
+		$request->authenticateWith($this->opts['user'], $this->opts['password']);
 	}
 }

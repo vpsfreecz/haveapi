@@ -5,7 +5,7 @@ module HaveAPI::CLI::Authentication
     register :basic
 
     def options(opts)
-      opts.on('--username USER', 'User name') do |u|
+      opts.on('--user USER', 'User name') do |u|
         @user = u
       end
 

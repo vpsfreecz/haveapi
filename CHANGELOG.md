@@ -1,3 +1,24 @@
+# Sun Sep 24 2023 - version 0.17.0
+## Ruby server
+- Pass exceptions from Action.safe\_output to exec\_exception hook
+- Sinatra 3.0
+- Improve compatibility with Ruby 3.0
+- Use correct credentials for token auth examples in online documentation
+- Use option `user` instead of `username` in HTTP basic authentication examples
+- Updated dependencies
+
+## Ruby client
+- Updated dependencies
+- Use CLI option `--user` instead of `--username` for HTTP basic authentication
+
+## PHP client
+- Compatibility with PHP 8.1
+- Switch to vpsfreecz/httpful
+- Use option `user` instead of `username` for HTTP basic authentication
+
+## JavaScript client
+- Use option `user` instead of `username` for HTTP basic authentication
+
 # Thu May 5 2022 - version 0.16.0
 ## Ruby server
 - Sinatra 2.2.0, ActiveRecord >= 6.0

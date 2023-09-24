@@ -21,7 +21,7 @@ END
         <<END
 #{init}
 
-client.authenticate(:basic, username: "user", password: "secret")
+client.authenticate(:basic, user: "user", password: "secret")
 END
 
       when :token

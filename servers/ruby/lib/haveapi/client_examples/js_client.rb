@@ -21,7 +21,7 @@ END
 #{init}
 
 api.authenticate("basic", {
-  username: "user",
+  user: "user",
   password: "secret"
 }, function (client, status) {
   console.log("Authenticated?", status);

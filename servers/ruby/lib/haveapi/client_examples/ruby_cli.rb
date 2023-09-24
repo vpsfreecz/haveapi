@@ -20,10 +20,10 @@ module HaveAPI::ClientExamples
       when :basic
         <<END
 # Provide credentials on command line
-#{init} --auth basic --username user --password secret
+#{init} --auth basic --user user --password secret
 
 # If username or password isn't provided, the user is asked on stdin
-#{init} --auth basic --username user
+#{init} --auth basic --user user
 Password: secret
 END
 

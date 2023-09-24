@@ -18,7 +18,7 @@ END
         <<END
 #{init}
 
-$api->authenticate("basic", ["username" => "user", "password" => "secret"]);
+$api->authenticate("basic", ["user" => "user", "password" => "secret"]);
 END
 
       when :token

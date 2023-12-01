@@ -40,6 +40,9 @@ Password: secret
 # nor password and be authenticated
 #{init} user current
 END
+
+      when :oauth2
+        '# OAuth2 is not supported by HaveAPI Ruby CLI.'
       end
     end
 

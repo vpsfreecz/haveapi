@@ -49,6 +49,9 @@ api.authenticate("token", {
   console.log("Authenticated?", status);
 });
 END
+
+      when :oauth2
+        '// OAuth2 is not supported by HaveAPI JavaScript client.'
       end
     end
 

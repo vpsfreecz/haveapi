@@ -10,6 +10,13 @@
     <dt>Query parameter:</dt>
     <dd><%= info[:query_parameter] %></dd>
   </dl>
+<% elsif name == :oauth2 %>
+  <dl>
+    <dt>Authorize path:</dt>
+    <dd><%= info[:authorize_path] %></dd>
+    <dt>Token path:</dt>
+    <dd><%= info[:token_path] %></dd>
+  </dl>
 <% end %>
 
 <% if info[:resources] %>

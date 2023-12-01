@@ -13,6 +13,10 @@ module HaveAPI
         end
       end
 
+      def self.inherited(subclass)
+        subclass.send(:instance_variable_set, '@auth_method', @auth_method)
+      end
+
       # @return [Symbol]
       attr_reader :name
 
@@ -21,6 +25,12 @@ module HaveAPI
         @server = server
         @version = v
         setup
+      end
+
+      # Register custom path handlers in sinatra
+      # @param sinatra [Sinatra::Base]
+      # @param prefix [String]
+      def register_routes(sinatra, prefix)
       end
 
       # @return [Module, nil]

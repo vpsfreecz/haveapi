@@ -33,6 +33,9 @@ echo "Token = ".$api->getAuthenticationProvider()->getToken();
 // Next time, the client can authenticate using the token directly
 $api->authenticate("token", ["token" => $savedToken]);
 END
+
+      when :oauth2
+        '// OAuth2 is not supported by HaveAPI PHP client.'
       end
     end
 

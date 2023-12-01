@@ -576,6 +576,13 @@ module HaveAPI
       "#{@root}v#{v}/"
     end
 
+    # @param v [String] API version
+    # @param provider [Authentication::Base]
+    # @param prefix [String]
+    def add_auth_routes(v, provider, prefix: '')
+      provider.register_routes(@sinatra, "#{@root}_auth/#{prefix}")
+    end
+
     def add_auth_module(v, name, mod, prefix: '')
       @routes[v] ||= {authentication: {name => {resources: {}}}}
 

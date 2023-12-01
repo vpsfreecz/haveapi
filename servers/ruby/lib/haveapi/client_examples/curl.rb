@@ -42,6 +42,9 @@ $ curl --request OPTIONS \\
        --header '#{desc[:http_header]}: thetoken' \\
        '#{base_url}'
 END
+
+      when :oauth2
+        '# See RFC 6749 for authorization process and RFC 6750 for access token usage.'
       end
     end
 

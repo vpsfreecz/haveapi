@@ -34,6 +34,9 @@ Password: secret
 # Note that the file system can read config file from haveapi-client, so if
 # you set up authentication there, the file system will use it.
 END
+
+      when :oauth2
+        '# OAuth2 is not supported by haveapi-fs.'
       end
     end
 

@@ -99,6 +99,8 @@ module HaveAPI::Authentication
       instance = p.new(@server, v)
       @instances[v] << instance
 
+      @server.add_auth_routes(v, instance, prefix: instance.name.to_s)
+
       if resource_module = instance.resource_module
         @server.add_auth_module(
           v,

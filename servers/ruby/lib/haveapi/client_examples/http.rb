@@ -37,6 +37,25 @@ Content-Type: application/json
 
 #{JSON.pretty_generate({token: login})}
 END
+
+      when :oauth2
+        <<END
+# 1) Request authorization code
+GET #{desc[:authorize_path]}?response_type=code&client_id=$client_id&state=$state&redirect_uri=$client_redirect_uri HTTP/1.1
+Host: #{host}
+
+# 2) The user logs in using this API
+
+# 3) The API then redirects the user back to the client application
+GET $client_redirect_uri?code=$authorization_code&state=$state
+Host: client-application
+
+# 4) The client application requests access token
+POST #{desc[:token_path]}
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code&code=$authorization_code&redirect_uri=$client_redirect_uri&client_id=$client_id&client_secret=$client_secret
+END
       end
     end
 

@@ -36,6 +36,9 @@ puts "Token = \#{client.auth.token}"
 # Next time, the client can authenticate using the token directly
 client.authenticate(:token, token: saved_token)
 END
+
+      when :oauth2
+        '# OAuth2 is not supported by HaveAPI Ruby client.'
       end
     end
 

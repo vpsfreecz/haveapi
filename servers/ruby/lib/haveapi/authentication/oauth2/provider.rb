@@ -190,7 +190,7 @@ module HaveAPI::Authentication
             when :authorization_code
               authorization = config.find_authorization_by_code(client, req.code)
 
-              if authorization.nil? || authorization.check_code_validity(req.redirect_uri)
+              if authorization.nil? || !authorization.check_code_validity(req.redirect_uri)
                 req.invalid_grant!
               end
 

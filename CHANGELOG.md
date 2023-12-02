@@ -1,3 +1,7 @@
+# Sat Dec 02 2023 - version 0.18.1
+## Ruby server
+- Fix OAuth2 token grant check
+
 # Sat Dec 02 2023 - version 0.18.0
 ## Ruby server
 - Support for OAuth2 authorization provider

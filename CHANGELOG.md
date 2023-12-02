@@ -1,3 +1,7 @@
+# Sat Dec 02 2023 - version 0.18.0
+## Ruby server
+- Support for OAuth2 authorization provider
+
 # Sun Sep 24 2023 - version 0.17.0
 ## Ruby server
 - Pass exceptions from Action.safe\_output to exec\_exception hook

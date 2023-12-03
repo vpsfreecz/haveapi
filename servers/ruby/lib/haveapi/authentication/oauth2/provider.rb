@@ -35,6 +35,12 @@ module HaveAPI::Authentication
 
     # Abstract class describing ongoing authorization and what methods it must respond to
     class Authorization
+      # @return [String, nil]
+      attr_reader :code_challenge
+
+      # @return [String, nil]
+      attr_reader :code_challenge_method
+
       # @return [String]
       attr_reader :redirect_uri
 
@@ -192,6 +198,13 @@ module HaveAPI::Authentication
 
               if authorization.nil? || !authorization.check_code_validity(req.redirect_uri)
                 req.invalid_grant!
+              end
+
+              if authorization.code_challenge && authorization.code_challenge_method
+                req.verify_code_verifier!(
+                  authorization.code_challenge,
+                  authorization.code_challenge_method.to_sym,
+                )
               end
 
               access_token, expires_at, refresh_token = config.get_tokens(authorization, handler.request)

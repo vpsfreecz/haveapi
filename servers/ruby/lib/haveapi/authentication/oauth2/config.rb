@@ -130,13 +130,22 @@ module HaveAPI::Authentication
       #
       # @return [Hash<String, String>]
       def oauth2_params(req)
-        {
+        ret = {
           client_id: req.client_id,
           response_type: req.response_type,
           redirect_uri: req.redirect_uri,
           scope: req.scope.join(' '),
           state: req.state,
         }
+
+        if req.code_challenge.present? && req.code_challenge_method.present?
+          ret.update(
+            code_challenge: req.code_challenge,
+            code_challenge_method: req.code_challenge_method,
+          )
+        end
+
+        ret
       end
     end
   end

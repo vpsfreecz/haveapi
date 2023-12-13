@@ -86,6 +86,19 @@ module HaveAPI::Authentication
 
       end
 
+      # Revoke access or refresh token
+      #
+      # Note that even if the token is not found, this method should return
+      # `:revoked`.
+      #
+      # @param sinatra_request [Sinatra::Request]
+      # @param token [String]
+      # @param token_type_hint [nil, 'access_token', 'refresh_token']
+      # @return [:revoked, :unsupported]
+      def handle_post_revoke(sinatra_request, token, token_type_hint: nil)
+
+      end
+
       # Find client by ID
       # @param client_id [String]
       # @return [Client, nil]

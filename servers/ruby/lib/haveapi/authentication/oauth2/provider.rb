@@ -81,6 +81,7 @@ module HaveAPI::Authentication
       def register_routes(sinatra, prefix)
         @authorize_path = File.join(prefix, 'authorize')
         @token_path = File.join(prefix, 'token')
+        @revoke_path = File.join(prefix, 'revoke')
         that = self
 
         sinatra.get @authorize_path do
@@ -93,6 +94,10 @@ module HaveAPI::Authentication
 
         sinatra.post @token_path do
           that.token_endpoint(self).call(request.env)
+        end
+
+        sinatra.post @revoke_path do
+          that.revoke_endpoint(self).call(request.env)
         end
       end
 
@@ -135,12 +140,15 @@ module HaveAPI::Authentication
         response and grant types are not supported at this time.
 
         The access token can be passed as bearer token according to RFC 6750.
+
+        The access and refresh tokens can be revoked as per RFC 7009.
         END
 
         {
           description: desc,
           authorize_path: @authorize_path,
           token_path: @token_path,
+          revoke_path: @revoke_path,
         }
       end
 
@@ -237,6 +245,25 @@ module HaveAPI::Authentication
             else
               req.unsupported_grant_type!
             end
+        end
+      end
+
+      def revoke_endpoint(handler)
+        RevokeEndpoint.new do |req, res|
+          ret = config.handle_post_revoke(
+            handler.request,
+            req.token,
+            token_type_hint: req.token_type_hint,
+          )
+
+          case ret
+          when :revoked
+            # ok
+          when :unsupported
+            req.unsupported_token_type!
+          else
+            raise Rack::OAuth2::Server::Abstract::ServerError
+          end
         end
       end
     end

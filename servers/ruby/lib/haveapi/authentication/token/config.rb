@@ -75,6 +75,7 @@ module HaveAPI::Authentication
             input do
               string :user, label: 'User', required: true
               password :password, label: 'Password', required: true
+              string :scope, label: 'Scope', default: 'all', fill: true
             end
 
             handle do

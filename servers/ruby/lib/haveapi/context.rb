@@ -72,6 +72,20 @@ module HaveAPI
       path_for(action, call_path_params(action, obj))
     end
 
+    def path_params_from_args
+      ret = {}
+      return ret if args.nil?
+
+      my_args = args.clone
+
+      path.scan(/\{([a-zA-Z\-_]+)\}/) do |match|
+        path_param = match.first
+        ret[path_param] = my_args.shift
+      end
+
+      ret
+    end
+
     def action_scope
       resource_path.map(&:downcase).join('.') + '#' + action.action_name.underscore
     end

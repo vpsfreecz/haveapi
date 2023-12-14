@@ -219,7 +219,10 @@ module HaveAPI
       def describe(context)
         authorization = (@authorization && @authorization.clone) || Authorization.new
 
-        return false if (context.endpoint || context.current_user) && !authorization.authorized?(context.current_user)
+        if (context.endpoint || context.current_user) \
+            && !authorization.authorized?(context.current_user, context.path_params_from_args)
+          return false
+        end
 
         route_method = context.action.http_method.to_s.upcase
         context.authorization = authorization
@@ -327,7 +330,7 @@ module HaveAPI
 
     def authorized?(user)
       @current_user = user
-      @authorization.authorized?(user)
+      @authorization.authorized?(user, extract_path_params)
     end
 
     def current_user
@@ -640,6 +643,18 @@ module HaveAPI
 
         @metadata.update(meta.input.validate(raw_meta))
       end
+    end
+
+    # @return <Hash<Symbol, String>> path parameters and their values
+    def extract_path_params
+      ret = {}
+
+      @context.path.scan(/\{([a-zA-Z\-_]+)\}/) do |match|
+        path_param = match.first
+        ret[path_param] = @params[path_param]
+      end
+
+      ret
     end
   end
 end

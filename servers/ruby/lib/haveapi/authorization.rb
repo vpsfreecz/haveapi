@@ -6,12 +6,12 @@ module HaveAPI
 
     # Returns true if user is authorized.
     # Block must call allow to authorize user, default rule is deny.
-    def authorized?(user)
+    def authorized?(user, path_params)
       @restrict = []
 
       catch(:rule) do
         @blocks.each do |block|
-          instance_exec(user, &block)
+          instance_exec(user, path_params, &block)
         end
 
         deny # will not be called if some block throws allow

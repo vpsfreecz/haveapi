@@ -1,7 +1,7 @@
 module HaveAPI
   class Authorization
     def initialize(&block)
-      @block = block
+      @blocks = [block]
     end
 
     # Returns true if user is authorized.
@@ -10,9 +10,16 @@ module HaveAPI
       @restrict = []
 
       catch(:rule) do
-        instance_exec(user, &@block) if @block
-        deny # will not be called if block throws allow
+        @blocks.each do |block|
+          instance_exec(user, &block)
+        end
+
+        deny # will not be called if some block throws allow
       end
+    end
+
+    def prepend_block(block)
+      @blocks.insert(0, block)
     end
 
     # Apply restrictions on query which selects objects from database.

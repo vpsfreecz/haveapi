@@ -16,6 +16,18 @@ module HaveAPI
 
     include Hookable
 
+    has_hook :pre_authorize,
+      desc: 'Called to provide additional authorization blocks. These blocks are '+
+            'called before action\'s own authorization block. Note that if any '+
+            'of the blocks uses allow/deny rule, it will be the final authorization '+
+            'decision and even action\'s own authorization block will not be called.',
+      args: {
+        context: 'HaveAPI::Context instance',
+      },
+      ret: {
+        blocks: 'array of authorization blocks',
+      }
+
     has_hook :exec_exception,
         desc: 'Called when unhandled exceptions occurs during Action.exec',
         args: {
@@ -290,6 +302,17 @@ module HaveAPI
         @authorization = class_auth.clone
       else
         @authorization = Authorization.new {}
+      end
+
+      ret = call_class_hooks_as_for(
+        Action,
+        :pre_authorize,
+        args: [@context],
+        initial: {blocks: []},
+      )
+
+      ret[:blocks].reverse_each do |block|
+        @authorization.prepend_block(block)
       end
     end
 

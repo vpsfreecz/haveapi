@@ -49,7 +49,7 @@ module HaveAPI::CLI::Authentication
       return if @token
 
       request_credentials.each do |name, desc|
-        if !@credentials.has_key?(name)
+        if !@credentials.has_key?(name) && desc[:required]
           @credentials[name] = read_param(name, desc)
         end
       end

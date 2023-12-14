@@ -69,7 +69,7 @@ module HaveAPI::Client::Authentication
         lifetime: @opts[:lifetime],
         interval: @opts[:interval] || 300,
       }
-      request_credentials.each { |name| input[name] = @opts[name] }
+      request_credentials.each { |name| input[name] = @opts[name] if @opts[name] }
 
       cont, next_action, token = login_step(:request, input)
       return if cont == :done

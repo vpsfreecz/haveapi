@@ -59,20 +59,21 @@ module HaveAPI
       singular ? resource_name.singularize.underscore : resource_name.tableize
     end
 
-    def self.routes(prefix='/')
+    def self.routes(prefix='/', resource_path: [])
       ret = []
       prefix = "#{prefix}#{@route || rest_name}/"
+      new_resource_path = resource_path + [resource_name.underscore]
 
       actions do |a|
         # Call used_by for selected model adapters. It is safe to do
         # only when all classes are loaded.
         a.initialize
 
-        ret << Route.new(a.build_route(prefix).chomp('/'), a)
+        ret << Route.new(a.build_route(prefix).chomp('/'), a, new_resource_path)
       end
 
       resources do |r|
-        ret << {r => r.routes(prefix)}
+        ret << {r => r.routes(prefix, resource_path: new_resource_path)}
       end
 
       ret
@@ -82,6 +83,9 @@ module HaveAPI
       ret = {description: self.desc, actions: {}, resources: {}}
 
       context.resource = self
+
+      orig_resource_path = context.resource_path
+      context.resource_path = context.resource_path + [resource_name.underscore]
 
       hash[:actions].each do |action, path|
         context.action = action
@@ -96,6 +100,8 @@ module HaveAPI
       hash[:resources].each do |resource, children|
         ret[:resources][resource.resource_name.underscore] = resource.describe(children, context)
       end
+
+      context.resource_path = orig_resource_path
 
       ret
     end

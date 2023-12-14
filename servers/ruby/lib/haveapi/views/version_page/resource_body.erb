@@ -17,6 +17,8 @@
           <dd><%= info[:description] %></dd>
           <dt>Authentication required:</dt>
           <dd><%= info[:auth] ? 'yes' : 'no' %></dd>
+          <dt>Scope:</dt>
+          <dd><%= info[:scope] %></dd>
           <dt>Aliases:</dt>
           <dd><%= info[:aliases].join(', ') %></dd>
           <dt>Blocking:</dt>

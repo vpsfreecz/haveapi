@@ -464,7 +464,8 @@ module HaveAPI
             path: route.path,
             params: params,
             user: current_user,
-            endpoint: true
+            endpoint: true,
+            resource_path: route.resource_path,
         ))
 
         unless action.authorized?(current_user)
@@ -507,7 +508,8 @@ module HaveAPI
             args: args,
             params: params,
             user: current_user,
-            endpoint: true
+            endpoint: true,
+            resource_path: route.resource_path,
         )
 
         begin

@@ -243,6 +243,7 @@ module HaveAPI
             output: @output ? @output.describe(context) : {parameters: {}},
             meta: @meta ? @meta.merge(@meta) { |_, v| v && v.describe(context) } : nil,
             examples: @examples ? @examples.describe(context) : [],
+            scope: context.action_scope,
             path: context.resolved_path,
             method: route_method,
             help: "#{context.path}?method=#{route_method}"

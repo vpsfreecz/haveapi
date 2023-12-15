@@ -78,6 +78,10 @@ module HaveAPI::Authentication
         super(server, v)
       end
 
+      def setup
+        @server.allow_header(config.http_header)
+      end
+
       def register_routes(sinatra, prefix)
         @authorize_path = File.join(prefix, 'authorize')
         @token_path = File.join(prefix, 'token')
@@ -104,7 +108,8 @@ module HaveAPI::Authentication
       def authenticate(request)
         tokens = [
           request['access_token'],
-          token_from_header(request)
+          token_from_authorization_header(request),
+          token_from_haveapi_header(request),
         ].compact
 
         token =
@@ -120,7 +125,7 @@ module HaveAPI::Authentication
         token && config.find_user_by_access_token(request, token)
       end
 
-      def token_from_header(request)
+      def token_from_authorization_header(request)
         auth_header = Rack::Auth::AbstractRequest.new(request.env)
 
         if auth_header.provided? && !auth_header.parts.first.nil? && auth_header.scheme.to_s == 'bearer'
@@ -128,6 +133,10 @@ module HaveAPI::Authentication
         else
           nil
         end
+      end
+
+      def token_from_haveapi_header(request)
+        request.env[header_to_env(config.http_header)]
       end
 
       def describe
@@ -146,6 +155,7 @@ module HaveAPI::Authentication
 
         {
           description: desc,
+          http_header: config.http_header,
           authorize_path: @authorize_path,
           token_path: @token_path,
           revoke_path: @revoke_path,
@@ -265,6 +275,11 @@ module HaveAPI::Authentication
             raise Rack::OAuth2::Server::Abstract::ServerError
           end
         end
+      end
+
+      private
+      def header_to_env(header)
+        "HTTP_#{header.upcase.gsub(/\-/, '_')}"
       end
     end
   end

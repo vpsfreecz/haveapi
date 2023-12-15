@@ -136,6 +136,16 @@ module HaveAPI::Authentication
         @provider.authorize_path
       end
 
+      # Custom HTTP header that is searched for the access token
+      #
+      # The authorization header is not feasible from web browsers, so we optionally
+      # use our own header for the purpose.
+      #
+      # @return [String]
+      def http_header
+        'X-HaveAPI-OAuth2-Token'
+      end
+
       # Parameters needed for the authorization process
       #
       # Use these in {#render_authorization_page}, put them e.g. in hidden form

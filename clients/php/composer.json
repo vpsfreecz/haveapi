@@ -12,6 +12,7 @@
     ],
     "require": {
         "php": ">=8.0.0",
+	"league/oauth2-client": "~2.7.0",
         "vpsfreecz/httpful": "~0.4.0"
     },
     "autoload": {

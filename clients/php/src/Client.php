@@ -46,6 +46,7 @@ class Client extends Client\Resource {
 
 		self::registerAuthProvider('none', 'HaveAPI\Client\Authentication\NoAuth');
 		self::registerAuthProvider('basic', 'HaveAPI\Client\Authentication\Basic');
+		self::registerAuthProvider('oauth2', 'HaveAPI\Client\Authentication\OAuth2');
 		self::registerAuthProvider('token', 'HaveAPI\Client\Authentication\Token');
 
 		$this->authProvider = new Client\Authentication\NoAuth($this, array(), array());
@@ -164,6 +165,13 @@ class Client extends Client\Resource {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function getUri() {
+		return $this->uri;
+	}
+
+	/**
 	 * Invoke action $action with $params and interpret the response.
 	 * @param Action $action
 	 * @param array $params
@@ -236,7 +244,7 @@ class Client extends Client\Resource {
 	 * @param string $method HTTP method
 	 * @param string $url
 	 */
-	protected function getRequest($method, $url) {
+	public function getRequest($method, $url) {
 		$this->queryParams = array();
 
 		$request = \Httpful\Request::$method($url);

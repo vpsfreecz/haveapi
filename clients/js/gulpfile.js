@@ -10,6 +10,7 @@ var src = [
 	'src/haveapi/authentication.js',
 	'src/haveapi/authentication/base.js',
 	'src/haveapi/authentication/basic.js',
+	'src/haveapi/authentication/oauth2.js',
 	'src/haveapi/authentication/token.js',
 	'src/haveapi/base_resource.js',
 	'src/haveapi/resource.js',

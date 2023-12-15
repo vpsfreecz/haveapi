@@ -323,7 +323,6 @@ Client.prototype.authenticate = function(method, opts, callback, reset) {
 
 		} else {
 			callback(that, status);
-
 			if (status)
 				that._private.hooks.invoke('after', 'authenticated', that, true);
 		}

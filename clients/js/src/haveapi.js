@@ -14,6 +14,7 @@ if (typeof exports === 'object' && (typeof window === 'undefined' || !window.XML
 
 // Register built-in providers
 Authentication.registerProvider('basic', Authentication.Basic);
+Authentication.registerProvider('oauth2', Authentication.OAuth2);
 Authentication.registerProvider('token', Authentication.Token);
 
 var classes = [

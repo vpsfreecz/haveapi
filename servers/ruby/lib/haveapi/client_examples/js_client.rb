@@ -51,7 +51,17 @@ api.authenticate("token", {
 END
 
       when :oauth2
-        '// OAuth2 is not supported by HaveAPI JavaScript client.'
+        <<END
+#{init}
+// The JavaScript client must be configured with OAuth2 access token, it does not
+// support the authorization procedure to obtain a new access token.
+var accessToken = {
+  access_token: "the access token"
+};
+
+// The client is authenticated immediately, no need for a callback
+api.authenticate("oauth2", {access_token: accessToken});
+END
       end
     end
 

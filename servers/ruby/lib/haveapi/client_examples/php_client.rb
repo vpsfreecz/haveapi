@@ -35,7 +35,49 @@ $api->authenticate("token", ["token" => $savedToken]);
 END
 
       when :oauth2
-        '// OAuth2 is not supported by HaveAPI PHP client.'
+        <<END
+// OAuth2 requires session
+session_start();
+
+// Client instance
+#{init}
+// Check if we already have an access token
+if (isset($_SESSION["access_token"])) {
+  // We're already authenticated, reuse the existing access token
+  $api->authenticate("oauth2", ["access_token" => $_SESSION["access_token"]]);
+
+} else {
+  // Follow the OAuth2 authorization process to get an access token using
+  // authorization code
+  $api->authenticate("oauth2", [
+    // Client id and secret are given by the API server
+    "client_id" => "your client id",
+    "client_secret" => "your client secret",
+
+    // This example code should run on the URL below
+    "redirect_uri" => "https://your-client.tld/oauth2-callback",
+
+    // Scopes are specific to the API implementation
+    "scope" => "all",
+  ]);
+
+  $provider = $api->getAuthenticationProvider();
+
+  // We don't have authorization code yet, request one
+  if (!isset($_GET['code'])) {
+    // Redirect the user to the authorization endpoint
+    $provider->requestAuthorizationCode();
+    exit;
+
+  } else {
+    // Request access token using the token endpoint
+    $provider->requestAccessToken();
+
+    // Store the access token in the session
+    $_SESSION['access_token'] = $provider->jsonSerialize();
+  }
+}
+END
       end
     end
 

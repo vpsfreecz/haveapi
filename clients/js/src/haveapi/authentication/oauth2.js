@@ -72,7 +72,7 @@ Authentication.OAuth2.prototype.logout = function(callback) {
 	var http = new XMLHttpRequest();
 	var that = this;
 
-	http.open('POST', this.client._private.url + this.description.revoke_path, true);
+	http.open('POST', this.description.revoke_url, true);
 	http.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
 
 	http.onreadystatechange = function() {

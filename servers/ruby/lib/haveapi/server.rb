@@ -32,6 +32,18 @@ module HaveAPI
         }
 
     module ServerHelpers
+      def setup_formatter
+        return if @formatter
+        @formatter = OutputFormatter.new
+
+        unless @formatter.supports?(request.accept)
+          @halted = true
+          halt 406, "Not Acceptable\n"
+        end
+
+        content_type @formatter.content_type, charset: 'utf-8'
+      end
+
       def authenticate!(v)
         require_auth! unless authenticated?(v)
       end
@@ -72,6 +84,7 @@ module HaveAPI
 
       def report_error(code, headers, msg)
         @halted = true
+
         content_type @formatter.content_type, charset: 'utf-8'
         halt code, headers, @formatter.format(false, nil, msg, version: false)
       end
@@ -203,15 +216,6 @@ module HaveAPI
         helpers DocHelpers
 
         before do
-          @formatter = OutputFormatter.new
-
-          unless @formatter.supports?(request.accept)
-            @halted = true
-            halt 406, "Not Acceptable\n"
-          end
-
-          content_type @formatter.content_type, charset: 'utf-8'
-
           if request.env['HTTP_ORIGIN']
             headers 'Access-Control-Allow-Origin' => '*',
                     'Access-Control-Allow-Credentials' => 'false'
@@ -219,6 +223,7 @@ module HaveAPI
         end
 
         not_found do
+          setup_formatter
           report_error(404, {}, 'Action not found') unless @halted
         end
 
@@ -247,6 +252,7 @@ module HaveAPI
       end
 
       @sinatra.options @root do
+        setup_formatter
         access_control
         authenticated?(settings.api_server.default_version)
         ret = nil
@@ -363,6 +369,7 @@ module HaveAPI
       end
 
       @sinatra.options prefix do
+        setup_formatter
         access_control
         authenticated?(v)
 
@@ -436,6 +443,8 @@ module HaveAPI
 
     def mount_action(v, route)
       @sinatra.method(route.http_method).call(route.sinatra_path) do
+        setup_formatter
+
         if route.action.auth
           authenticate!(v)
         else
@@ -489,6 +498,7 @@ module HaveAPI
       end
 
       @sinatra.options route.sinatra_path do |*args|
+        setup_formatter
         access_control
         route_method = route.http_method.to_s.upcase
 

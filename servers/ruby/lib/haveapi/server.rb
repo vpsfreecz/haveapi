@@ -198,6 +198,7 @@ module HaveAPI
           set :show_exceptions, false
         end
 
+        helpers Sinatra::Cookies
         helpers ServerHelpers
         helpers DocHelpers
 

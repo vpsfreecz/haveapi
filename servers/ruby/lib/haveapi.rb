@@ -4,6 +4,7 @@ require 'require_all'
 require 'active_support/inflector'
 require 'active_record' if ar
 require 'sinatra/base'
+require 'sinatra/cookies'
 require 'sinatra/activerecord' if ar
 require 'pp'
 require 'github/markdown'

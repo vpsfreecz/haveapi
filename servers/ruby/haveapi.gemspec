@@ -18,6 +18,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'json'
   s.add_runtime_dependency 'activesupport', '>= 7.0'
   s.add_runtime_dependency 'sinatra', '~> 3.1.0'
+  s.add_runtime_dependency 'sinatra-contrib', '~> 3.1.0'
   s.add_runtime_dependency 'tilt', '~> 2.3.0'
   s.add_runtime_dependency 'redcarpet', '~> 3.6'
   s.add_runtime_dependency 'rake'

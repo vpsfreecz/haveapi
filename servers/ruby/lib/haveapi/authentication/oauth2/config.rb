@@ -21,13 +21,14 @@ module HaveAPI::Authentication
       # This method usually writes HTML to `oauth2_response`, you must also set
       # content type.
       #
+      # @param sinatra_handler [Object]
       # @param sinatra_request [Sinatra::Request]
       # @param sinatra_params [Hash] request params
       # @param oauth2_request [Rack::OAuth2::Server::Authorize::Request]
       # @param oauth2_response [Rack::OAuth2::Server::Authorize::Response]
       # @param client [Client]
       # @return [AuthResult, nil]
-      def handle_get_authorize(sinatra_request:, sinatra_params:, oauth2_request:, oauth2_response:, client:)
+      def handle_get_authorize(sinatra_handler:, sinatra_request:, sinatra_params:, oauth2_request:, oauth2_response:, client:)
 
       end
 
@@ -40,13 +41,14 @@ module HaveAPI::Authentication
       # If the authentication is incomplete, this method must also write output
       # to `oauth2_response`, usually HTML. Content type must be set.
       #
+      # @param sinatra_handler [Object]
       # @param sinatra_request [Sinatra::Request]
       # @param sinatra_params [Hash] request params
       # @param oauth2_request [Rack::OAuth2::Server::Authorize::Request]
       # @param oauth2_response [Rack::OAuth2::Server::Authorize::Response]
       # @param client [Client]
       # @return [AuthResult, nil]
-      def handle_post_authorize(sinatra_request:, sinatra_params:, oauth2_request:, oauth2_response:, client:)
+      def handle_post_authorize(sinatra_handler:, sinatra_request:, sinatra_params:, oauth2_request:, oauth2_response:, client:)
 
       end
 

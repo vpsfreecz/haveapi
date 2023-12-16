@@ -181,6 +181,7 @@ module HaveAPI::Authentication
 
           if req.post?
             auth_res = config.handle_post_authorize(
+              sinatra_handler: handler,
               sinatra_request: handler.request,
               sinatra_params: handler.params,
               oauth2_request: req,
@@ -207,6 +208,7 @@ module HaveAPI::Authentication
             end
           else
             auth_res = config.handle_get_authorize(
+              sinatra_handler: handler,
               sinatra_request: handler.request,
               sinatra_params: handler.params,
               oauth2_request: req,

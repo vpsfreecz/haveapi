@@ -27,8 +27,8 @@ class OAuth2 extends Base {
 			'clientId' => $this->opts['client_id'],
 			'clientSecret' => $this->opts['client_secret'],
 			'redirectUri' => $this->opts['redirect_uri'],
-			'urlAuthorize' => $apiUri.'/'.$this->description->authorize_path,
-			'urlAccessToken' => $apiUri.'/'.$this->description->token_path,
+			'urlAuthorize' => $this->description->authorize_url,
+			'urlAccessToken' => $this->description->token_url,
 			'urlResourceOwnerDetails' => 'ENOTSUPPORTED',
 			'pkceMethod' => \League\OAuth2\Client\Provider\GenericProvider::PKCE_METHOD_S256,
 			'scopes' => $this->opts['scope'],
@@ -86,7 +86,7 @@ class OAuth2 extends Base {
 	 * Revoke the access token
 	 */
 	public function logout() {
-		$request = $this->client->getRequest('post', $this->client->getUri().$this->description->revoke_path);
+		$request = $this->client->getRequest('post', $this->description->revoke_url);
 		$request->sendsForm();
 		$request->body("token=".$this->accessToken->getToken());
 		$request->send();

@@ -130,6 +130,18 @@ module HaveAPI::Authentication
 
       end
 
+      # Base URL of the authorization server, including protocol
+      #
+      # This should in general be the same URL at which your API is located.
+      # It can be useful if you wish to have a separate domain for authentication.
+      #
+      # Example: `https://api.domain.tld`
+      #
+      # @return [String]
+      def base_url
+        raise NotImplementedError
+      end
+
       # Path to the authorization endpoint on this API
       # @return [String]
       def authorize_path

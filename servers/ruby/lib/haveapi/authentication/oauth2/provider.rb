@@ -86,6 +86,13 @@ module HaveAPI::Authentication
         @authorize_path = File.join(prefix, 'authorize')
         @token_path = File.join(prefix, 'token')
         @revoke_path = File.join(prefix, 'revoke')
+
+        base_url = config.base_url
+
+        @authorize_url = File.join(base_url, @authorize_path)
+        @token_url = File.join(base_url, @token_path)
+        @revoke_url = File.join(base_url, @revoke_path)
+
         that = self
 
         sinatra.get @authorize_path do
@@ -156,8 +163,11 @@ module HaveAPI::Authentication
         {
           description: desc,
           http_header: config.http_header,
+          authorize_url: @authorize_url,
           authorize_path: @authorize_path,
+          token_url: @token_url,
           token_path: @token_path,
+          revoke_url: @revoke_url,
           revoke_path: @revoke_path,
         }
       end

@@ -49,6 +49,7 @@ class OAuth2 extends Base {
 		$_SESSION['oauth2state'] = $this->genericProvider->getState();
 		$_SESSION['oauth2pkceCode'] = $this->genericProvider->getPkceCode();
 
+		header('Accept: text/html');
 		header('Location: ' . $authorizationUrl);
 		exit;
 	}

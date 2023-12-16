@@ -6,7 +6,7 @@ module HaveAPI::Authentication
     # The created provider can then be added to authentication chain.
     #
     # In general, it is up to the implementation to provide the authentication flow
-    # -- render HTML page in {#render_authorize_page} and then process it in
+    # -- render HTML page in {#handle_get_authorize} and then process it in
     # {#handle_post_authorize}. The implementation must also handle generation
     # of all needed tokens, their persistence and validity checking.
     class Config
@@ -16,36 +16,37 @@ module HaveAPI::Authentication
         @version = v
       end
 
-      # Render authorization page
+      # Handle GET authorize requests
       #
-      # This method can be called on both GET and POST requests, e.g. if the user
-      # provided incorrect credentials or if there are multiple authentication
-      # steps.
+      # This method usually writes HTML to `oauth2_response`, you must also set
+      # content type.
       #
-      # It should return full HTML page that will be sent to the user. The page
-      # usually contains a login form.
-      #
-      # @param oauth2_request [Rack::OAuth2::Server::Authorize::Request]
+      # @param sinatra_request [Sinatra::Request]
       # @param sinatra_params [Hash] request params
+      # @param oauth2_request [Rack::OAuth2::Server::Authorize::Request]
+      # @param oauth2_response [Rack::OAuth2::Server::Authorize::Response]
       # @param client [Client]
-      # @param auth_result [AuthResult, nil]
-      # @return [String] HTML
-      def render_authorize_page(oauth2_request, sinatra_params, client, auth_result: nil)
+      # @return [AuthResult, nil]
+      def handle_get_authorize(sinatra_request:, sinatra_params:, oauth2_request:, oauth2_response:, client:)
 
       end
 
-      # Handle POST requests made from {#render_authorize_page}
+      # Handle POST authorize requests
       #
       # Process form data and return {AuthResult} or nil. When nil is returned
       # the authorization process is aborted and the user is redirected back
       # to the client.
       #
+      # If the authentication is incomplete, this method must also write output
+      # to `oauth2_response`, usually HTML. Content type must be set.
+      #
       # @param sinatra_request [Sinatra::Request]
       # @param sinatra_params [Hash] request params
       # @param oauth2_request [Rack::OAuth2::Server::Authorize::Request]
+      # @param oauth2_response [Rack::OAuth2::Server::Authorize::Response]
       # @param client [Client]
       # @return [AuthResult, nil]
-      def handle_post_authorize(sinatra_request, sinatra_params, oauth2_request, client)
+      def handle_post_authorize(sinatra_request:, sinatra_params:, oauth2_request:, oauth2_response:, client:)
 
       end
 

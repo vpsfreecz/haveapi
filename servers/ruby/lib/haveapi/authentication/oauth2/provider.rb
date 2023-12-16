@@ -180,7 +180,13 @@ module HaveAPI::Authentication
           res.redirect_uri = req.verify_redirect_uri!(client.redirect_uri)
 
           if req.post?
-            auth_res = config.handle_post_authorize(handler.request, handler.params, req, client)
+            auth_res = config.handle_post_authorize(
+              sinatra_request: handler.request,
+              sinatra_params: handler.params,
+              oauth2_request: req,
+              oauth2_response: res,
+              client:,
+            )
 
             if auth_res.nil?
               # Authentication failed
@@ -198,18 +204,32 @@ module HaveAPI::Authentication
               end
 
               res.approve!
-            elsif auth_res.authenticated && !auth_res.complete
-              # Continue with another authentication step
-              res.content_type = 'text/html'
-              res.write(config.render_authorize_page(req, handler.params, client, auth_result: auth_res))
-            else
-              # Authentication failed, report errors and let the user retry
-              res.content_type = 'text/html'
-              res.write(config.render_authorize_page(req, handler.params, client, auth_result: auth_res))
             end
           else
-            res.content_type = 'text/html'
-            res.write(config.render_authorize_page(req, handler.params, client))
+            auth_res = config.handle_get_authorize(
+              sinatra_request: handler.request,
+              sinatra_params: handler.params,
+              oauth2_request: req,
+              oauth2_response: res,
+              client:,
+            )
+
+            if auth_res.nil?
+              # We expect `config.handle_get_authorize` has sent response body
+            elsif auth_res.cancel
+              # Cancel the process
+              req.access_denied!
+            elsif auth_res.authenticated && auth_res.complete
+              # Authentication was successful
+              case req.response_type
+              when :code
+                res.code = config.get_authorization_code(auth_res)
+              when :token
+                req.unsupported_response_type!
+              end
+
+              res.approve!
+            end
           end
         end
       end

@@ -49,10 +49,10 @@ module HaveAPI
       ret = {}
       ret[:version] = HaveAPI::PROTOCOL_VERSION if version
       ret.update({
-          status: status,
-          response: response,
-          message: message,
-          errors: errors
+        status: status,
+        response: response,
+        message: message,
+        errors: errors
       })
       ret
     end

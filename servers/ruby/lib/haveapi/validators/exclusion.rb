@@ -12,8 +12,8 @@ module HaveAPI
   #     message: 'the error message'
   #   }
   #
-  # In this case, the value could be anything but +one+, +two+ or
-  # +three+.
+  # In this case, the value could be anything but `one`, `two` or
+  # `three`.
   class Validators::Exclusion < Validator
     name :exclude
     takes :exclude
@@ -28,8 +28,8 @@ module HaveAPI
 
     def describe
       {
-          values: @values,
-          message: @message,
+        values: @values,
+        message: @message,
       }
     end
 

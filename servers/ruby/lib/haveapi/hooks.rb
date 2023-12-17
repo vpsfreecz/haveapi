@@ -79,15 +79,15 @@ module HaveAPI
   module Hooks
     INSTANCE_VARIABLE = '@_haveapi_hooks'
 
-    # Register a hook defined by +klass+ with +name+.
-    # +klass+ is an instance of Class, that is class name, not it's instance.
-    # +opts+ is a hash and can have following keys:
-    #   - desc - why this hook exists, when it's called
-    #   - context - the context in which given blocks are called
-    #   - args - hash of block positional arguments
-    #   - kwargs - hash of block keyword arguments
-    #   - initial - hash of initial values
-    #   - ret - hash of return values
+    # Register a hook defined by `klass` with `name`.
+    # @param klass [Class]  an instance of Class, that is class name, not it's instance
+    # @param opts [Hash]
+    # @option opts [String] :desc why this hook exists, when it's called
+    # @option opts [String] :context the context in which given blocks are called
+    # @option opts [Hash] :args hash of block positional arguments
+    # @option opts [Hash] :kwargs hash of block keyword arguments
+    # @option opts [Hash] :initial - hash of initial values
+    # @option opts [Hash] :ret hash of return values
     def self.register_hook(klass, name, opts = {})
       classified = hook_classify(klass)
       opts[:listeners] = []
@@ -101,13 +101,13 @@ module HaveAPI
       @hooks
     end
 
-    # Connect class hook defined in +klass+ with +name+ to +block+.
-    # +klass+ is a class name.
+    # Connect class hook defined in `klass` with `name` to `block`.
+    # `klass` is a class name.
     def self.connect_hook(klass, name, &block)
       @hooks[hook_classify(klass)][name][:listeners] << block
     end
 
-    # Connect instance hook from instance +klass+ with +name+ to +block+.
+    # Connect instance hook from instance `klass` with `name` to `block`.
     def self.connect_instance_hook(instance, name, &block)
       hooks = instance.instance_variable_get(INSTANCE_VARIABLE)
 
@@ -120,11 +120,11 @@ module HaveAPI
       hooks[name][:listeners] << block
     end
 
-    # Call all blocks that are connected to hook in +klass+ with +name+.
+    # Call all blocks that are connected to hook in `klass` with `name`.
     # +klass+ may be a class name or an object instance.
-    # If +where+ is set, the blocks are executed in it with instance_exec.
-    # +args+ is an array of arguments given to all blocks. The first argument
-    # to all block is always a return value from previous block or +initial+,
+    # If `where` is set, the blocks are executed in it with instance_exec.
+    # `args` is an array of arguments given to all blocks. The first argument
+    # to all block is always a return value from previous block or `initial`,
     # which defaults to an empty hash.
     #
     # Blocks are executed one by one in the order they were connected.
@@ -193,17 +193,17 @@ module HaveAPI
   # Classes that define hooks must include this module.
   module Hookable
     module ClassMethods
-      # Register a hook named +name+.
+      # Register a hook named `name`.
       def has_hook(name, opts = {})
         Hooks.register_hook(self.to_s, name, opts)
       end
 
-      # Connect +block+ to registered hook with +name+.
+      # Connect `block` to registered hook with `name`.
       def connect_hook(name, &block)
         Hooks.connect_hook(self.to_s, name, &block)
       end
 
-      # Call all hooks for +name+. see Hooks.call_for.
+      # Call all hooks for `name`. see {Hooks.call_for}.
       def call_hooks(*args, **kwargs)
         Hooks.call_for(self.to_s, *args, **kwargs)
       end
@@ -228,7 +228,7 @@ module HaveAPI
         Hooks.call_for(self.class, name, where, args: args, kwargs: kwargs, initial: initial)
       end
 
-      # Call hooks for different +klass+.
+      # Call hooks for different `klass`.
       def call_hooks_as_for(klass, *args, **kwargs)
         ret = call_instance_hooks_as_for(klass, *args, **kwargs)
 
@@ -236,17 +236,17 @@ module HaveAPI
         call_class_hooks_as_for(klass.class, *args, **kwargs)
       end
 
-      # Call only instance hooks for different +klass+.
+      # Call only instance hooks for different `klass`.
       def call_instance_hooks_as_for(klass, *args, **kwargs)
         Hooks.call_for(klass, *args, **kwargs)
       end
 
-      # Call only class hooks for different +klass+.
+      # Call only class hooks for different `klass`.
       def call_class_hooks_as_for(klass, *args, **kwargs)
         Hooks.call_for(klass, *args, **kwargs)
       end
 
-      # Connect instance level hook +name+ to +block+.
+      # Connect instance level hook `name` to `block`.
       def connect_hook(name, &block)
         Hooks.connect_instance_hook(self, name, &block)
       end

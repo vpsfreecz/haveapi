@@ -6,7 +6,7 @@ module HaveAPI
 
     def self.describe
       {
-          namespace: namespace
+        namespace: namespace
       }
     end
 

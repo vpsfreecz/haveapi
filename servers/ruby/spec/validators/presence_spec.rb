@@ -24,7 +24,7 @@ describe HaveAPI::Validators::Presence do
       before(:each) do
         @v = HaveAPI::Validators::Presence.new(:required, {})
       end
-      
+
       include_examples :all
     end
   end

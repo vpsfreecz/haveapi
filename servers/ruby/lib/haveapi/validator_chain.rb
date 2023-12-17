@@ -13,11 +13,11 @@ module HaveAPI
       end
     end
 
-    # Adds validator that takes option +name+ with configuration in +opt+.
+    # Adds validator that takes option `name` with configuration in `opt`.
     # If such validator already exists, it is reconfigured with newly provided
-    # +opt+.
+    # `opt`.
     #
-    # If +opt+ is +nil+, the validator is removed.
+    # If `opt` is `nil`, the validator is removed.
     def add_or_replace(name, opt)
       args = { name => opt }
 
@@ -61,8 +61,8 @@ module HaveAPI
       ret
     end
 
-    # Validate +value+ using all configured validators. It returns
-    # either +true+ if the value passed all validators or an array
+    # Validate `value` using all configured validators. It returns
+    # either `true` if the value passed all validators or an array
     # of errors.
     def validate(value, params)
       ret = []
@@ -70,7 +70,7 @@ module HaveAPI
       @validators.each do |validator|
         next if validator.validate(value, params)
         ret << validator.message % {
-            value: value
+          value: value
         }
       end
 

@@ -10,7 +10,7 @@ describe HaveAPI::Validators::Format do
       expect(@v.valid?('bacacb')).to be false
       expect(@v.valid?('b')).to be false
     end
-  end 
+  end
 
   context 'with match = true' do
     context 'short form' do
@@ -24,7 +24,7 @@ describe HaveAPI::Validators::Format do
     context 'full form' do
       before(:each) do
         @v = HaveAPI::Validators::Format.new(:format, {
-            rx: /^a[^b]+b$/
+          rx: /^a[^b]+b$/
         })
       end
 
@@ -35,11 +35,11 @@ describe HaveAPI::Validators::Format do
   context 'with match = false' do
     before(:each) do
       @v = HaveAPI::Validators::Format.new(:format, {
-            rx: /^a[^b]+b$/,
-            match: false
+        rx: /^a[^b]+b$/,
+        match: false
       })
     end
-    
+
     it 'rejects a value that matches the regexp' do
       expect(@v.valid?('aab')).to be false
       expect(@v.valid?('aacacb')).to be false

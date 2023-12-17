@@ -25,10 +25,10 @@ module HaveAPI
 
     def describe
       {
-          rx: @rx.source,
-          match: @match,
-          description: @desc,
-          message: @message,
+        rx: @rx.source,
+        match: @match,
+        description: @desc,
+        message: @message,
       }
     end
 

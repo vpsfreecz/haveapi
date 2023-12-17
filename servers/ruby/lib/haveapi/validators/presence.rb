@@ -27,8 +27,8 @@ module HaveAPI
 
     def describe
       {
-          empty: @empty,
-          message: @message,
+        empty: @empty,
+        message: @message,
       }
     end
 

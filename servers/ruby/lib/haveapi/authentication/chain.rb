@@ -31,7 +31,7 @@ module HaveAPI::Authentication
       # end
     end
 
-    # Iterate through authentication providers registered for version +v+
+    # Iterate through authentication providers registered for version `v`
     # until authentication is successful or the end is reached and user
     # is not authenticated.
     # Authentication provider can deny the user access by calling Base#deny.
@@ -68,7 +68,7 @@ module HaveAPI::Authentication
       ret
     end
 
-    # Return provider list for version +v+.
+    # Return provider list for version `v`.
     # Used for registering providers to specific version, e.g.
     #   api.auth_chain[1] << MyAuthProvider
     def [](v)
@@ -76,8 +76,8 @@ module HaveAPI::Authentication
       @chain[v]
     end
 
-    # Register authentication +provider+ for all available API versions.
-    # +provider+ may also be an Array of providers.
+    # Register authentication `provider` for all available API versions.
+    # `provider` may also be an Array of providers.
     def <<(provider)
       @chain[:all] ||= []
 

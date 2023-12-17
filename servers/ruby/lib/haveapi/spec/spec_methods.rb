@@ -35,23 +35,23 @@ module HaveAPI::Spec
         app
 
         action, path = find_action(
-            (params && params[:version]) || @api.default_version,
-            r_name, a_name
+          (params && params[:version]) || @api.default_version,
+          r_name, a_name
         )
 
         method(action.http_method).call(
-            path,
-            params && params.to_json,
-            {'Content-Type' => 'application/json'}
+          path,
+          params && params.to_json,
+          {'Content-Type' => 'application/json'}
         )
 
       else
         http_method, path, params = args
 
         method(http_method).call(
-            path,
-            params && params.to_json,
-            {'Content-Type' => 'application/json'}
+          path,
+          params && params.to_json,
+          {'Content-Type' => 'application/json'}
         )
       end
     end

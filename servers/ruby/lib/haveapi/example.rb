@@ -58,15 +58,15 @@ module HaveAPI
     def describe(context)
       if provided?
         {
-            title: @title,
-            comment: @comment,
-            path_params: @path_params,
-            request: filter_input_params(context, @request),
-            response: filter_output_params(context, @response),
-            status: @status.nil? ? true : @status,
-            message: @message,
-            errors: @errors,
-            http_status: @http_status || 200,
+          title: @title,
+          comment: @comment,
+          path_params: @path_params,
+          request: filter_input_params(context, @request),
+          response: filter_output_params(context, @response),
+          status: @status.nil? ? true : @status,
+          message: @message,
+          errors: @errors,
+          http_status: @http_status || 200,
         }
       else
         {}

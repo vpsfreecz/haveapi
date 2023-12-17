@@ -39,7 +39,7 @@ module HaveAPI
       end
 
       # Reimplement this method in your authentication provider.
-      # +request+ is passed directly from Sinatra.
+      # `request` is passed directly from Sinatra.
       def authenticate(request)
 
       end

@@ -10,13 +10,13 @@ module HaveAPI::Spec
 
     def call(input, user: nil, &block)
       action = @action.new(nil, @v, input, nil, HaveAPI::Context.new(
-          @server,
-          version: @v,
-          action: @action,
-          path: @path,
-          params: input,
-          user: user,
-          endpoint: true
+        @server,
+        version: @v,
+        action: @action,
+        path: @path,
+        params: input,
+        user: user,
+        endpoint: true
       ))
 
       unless action.authorized?(user)

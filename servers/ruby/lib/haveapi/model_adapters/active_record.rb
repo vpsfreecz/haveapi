@@ -21,7 +21,7 @@ module HaveAPI::ModelAdapters
       module InstanceMethods
         # Helper method that sets correct ActiveRecord includes
         # according to the meta includes sent by the user.
-        # +q+ is the model or partial AR query. If not set,
+        # `q` is the model or partial AR query. If not set,
         # action's model class is used instead.
         def with_includes(q = nil)
           q ||= self.class.model
@@ -179,14 +179,14 @@ END
         end
 
         {
-            path_params: params.is_a?(Array) ? params : [params],
-            resolved: true
+          path_params: params.is_a?(Array) ? params : [params],
+          resolved: true
         }
       end
 
       protected
-      # Return representation of an associated resource +param+
-      # with its instance in +val+.
+      # Return representation of an associated resource `param`
+      # with its instance in `val`.
       #
       # By default, it returns an unresolved resource, which contains
       # only object id and label. Resource will be resolved
@@ -204,11 +204,11 @@ END
           pass_includes = includes_pass_on_to(param.name)
 
           show = res_show.new(
-              push_ins.request,
-              push_ins.version,
-              {},
-              nil,
-              @context
+            push_ins.request,
+            push_ins.version,
+            {},
+            nil,
+            @context
           )
           show.meta[:includes] = pass_includes
 
@@ -231,17 +231,17 @@ END
 
         else
           {
-              param.value_id => val.send(res_output[param.value_id].db_name),
-              param.value_label => val.send(res_output[param.value_label].db_name),
-              _meta: {
-                :path_params => args.is_a?(Array) ? args : [args],
-                :resolved => false
-              }
+            param.value_id => val.send(res_output[param.value_id].db_name),
+            param.value_label => val.send(res_output[param.value_label].db_name),
+            _meta: {
+              :path_params => args.is_a?(Array) ? args : [args],
+              :resolved => false
+            }
           }
         end
       end
 
-      # Should an association with +name+ be resolved?
+      # Should an association with `name` be resolved?
       def includes_include?(name)
         includes = @context.action_instance.meta[:includes]
         return unless includes
@@ -324,7 +324,7 @@ END
 
       handle ::ActiveModel::Validations::ExclusionValidator do |v|
         opts = {
-            values: v.options[:in].map { |v| v }
+          values: v.options[:in].map { |v| v }
         }
         opts[:message] = v.options[:message] if v.options[:message]
 
@@ -333,7 +333,7 @@ END
 
       handle ::ActiveModel::Validations::FormatValidator do |v|
         opts = {
-            rx: v.options[:with]
+          rx: v.options[:with]
         }
         opts[:message] = v.options[:message] if v.options[:message]
 
@@ -342,7 +342,7 @@ END
 
       handle ::ActiveModel::Validations::InclusionValidator do |v|
         opts = {
-            values: v.options[:in].map { |v| v }
+          values: v.options[:in].map { |v| v }
         }
         opts[:message] = v.options[:message] if v.options[:message]
 

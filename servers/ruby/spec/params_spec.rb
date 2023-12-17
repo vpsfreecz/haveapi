@@ -156,7 +156,7 @@ describe HaveAPI::Params do
 
     expect do
       p.check_layout({
-          my_resource: {}
+        my_resource: {}
       })
     end.not_to raise_error
   end
@@ -171,7 +171,7 @@ describe HaveAPI::Params do
 
     expect do
       p.check_layout({
-          something_bad: {}
+        something_bad: {}
       })
     end.to raise_error(HaveAPI::ValidationError)
   end

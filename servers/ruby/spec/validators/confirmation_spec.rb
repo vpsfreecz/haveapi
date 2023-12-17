@@ -7,7 +7,7 @@ describe HaveAPI::Validators::Confirmation do
     it "rejects a different value" do
       expect(@v.validate('bar', {other_param: 'foo'})).to be false
     end
-  end 
+  end
 
   context 'short form' do
     before(:each) do
@@ -20,7 +20,7 @@ describe HaveAPI::Validators::Confirmation do
   context 'full form' do
     before(:each) do
       @v = HaveAPI::Validators::Confirmation.new(:confirm, {
-          param: :other_param
+        param: :other_param
       })
     end
 
@@ -30,8 +30,8 @@ describe HaveAPI::Validators::Confirmation do
   context 'with equal = false' do
     before(:each) do
       @v = HaveAPI::Validators::Confirmation.new(:confirm, {
-          param: :other_param,
-          equal: false
+        param: :other_param,
+        equal: false
       })
     end
 

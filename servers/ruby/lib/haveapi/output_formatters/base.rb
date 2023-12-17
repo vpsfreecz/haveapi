@@ -13,7 +13,7 @@ module HaveAPI::OutputFormatters
 
       def handle?(type)
         @types.detect do |t|
-           File.fnmatch(type, t)
+          File.fnmatch(type, t)
         end
       end
     end

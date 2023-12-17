@@ -26,12 +26,12 @@ module HaveAPI::Resources
     module Mixin
       def state_to_hash(state)
         hash = {
-            id: state.id,
-            label: state.label,
-            status: state.status,
-            created_at: state.created_at,
-            updated_at: state.updated_at,
-            can_cancel: state.can_cancel?,
+          id: state.id,
+          label: state.label,
+          status: state.status,
+          created_at: state.created_at,
+          updated_at: state.updated_at,
+          can_cancel: state.can_cancel?,
         }
 
         if state.finished?
@@ -68,10 +68,10 @@ module HaveAPI::Resources
       def exec
         ret = []
         actions = @context.server.action_state.list_pending(
-            current_user,
-            input[:offset],
-            input[:limit],
-            input[:order].to_sym
+          current_user,
+          input[:offset],
+          input[:limit],
+          input[:order].to_sym
         )
 
         actions.each do |state|
@@ -110,8 +110,8 @@ module HaveAPI::Resources
 
         loop do
           state = @context.server.action_state.new(
-              current_user,
-              id: params[:action_state_id]
+            current_user,
+            id: params[:action_state_id]
           )
 
           error('action state not found') unless state.valid?
@@ -147,8 +147,8 @@ module HaveAPI::Resources
 
       def exec
         state = @context.server.action_state.new(
-            current_user,
-            id: params[:action_state_id]
+          current_user,
+          id: params[:action_state_id]
         )
 
         return state_to_hash(state) if state.valid?
@@ -168,8 +168,8 @@ module HaveAPI::Resources
 
       def exec
         state = @context.server.action_state.new(
-            current_user,
-            id: params[:action_state_id]
+          current_user,
+          id: params[:action_state_id]
         )
 
         error('action state not found') unless state.valid?

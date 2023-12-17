@@ -10,7 +10,7 @@ describe HaveAPI::Validators::Exclusion do
       expect(@v.valid?('zero')).to be true
       expect(@v.valid?('four')).to be true
     end
-  end 
+  end
 
   context 'short form' do
     before(:each) do
@@ -23,7 +23,7 @@ describe HaveAPI::Validators::Exclusion do
   context 'full form' do
     before(:each) do
       @v = HaveAPI::Validators::Exclusion.new(:exclude, {
-          values: %w(one two three)
+        values: %w(one two three)
       })
     end
 

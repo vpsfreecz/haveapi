@@ -13,7 +13,7 @@ module HaveAPI
   #     message: 'the error message'
   #   }
   #
-  # +equal+ defaults to +true+.
+  # `equal` defaults to `true`.
   class Validators::Confirmation < Validator
     name :confirm
     takes :confirm
@@ -30,9 +30,9 @@ module HaveAPI
 
     def describe
       {
-          equal: @equal ? true : false,
-          parameter: @param,
-          message: @message,
+        equal: @equal ? true : false,
+        parameter: @param,
+        message: @message,
       }
     end
 

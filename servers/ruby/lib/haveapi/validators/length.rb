@@ -47,7 +47,7 @@ module HaveAPI
 
     def describe
       ret = {
-          message: @message,
+        message: @message,
       }
 
       if @equals

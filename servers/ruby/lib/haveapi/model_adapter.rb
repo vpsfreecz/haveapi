@@ -2,8 +2,8 @@ module HaveAPI
   # Model adapters are used to automate handling of action
   # input/output.
   #
-  # Adapters are chosen based on the +model+ set on a HaveAPI::Resource.
-  # If no +model+ is specified, ModelAdapters::Hash is used as a default
+  # Adapters are chosen based on the `model` set on a HaveAPI::Resource.
+  # If no `model` is specified, ModelAdapters::Hash is used as a default
   # adapter.
   #
   # All model adapters are based on this class.
@@ -17,7 +17,7 @@ module HaveAPI
         ModelAdapter.adapters << Kernel.const_get(self.to_s)
       end
 
-      # Returns an adapter suitable for +layout+ and +obj+.
+      # Returns an adapter suitable for `layout` and `obj`.
       # Adapters are iterated over and the first to return true to handle?()
       # is returned.
       def for(layout, obj)
@@ -41,21 +41,21 @@ module HaveAPI
         self::Output.new(*args)
       end
 
-      # Override this method to load validators from +model+
-      # to +params+.
+      # Override this method to load validators from `model`
+      # to `params`.
       def load_validators(model, params)
 
       end
 
       # Called when mounting the API. Model adapters may use this method
-      # to add custom meta parameters to +action+. +direction+ is one of
-      # +:input+ and +:output+.
+      # to add custom meta parameters to `action`. `direction` is one of
+      # `:input` and `:output`.
       def used_by(direction, action)
         case direction
-          when :input
-            self::Input.used_by(action)
-          when :output
-            self::Output.used_by(action)
+        when :input
+          self::Input.used_by(action)
+        when :output
+          self::Output.used_by(action)
         end
       end
     end
@@ -72,12 +72,12 @@ module HaveAPI
       end
 
       # Return true if input parameters contain parameter
-      # with +name+.
+      # with `name`.
       def has_param?(name)
         @input.has_key?(name)
       end
 
-      # Return parameter with +name+.
+      # Return parameter with `name`.
       def [](name)
         @input[name]
       end
@@ -101,7 +101,7 @@ module HaveAPI
       end
 
       # Return true if input parameters contain parameter
-      # with +name+.
+      # with `name`.
       def has_param?(name)
 
       end

@@ -29,22 +29,22 @@ module HaveAPI
     end
 
     # Restrict parameters client can set/change.
-    # [whitelist]  allow only listed parameters
-    # [blacklist]  allow all parameters except listed ones
+    # @param whitelist [Array<Symbol>] allow only listed parameters
+    # @param blacklist [Array<Symbol>] allow all parameters except listed ones
     def input(whitelist: nil, blacklist: nil)
       @input = {
-          whitelist: whitelist,
-          blacklist: blacklist,
+        whitelist: whitelist,
+        blacklist: blacklist,
       }
     end
 
     # Restrict parameters client can retrieve.
-    # [whitelist]  allow only listed parameters
-    # [blacklist]  allow all parameters except listed ones
+    # @param whitelist [Array<Symbol>] allow only listed parameters
+    # @param blacklist [Array<Symbol>] allow all parameters except listed ones
     def output(whitelist: nil, blacklist: nil)
       @output = {
-          whitelist: whitelist,
-          blacklist: blacklist,
+        whitelist: whitelist,
+        blacklist: blacklist,
       }
     end
 

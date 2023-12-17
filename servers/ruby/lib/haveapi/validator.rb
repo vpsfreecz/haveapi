@@ -8,15 +8,15 @@ module HaveAPI
   # when default configuration is sufficient. Custom settings can be set using
   # the full form.
   #
-  # The short form means the validator is configured as +<option> => <single value>+.
-  # The full form is +<option> => { hash with configuration options }+.
+  # The short form means the validator is configured as `<option> => <single value>`.
+  # The full form is `<option> => { hash with configuration options }`.
   #
   # It is up to each validator what exactly the short form means and what options
   # can be set. Specify only those options that you wish to override. The only
-  # common option is +message+ - the error message sent to the client if the provided
+  # common option is `message` - the error message sent to the client if the provided
   # value did not pass the validator.
   #
-  # The +message+ can contain +%{value}+, which is replaced by the actual value
+  # The `message` can contain `%{value}`, which is replaced by the actual value
   # that did not pass the validator.
   class Validator
     class << self
@@ -35,13 +35,13 @@ module HaveAPI
         @takes = opts
       end
 
-      # True if this validator uses any of options in hash +opts+.
+      # True if this validator uses any of options in hash `opts`.
       def use?(opts)
         !(opts.keys & @takes).empty?
       end
 
-      # Use the validator on given set of options in hash +opts+. Used
-      # options are removed from +opts+.
+      # Use the validator on given set of options in hash `opts`. Used
+      # options are removed from `opts`.
       def use(opts)
         keys = opts.keys & @takes
 
@@ -84,7 +84,7 @@ module HaveAPI
     end
 
     # Calls method valid?, but before calling it sets instance variable
-    # +@params+. It contains of hash of all other parameters. The validator
+    # `@params`. It contains of hash of all other parameters. The validator
     # may use this information as it will.
     def validate(v, params)
       @params = params
@@ -96,12 +96,12 @@ module HaveAPI
     protected
     # This method has three modes of function.
     #
-    # 1. If +v+ is nil, it returns +@opts+. It is used if +@opts+ is not a hash
+    # 1. If `v` is nil, it returns `@opts`. It is used if `@opts` is not a hash
     #    but a single value - abbreviation if we're ok with default settings
     #    for given validator.
-    # 2. If +v+ is not nil and +@opts+ is not a hash, it returns +default+
-    # 3. If +v+ is not nil and +@opts+ is a hash and +@opts[v]+ is not nil, it is
-    #    returned. Otherwise the +default+ is returned.
+    # 2. If `v` is not nil and `@opts` is not a hash, it returns `default`
+    # 3. If `v` is not nil and `@opts` is a hash and `@opts[v]` is not nil, it is
+    #    returned. Otherwise the `default` is returned.
     def take(v = nil, default = nil)
       if v.nil?
         @opts
@@ -120,7 +120,7 @@ module HaveAPI
       @useful = false
     end
 
-    # Returns true if +@opts+ is not a hash.
+    # Returns true if `@opts` is not a hash.
     def simple?
       !@opts.is_a?(::Hash)
     end

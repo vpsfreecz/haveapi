@@ -11,9 +11,9 @@ describe 'Parameters::Typed' do
 
   it 'does not change provided arguments' do
     kwargs = {
-        label: 'Param 1',
-        desc: 'Desc',
-        required: true,
+      label: 'Param 1',
+      desc: 'Desc',
+      required: true,
     }
     p_arg(kwargs)
     expect(kwargs.keys).to contain_exactly(*%i(label desc required))

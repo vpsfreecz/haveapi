@@ -7,7 +7,7 @@ describe HaveAPI::Validators::Acceptance do
     it "rejects incorrect value" do
       expect(@v.valid?('bar')).to be false
     end
-  end 
+  end
 
   context 'short form' do
     before(:each) do
@@ -20,7 +20,7 @@ describe HaveAPI::Validators::Acceptance do
   context 'full form' do
     before(:each) do
       @v = HaveAPI::Validators::Acceptance.new(:accept, {
-          value: 'foo'
+        value: 'foo'
       })
     end
 

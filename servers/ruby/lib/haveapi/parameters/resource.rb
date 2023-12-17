@@ -43,35 +43,35 @@ module HaveAPI::Parameters
 
     def describe(context)
       val_path = context.path_for(
-          @resource::Show,
-          context.endpoint && context.action_prepare && context.layout == :object && context.call_path_params(context.action, context.action_prepare)
+        @resource::Show,
+        context.endpoint && context.action_prepare && context.layout == :object && context.call_path_params(context.action, context.action_prepare)
       )
       val_method = @resource::Index.http_method.to_s.upcase
 
       choices_path = context.path_for(
-          @choices,
-          context.endpoint && context.layout == :object && context.call_path_params(context.action, context.action_prepare)
+        @choices,
+        context.endpoint && context.layout == :object && context.call_path_params(context.action, context.action_prepare)
       )
       choices_method = @choices.http_method.to_s.upcase
 
       {
-          required: required?,
-          label: @label,
-          description: @desc,
-          type: 'Resource',
-          resource: @resource_path,
-          value_id: @value_id,
-          value_label: @value_label,
-          value: context.action_prepare && {
-              path: val_path,
-              method: val_method,
-              help: "#{val_path}?method=#{val_method}",
-          },
-          choices: {
-              path: choices_path,
-              method: choices_method,
-              help: "#{choices_path}?method=#{choices_method}"
-          }
+        required: required?,
+        label: @label,
+        description: @desc,
+        type: 'Resource',
+        resource: @resource_path,
+        value_id: @value_id,
+        value_label: @value_label,
+        value: context.action_prepare && {
+          path: val_path,
+          method: val_method,
+          help: "#{val_path}?method=#{val_method}",
+        },
+        choices: {
+          path: choices_path,
+          method: choices_method,
+          help: "#{choices_path}?method=#{choices_method}"
+        }
       }
     end
 
@@ -93,7 +93,7 @@ module HaveAPI::Parameters
 
     def clean(raw)
       ::HaveAPI::ModelAdapter.for(
-          show_action.input.layout, @resource.model
+        show_action.input.layout, @resource.model
       ).input_clean(@resource.model, raw, @extra)
     end
 

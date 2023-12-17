@@ -40,17 +40,17 @@ describe HaveAPI::Authorization do
       input whitelist: %i(param1)
       allow
     end
-    
+
     expect(auth.authorized?(nil)).to be true
-  
+
     action = Resource::Index
 
     expect(auth.filter_input(
-        action.input.params,
-        action.model_adapter(action.input.layout).input({
-            param1: '123',
-            param2: '456',
-        })
+      action.input.params,
+      action.model_adapter(action.input.layout).input({
+        param1: '123',
+        param2: '456',
+      })
     ).keys).to contain_exactly(:param1)
   end
 
@@ -59,17 +59,17 @@ describe HaveAPI::Authorization do
       input blacklist: %i(param1)
       allow
     end
-    
+
     expect(auth.authorized?(nil)).to be true
-  
+
     action = Resource::Index
 
     expect(auth.filter_input(
-        action.input.params,
-        action.model_adapter(action.input.layout).input({
-            param1: '123',
-            param2: '456',
-        })
+      action.input.params,
+      action.model_adapter(action.input.layout).input({
+        param1: '123',
+        param2: '456',
+      })
     ).keys).to contain_exactly(:param2)
   end
 
@@ -78,17 +78,17 @@ describe HaveAPI::Authorization do
       output whitelist: %i(param1)
       allow
     end
-    
+
     expect(auth.authorized?(nil)).to be true
-  
+
     action = Resource::Index
 
     expect(auth.filter_output(
-        action.output.params,
-        action.model_adapter(action.output.layout).output(nil, {
-            param1: '123',
-            param2: '456',
-        })
+      action.output.params,
+      action.model_adapter(action.output.layout).output(nil, {
+        param1: '123',
+        param2: '456',
+      })
     ).keys).to contain_exactly(:param1)
   end
 
@@ -97,17 +97,17 @@ describe HaveAPI::Authorization do
       output blacklist: %i(param1)
       allow
     end
-    
+
     expect(auth.authorized?(nil)).to be true
-  
+
     action = Resource::Index
 
     expect(auth.filter_output(
-        action.output.params,
-        action.model_adapter(action.output.layout).output(nil, {
-            param1: '123',
-            param2: '456',
-        })
+      action.output.params,
+      action.model_adapter(action.output.layout).output(nil, {
+        param1: '123',
+        param2: '456',
+      })
     ).keys).to contain_exactly(:param2)
   end
 end

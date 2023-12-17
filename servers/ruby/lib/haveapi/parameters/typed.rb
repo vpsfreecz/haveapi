@@ -46,13 +46,13 @@ module HaveAPI::Parameters
 
     def describe(context)
       {
-          required: required?,
-          label: @label,
-          description: @desc,
-          type: @type ? @type.to_s : String.to_s,
-          validators: @validators ? @validators.describe : {},
-          default: @default,
-          protected: @protected || false,
+        required: required?,
+        label: @label,
+        description: @desc,
+        type: @type ? @type.to_s : String.to_s,
+        validators: @validators ? @validators.describe : {},
+        default: @default,
+        protected: @protected || false,
       }
     end
 

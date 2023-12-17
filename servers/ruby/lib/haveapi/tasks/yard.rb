@@ -5,8 +5,8 @@ def render_doc_file(src, dst)
 
   Proc.new do
     File.write(
-        dst,
-        ERB.new(File.read(src), 0).result(binding)
+      dst,
+      ERB.new(File.read(src), 0).result(binding)
     )
   end
 end

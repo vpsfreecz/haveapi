@@ -11,7 +11,7 @@ module HaveAPI
   #     message: 'the error message'
   #   }
   #
-  # Will allow values +3+, +5+, +7+ and +9+.
+  # Will allow values `3`, `5`, `7` and `9`.
   #
   #   string :param, number: {
   #     min: 3,
@@ -19,7 +19,7 @@ module HaveAPI
   #     mod: 2,
   #   }
   #
-  # Will allow values +4+, +6+, +8+ and +10+.
+  # Will allow values `4`, `6`, `8` and `10`.
   class Validators::Numericality < Validator
     name :number
     takes :number
@@ -74,7 +74,7 @@ module HaveAPI
 
     def describe
       ret = {
-          message: @message,
+        message: @message,
       }
 
       ret[:min] = @min if @min

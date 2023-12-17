@@ -238,18 +238,18 @@ module HaveAPI
         end
 
         {
-            auth: @auth,
-            description: @desc,
-            aliases: @aliases,
-            blocking: @blocking ? true : false,
-            input: @input ? @input.describe(context) : {parameters: {}},
-            output: @output ? @output.describe(context) : {parameters: {}},
-            meta: @meta ? @meta.merge(@meta) { |_, v| v && v.describe(context) } : nil,
-            examples: @examples ? @examples.describe(context) : [],
-            scope: context.action_scope,
-            path: context.resolved_path,
-            method: route_method,
-            help: "#{context.path}?method=#{route_method}"
+          auth: @auth,
+          description: @desc,
+          aliases: @aliases,
+          blocking: @blocking ? true : false,
+          input: @input ? @input.describe(context) : {parameters: {}},
+          output: @output ? @output.describe(context) : {parameters: {}},
+          meta: @meta ? @meta.merge(@meta) { |_, v| v && v.describe(context) } : nil,
+          examples: @examples ? @examples.describe(context) : [],
+          scope: context.action_scope,
+          path: context.resolved_path,
+          method: route_method,
+          help: "#{context.path}?method=#{route_method}",
         }
       end
 
@@ -439,9 +439,9 @@ module HaveAPI
             when :object
               out = adapter.output(@context, ret)
               safe_ret = @authorization.filter_output(
-                  out_params,
-                  out,
-                  true
+                out_params,
+                out,
+                true
               )
               @reply_meta[:global].update(out.meta)
 
@@ -452,27 +452,27 @@ module HaveAPI
                 out = adapter.output(@context, obj)
 
                 safe_ret << @authorization.filter_output(
-                    out_params,
-                    out,
-                    true
+                  out_params,
+                  out,
+                  true
                 )
                 safe_ret.last.update({Metadata.namespace => out.meta}) unless meta[:no]
               end
 
             when :hash
               safe_ret = @authorization.filter_output(
-                  out_params,
-                  adapter.output(@context, ret),
-                  true
+                out_params,
+                adapter.output(@context, ret),
+                true
               )
 
             when :hash_list
               safe_ret = ret
               safe_ret.map! do |hash|
                 @authorization.filter_output(
-                    out_params,
-                    adapter.output(@context, hash),
-                    true
+                  out_params,
+                  adapter.output(@context, hash),
+                  true
                 )
               end
 
@@ -601,14 +601,16 @@ module HaveAPI
           when :object_list, :hash_list
             @safe_params[input.namespace].map! do |obj|
               @authorization.filter_input(
-                  self.class.input.params,
-                  self.class.model_adapter(self.class.input.layout).input(obj))
+                self.class.input.params,
+                self.class.model_adapter(self.class.input.layout).input(obj)
+              )
             end
 
           else
             @safe_params[input.namespace] = @authorization.filter_input(
-                self.class.input.params,
-                self.class.model_adapter(self.class.input.layout).input(@safe_params[input.namespace]))
+              self.class.input.params,
+              self.class.model_adapter(self.class.input.layout).input(@safe_params[input.namespace])
+            )
         end
 
         # Now check required params, convert types and set defaults
@@ -632,8 +634,8 @@ module HaveAPI
           next unless params
 
           raw_meta = auth.filter_input(
-              meta.input.params,
-              self.class.model_adapter(meta.input.layout).input(params)
+            meta.input.params,
+            self.class.model_adapter(meta.input.layout).input(params)
           )
 
           break if raw_meta

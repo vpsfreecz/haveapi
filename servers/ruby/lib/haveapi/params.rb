@@ -178,12 +178,14 @@ module HaveAPI
 
       if @direction == :input
         ret[:parameters] = context.authorization.filter_input(
-                             @params,
-                             ModelAdapters::Hash.output(context, ret[:parameters]))
+          @params,
+          ModelAdapters::Hash.output(context, ret[:parameters])
+        )
       else
         ret[:parameters] = context.authorization.filter_output(
-                             @params,
-                             ModelAdapters::Hash.output(context, ret[:parameters]))
+          @params,
+          ModelAdapters::Hash.output(context, ret[:parameters])
+        )
       end
 
       ret
@@ -205,11 +207,11 @@ module HaveAPI
       end
 
       case layout
-        when :object, :hash
-          params[namespace] ||= {}
+      when :object, :hash
+        params[namespace] ||= {}
 
-        when :object_list, :hash_list
-          params[namespace] ||= []
+      when :object_list, :hash_list
+        params[namespace] ||= []
       end
     end
 
@@ -298,14 +300,14 @@ module HaveAPI
 
     def valid_layout?(params)
       case layout
-        when :object, :hash
-          params[namespace].is_a?(Hash)
+      when :object, :hash
+        params[namespace].is_a?(Hash)
 
-        when :object_list, :hash_list
-          params[namespace].is_a?(Array)
+      when :object_list, :hash_list
+        params[namespace].is_a?(Array)
 
-        else
-          false
+      else
+        false
       end
     end
 
@@ -313,16 +315,16 @@ module HaveAPI
       ns = namespace
 
       case layout
-        when :object, :hash
-          yield(ns ? params[namespace] : params)
+      when :object, :hash
+        yield(ns ? params[namespace] : params)
 
-        when :object_list, :hash_list
-          (ns ? params[namespace] : params).each do |object|
-            yield(object)
-          end
+      when :object_list, :hash_list
+        (ns ? params[namespace] : params).each do |object|
+          yield(object)
+        end
 
-        else
-          false
+      else
+        false
       end
     end
 

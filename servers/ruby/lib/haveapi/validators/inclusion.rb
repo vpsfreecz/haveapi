@@ -12,7 +12,7 @@ module HaveAPI
   #     message: 'the error message'
   #   }
   #
-  # Option +choices+ is an alias to +include+.
+  # Option `choices` is an alias to `include`.
   class Validators::Inclusion < Validator
     name :include
     takes :choices, :include
@@ -36,8 +36,8 @@ module HaveAPI
 
     def describe
       {
-          values: @values,
-          message: @message,
+        values: @values,
+        message: @message,
       }
     end
 

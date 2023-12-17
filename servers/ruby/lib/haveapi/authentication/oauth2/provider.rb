@@ -276,7 +276,11 @@ module HaveAPI::Authentication
               req.unsupported_grant_type!
 
             when :refresh_token
-              config.find_authorization_by_refresh_token(client, req.refresh_token)
+              authorization = config.find_authorization_by_refresh_token(client, req.refresh_token)
+
+              if authorization.nil?
+                req.invalid_grant!
+              end
 
               access_token, expires_at, refresh_token = config.refresh_tokens(authorization, handler.request)
 

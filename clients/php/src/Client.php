@@ -172,6 +172,13 @@ class Client extends Client\Resource {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function getIdentity() {
+		return $this->identity;
+	}
+
+	/**
 	 * Invoke action $action with $params and interpret the response.
 	 * @param Action $action
 	 * @param array $params

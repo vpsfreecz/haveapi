@@ -12,6 +12,10 @@ module HaveAPI::Client
       apply_args(args)
     end
 
+    def inspect
+      "#<#{self.class.name} @name=#{@name}>"
+    end
+
     def execute(data, raw: false)
       params_arg = {}
 

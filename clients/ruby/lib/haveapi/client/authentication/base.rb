@@ -38,6 +38,10 @@ module HaveAPI::Client
         setup
       end
 
+      def inspect
+        "#<#{self.class.name} @opts=#{@opts.inspect}>"
+      end
+
       # Called right after initialize. Use this method to initialize provider.
       def setup
 

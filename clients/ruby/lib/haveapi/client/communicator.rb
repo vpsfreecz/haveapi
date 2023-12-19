@@ -26,6 +26,10 @@ module HaveAPI::Client
       @identity = 'haveapi-client-ruby'
     end
 
+    def inspect
+      "#<#{self.class.name} @url=#{@url} @version=#{@version} @auth=#{@auth.class.name}>"
+    end
+
     # @return [:compatible] if perfectly compatible
     # @return [:imperfect] if minor version differs
     # @return [false] if not compatible

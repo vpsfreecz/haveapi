@@ -32,6 +32,10 @@ class HaveAPI::Client::Client
     end
   end
 
+  def inspect
+    "#<#{self.class.name} url=#{@api.url} version=#{@opts[:version]}>"
+  end
+
   # Get the description from the API now.
   def setup(v = :_nil)
     @version = v unless v == :_nil

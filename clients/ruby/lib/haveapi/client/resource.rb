@@ -13,6 +13,10 @@ module HaveAPI::Client
       @resources = {}
     end
 
+    def inspect
+      "#<#{self.class.name} @name=#{@name} @prepared_args=#{@prepared_args} @actions=#{@actions.keys.inspect} @resources=#{@resources.keys.inspect}>"
+    end
+
     def setup(description)
       @description = description
 
@@ -44,10 +48,6 @@ module HaveAPI::Client
         define_resource(resource)
         @resources[name] = resource
       end
-    end
-
-    def inspect
-      super
     end
 
     # Create a new instance of a resource. The created instance

@@ -23,28 +23,30 @@ class OAuth2 extends Base {
 	public function setup() {
 		$apiUri = $this->client->getUri();
 
-		$httpClient = new \GuzzleHttp\Client([
-            'headers' => [
-                'User-Agent' => $this->client->getIdentity(),
-            ],
-        ]);
+		if (isset($this->opts['client_id'])) {
+			$httpClient = new \GuzzleHttp\Client([
+				'headers' => [
+					'User-Agent' => $this->client->getIdentity(),
+				],
+			]);
 
-		$this->genericProvider = new \League\OAuth2\Client\Provider\GenericProvider(
-			[
-				'clientId' => $this->opts['client_id'],
-				'clientSecret' => $this->opts['client_secret'],
-				'redirectUri' => $this->opts['redirect_uri'],
-				'urlAuthorize' => $this->description->authorize_url,
-				'urlAccessToken' => $this->description->token_url,
-				'urlResourceOwnerDetails' => 'ENOTSUPPORTED',
-				'pkceMethod' => \League\OAuth2\Client\Provider\GenericProvider::PKCE_METHOD_S256,
-				'scopes' => $this->opts['scope'],
-				'scopeSeparator' => ' ',
-			],
-			[
-				'httpClient' => $httpClient,
-			]
-		);
+			$this->genericProvider = new \League\OAuth2\Client\Provider\GenericProvider(
+				[
+					'clientId' => $this->opts['client_id'],
+					'clientSecret' => $this->opts['client_secret'],
+					'redirectUri' => $this->opts['redirect_uri'],
+					'urlAuthorize' => $this->description->authorize_url,
+					'urlAccessToken' => $this->description->token_url,
+					'urlResourceOwnerDetails' => 'ENOTSUPPORTED',
+					'pkceMethod' => \League\OAuth2\Client\Provider\GenericProvider::PKCE_METHOD_S256,
+					'scopes' => $this->opts['scope'],
+					'scopeSeparator' => ' ',
+				],
+				[
+					'httpClient' => $httpClient,
+				]
+			);
+		}
 
 		if (isset($this->opts['access_token'])) {
 			$this->accessToken = new \League\OAuth2\Client\Token\AccessToken($this->opts['access_token']);

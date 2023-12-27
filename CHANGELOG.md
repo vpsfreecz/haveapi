@@ -1,3 +1,28 @@
+# Sat Dec 27 2023 - version 0.19.0
+## Ruby server
+- Fix OAuth2 token grant check
+- Support for OAuth2 code challenge verification
+- Support for OAuth2 token revocation
+- Improve OAuth2 documentation by adding client examples
+- Configurable OAuth2 URL in case it should differ from API URL
+- Replace OAuth2 `render_authorize_page` with `handle_get_authorize` to allow the GET endpoint to authorize the client
+- Global action pre-authorization hook
+- Authorization blocks have access to path parameters
+- Define scopes for all actions based on resource and action name
+- Add scope to default input parameters for token authentication
+- Support for custom OAuth2 HTTP header with access token
+- Setup output formatter only on JSON endpoints
+
+## Ruby client
+- Do not prompt for optional authentication parameters on standard input
+- Improved exception output by hiding long instance variables from `#inspect`
+
+## PHP client
+- Support for OAuth2
+
+## JavaScript client
+- Support for accessing API with OAuth2 access token
+
 # Sat Dec 02 2023 - version 0.18.0
 ## Ruby server
 - Support for OAuth2 authorization provider

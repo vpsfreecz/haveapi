@@ -1,4 +1,4 @@
-# Sat Dec 27 2023 - version 0.19.0
+# Wed Dec 27 2023 - version 0.19.0
 ## Ruby server
 - Fix OAuth2 token grant check
 - Support for OAuth2 code challenge verification

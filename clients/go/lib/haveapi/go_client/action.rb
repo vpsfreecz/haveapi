@@ -82,7 +82,7 @@ module HaveAPI::GoClient
 
     # @return [Boolean]
     def has_path_params?
-      path =~ /\{[a-zA-Z\-_]+\}/
+      path =~ /\{[a-zA-Z0-9\-_]+\}/
     end
 
     # @return [Boolean]

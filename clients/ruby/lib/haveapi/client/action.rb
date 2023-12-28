@@ -124,7 +124,7 @@ module HaveAPI::Client
     end
 
     def unresolved_args?
-      prepared_path =~ /\{[a-zA-Z\-_]+\}/
+      prepared_path =~ /\{[a-zA-Z0-9\-_]+\}/
     end
 
     def provide_args(*args)
@@ -240,8 +240,8 @@ module HaveAPI::Client
       @prepared_help ||= @spec[:help].dup
 
       args.each do |arg|
-        @prepared_path.sub!(/\{[a-zA-Z\-_]+\}/, arg.to_s)
-        @prepared_help.sub!(/\{[a-zA-Z\-_]+\}/, arg.to_s)
+        @prepared_path.sub!(/\{[a-zA-Z0-9\-_]+\}/, arg.to_s)
+        @prepared_help.sub!(/\{[a-zA-Z0-9\-_]+\}/, arg.to_s)
       end
     end
   end

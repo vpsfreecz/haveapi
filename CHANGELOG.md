@@ -1,3 +1,7 @@
+# Thu Dec 28 2023 - version 0.19.1
+## Ruby, PHP, JavaScript and Go clients
+- Path parameter names can contain numbers
+
 # Wed Dec 27 2023 - version 0.19.0
 ## Ruby server
 - Fix OAuth2 token grant check

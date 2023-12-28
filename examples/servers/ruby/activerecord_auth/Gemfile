@@ -2,7 +2,7 @@ source 'https://rubygems.org'
 
 gem 'activerecord', '~> 7.0.8'
 gem 'sinatra-activerecord', '~> 2.0.26'
-gem 'haveapi', '~> 0.19.0', path: '../../../../servers/ruby'
+gem 'haveapi', '~> 0.19.1', path: '../../../../servers/ruby'
 gem 'rake'
 
 # Enable needed database adapters

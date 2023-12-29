@@ -1,3 +1,7 @@
+# Fri Dec 29 2023 - version 0.19.3
+## PHP client
+- Set Client-IP header on OAuth2 requests
+
 # Fri Dec 29 2023 - version 0.19.2
 ## PHP client
 - Fixed missing OAuth2 file in haveapi-client-php repository for composer

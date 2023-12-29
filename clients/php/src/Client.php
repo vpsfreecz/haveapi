@@ -268,6 +268,27 @@ class Client extends Client\Resource {
 	}
 
 	/**
+	 * Return client's IP address
+	 * @return string|false
+	 */
+	public function getClientIp() {
+		if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+			$ips = array_values(array_filter(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])));
+
+			return end($ips);
+
+		} else if (isset($_SERVER['REMOTE_ADDR'])) {
+			return $_SERVER["REMOTE_ADDR"];
+
+		} else if (isset($_SERVER['HTTP_CLIENT_IP'])) {
+			return $_SERVER["HTTP_CLIENT_IP"];
+
+		} else {
+			return false;
+		}
+	}
+
+	/**
 	 * Send \Httpful\Request.
 	 * @param \Httpful\Request $request
 	 * @param Action $action
@@ -380,22 +401,5 @@ class Client extends Client\Resource {
 
 		if($this->descCallback)
 			call_user_func($this->descCallback, $this);
-	}
-
-	private function getClientIp() {
-		if (array_key_exists('HTTP_X_FORWARDED_FOR', $_SERVER)) {
-			$ips = array_values(array_filter(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])));
-
-			return end($ips);
-
-		} else if (array_key_exists('REMOTE_ADDR', $_SERVER)) {
-			return $_SERVER["REMOTE_ADDR"];
-
-		} else if (array_key_exists('HTTP_CLIENT_IP', $_SERVER)) {
-			return $_SERVER["HTTP_CLIENT_IP"];
-
-		} else {
-			return false;
-		}
 	}
 }

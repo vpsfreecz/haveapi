@@ -24,10 +24,17 @@ class OAuth2 extends Base {
 		$apiUri = $this->client->getUri();
 
 		if (isset($this->opts['client_id'])) {
+			$headers = [
+				'User-Agent' => $this->client->getIdentity(),
+			];
+
+			$ip = $this->client->getClientIp();
+
+			if ($ip)
+				$headers['Client-IP'] = $ip;
+
 			$httpClient = new \GuzzleHttp\Client([
-				'headers' => [
-					'User-Agent' => $this->client->getIdentity(),
-				],
+				'headers' => $headers,
 			]);
 
 			$this->genericProvider = new \League\OAuth2\Client\Provider\GenericProvider(

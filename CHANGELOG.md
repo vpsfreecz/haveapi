@@ -1,3 +1,7 @@
+# Fri Dec 29 2023 - version 0.19.2
+## PHP client
+- Fixed missing OAuth2 file in haveapi-client-php repository for composer
+
 # Thu Dec 28 2023 - version 0.19.1
 ## Ruby, PHP, JavaScript and Go clients
 - Path parameter names can contain numbers

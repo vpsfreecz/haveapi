@@ -26,7 +26,7 @@ module HaveAPI::GoClient
     end
 
     def initialize(name, vars)
-      @_tpl = ERB.new(File.new(HaveAPI::GoClient.tpl(name)).read, 0, '-')
+      @_tpl = ERB.new(File.new(HaveAPI::GoClient.tpl(name)).read, trim_mode: '-')
 
       vars.each do |k, v|
         if v.is_a?(Proc)

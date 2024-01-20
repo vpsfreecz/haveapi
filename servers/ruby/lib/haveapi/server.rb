@@ -230,7 +230,9 @@ module HaveAPI
         end
 
         after do
-          ActiveRecord::Base.clear_active_connections! if Object.const_defined?(:ActiveRecord)
+          if Object.const_defined?(:ActiveRecord)
+            ActiveRecord::Base.connection_handler.clear_active_connections!
+          end
         end
       end
 

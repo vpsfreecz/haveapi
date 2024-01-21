@@ -1,3 +1,18 @@
+# Sun Jan 21 2023 - version 0.20.0
+## Ruby server
+- Require ActiveSupport and ActiveRecord >= 7.1
+- Fix boolean input parameter conversion on Ruby 3.2
+
+## All clients
+- Path parameters can contain numbers
+
+## PHP client
+- Set Client-IP HTTP header on OAuth2 requests
+
+## Golang client generator
+- Fix ERB deprecation warnings
+- Support for OAuth2 access tokens
+
 # Wed Dec 27 2023 - version 0.19.0
 ## Ruby server
 - Fix OAuth2 token grant check

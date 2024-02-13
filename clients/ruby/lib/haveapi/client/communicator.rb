@@ -214,7 +214,7 @@ module HaveAPI::Client
 
       if major1 != major2
         raise ProtocolError,
-              "Incompatible protocol version: the client uses v#{p_v} " +
+              "Incompatible protocol version: the client uses v#{p_v} " \
               "while the API server uses v#{ret[:version]}"
       end
 

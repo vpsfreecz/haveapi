@@ -88,7 +88,7 @@ module HaveAPI::ClientExamples
                      '0'
 
                    else
-                     "#{v}"
+                     v.to_s
                    end
 
             cmd << "\n"

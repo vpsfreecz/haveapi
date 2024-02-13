@@ -244,40 +244,30 @@ module HaveAPI::ModelAdapters
       # Should an association with `name` be resolved?
       def includes_include?(name)
         includes = @context.action_instance.meta[:includes]
-        return unless includes
+        return false unless includes
 
         name = name.to_sym
 
         if @context.action_instance.flags[:inner_assoc]
           # This action is called as an association of parent resource.
           # Meta includes are already parsed and can be accessed directly.
-          includes.each do |v|
-            if v.is_a?(::Hash)
-              return true if v.has_key?(name)
-            elsif v == name
-              return true
-            end
-          end
-
-          false
-
         else
           # This action is the one that was called by the user.
           # Meta includes contains an array of strings as was sent
           # by the user. The parsed includes must be fetched from
           # the action itself.
           includes = @context.action_instance.ar_parse_includes([])
-
-          includes.each do |v|
-            if v.is_a?(::Hash)
-              return true if v.has_key?(name)
-            elsif v == name
-              return true
-            end
-          end
-
-          false
         end
+
+        includes.each do |v|
+          if v.is_a?(::Hash)
+            return true if v.has_key?(name)
+          elsif v == name
+            return true
+          end
+        end
+
+        false
       end
 
       # Create an array of includes that is passed to child association.

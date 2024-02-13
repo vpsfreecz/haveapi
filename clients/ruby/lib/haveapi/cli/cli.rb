@@ -138,8 +138,9 @@ module HaveAPI::CLI
         res.meta[:action_state_id]
       )
 
+      puts
+
       if @opts[:block]
-        puts
         action_ret = state.wait_for_completion(timeout: @opts[:timeout])
 
         if action_ret.nil?
@@ -148,7 +149,6 @@ module HaveAPI::CLI
         end
 
       else
-        puts
         state.print_help
       end
     end
@@ -526,12 +526,12 @@ module HaveAPI::CLI
           parts.each do |part|
             raise "'#{part}' not found" unless top.has_key?(part)
 
-            if top[part][:type] == 'Resource'
-              param = top[part]
-              top = @api.get_action(top[part][:resource], :show, []).params
+            param = top[part]
+
+            if param[:type] == 'Resource'
+              top = @api.get_action(param[:resource], :show, []).params
 
             else
-              param = top[part]
               break
             end
           end

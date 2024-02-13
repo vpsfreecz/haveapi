@@ -69,10 +69,10 @@ module HaveAPI::CLI
     # and call self.wait_for_completion on the cancellation, if it is blocking
     # operation.
     def cancel_action(timeout: nil)
-      STDOUT.write('Do you wish to cancel the action? [y/N]: ')
-      STDOUT.flush
+      $stdout.write('Do you wish to cancel the action? [y/N]: ')
+      $stdout.flush
 
-      return unless STDIN.readline.strip.downcase == 'y'
+      return unless $stdin.readline.strip.downcase == 'y'
 
       begin
         res = HaveAPI::Client::Action.cancel(@client, @id)

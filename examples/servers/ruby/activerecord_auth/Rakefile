@@ -15,10 +15,10 @@ task :create_admin do
   vals = {}
 
   %i[username password].each do |v|
-    STDOUT.write("#{v.capitalize}: ")
-    STDOUT.flush
+    $stdout.write("#{v.capitalize}: ")
+    $stdout.flush
 
-    vals[v] = STDIN.readline.strip
+    vals[v] = $stdin.readline.strip
   end
 
   ::User.create!(

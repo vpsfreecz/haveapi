@@ -28,7 +28,7 @@ module HaveAPI
         end
       end
 
-      @formatter.nil? ? false : true
+      !@formatter.nil?
     end
 
     def format(status, response, message = nil, errors = nil, version: true)

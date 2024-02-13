@@ -45,7 +45,7 @@ module HaveAPI
 
       return unless v_class == Validators::Presence
 
-      @required = !opt.nil? && obj.useful? ? true : false
+      @required = !opt.nil? && obj.useful?
     end
 
     # Returns true if validator Validators::Presence is used.

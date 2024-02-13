@@ -34,12 +34,7 @@ module HaveAPI::Resources
           can_cancel: state.can_cancel?
         }
 
-        hash[:finished] = if state.finished?
-                            true
-
-                          else
-                            false
-                          end
+        hash[:finished] = state.finished?
 
         progress = state.progress
         hash[:current] = progress[:current] || 0

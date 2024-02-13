@@ -15,6 +15,6 @@ in stdenv.mkDerivation rec {
   shellHook = ''
     export GEM_HOME=$(pwd)/.gems
     export PATH="$GEM_HOME/bin:$PATH"
-    gem install bundler
+    gem install --no-document bundler rubocop
   '';
 }

@@ -1,0 +1,8 @@
+Layout/LineLength:
+  Enabled: false
+
+Lint/UnusedMethodArgument:
+  Enabled: false
+
+Style/OptionalBooleanParameter:
+  Enabled: false

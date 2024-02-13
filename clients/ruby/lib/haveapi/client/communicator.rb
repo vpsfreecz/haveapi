@@ -99,7 +99,7 @@ module HaveAPI::Client
       a = tmp[:actions][action]
 
       unless a # search in aliases
-        tmp[:actions].each do |_, v|
+        tmp[:actions].each_value do |v|
           if v[:aliases].include?(action.to_s)
             a = v
             break

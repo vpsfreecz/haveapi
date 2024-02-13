@@ -371,7 +371,7 @@ module HaveAPI::CLI
     def list_versions
       desc = @api.available_versions
 
-      desc[:versions].each do |v, _|
+      desc[:versions].each_key do |v|
         next if v == :default
 
         v_int = v.to_s.to_i

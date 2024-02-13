@@ -84,9 +84,7 @@ module HaveAPI::CLI::Authentication
     protected
 
     def request_credentials
-      desc[:resources][:token][:actions][:request][:input][:parameters].reject do |name, _|
-        %i[lifetime interval].include?(name)
-      end
+      desc[:resources][:token][:actions][:request][:input][:parameters].except(:lifetime, :interval)
     end
   end
 end

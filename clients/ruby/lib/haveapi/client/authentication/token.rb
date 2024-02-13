@@ -127,9 +127,7 @@ module HaveAPI::Client::Authentication
     end
 
     def auth_action_input(name)
-      @desc[:resources][:token][:actions][name][:input][:parameters].reject do |k, _|
-        %i[token].include?(k)
-      end
+      @desc[:resources][:token][:actions][name][:input][:parameters].except(:token)
     end
   end
 end

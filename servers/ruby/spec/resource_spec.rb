@@ -23,7 +23,6 @@ describe HaveAPI::Resource do
     class Index < HaveAPI::Actions::Default::Index; end
     class Show < HaveAPI::Actions::Default::Show; end
     class Create < HaveAPI::Actions::Default::Create; end
-    class Dummy; end
 
     class SubResource < HaveAPI::Resource
       class Index < HaveAPI::Actions::Default::Index; end

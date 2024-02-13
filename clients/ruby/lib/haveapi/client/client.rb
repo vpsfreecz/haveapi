@@ -103,6 +103,13 @@ class HaveAPI::Client::Client
     end
   end
 
+  def respond_to_missing?(symbol, *)
+    return super if @setup
+
+    setup_api
+    @resources.include?(symbol)
+  end
+
   private
 
   # Get the description from the API and setup resource methods.

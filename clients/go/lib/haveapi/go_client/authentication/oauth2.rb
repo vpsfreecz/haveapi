@@ -13,6 +13,7 @@ module HaveAPI::GoClient
     attr_reader :revoke_url
 
     def initialize(api_version, name, desc)
+      super
       @http_header = desc[:http_header]
       @revoke_url = desc[:revoke_url]
     end

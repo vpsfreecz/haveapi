@@ -31,6 +31,7 @@ describe HaveAPI::Common do
     attr2 :bar
 
     def self.inherited(subclass)
+      super
       inherit_attrs(subclass)
     end
   end

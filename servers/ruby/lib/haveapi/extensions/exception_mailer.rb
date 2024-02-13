@@ -16,6 +16,7 @@ module HaveAPI::Extensions
     # @option opts subject [String] '%s' is replaced by the error message
     # @option opts smtp [Hash, falsy] smtp options, sendmail is used if not provided
     def initialize(opts)
+      super()
       @opts = opts
     end
 

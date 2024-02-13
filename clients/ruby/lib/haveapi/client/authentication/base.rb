@@ -6,6 +6,7 @@ module HaveAPI::Client
     # outside action execution (in which access forbidden is raised from RestClient).
     class AuthenticationFailed < Exception
       def initialize(msg)
+        super
         @msg = msg
       end
 

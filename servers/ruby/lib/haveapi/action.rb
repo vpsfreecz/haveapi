@@ -45,7 +45,7 @@ module HaveAPI
 
       def inherited(subclass)
         # puts "Action.inherited called #{subclass} from #{to_s}"
-
+        super
         subclass.instance_variable_set(:@obj_type, obj_type)
 
         return unless subclass.name
@@ -88,7 +88,7 @@ module HaveAPI
         end
       end
 
-      def initialize
+      def initialize # rubocop:disable Lint/MissingSuper
         return if @initialized
 
         check_build("#{self}.input") do
@@ -108,7 +108,7 @@ module HaveAPI
             output do
               integer :action_state_id,
                       label: 'Action state ID',
-                      desc: 'ID of ActionState object for state querying. When null, the action ' +
+                      desc: 'ID of ActionState object for state querying. When null, the action ' \
                             'is not blocking for the current invocation.'
             end
           end
@@ -284,6 +284,7 @@ module HaveAPI
     end
 
     def initialize(request, version, params, body, context)
+      super()
       @request = request
       @version = version
       @params = params

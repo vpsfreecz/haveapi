@@ -5,11 +5,9 @@ module HaveAPI::Client
     attr_reader :response
 
     def initialize(response)
-      @response = response
-    end
+      super("#{response.action.name} failed: #{response.message}")
 
-    def message
-      "#{@response.action.name} failed: #{@response.message}"
+      @response = response
     end
   end
 
@@ -17,12 +15,10 @@ module HaveAPI::Client
     attr_reader :errors
 
     def initialize(action, errors)
+      super("#{action.name} failed: input parameters not valid")
+
       @action = action
       @errors = errors
-    end
-
-    def message
-      "#{@action.name} failed: input parameters not valid"
     end
   end
 end

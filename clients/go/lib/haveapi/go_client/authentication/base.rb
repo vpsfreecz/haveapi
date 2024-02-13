@@ -5,6 +5,8 @@ module HaveAPI::GoClient
       AuthenticationMethods.register(name, self)
     end
 
+    def initialize(api_version, name, desc); end
+
     # @param dst [String]
     def generate(dst)
       raise NotImplementedError

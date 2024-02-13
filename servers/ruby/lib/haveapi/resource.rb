@@ -11,6 +11,7 @@ module HaveAPI
     has_attr :singular, false
 
     def self.inherited(subclass)
+      super
       subclass.instance_variable_set(:@obj_type, obj_type)
     end
 

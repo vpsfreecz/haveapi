@@ -17,6 +17,7 @@ module HaveAPI::GoClient
     attr_reader :resource
 
     def initialize(api_version, name, desc)
+      super
       @http_header = desc[:http_header]
       @query_parameter = desc[:query_parameter]
       @resource = Resource.new(

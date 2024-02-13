@@ -14,6 +14,7 @@ module HaveAPI
       end
 
       def self.inherited(subclass)
+        super
         subclass.send(:instance_variable_set, '@auth_method', @auth_method)
       end
 

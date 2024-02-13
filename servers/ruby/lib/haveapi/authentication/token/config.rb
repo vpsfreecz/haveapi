@@ -70,6 +70,8 @@ module HaveAPI::Authentication
         end
 
         def inherited(subclass)
+          super
+
           # Default request
           subclass.request do
             input do

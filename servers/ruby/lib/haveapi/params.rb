@@ -4,12 +4,8 @@ module HaveAPI
 
   class ValidationError < Exception
     def initialize(msg, errors = {})
-      @msg = msg
+      super(msg)
       @errors = errors
-    end
-
-    def message
-      @msg
     end
 
     def to_hash

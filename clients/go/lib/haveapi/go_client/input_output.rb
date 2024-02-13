@@ -42,7 +42,7 @@ module HaveAPI::GoClient
     end
 
     def resolve_associations
-      parameters.each { |p| p.resolve }
+      parameters.each(&:resolve)
     end
   end
 end

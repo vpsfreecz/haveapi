@@ -5,7 +5,7 @@ module HaveAPI::CLI
 
       def cmd(resource, action = nil)
         @resource = resource.is_a?(::Array) ? resource : [resource]
-        @resource.map! { |v| v.to_s }
+        @resource.map!(&:to_s)
         @action = action && action.to_s
 
         Cli.register_command(self)

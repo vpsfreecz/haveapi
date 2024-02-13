@@ -106,9 +106,7 @@ module HaveAPI::GoClient
     end
 
     def resolve_associations
-      input_output.each do |io|
-        io.resolve_associations
-      end
+      input_output.each(&:resolve_associations)
 
       metadata && metadata.resolve_associations
     end

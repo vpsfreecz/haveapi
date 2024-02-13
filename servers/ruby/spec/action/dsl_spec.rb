@@ -48,7 +48,7 @@ describe HaveAPI::Action do
       # Invokes execution of input/output blocks
       Resource.routes
 
-      params = Resource::InputChainAction.input.params.map { |p| p.name }
+      params = Resource::InputChainAction.input.params.map(&:name)
       expect(params).to contain_exactly(:param1, :param2)
     end
 
@@ -68,7 +68,7 @@ describe HaveAPI::Action do
       # Invokes execution of input/output blocks
       Resource.routes
 
-      params = Resource::OutputChainAction.output.params.map { |p| p.name }
+      params = Resource::OutputChainAction.output.params.map(&:name)
       expect(params).to contain_exactly(:param1, :param2)
     end
 
@@ -116,8 +116,8 @@ describe HaveAPI::Action do
       # Invokes execution of input/output blocks
       Resource.routes
 
-      input = Resource::SubAction.input.params.map { |p| p.name }
-      output = Resource::SubAction.output.params.map { |p| p.name }
+      input = Resource::SubAction.input.params.map(&:name)
+      output = Resource::SubAction.output.params.map(&:name)
 
       expect(input).to contain_exactly(*%i[inbase1 inbase2 insub1 insub2 insub3])
       expect(output).to contain_exactly(*%i[outbase1 outbase2 outsub1 outsub2 outsub3])

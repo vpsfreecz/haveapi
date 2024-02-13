@@ -24,7 +24,7 @@ describe HaveAPI::Params do
     p.add_block proc { string :param2 }
     p.add_block proc { string :param3 }
     p.exec
-    expect(p.params.map { |p| p.name }).to contain_exactly(*%i[param1 param2 param3])
+    expect(p.params.map(&:name)).to contain_exactly(*%i[param1 param2 param3])
   end
 
   it 'returns deduced singular namespace' do
@@ -48,7 +48,7 @@ describe HaveAPI::Params do
     p = HaveAPI::Params.new(:input, MyResource::Index)
     p.add_block proc { use :all }
     p.exec
-    expect(p.params.map { |p| p.name }).to contain_exactly(*%i[res_param1 res_param2])
+    expect(p.params.map(&:name)).to contain_exactly(*%i[res_param1 res_param2])
   end
 
   it 'has param requires' do

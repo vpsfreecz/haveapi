@@ -14,7 +14,7 @@ module HaveAPI::GoClient
         Resource.new(self, k, v)
       end.sort!
 
-      @resources.each { |r| r.resolve_associations }
+      @resources.each(&:resolve_associations)
 
       @auth_methods = desc[:authentication].map do |k, v|
         AuthenticationMethods.new(self, k, v)

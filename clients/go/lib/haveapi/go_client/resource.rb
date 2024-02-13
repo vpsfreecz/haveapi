@@ -78,8 +78,8 @@ module HaveAPI::GoClient
     end
 
     def resolve_associations
-      actions.each { |a| a.resolve_associations }
-      resources.each { |r| r.resolve_associations }
+      actions.each(&:resolve_associations)
+      resources.each(&:resolve_associations)
     end
 
     def generate(gen)

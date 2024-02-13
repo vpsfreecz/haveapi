@@ -518,7 +518,7 @@ module HaveAPI::CLI
 
         # Fetching an associated attribute
         if raw_name.to_s.index('.')
-          parts = raw_name.to_s.split('.').map! { |v| v.to_sym }
+          parts = raw_name.to_s.split('.').map!(&:to_sym)
           name = parts.first.to_sym
 
           top = action.params
@@ -705,7 +705,7 @@ module HaveAPI::CLI
         includes = []
         top = action.params
 
-        param.split('.').map! { |v| v.to_sym }.each do |part|
+        param.split('.').map!(&:to_sym).each do |part|
           next unless top.has_key?(part)
           next if top[part][:type] != 'Resource'
 

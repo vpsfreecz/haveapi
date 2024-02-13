@@ -125,7 +125,7 @@ module HaveAPI::GoClient
       names << 'Action'
       names.concat(resource.resource_path.map(&:go_name))
       names << go_name
-      names.join('')
+      names.join
     end
   end
 end

@@ -82,7 +82,7 @@ module HaveAPI::CLI
 
       if args.count == 1
         describe_resource(resources)
-        exit(true)
+        exit
       end
 
       action = @api.get_action(resources, args[1].to_sym, args[2..])

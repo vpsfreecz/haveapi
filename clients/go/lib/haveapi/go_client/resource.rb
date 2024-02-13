@@ -134,7 +134,7 @@ module HaveAPI::GoClient
       names = ['Resource']
       names.concat(parent_resources.map(&:go_name))
       names << go_name
-      prefix_camel(names.join(''))
+      prefix_camel(names.join)
     end
   end
 end

@@ -4,7 +4,7 @@ module HaveAPI::GoClient
     # @param v [String]
     # @return [String]
     def camelize(v)
-      v.to_s.split('_').map(&:capitalize).join('')
+      v.to_s.split('_').map(&:capitalize).join
     end
   end
 end

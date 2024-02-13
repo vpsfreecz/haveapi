@@ -27,28 +27,23 @@ module HaveAPI::CLI
       # This method is NOT called if the auth provider has been loaded
       # from the config and wasn't specified as a command line option
       # and therefore all necessary information must be stored in the config.
-      def options(opts)
-
-      end
+      def options(opts); end
 
       # Implement this method to check if all needed information
       # for successful authentication are provided.
       # Ask the user on stdin if something is missing.
-      def validate
-
-      end
+      def validate; end
 
       # This method should call HaveAPI::Client::Communicator#authenticate
       # with arguments specific for this authentication provider.
-      def authenticate
-
-      end
+      def authenticate; end
 
       def save
         @communicator.auth_save
       end
 
       protected
+
       attr_reader :communicator, :desc
     end
   end

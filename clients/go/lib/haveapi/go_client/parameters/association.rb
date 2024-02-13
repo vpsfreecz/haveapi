@@ -28,6 +28,7 @@ module HaveAPI::GoClient
     end
 
     protected
+
     def find_resource(path)
       root = parameter.io.action.resource.api_version
       path = path.clone
@@ -37,7 +38,7 @@ module HaveAPI::GoClient
         resource = root.resources.detect { |r| r.name == name }
 
         if resource.nil?
-          fail "associated resource '#{name}' not found in "+
+          raise "associated resource '#{name}' not found in " +
                 (root.is_a?(ApiVersion) ? 'root' : root.resource_path.map(&:name).join('.'))
 
         elsif path.empty?
@@ -48,7 +49,7 @@ module HaveAPI::GoClient
         end
       end
 
-      fail 'programming error'
+      raise 'programming error'
     end
   end
 end

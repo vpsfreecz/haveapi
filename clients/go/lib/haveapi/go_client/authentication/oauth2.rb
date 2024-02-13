@@ -22,7 +22,7 @@ module HaveAPI::GoClient
         'authentication/oauth2.go',
         {
           package: gen.package,
-          auth: self,
+          auth: self
         },
         File.join(gen.dst, 'auth_oauth2.go')
       )

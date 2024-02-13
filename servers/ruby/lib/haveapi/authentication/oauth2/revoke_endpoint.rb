@@ -23,13 +23,12 @@ module HaveAPI::Authentication
           raise Rack::OAuth2::Server::Abstract::BadRequest.new(
             :unsupported_token_type,
             description,
-            options,
+            options
           )
         end
       end
 
       class Response < Rack::OAuth2::Server::Abstract::Response
-
       end
     end
   end

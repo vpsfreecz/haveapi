@@ -28,7 +28,7 @@ module HaveAPI
         rx: @rx.source,
         match: @match,
         description: @desc,
-        message: @message,
+        message: @message
       }
     end
 

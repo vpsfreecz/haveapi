@@ -1,5 +1,5 @@
 module HaveAPI::GoClient
-  module Parameters ; end
+  module Parameters; end
 
   module Parameter
     # @param klass [Class]
@@ -16,8 +16,8 @@ module HaveAPI::GoClient
     # @param desc [Hash]
     # @return [Parameters::Base, nil]
     def self.new(role, direction, io, name, desc)
-      klass, _ =
-        @handlers.select do |klass, block|
+      klass, =
+        @handlers.select do |_klass, block|
           block.call(role, direction, name, desc)
         end.first
 

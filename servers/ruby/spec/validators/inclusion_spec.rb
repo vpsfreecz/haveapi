@@ -6,14 +6,14 @@ describe HaveAPI::Validators::Inclusion do
       expect(@v.valid?('three')).to be true
     end
 
-    it "rejects an unlisted value" do
+    it 'rejects an unlisted value' do
       expect(@v.valid?('zero')).to be false
       expect(@v.valid?('four')).to be false
     end
   end
 
   [
-    %w(one two three),
+    %w[one two three],
     {
       one: 'Fancy one',
       two: 'Fancy two',
@@ -23,7 +23,7 @@ describe HaveAPI::Validators::Inclusion do
     context "with include as a '#{include.class}'" do
       context 'short form' do
         before(:each) do
-          @v = HaveAPI::Validators::Inclusion.new(:include, %w(one two three))
+          @v = HaveAPI::Validators::Inclusion.new(:include, %w[one two three])
         end
 
         include_examples :all
@@ -32,7 +32,7 @@ describe HaveAPI::Validators::Inclusion do
       context 'full form' do
         before(:each) do
           @v = HaveAPI::Validators::Inclusion.new(:include, {
-            values: %w(one two three)
+            values: %w[one two three]
           })
         end
 

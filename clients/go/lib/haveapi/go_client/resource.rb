@@ -48,7 +48,7 @@ module HaveAPI::GoClient
         Resource.new(self, k, v)
       end.sort!
       @actions = desc[:actions].map do |k, v|
-        Action.new(self, k.to_s, v, prefix: prefix)
+        Action.new(self, k.to_s, v, prefix:)
       end.sort!
     end
 
@@ -87,7 +87,7 @@ module HaveAPI::GoClient
         'resource.go',
         {
           package: gen.package,
-          resource: self,
+          resource: self
         },
         File.join(gen.dst, prefix_underscore("resource_#{full_name}.go"))
       )
@@ -99,7 +99,7 @@ module HaveAPI::GoClient
           'action.go',
           {
             package: gen.package,
-            action: a,
+            action: a
           },
           File.join(gen.dst, prefix_underscore("resource_#{full_name}_action_#{a.name}.go"))
         )
@@ -111,6 +111,7 @@ module HaveAPI::GoClient
     end
 
     protected
+
     attr_reader :prefix
 
     def prefix_underscore(s)

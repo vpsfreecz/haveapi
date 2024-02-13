@@ -40,10 +40,11 @@ module HaveAPI::Client
     end
 
     protected
+
     def coerce(raw)
       type = @desc[:type]
 
-      val = if type == 'Integer'
+      if type == 'Integer'
         raw.to_i
 
       elsif type == 'Float'
@@ -62,21 +63,18 @@ module HaveAPI::Client
         else
           begin
             DateTime.iso8601(raw).to_time
-
           rescue ArgumentError
             @errors << 'not in ISO 8601 format'
             nil
           end
         end
 
-      elsif %w(String Text).include?(type)
+      elsif %w[String Text].include?(type)
         raw.to_s
 
       else
         raw
       end
-
-      val
     end
   end
 end

@@ -16,12 +16,12 @@ module HaveAPI
     takes :accept
 
     def setup
-      if simple?
-        @value = take
+      @value = if simple?
+                 take
 
-      else
-        @value = take(:value)
-      end
+               else
+                 take(:value)
+               end
 
       @message = take(:message, "has to be #{@value}")
     end
@@ -29,7 +29,7 @@ module HaveAPI
     def describe
       {
         value: @value,
-        message: @message,
+        message: @message
       }
     end
 

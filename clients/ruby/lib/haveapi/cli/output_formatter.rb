@@ -1,12 +1,12 @@
 module HaveAPI::CLI
   class OutputFormatter
-    def self.format(*args)
-      f = new(*args)
+    def self.format(*)
+      f = new(*)
       f.format
     end
 
-    def self.print(*args, **kwargs)
-      f = new(*args, **kwargs)
+    def self.print(*, **)
+      f = new(*, **)
       f.print
     end
 
@@ -18,27 +18,25 @@ module HaveAPI::CLI
       @empty = empty
 
       if @layout.nil?
-        if many?
-          @layout = :columns
+        @layout = if many?
+                    :columns
 
-        else
-          @layout = :rows
-        end
+                  else
+                    :rows
+                  end
       end
 
       if cols
         @cols = parse_cols(cols)
 
+      elsif @objects.is_a?(::Array)
+        @cols ||= parse_cols(@objects.first.keys) # A list of items
+
+      elsif @objects.is_a?(::Hash) # Single item
+        @cols ||= parse_cols(@objects.keys)
+
       else
-        if @objects.is_a?(::Array) # A list of items
-          @cols ||= parse_cols(@objects.first.keys)
-
-        elsif @objects.is_a?(::Hash) # Single item
-          @cols ||= parse_cols(@objects.keys)
-
-        else
-          fail "unsupported type #{@objects.class}"
-        end
+        raise "unsupported type #{@objects.class}"
       end
     end
 
@@ -54,6 +52,7 @@ module HaveAPI::CLI
     end
 
     protected
+
     def parse_cols(cols)
       ret = []
 
@@ -65,7 +64,7 @@ module HaveAPI::CLI
         if c.is_a?(::String) || c.is_a?(::Symbol)
           base.update({
               name: c,
-              label: c.to_s.upcase,
+              label: c.to_s.upcase
           })
           ret << base
 
@@ -74,7 +73,7 @@ module HaveAPI::CLI
           ret << base
 
         else
-          fail "unsupported column type #{c.class}"
+          raise "unsupported column type #{c.class}"
         end
       end
 
@@ -83,6 +82,7 @@ module HaveAPI::CLI
 
     def generate
       return if @cols.empty?
+
       prepare
 
       case @layout
@@ -93,7 +93,7 @@ module HaveAPI::CLI
         rows
 
       else
-        fail "unsupported layout '#{@layout}'"
+        raise "unsupported layout '#{@layout}'"
       end
     end
 
@@ -103,21 +103,21 @@ module HaveAPI::CLI
 
       formatters = @cols.map do |c|
         ret = case c[:align].to_sym
-        when :right
-          "%#{col_width(i, c)}s"
+              when :right
+                "%#{col_width(i, c)}s"
 
-        else
-          "%-#{col_width(i, c)}s"
-        end
+              else
+                "%-#{col_width(i, c)}s"
+              end
 
         i += 1
         ret
       end.join('  ')
 
-      line sprintf(formatters, * @cols.map { |c| c[:label] }) if @header
+      line format(formatters, * @cols.map { |c| c[:label] }) if @header
 
       @str_objects.each do |o|
-        line sprintf(formatters, *o)
+        line format(formatters, *o)
       end
     end
 
@@ -131,13 +131,13 @@ module HaveAPI::CLI
 
           if o[i].is_a?(::String) && o[i].index("\n")
             lines = o[i].split("\n")
-            v = ([lines.first] + lines[1..-1].map { |l| (' ' * (w+3)) + l }).join("\n")
+            v = ([lines.first] + lines[1..-1].map { |l| (' ' * (w + 3)) + l }).join("\n")
 
           else
             v = o[i]
           end
 
-          line sprintf("%#{w}s:  %s", c[:label], v)
+          line format("%#{w}s:  %s", c[:label], v)
         end
 
         line
@@ -160,7 +160,7 @@ module HaveAPI::CLI
         arr = []
 
         @cols.each do |c|
-          v = o[ c[:name] ]
+          v = o[c[:name]]
           str = (c[:display] ? c[:display].call(v) : v)
           str = @empty if !str || (str.is_a?(::String) && str.empty?)
 
@@ -172,7 +172,7 @@ module HaveAPI::CLI
 
       if @sort
         col_i = @cols.index { |c| c[:name] == @sort }
-        fail "unknown column '#{@sort}'" unless col_i
+        raise "unknown column '#{@sort}'" unless col_i
 
         @str_objects.sort! do |a, b|
           a_i = a[col_i]
@@ -181,6 +181,7 @@ module HaveAPI::CLI
           next 0 if a_i == @empty && b_i == @empty
           next -1 if a_i == @empty && b_i != @empty
           next 1 if a_i != @empty && b_i == @empty
+
           a_i <=> b_i
         end
       end
@@ -211,9 +212,9 @@ module HaveAPI::CLI
       w + 1
     end
 
-    def each_object
+    def each_object(&)
       if @objects.is_a?(::Array)
-        @objects.each { |v| yield(v) }
+        @objects.each(&)
 
       else
         yield(@objects)

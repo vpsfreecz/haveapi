@@ -24,7 +24,7 @@ module HaveAPI::CLI::Authentication
     end
 
     def authenticate
-      @communicator.authenticate(:basic, {user: @user, password: @password})
+      @communicator.authenticate(:basic, { user: @user, password: @password })
     end
   end
 end

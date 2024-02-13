@@ -24,9 +24,9 @@ module HaveAPI::CLI
 
         # response
         cli.format_output(
-            action,
-            {action.namespace(:output).to_sym => example[:response]},
-            out
+          action,
+          { action.namespace(:output).to_sym => example[:response] },
+          out
         )
       end
     end
@@ -35,16 +35,16 @@ module HaveAPI::CLI
       option = name.to_s.dasherize
 
       case desc[:type]
-        when 'Boolean'
-          value ? "--#{option}" : "--no-#{option}"
+      when 'Boolean'
+        value ? "--#{option}" : "--no-#{option}"
 
-        else
-          "--#{option} #{example_value(value)}"
+      else
+        "--#{option} #{example_value(value)}"
       end
     end
 
     def self.example_value(v)
-      (v.is_a?(String) && (v.empty? || v.index(' '))) ? "\"#{v}\"" : v
+      v.is_a?(String) && (v.empty? || v.index(' ')) ? "\"#{v}\"" : v
     end
   end
 end

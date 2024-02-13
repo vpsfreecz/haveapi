@@ -15,10 +15,10 @@ module HaveAPI::Authentication
         @chain[v] && @chain[v].each { |p| register_provider(v, p) }
       end
 
-      if @chain[:all]
-        @chain[:all].each do |p|
-          @instances.each_key { |v| register_provider(v, p) }
-        end
+      return unless @chain[:all]
+
+      @chain[:all].each do |p|
+        @instances.each_key { |v| register_provider(v, p) }
       end
 
       # @chain.each do |p|
@@ -56,12 +56,12 @@ module HaveAPI::Authentication
       @instances[context.version].each do |provider|
         ret[provider.name] = provider.describe
 
-        if provider.resource_module
-          ret[provider.name][:resources] = {}
+        next unless provider.resource_module
 
-          @server.routes[context.version][:authentication][provider.name][:resources].each do |r, children|
-            ret[provider.name][:resources][r.resource_name.underscore.to_sym] = r.describe(children, context)
-          end
+        ret[provider.name][:resources] = {}
+
+        @server.routes[context.version][:authentication][provider.name][:resources].each do |r, children|
+          ret[provider.name][:resources][r.resource_name.underscore.to_sym] = r.describe(children, context)
         end
       end
 
@@ -95,20 +95,21 @@ module HaveAPI::Authentication
     end
 
     protected
+
     def register_provider(v, p)
       instance = p.new(@server, v)
       @instances[v] << instance
 
       @server.add_auth_routes(v, instance, prefix: instance.name.to_s)
 
-      if resource_module = instance.resource_module
-        @server.add_auth_module(
-          v,
-          instance.name,
-          resource_module,
-          prefix: instance.name.to_s,
-        )
-      end
+      return unless resource_module = instance.resource_module
+
+      @server.add_auth_module(
+        v,
+        instance.name,
+        resource_module,
+        prefix: instance.name.to_s
+      )
     end
   end
 end

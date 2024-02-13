@@ -1,7 +1,7 @@
 class SetupDatabase < ActiveRecord::Migration
   def change
     create_table :users do |t|
-      t.string      :username,   null: false, limit: 50,  unique: true
+      t.string      :username,   null: false, limit: 50, unique: true
       t.string      :password,   null: false, limit: 100
       t.boolean     :is_admin,   null: false, default: 0
       t.timestamps

@@ -4,8 +4,8 @@ require 'date'
 module HaveAPI
   module Client
     # Shortcut to HaveAPI::Client::Client.new
-    def self.new(*args)
-      HaveAPI::Client::Client.new(*args)
+    def self.new(*)
+      HaveAPI::Client::Client.new(*)
     end
   end
 end

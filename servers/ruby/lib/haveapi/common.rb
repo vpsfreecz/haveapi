@@ -3,13 +3,13 @@ module HaveAPI
     class << self
       attr_accessor :custom_attrs
 
-      def has_attr(name, default=nil)
+      def has_attr(name, default = nil)
         @custom_attrs ||= []
         @custom_attrs << name
 
         instance_variable_set("@#{name}", default)
 
-        self.class.send(:define_method, name) do |value=nil|
+        self.class.send(:define_method, name) do |value = nil|
           if value.nil?
             instance_variable_get("@#{name}")
           else
@@ -34,8 +34,7 @@ module HaveAPI
 
       def check_build(msg)
         yield
-      
-      rescue => e
+      rescue StandardError => e
         raise BuildError.new(msg, e)
       end
     end

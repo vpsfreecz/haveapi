@@ -7,7 +7,6 @@ module HaveAPI::Authentication
     # Exception that has to be raised when generated token already exists.
     # Provider will catch it and generate another token.
     class TokenExists < Exception
-
     end
 
     # Provider for token authentication.
@@ -140,6 +139,7 @@ module HaveAPI::Authentication
 
       def resource_module
         return @module if @module
+
         provider = self
 
         @module = Module.new do
@@ -166,18 +166,19 @@ module HaveAPI::Authentication
         {
           http_header: config.class.http_header,
           query_parameter: config.class.query_parameter,
-          description: "The client authenticates with credentials, usually "+
-                       "username and password, and gets a token. "+
-                       "From this point, the credentials can be forgotten and "+
-                       "the token is used instead. Tokens can have different lifetimes, "+
-                       "can be renewed and revoked. The token is passed either via HTTP "+
-                       "header or query parameter."
+          description: 'The client authenticates with credentials, usually ' +
+            'username and password, and gets a token. ' +
+            'From this point, the credentials can be forgotten and ' +
+            'the token is used instead. Tokens can have different lifetimes, ' +
+            'can be renewed and revoked. The token is passed either via HTTP ' +
+            'header or query parameter.'
         }
       end
 
       private
+
       def header_to_env
-        "HTTP_#{config.class.http_header.upcase.gsub(/\-/, '_')}"
+        "HTTP_#{config.class.http_header.upcase.gsub('-', '_')}"
       end
 
       def token_resource
@@ -199,16 +200,16 @@ module HaveAPI::Authentication
               end
 
               string :lifetime, label: 'Lifetime', required: true,
-                      choices: %i(fixed renewable_manual renewable_auto permanent),
-                      desc: <<END
-fixed - the token has a fixed validity period, it cannot be renewed
-renewable_manual - the token can be renewed, but it must be done manually via renew action
-renewable_auto - the token is renewed automatically to now+interval every time it is used
-permanent - the token will be valid forever, unless deleted
-END
+                                choices: %i[fixed renewable_manual renewable_auto permanent],
+                                desc: <<~END
+                                  fixed - the token has a fixed validity period, it cannot be renewed
+                                  renewable_manual - the token can be renewed, but it must be done manually via renew action
+                                  renewable_auto - the token is renewed automatically to now+interval every time it is used
+                                  permanent - the token will be valid forever, unless deleted
+                                END
               integer :interval, label: 'Interval',
-                      desc: 'How long will requested token be valid, in seconds.',
-                      default: 60*5, fill: true
+                                 desc: 'How long will requested token be valid, in seconds.',
+                                 default: 60 * 5, fill: true
             end
 
             output(:hash) do
@@ -227,9 +228,9 @@ END
 
               begin
                 result = config.class.request.handle.call(ActionRequest.new(
-                  request: request,
-                  input: input,
-                ), ActionResult.new)
+                                                            request:,
+                                                            input:
+                                                          ), ActionResult.new)
               rescue HaveAPI::AuthenticationError => e
                 error(e.message)
               end
@@ -242,7 +243,7 @@ END
                 token: result.token,
                 valid_to: result.valid_to,
                 complete: result.complete?,
-                next_action: result.next_action,
+                next_action: result.next_action
               }
             end
           end
@@ -258,10 +259,10 @@ END
             def exec
               provider = self.class.resource.token_instance
               result = provider.config.class.revoke.handle.call(ActionRequest.new(
-                request: request,
-                user: current_user,
-                token: provider.token(request),
-              ), ActionResult.new)
+                                                                  request:,
+                                                                  user: current_user,
+                                                                  token: provider.token(request)
+                                                                ), ActionResult.new)
 
               if result.ok?
                 ok
@@ -286,13 +287,13 @@ END
             def exec
               provider = self.class.resource.token_instance
               result = provider.config.renew_token(ActionRequest.new(
-                request: request,
-                user: current_user,
-                token: provider.token(request),
-              ), ActionResult.new)
+                                                     request:,
+                                                     user: current_user,
+                                                     token: provider.token(request)
+                                                   ), ActionResult.new)
 
               if result.ok?
-                {valid_to: result.valid_to}
+                { valid_to: result.valid_to }
               else
                 error(result.error || 'renew failed')
               end
@@ -323,10 +324,10 @@ END
               define_method(:exec) do
                 begin
                   result = config.handle.call(ActionRequest.new(
-                    request: request,
-                    input: input,
-                    token: input[:token],
-                  ), ActionResult.new)
+                                                request:,
+                                                input:,
+                                                token: input[:token]
+                                              ), ActionResult.new)
                 rescue HaveAPI::AuthenticationError => e
                   error(e.message)
                 end
@@ -339,7 +340,7 @@ END
                   token: result.token,
                   valid_to: result.valid_to,
                   complete: result.complete?,
-                  next_action: result.next_action,
+                  next_action: result.next_action
                 }
               end
             end

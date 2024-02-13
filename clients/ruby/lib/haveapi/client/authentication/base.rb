@@ -43,14 +43,10 @@ module HaveAPI::Client
       end
 
       # Called right after initialize. Use this method to initialize provider.
-      def setup
-
-      end
+      def setup; end
 
       # Return RestClient::Resource instance. This is mainly for HTTP basic auth.
-      def resource
-
-      end
+      def resource; end
 
       # Called for each request. Returns a hash of query parameters.
       def request_query_params

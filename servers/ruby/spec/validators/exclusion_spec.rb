@@ -6,7 +6,7 @@ describe HaveAPI::Validators::Exclusion do
       expect(@v.valid?('three')).to be false
     end
 
-    it "accepts an unlisted value" do
+    it 'accepts an unlisted value' do
       expect(@v.valid?('zero')).to be true
       expect(@v.valid?('four')).to be true
     end
@@ -14,7 +14,7 @@ describe HaveAPI::Validators::Exclusion do
 
   context 'short form' do
     before(:each) do
-      @v = HaveAPI::Validators::Exclusion.new(:exclude, %w(one two three))
+      @v = HaveAPI::Validators::Exclusion.new(:exclude, %w[one two three])
     end
 
     include_examples :all
@@ -23,7 +23,7 @@ describe HaveAPI::Validators::Exclusion do
   context 'full form' do
     before(:each) do
       @v = HaveAPI::Validators::Exclusion.new(:exclude, {
-        values: %w(one two three)
+        values: %w[one two three]
       })
     end
 

@@ -19,10 +19,10 @@ class HaveAPI::Client::Response
 
   def response
     case @action.output_layout
-      when :object, :object_list, :hash, :hash_list
-        @response[:response][@action.namespace(:output).to_sym]
-      else
-        @response[:response]
+    when :object, :object_list, :hash, :hash_list
+      @response[:response][@action.namespace(:output).to_sym]
+    else
+      @response[:response]
     end
   end
 
@@ -44,7 +44,7 @@ class HaveAPI::Client::Response
 
   # Access namespaced params directly.
   def [](key)
-    return unless %i(object hash).include?(@action.output_layout.to_sym)
+    return unless %i[object hash].include?(@action.output_layout.to_sym)
 
     @response[:response][@action.namespace(:output).to_sym][key]
   end
@@ -52,7 +52,7 @@ class HaveAPI::Client::Response
   # Iterate over namespaced items directly. Works for only for
   # object_list or hash_list.
   def each
-    return unless %i(list).include?(@action.layout.to_sym)
+    return unless %i[list].include?(@action.layout.to_sym)
 
     @response[:response][@action.namespace(:output).to_sym].each
   end
@@ -61,10 +61,10 @@ class HaveAPI::Client::Response
   # it is regularly called with the action's state.
   #
   # @see HaveAPI::Client::Action#wait_for_completion
-  def wait_for_completion(**kwargs, &block)
+  def wait_for_completion(**, &)
     id = meta[:action_state_id]
     return nil unless id
 
-    HaveAPI::Client::Action.wait_for_completion(@action.client, id, **kwargs, &block)
+    HaveAPI::Client::Action.wait_for_completion(@action.client, id, **, &)
   end
 end

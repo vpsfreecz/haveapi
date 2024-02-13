@@ -5,7 +5,7 @@ describe HaveAPI::Validators::Format do
       expect(@v.valid?('aacacb')).to be true
     end
 
-    it "rejects a value that does not match the regexp" do
+    it 'rejects a value that does not match the regexp' do
       expect(@v.valid?('aacac')).to be false
       expect(@v.valid?('bacacb')).to be false
       expect(@v.valid?('b')).to be false
@@ -45,7 +45,7 @@ describe HaveAPI::Validators::Format do
       expect(@v.valid?('aacacb')).to be false
     end
 
-    it "accepts a value if it does not match the regexp" do
+    it 'accepts a value if it does not match the regexp' do
       expect(@v.valid?('aacac')).to be true
       expect(@v.valid?('bacacb')).to be true
       expect(@v.valid?('b')).to be true

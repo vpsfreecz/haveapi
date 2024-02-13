@@ -4,7 +4,7 @@ describe HaveAPI::Validators::Acceptance do
       expect(@v.valid?('foo')).to be true
     end
 
-    it "rejects incorrect value" do
+    it 'rejects incorrect value' do
       expect(@v.valid?('bar')).to be false
     end
   end

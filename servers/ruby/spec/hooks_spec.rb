@@ -7,7 +7,7 @@ describe HaveAPI::Hooks do
     has_hook :ret_hook
     has_hook :context_hook
   end
-  
+
   class InstanceLevel
     include HaveAPI::Hookable
 
@@ -35,10 +35,10 @@ describe HaveAPI::Hooks do
       end
 
     else
-      fail "unknown level '#{@level}'"
+      raise "unknown level '#{@level}'"
     end
   end
-  
+
   shared_examples(:common) do
     it 'calls hooks' do
       called = false
@@ -51,10 +51,10 @@ describe HaveAPI::Hooks do
       call_hooks(:simple_hook)
       expect(called).to be true
     end
-    
+
     it 'passes arguments' do
       called = false
-      
+
       connect_hook(:arg_hook) do |ret, a, b, c|
         called = true
         expect([a, b, c]).to eq([1, 2, 3])
@@ -87,7 +87,7 @@ describe HaveAPI::Hooks do
         end
       end
 
-      sum = call_hooks(:ret_hook, initial: {counter: 0})
+      sum = call_hooks(:ret_hook, initial: { counter: 0 })
       expect(sum[:counter]).to eq(5)
     end
 
@@ -113,7 +113,7 @@ describe HaveAPI::Hooks do
       @obj = ClassLevel
       @level = :class
     end
-    
+
     include_examples :common
   end
 
@@ -123,23 +123,23 @@ describe HaveAPI::Hooks do
         @obj = InstanceLevel.new
         @level = :instance
       end
-      
+
       include_examples :common
     end
-    
+
     context 'only class hooks' do
       # FIXME: class hooks fail (that is correct, no class hooks are defined)
       #        must find a way to test failure
-      #include_examples :common
+      # include_examples :common
     end
-    
+
     context 'only instance hooks' do
       before(:each) do
         @obj = InstanceLevel.new
         @level = :instance
         @method = :call_instance_hooks_for
       end
-      
+
       include_examples :common
     end
   end

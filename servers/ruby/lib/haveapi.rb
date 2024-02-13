@@ -11,8 +11,8 @@ require 'github/markdown'
 require 'json'
 
 module HaveAPI
-  module Resources ; end
-  module Actions ; end
+  module Resources; end
+  module Actions; end
 end
 
 require_relative 'haveapi/params'

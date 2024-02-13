@@ -8,7 +8,7 @@ describe HaveAPI::Action do
           end
         end
 
-        class SubInputAction < InputAction ; end
+        class SubInputAction < InputAction; end
       end
 
       # Invokes execution of input/output blocks
@@ -24,9 +24,9 @@ describe HaveAPI::Action do
           end
         end
 
-        class SubOutputAction < OutputAction ; end
+        class SubOutputAction < OutputAction; end
       end
-    
+
       # Invokes execution of input/output blocks
       Resource.routes
       expect(Resource::SubOutputAction.output.params.first.name).to eq(:param)
@@ -44,7 +44,7 @@ describe HaveAPI::Action do
           end
         end
       end
-   
+
       # Invokes execution of input/output blocks
       Resource.routes
 
@@ -64,7 +64,7 @@ describe HaveAPI::Action do
           end
         end
       end
-   
+
       # Invokes execution of input/output blocks
       Resource.routes
 
@@ -119,13 +119,13 @@ describe HaveAPI::Action do
       input = Resource::SubAction.input.params.map { |p| p.name }
       output = Resource::SubAction.output.params.map { |p| p.name }
 
-      expect(input).to contain_exactly(*%i(inbase1 inbase2 insub1 insub2 insub3))
-      expect(output).to contain_exactly(*%i(outbase1 outbase2 outsub1 outsub2 outsub3))
+      expect(input).to contain_exactly(*%i[inbase1 inbase2 insub1 insub2 insub3])
+      expect(output).to contain_exactly(*%i[outbase1 outbase2 outsub1 outsub2 outsub3])
     end
 
     it 'sets layout' do
       class Resource < HaveAPI::Resource
-        class DefaultLayoutAction < HaveAPI::Action ; end
+        class DefaultLayoutAction < HaveAPI::Action; end
 
         class ObjectLayoutAction < HaveAPI::Action
           input(:object) {}
@@ -136,17 +136,17 @@ describe HaveAPI::Action do
           input(:object_list) {}
           output(:object_list) {}
         end
-        
+
         class HashLayoutAction < HaveAPI::Action
           input(:hash) {}
           output(:hash) {}
         end
-        
+
         class HashListLayoutAction < HaveAPI::Action
           input(:hash_list) {}
           output(:hash_list) {}
         end
-        
+
         class CombinedLayoutAction < HaveAPI::Action
           input(:hash) {}
           output(:object_list) {}
@@ -176,19 +176,19 @@ describe HaveAPI::Action do
       class ExResourceIn < HaveAPI::Resource
         class ExInputAction < HaveAPI::Action
           input do
-            fail 'this is terrible!'
+            raise 'this is terrible!'
           end
         end
       end
 
       expect { ExResourceIn.routes }.to raise_error(HaveAPI::BuildError)
     end
-    
+
     it 'catches exceptions in output' do
       class ExResourceOut < HaveAPI::Resource
         class ExOutputAction < HaveAPI::Action
           output do
-            fail 'this is terrible!'
+            raise 'this is terrible!'
           end
         end
       end

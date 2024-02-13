@@ -5,7 +5,7 @@ module HaveAPI::Client
       @response = response
 
       response.response.each do |hash|
-        self << ResourceInstance.new(client, api, resource, action: action, response: hash)
+        self << ResourceInstance.new(client, api, resource, action:, response: hash)
       end
     end
 

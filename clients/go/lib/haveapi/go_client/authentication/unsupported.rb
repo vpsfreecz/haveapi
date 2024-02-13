@@ -6,8 +6,6 @@ module HaveAPI::GoClient
       warn "Ignoring unsupported authentication method #{name}"
     end
 
-    def generate(gen)
-
-    end
+    def generate(gen); end
   end
 end

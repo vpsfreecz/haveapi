@@ -116,7 +116,7 @@ module HaveAPI::Authentication
         tokens = [
           request['access_token'],
           token_from_authorization_header(request),
-          token_from_haveapi_header(request),
+          token_from_haveapi_header(request)
         ].compact
 
         token =
@@ -126,7 +126,7 @@ module HaveAPI::Authentication
           when 1
             tokens.first
           else
-            fail 'Too many oauth2 tokens'
+            raise 'Too many oauth2 tokens'
           end
 
         token && config.find_user_by_access_token(request, token)
@@ -135,11 +135,9 @@ module HaveAPI::Authentication
       def token_from_authorization_header(request)
         auth_header = Rack::Auth::AbstractRequest.new(request.env)
 
-        if auth_header.provided? && !auth_header.parts.first.nil? && auth_header.scheme.to_s == 'bearer'
-          auth_header.params
-        else
-          nil
-        end
+        return unless auth_header.provided? && !auth_header.parts.first.nil? && auth_header.scheme.to_s == 'bearer'
+
+        auth_header.params
       end
 
       def token_from_haveapi_header(request)
@@ -171,7 +169,7 @@ module HaveAPI::Authentication
           token_url: @token_url,
           token_path: @token_path,
           revoke_url: @revoke_url,
-          revoke_path: @revoke_path,
+          revoke_path: @revoke_path
         }
       end
 
@@ -189,7 +187,7 @@ module HaveAPI::Authentication
               sinatra_params: handler.params,
               oauth2_request: req,
               oauth2_response: res,
-              client:,
+              client:
             )
 
             if auth_res.nil?
@@ -216,7 +214,7 @@ module HaveAPI::Authentication
               sinatra_params: handler.params,
               oauth2_request: req,
               oauth2_response: res,
-              client:,
+              client:
             )
 
             if auth_res.nil?
@@ -256,15 +254,15 @@ module HaveAPI::Authentication
               if authorization.code_challenge && authorization.code_challenge_method
                 req.verify_code_verifier!(
                   authorization.code_challenge,
-                  authorization.code_challenge_method.to_sym,
+                  authorization.code_challenge_method.to_sym
                 )
               end
 
               access_token, expires_at, refresh_token = config.get_tokens(authorization, handler.request)
 
               bearer_token = Rack::OAuth2::AccessToken::Bearer.new(
-                access_token: access_token,
-                expires_in: expires_at - Time.now,
+                access_token:,
+                expires_in: expires_at - Time.now
               )
               bearer_token.refresh_token = refresh_token if refresh_token
               bearer_token
@@ -285,8 +283,8 @@ module HaveAPI::Authentication
               access_token, expires_at, refresh_token = config.refresh_tokens(authorization, handler.request)
 
               bearer_token = Rack::OAuth2::AccessToken::Bearer.new(
-                access_token: access_token,
-                expires_in: expires_at - Time.now,
+                access_token:,
+                expires_in: expires_at - Time.now
               )
               bearer_token.refresh_token = refresh_token if refresh_token
               bearer_token
@@ -298,11 +296,11 @@ module HaveAPI::Authentication
       end
 
       def revoke_endpoint(handler)
-        RevokeEndpoint.new do |req, res|
+        RevokeEndpoint.new do |req, _res|
           ret = config.handle_post_revoke(
             handler.request,
             req.token,
-            token_type_hint: req.token_type_hint,
+            token_type_hint: req.token_type_hint
           )
 
           case ret
@@ -317,8 +315,9 @@ module HaveAPI::Authentication
       end
 
       private
+
       def header_to_env(header)
-        "HTTP_#{header.upcase.gsub(/\-/, '_')}"
+        "HTTP_#{header.upcase.gsub('-', '_')}"
       end
     end
   end

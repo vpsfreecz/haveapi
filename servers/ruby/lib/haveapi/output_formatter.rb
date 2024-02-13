@@ -1,6 +1,5 @@
 module HaveAPI
   module OutputFormatters
-
   end
 
   class OutputFormatter
@@ -45,14 +44,15 @@ module HaveAPI
     end
 
     protected
+
     def header(status, response, message = nil, errors = nil, version)
       ret = {}
       ret[:version] = HaveAPI::PROTOCOL_VERSION if version
       ret.update({
-        status: status,
-        response: response,
-        message: message,
-        errors: errors
+        status:,
+        response:,
+        message:,
+        errors:
       })
       ret
     end

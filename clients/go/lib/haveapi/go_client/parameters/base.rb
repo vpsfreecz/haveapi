@@ -64,11 +64,10 @@ module HaveAPI::GoClient
     end
 
     protected
+
     # @return [Hash]
     attr_reader :desc
 
-    def do_resolve
-
-    end
+    def do_resolve; end
   end
 end

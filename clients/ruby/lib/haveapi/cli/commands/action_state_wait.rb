@@ -8,23 +8,23 @@ module HaveAPI::CLI::Commands
 
     def exec(args)
       if args.size < 1
-        warn "Provide argument STATE ID"
+        warn 'Provide argument STATE ID'
         exit(false)
       end
 
       @api.set_opts(block: false)
 
       state = HaveAPI::CLI::ActionState.new(
-          @global_opts,
-          @api,
-          args.first.to_i
+        @global_opts,
+        @api,
+        args.first.to_i
       )
       ret = state.wait_for_completion(timeout: @global_opts[:timeout])
 
-      if ret.nil?
-        warn "Timeout"
-        exit(false)
-      end
+      return unless ret.nil?
+
+      warn 'Timeout'
+      exit(false)
     end
   end
 end

@@ -18,7 +18,7 @@ module HaveAPI::Authentication
           end
         end
 
-        %i(renew revoke).each do |name|
+        %i[renew revoke].each do |name|
           # Configuration method
           define_method(name) do |&block|
             var = :"@#{name}"
@@ -84,7 +84,7 @@ module HaveAPI::Authentication
           end
 
           # Default renew and revoke
-          %i(renew revoke).each do |name|
+          %i[renew revoke].each do |name|
             subclass.send(name) do
               handle do
                 raise NotImplementedError
@@ -108,9 +108,7 @@ module HaveAPI::Authentication
       # @param request [Sinatra::Request]
       # @param token [String]
       # @return [Object, nil]
-      def find_user_by_token(request, token)
-
-      end
+      def find_user_by_token(request, token); end
     end
   end
 end

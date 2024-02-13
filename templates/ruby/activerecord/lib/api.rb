@@ -4,7 +4,7 @@ require 'haveapi'
 
 module API
   # API resources are stored in this module
-  module Resources ; end
+  module Resources; end
 
   # When a resource has no version set, this one will be used
   HaveAPI.implicit_version = '1.0'

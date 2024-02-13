@@ -4,15 +4,13 @@ module HaveAPI::GoClient
   class Authentication::Basic < Authentication::Base
     register :basic
 
-    def initialize(api_version, name, desc)
-
-    end
+    def initialize(api_version, name, desc); end
 
     def generate(gen)
       ErbTemplate.render_to_if_changed(
         'authentication/basic.go',
         {
-          package: gen.package,
+          package: gen.package
         },
         File.join(gen.dst, 'auth_basic.go')
       )

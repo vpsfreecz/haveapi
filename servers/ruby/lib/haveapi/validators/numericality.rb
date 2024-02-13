@@ -33,17 +33,17 @@ module HaveAPI
       @odd = take(:odd)
 
       msg = if @min && !@max
-        "has to be minimally #{@min}"
+              "has to be minimally #{@min}"
 
-      elsif !@min && @max
-        "has to be maximally #{@max}"
+            elsif !@min && @max
+              "has to be maximally #{@max}"
 
-      elsif @min && @max
-        "has to be in range <#{@min}, #{@max}>"
+            elsif @min && @max
+              "has to be in range <#{@min}, #{@max}>"
 
-      else
-        'has to be a number'
-      end
+            else
+              'has to be a number'
+            end
 
       if @step
         msg += '; ' unless msg.empty?
@@ -57,16 +57,16 @@ module HaveAPI
 
       if @odd
         msg += '; ' unless msg.empty?
-        msg += "odd"
+        msg += 'odd'
       end
 
       if @even
         msg += '; ' unless msg.empty?
-        msg += "even"
+        msg += 'even'
       end
 
       if @odd && @even
-        fail 'cannot be both odd and even at the same time'
+        raise 'cannot be both odd and even at the same time'
       end
 
       @message = take(:message, msg)
@@ -74,7 +74,7 @@ module HaveAPI
 
     def describe
       ret = {
-        message: @message,
+        message: @message
       }
 
       ret[:min] = @min if @min
@@ -90,6 +90,7 @@ module HaveAPI
     def valid?(v)
       if v.is_a?(::String)
         return false if /\A\d+\z/ !~ v
+
         v = v.to_i
       end
 
@@ -98,7 +99,7 @@ module HaveAPI
       ret = false if @max && v > @max
       ret = false if @step && (v - (@min || 0)) % @step != 0
       ret = false if @mod && v % @mod != 0
-      ret = false if @odd && v % 2 == 0
+      ret = false if @odd && v.even?
       ret = false if @even && v % 2 > 0
       ret
     end

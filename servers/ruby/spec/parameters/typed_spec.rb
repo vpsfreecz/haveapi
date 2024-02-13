@@ -2,21 +2,21 @@ require 'time'
 
 describe 'Parameters::Typed' do
   def p_type(type)
-    HaveAPI::Parameters::Typed.new(:param1, type: type)
+    HaveAPI::Parameters::Typed.new(:param1, type:)
   end
 
   def p_arg(arg = {})
-    HaveAPI::Parameters::Typed.new(*[:param1, arg])
+    HaveAPI::Parameters::Typed.new(:param1, arg)
   end
 
   it 'does not change provided arguments' do
     kwargs = {
       label: 'Param 1',
       desc: 'Desc',
-      required: true,
+      required: true
     }
     p_arg(kwargs)
-    expect(kwargs.keys).to contain_exactly(*%i(label desc required))
+    expect(kwargs.keys).to contain_exactly(*%i[label desc required])
   end
 
   it 'automatically sets label' do
@@ -63,11 +63,11 @@ describe 'Parameters::Typed' do
     # Boolean
     p = p_type(Boolean)
 
-    %w(true t yes y 1).each do |v|
+    %w[true t yes y 1].each do |v|
       expect(p.clean(v)).to be true
     end
 
-    %w(false f no n 0).each do |v|
+    %w[false f no n 0].each do |v|
       expect(p.clean(v)).to be false
     end
 

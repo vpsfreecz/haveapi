@@ -28,7 +28,7 @@ module HaveAPI::Spec
     # Two modes:
     #   http_method, path, params = {}
     #   [resource], action, params, &block
-    def call_api(*args, &block)
+    def call_api(*args, &)
       if args[0].is_a?(::Array) || args[1].is_a?(::Symbol)
         r_name, a_name, params = args
 
@@ -42,7 +42,7 @@ module HaveAPI::Spec
         method(action.http_method).call(
           path,
           params && params.to_json,
-          {'Content-Type' => 'application/json'}
+          { 'Content-Type' => 'application/json' }
         )
 
       else
@@ -51,7 +51,7 @@ module HaveAPI::Spec
         method(http_method).call(
           path,
           params && params.to_json,
-          {'Content-Type' => 'application/json'}
+          { 'Content-Type' => 'application/json' }
         )
       end
     end
@@ -79,22 +79,23 @@ module HaveAPI::Spec
       v = version || @api.default_version
       action, path = find_action(v, r_name, a_name)
       m = MockAction.new(self, @api, action, path, v)
-      m.call(params, user: user, &block)
+      m.call(params, user:, &block)
     end
 
     # Return parsed API response.
     # @return [HaveAPI::Spec::ApiResponse]
     def api_response
-      if last_response != @last_response
+      if last_response == @last_response
+        @api_response ||= ApiResponse.new(last_response.body)
+      else
         @last_response = last_response
         @api_response = ApiResponse.new(last_response.body)
 
-      else
-        @api_response ||= ApiResponse.new(last_response.body)
       end
     end
 
     protected
+
     def get_opt(name)
       self.class.opts && self.class.opts[name]
     end
@@ -113,7 +114,7 @@ module HaveAPI::Spec
         end.second
       end
 
-      top[:actions].detect do |k, v|
+      top[:actions].detect do |k, _v|
         k.to_s.demodulize.underscore.to_sym == a_name
       end
     end

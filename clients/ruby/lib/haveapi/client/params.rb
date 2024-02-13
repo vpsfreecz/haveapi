@@ -1,5 +1,5 @@
 module HaveAPI::Client
-  module Parameters ; end
+  module Parameters; end
 
   class Params
     attr_reader :errors, :params
@@ -16,12 +16,12 @@ module HaveAPI::Client
       @action.input_params.each do |name, p|
         next unless @data.has_key?(name)
 
-        if p[:type] == 'Resource'
-          @params[name] = Parameters::Resource.new(self, p, @data[name])
+        @params[name] = if p[:type] == 'Resource'
+                          Parameters::Resource.new(self, p, @data[name])
 
-        else
-          @params[name] = Parameters::Typed.new(self, p, @data[name])
-        end
+                        else
+                          Parameters::Typed.new(self, p, @data[name])
+                        end
       end
     end
 
@@ -36,10 +36,9 @@ module HaveAPI::Client
           next
         end
 
-        if !@params[name].valid?
+        unless @params[name].valid?
           error(name, @params[name].errors)
         end
-
       end
 
       @errors.empty?
@@ -58,6 +57,7 @@ module HaveAPI::Client
     end
 
     protected
+
     def error(param, msg)
       @errors[param] ||= []
 

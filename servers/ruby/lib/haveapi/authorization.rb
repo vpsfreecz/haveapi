@@ -33,8 +33,8 @@ module HaveAPI
     # @param blacklist [Array<Symbol>] allow all parameters except listed ones
     def input(whitelist: nil, blacklist: nil)
       @input = {
-        whitelist: whitelist,
-        blacklist: blacklist,
+        whitelist:,
+        blacklist:
       }
     end
 
@@ -43,8 +43,8 @@ module HaveAPI
     # @param blacklist [Array<Symbol>] allow all parameters except listed ones
     def output(whitelist: nil, blacklist: nil)
       @output = {
-        whitelist: whitelist,
-        blacklist: blacklist,
+        whitelist:,
+        blacklist:
       }
     end
 
@@ -75,6 +75,7 @@ module HaveAPI
     end
 
     private
+
     def filter_inner(allowed_params, direction, params, format)
       allowed = {}
 

@@ -11,16 +11,16 @@ module HaveAPI::Resources
       string :label, label: 'Label'
       bool :finished, label: 'Finished'
       bool :status, label: 'Status',
-          desc: 'Determines whether the action is proceeding or failing'
+                    desc: 'Determines whether the action is proceeding or failing'
       integer :current, label: 'Current progress'
       integer :total, label: 'Total',
-          desc: 'The action is finished when current equals to total'
+                      desc: 'The action is finished when current equals to total'
       string :unit, label: 'Unit', desc: 'Unit of current and total'
       bool :can_cancel, label: 'Can cancel',
-          desc: 'When true, execution of this action can be cancelled'
+                        desc: 'When true, execution of this action can be cancelled'
       datetime :created_at, label: 'Created at'
       datetime :updated_at, label: 'Updated at',
-          desc: 'When was the progress last updated'
+                            desc: 'When was the progress last updated'
     end
 
     module Mixin
@@ -31,15 +31,15 @@ module HaveAPI::Resources
           status: state.status,
           created_at: state.created_at,
           updated_at: state.updated_at,
-          can_cancel: state.can_cancel?,
+          can_cancel: state.can_cancel?
         }
 
-        if state.finished?
-          hash[:finished] = true
+        hash[:finished] = if state.finished?
+                            true
 
-        else
-          hash[:finished] = false
-        end
+                          else
+                            false
+                          end
 
         progress = state.progress
         hash[:current] = progress[:current] || 0
@@ -56,7 +56,7 @@ module HaveAPI::Resources
       desc 'List states of pending actions'
 
       input(:hash) do
-        string :order, choices: %w(newest oldest), default: 'newest', fill: true
+        string :order, choices: %w[newest oldest], default: 'newest', fill: true
       end
 
       output(:hash_list) do
@@ -92,8 +92,8 @@ module HaveAPI::Resources
       input(:hash) do
         float :timeout, label: 'Timeout', desc: 'in seconds', default: 15, fill: true
         float :update_in, label: 'Progress',
-            desc: 'number of seconds after which the state is returned if the progress '+
-                  'has changed'
+                          desc: 'number of seconds after which the state is returned if the progress ' +
+                                'has changed'
         bool :status, desc: 'status to check with if update_in is set'
         integer :current, desc: 'progress to check with if update_in is set'
         integer :total, desc: 'progress to check with if update_in is set'
@@ -122,7 +122,7 @@ module HaveAPI::Resources
           elsif input[:update_in]
             new_state = state_to_hash(state)
 
-            %i(status current total).each do |v|
+            %i[status current total].each do |v|
               return new_state if input[v] != new_state[v]
             end
           end
@@ -185,14 +185,11 @@ module HaveAPI::Resources
         else
           error('cancellation failed')
         end
-
       rescue RuntimeError, NotImplementedError => e
         error(e.message)
       end
 
-      def state_id
-        @state_id
-      end
+      attr_reader :state_id
     end
   end
 end

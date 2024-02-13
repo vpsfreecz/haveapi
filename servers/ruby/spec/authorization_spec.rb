@@ -37,7 +37,7 @@ describe HaveAPI::Authorization do
 
   it 'whitelists input' do
     auth = HaveAPI::Authorization.new do
-      input whitelist: %i(param1)
+      input whitelist: %i[param1]
       allow
     end
 
@@ -49,14 +49,14 @@ describe HaveAPI::Authorization do
       action.input.params,
       action.model_adapter(action.input.layout).input({
         param1: '123',
-        param2: '456',
+        param2: '456'
       })
     ).keys).to contain_exactly(:param1)
   end
 
   it 'blacklists input' do
     auth = HaveAPI::Authorization.new do
-      input blacklist: %i(param1)
+      input blacklist: %i[param1]
       allow
     end
 
@@ -68,14 +68,14 @@ describe HaveAPI::Authorization do
       action.input.params,
       action.model_adapter(action.input.layout).input({
         param1: '123',
-        param2: '456',
+        param2: '456'
       })
     ).keys).to contain_exactly(:param2)
   end
 
   it 'whitelists output' do
     auth = HaveAPI::Authorization.new do
-      output whitelist: %i(param1)
+      output whitelist: %i[param1]
       allow
     end
 
@@ -87,14 +87,14 @@ describe HaveAPI::Authorization do
       action.output.params,
       action.model_adapter(action.output.layout).output(nil, {
         param1: '123',
-        param2: '456',
+        param2: '456'
       })
     ).keys).to contain_exactly(:param1)
   end
 
   it 'blacklists output' do
     auth = HaveAPI::Authorization.new do
-      output blacklist: %i(param1)
+      output blacklist: %i[param1]
       allow
     end
 
@@ -106,7 +106,7 @@ describe HaveAPI::Authorization do
       action.output.params,
       action.model_adapter(action.output.layout).output(nil, {
         param1: '123',
-        param2: '456',
+        param2: '456'
       })
     ).keys).to contain_exactly(:param2)
   end

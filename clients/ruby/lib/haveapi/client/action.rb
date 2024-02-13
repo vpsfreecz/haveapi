@@ -29,13 +29,9 @@ module HaveAPI::Client
         params_arg = params.to_api
       end
 
-      ret = @api.call(self, params_arg, raw: raw)
+      ret = @api.call(self, params_arg, raw:)
       reset
       ret
-    end
-
-    def name
-      @name
     end
 
     def auth?
@@ -167,12 +163,12 @@ module HaveAPI::Client
 
       loop do
         res = client.action_state.poll(
-            id,
-            timeout: interval,
-            update_in: update_in,
-            status: last[:status],
-            current: last[:current],
-            total: last[:total],
+          id,
+          timeout: interval,
+          update_in:,
+          status: last[:status],
+          current: last[:current],
+          total: last[:total]
         )
 
         state = ActionState.new(res)
@@ -193,18 +189,19 @@ module HaveAPI::Client
           if ret.is_a?(Response)
             # The cancel is not a blocking operation, return immediately
             raise ActionFailed, ret unless ret.ok?
+
             return ret
           end
 
           # Cancel is a blocking operation
           if cancel_block
             return wait_for_completion(
-                client,
-                ret,
-                interval: interval,
-                timeout: timeout,
-                update_in: update_in,
-                &cancel_block
+              client,
+              ret,
+              interval:,
+              timeout:,
+              update_in:,
+              &cancel_block
             )
           end
 
@@ -215,16 +212,15 @@ module HaveAPI::Client
       end
 
       state.status
-
     rescue Interrupt => e
-      %i(show poll).each do |action|
+      %i[show poll].each do |action|
         client.action_state.actions[action].reset
       end
       raise e
     end
 
     def self.cancel(client, id)
-      res = client.action_state.cancel(id, meta: {block: false})
+      res = client.action_state.cancel(id, meta: { block: false })
 
       if res.ok? && res.action.blocking? && res.meta[:action_state_id]
         res.meta[:action_state_id]
@@ -235,6 +231,7 @@ module HaveAPI::Client
     end
 
     private
+
     def apply_args(args)
       @prepared_path ||= @spec[:path].dup
       @prepared_help ||= @spec[:help].dup

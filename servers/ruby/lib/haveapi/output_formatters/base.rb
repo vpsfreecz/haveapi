@@ -7,7 +7,7 @@ module HaveAPI::OutputFormatters
         @types ||= []
         @types += args
 
-        HaveAPI::OutputFormatter.register(Kernel.const_get(self.to_s)) unless @registered
+        HaveAPI::OutputFormatter.register(Kernel.const_get(to_s)) unless @registered
         @registered = true
       end
 
@@ -22,8 +22,6 @@ module HaveAPI::OutputFormatters
       self.class.types.first
     end
 
-    def format(response)
-
-    end
+    def format(response); end
   end
 end

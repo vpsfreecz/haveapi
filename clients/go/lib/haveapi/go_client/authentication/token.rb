@@ -23,7 +23,7 @@ module HaveAPI::GoClient
         api_version,
         :token,
         desc[:resources][:token],
-        prefix: 'auth_token',
+        prefix: 'auth_token'
       )
       resource.resolve_associations
     end
@@ -33,7 +33,7 @@ module HaveAPI::GoClient
         'authentication/token.go',
         {
           package: gen.package,
-          auth: self,
+          auth: self
         },
         File.join(gen.dst, 'auth_token.go')
       )
@@ -49,7 +49,7 @@ module HaveAPI::GoClient
     # @return [Array<Action>]
     def custom_actions
       @custom_actions ||= resource.actions.reject do |a|
-        %w(request renew revoke).include?(a.name)
+        %w[request renew revoke].include?(a.name)
       end
     end
   end

@@ -1,6 +1,6 @@
 module HaveAPI
   # Validators are stored in this module.
-  module Validators ; end
+  module Validators; end
 
   # Base class for all validators.
   #
@@ -45,7 +45,8 @@ module HaveAPI
       def use(opts)
         keys = opts.keys & @takes
 
-        fail 'too many keys' if keys.size > 1
+        raise 'too many keys' if keys.size > 1
+
         new(keys.first, opts.delete(keys.first))
       end
     end
@@ -94,6 +95,7 @@ module HaveAPI
     end
 
     protected
+
     # This method has three modes of function.
     #
     # 1. If `v` is nil, it returns `@opts`. It is used if `@opts` is not a hash
@@ -109,6 +111,7 @@ module HaveAPI
       else
         return default unless @opts.is_a?(::Hash)
         return @opts[v] unless @opts[v].nil?
+
         default
       end
     end

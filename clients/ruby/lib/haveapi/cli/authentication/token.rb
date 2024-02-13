@@ -22,7 +22,7 @@ module HaveAPI::CLI::Authentication
       end
 
       opts.on('--token-lifetime LIFETIME',
-              %i(fixed renewable_manual renewable_auto permanent),
+              %i[fixed renewable_manual renewable_auto permanent],
               'Token lifetime, defaults to renewable_auto') do |l|
         @lifetime = l
       end
@@ -36,7 +36,7 @@ module HaveAPI::CLI::Authentication
         @token = nil
       end
 
-      via = %i(query_param header)
+      via = %i[query_param header]
 
       opts.on('--token-via VIA', via,
               'Send token as a query parameter or in HTTP header',
@@ -61,12 +61,12 @@ module HaveAPI::CLI::Authentication
         lifetime: @lifetime || :renewable_auto,
         interval: @interval,
         valid_to: @valid_to,
-        via: @via,
+        via: @via
       }
 
       opts.update(@credentials) if @credentials
 
-      @communicator.authenticate(:token, opts) do |action, params|
+      @communicator.authenticate(:token, opts) do |_action, params|
         ret = {}
 
         params.each do |name, desc|
@@ -78,13 +78,14 @@ module HaveAPI::CLI::Authentication
     end
 
     def save
-      super.update({via: @via, interval: @interval})
+      super.update({ via: @via, interval: @interval })
     end
 
     protected
+
     def request_credentials
       desc[:resources][:token][:actions][:request][:input][:parameters].reject do |name, _|
-        %i(lifetime interval).include?(name)
+        %i[lifetime interval].include?(name)
       end
     end
   end

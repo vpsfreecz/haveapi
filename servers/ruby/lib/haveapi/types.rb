@@ -14,13 +14,10 @@ module Boolean
 end
 
 module Datetime
-
 end
 
 module Custom
-
 end
 
 class Text < String
-
 end

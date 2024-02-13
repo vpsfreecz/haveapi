@@ -5,7 +5,6 @@ require_rel '../lib/haveapi/spec/*.rb'
 module HaveAPI
   module Spec
     module API
-
     end
   end
 end

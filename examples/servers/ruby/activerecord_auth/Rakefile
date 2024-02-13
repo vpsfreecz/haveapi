@@ -14,7 +14,7 @@ desc 'Create admin user'
 task :create_admin do
   vals = {}
 
-  %i(username password).each do |v|
+  %i[username password].each do |v|
     STDOUT.write("#{v.capitalize}: ")
     STDOUT.flush
 
@@ -22,8 +22,8 @@ task :create_admin do
   end
 
   ::User.create!(
-      username: vals[:username],
-      password: ::User.hash_password(vals[:password]),
-      is_admin: true,
+    username: vals[:username],
+    password: ::User.hash_password(vals[:password]),
+    is_admin: true
   )
 end

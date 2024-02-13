@@ -1,4 +1,4 @@
-module HaveAPI::Spec    
+module HaveAPI::Spec
   # This class wraps raw reply from the API and provides a more friendly
   # interface.
   class ApiResponse

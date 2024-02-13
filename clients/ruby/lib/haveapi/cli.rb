@@ -2,7 +2,7 @@ require 'haveapi/client'
 
 module HaveAPI
   module CLI
-    module Commands ; end
+    module Commands; end
   end
 end
 

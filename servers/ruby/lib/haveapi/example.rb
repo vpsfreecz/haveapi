@@ -50,9 +50,13 @@ module HaveAPI
     end
 
     def provided?
-      instance_variables.detect do |v|
+      if instance_variables.detect do |v|
         instance_variable_get(v)
-      end ? true : false
+      end
+        true
+      else
+        false
+      end
     end
 
     def describe(context)
@@ -66,7 +70,7 @@ module HaveAPI
           status: @status.nil? ? true : @status,
           message: @message,
           errors: @errors,
-          http_status: @http_status || 200,
+          http_status: @http_status || 200
         }
       else
         {}
@@ -74,12 +78,13 @@ module HaveAPI
     end
 
     protected
+
     def filter_input_params(context, input)
       case context.action.input.layout
       when :object, :hash
         context.authorization.filter_input(
           context.action.input.params,
-          ModelAdapters::Hash.output(context, input),
+          ModelAdapters::Hash.output(context, input)
         )
 
       when :object_list, :hash_list

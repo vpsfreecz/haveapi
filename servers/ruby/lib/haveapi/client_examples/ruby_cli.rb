@@ -1,5 +1,5 @@
 module HaveAPI
-  module CLI ; end
+  module CLI; end
 end
 
 require 'haveapi/cli/output_formatter'
@@ -18,28 +18,28 @@ module HaveAPI::ClientExamples
     def auth(method, desc)
       case method
       when :basic
-        <<END
-# Provide credentials on command line
-#{init} --auth basic --user user --password secret
+        <<~END
+          # Provide credentials on command line
+          #{init} --auth basic --user user --password secret
 
-# If username or password isn't provided, the user is asked on stdin
-#{init} --auth basic --user user
-Password: secret
-END
+          # If username or password isn't provided, the user is asked on stdin
+          #{init} --auth basic --user user
+          Password: secret
+        END
 
       when :token
-        <<END
-# Get token using username and password and save it to disk
-# Note that the client always has to call some action. APIs should provide
-# an action to get information about the current user, so that's what we're
-# calling now.
-#{init} --auth token #{auth_token_credentials(desc, password: false).map { |k, v| "--#{k} #{v}" }.join(' ')} --save user current
-Password: secret
+        <<~END
+          # Get token using username and password and save it to disk
+          # Note that the client always has to call some action. APIs should provide
+          # an action to get information about the current user, so that's what we're
+          # calling now.
+          #{init} --auth token #{auth_token_credentials(desc, password: false).map { |k, v| "--#{k} #{v}" }.join(' ')} --save user current
+          Password: secret
 
-# Now the token is read from disk and the user does not have to provide username
-# nor password and be authenticated
-#{init} user current
-END
+          # Now the token is read from disk and the user does not have to provide username
+          # nor password and be authenticated
+          #{init} user current
+        END
 
       when :oauth2
         '# OAuth2 is not supported by HaveAPI Ruby CLI.'
@@ -56,7 +56,7 @@ END
         cmd << "-- \\\n"
 
         res = cmd.join(' ') + sample[:request].map do |k, v|
-          ' '*14 + input_param(k, v)
+          (' ' * 14) + input_param(k, v)
         end.join(" \\\n")
 
       else
@@ -84,17 +84,17 @@ END
 
       action[:output][:parameters].each do |name, param|
         col = {
-            name: name,
-            align: %w(Integer Float).include?(param[:type]) ? 'right' : 'left',
-            label: param[:label] && !param[:label].empty? ? param[:label] : name.upcase,
+            name:,
+            align: %w[Integer Float].include?(param[:type]) ? 'right' : 'left',
+            label: param[:label] && !param[:label].empty? ? param[:label] : name.upcase
         }
 
         if param[:type] == 'Resource'
-          col[:display] = Proc.new do |r|
+          col[:display] = proc do |r|
             next '' unless r
             next r unless r.is_a?(::Hash)
 
-            "#{r[ param[:value_label].to_sym ]} (##{r[ param[:value_id].to_sym ]})"
+            "#{r[param[:value_label].to_sym]} (##{r[param[:value_id].to_sym]})"
           end
         end
 
@@ -102,14 +102,14 @@ END
       end
 
       res << "\n" << HaveAPI::CLI::OutputFormatter.format(
-          sample[:response],
-          cols
+        sample[:response],
+        cols
       )
       res
     end
 
     def input_param(name, value)
-      option = name.to_s.gsub(/_/, '-')
+      option = name.to_s.gsub('_', '-')
 
       if action[:input][:parameters][name][:type] == 'Boolean'
         return value ? "--#{option}" : "--no-#{name}"

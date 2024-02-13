@@ -1,12 +1,12 @@
 module HaveAPI::Client
-  module Validators ; end
+  module Validators; end
 
   class Validator
     class << self
       def name(v)
         Validator.register(v, self)
       end
-      
+
       def register(name, klass)
         @validators ||= {}
         @validators[name] = klass
@@ -14,9 +14,9 @@ module HaveAPI::Client
 
       def validate(validators, param, other_params)
         ret = []
-        
+
         validators.each do |name, desc|
-          fail "unsupported validator '#{name}'" if @validators[name].nil?
+          raise "unsupported validator '#{name}'" if @validators[name].nil?
 
           v = @validators[name].new(desc, param, other_params)
           ret.concat(v.errors) unless v.valid?
@@ -35,7 +35,7 @@ module HaveAPI::Client
     end
 
     def errors
-      @errors || [opts[:message] % { value: value }]
+      @errors || [format(opts[:message], value:)]
     end
 
     def valid?
@@ -43,9 +43,8 @@ module HaveAPI::Client
     end
 
     protected
-    def opts
-      @opts
-    end
+
+    attr_reader :opts
 
     def error(e)
       @errors ||= []

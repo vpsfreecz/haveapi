@@ -1,5 +1,5 @@
 module HaveAPI::GoClient
-  module Authentication ; end
+  module Authentication; end
 
   module AuthenticationMethods
     # @param name [Symbol]
@@ -16,9 +16,9 @@ module HaveAPI::GoClient
 
     # @param api_version [ApiVersion]
     # @param name [String]
-    def self.new(api_version, name, *args)
+    def self.new(api_version, name, *)
       klass = get(name) || Authentication::Unsupported
-      klass.new(api_version, name, *args)
+      klass.new(api_version, name, *)
     end
   end
 end

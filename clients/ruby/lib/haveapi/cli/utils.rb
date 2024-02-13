@@ -6,12 +6,12 @@ module HaveAPI::CLI
       ret = '--'
       name = name.to_s.dasherize
 
-      if p[:type] == 'Boolean'
-        ret += "[no-]#{name}"
+      ret += if p[:type] == 'Boolean'
+               "[no-]#{name}"
 
-      else
-        ret += "#{name} [#{name.underscore.upcase}]"
-      end
+             else
+               "#{name} [#{name.underscore.upcase}]"
+             end
 
       ret
     end

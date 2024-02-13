@@ -9,6 +9,7 @@ module HaveAPI::Client
 
       if opts[:equal]
         return false if params[other].nil?
+
         value == params[other].value
 
       else

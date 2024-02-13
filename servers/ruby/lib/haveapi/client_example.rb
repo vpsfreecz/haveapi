@@ -1,5 +1,5 @@
 module HaveAPI
-  module ClientExamples ; end
+  module ClientExamples; end
 
   # All client example classes should inherit this class. Depending on the client,
   # the subclass may choose to implement either method `example` or `request` and
@@ -39,8 +39,8 @@ module HaveAPI
       end
 
       # Shortcut to {ClientExample#init}
-      def init(*args)
-        new(*args).init
+      def init(*)
+        new(*).init
       end
 
       # Shortcut to {ClientExample#auth}
@@ -68,24 +68,21 @@ module HaveAPI
       @resource_path, @resource, @action_name, @action = args
     end
 
-    def init
+    def init; end
 
-    end
-
-    def auth(method, desc)
-
-    end
+    def auth(method, desc); end
 
     def version_url
       File.join(base_url, "v#{version}", '/')
     end
 
     protected
+
     # @param password [Boolean] include password parameter
     # @return [Hash<String, String>] parameter => example value
     def auth_token_credentials(desc, password: true)
-      passwords = %i(password pass passwd)
-      params = desc[:resources][:token][:actions]['request'][:input][:parameters].keys - %i(lifetime interval)
+      passwords = %i[password pass passwd]
+      params = desc[:resources][:token][:actions]['request'][:input][:parameters].keys - %i[lifetime interval]
 
       unless password
         params.reject! { |param| passwords.include?(param) }

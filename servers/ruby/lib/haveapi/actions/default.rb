@@ -7,7 +7,7 @@ module HaveAPI
       class Index < Action
         route ''
         http_method :get
-        aliases %i(list)
+        aliases %i[list]
 
         meta(:global) do
           input do
@@ -26,32 +26,30 @@ module HaveAPI
         end
 
         # Return the total count of items.
-        def count
-
-        end
+        def count; end
       end
 
       class Create < Action
         route ''
         http_method :post
-        aliases %i(new)
+        aliases %i[new]
       end
 
       class Show < Action
-        route ->(r){ r.singular ? '' : '{%{resource}_id}' }
+        route ->(r) { r.singular ? '' : '{%{resource}_id}' }
         http_method :get
-        aliases %i(find)
+        aliases %i[find]
       end
 
       class Update < Action
-        route ->(r){ r.singular ? '' : '{%{resource}_id}' }
+        route ->(r) { r.singular ? '' : '{%{resource}_id}' }
         http_method :put
       end
 
       class Delete < Action
-        route ->(r){ r.singular ? '' : '{%{resource}_id}' }
+        route ->(r) { r.singular ? '' : '{%{resource}_id}' }
         http_method :delete
-        aliases %i(destroy)
+        aliases %i[destroy]
       end
     end
   end

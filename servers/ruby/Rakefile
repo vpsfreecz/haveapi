@@ -16,16 +16,15 @@ begin
   YARD::Rake::YardocTask.new do |t|
     t.files   = ['lib/**/*.rb']
     t.options = [
-        '--protected',
-        '--output-dir=html_doc',
-        '--files=doc/*.md',
-        '--files=doc/*.html'
+      '--protected',
+      '--output-dir=html_doc',
+      '--files=doc/*.md',
+      '--files=doc/*.html'
     ]
-    t.before = Proc.new do
+    t.before = proc do
       document_hooks.call
       render_doc_file('doc/json-schema.erb', 'doc/JSON-Schema.html').call
     end
   end
-
 rescue LoadError
 end

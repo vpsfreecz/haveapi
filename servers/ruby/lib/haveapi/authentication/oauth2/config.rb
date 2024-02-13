@@ -28,9 +28,7 @@ module HaveAPI::Authentication
       # @param oauth2_response [Rack::OAuth2::Server::Authorize::Response]
       # @param client [Client]
       # @return [AuthResult, nil]
-      def handle_get_authorize(sinatra_handler:, sinatra_request:, sinatra_params:, oauth2_request:, oauth2_response:, client:)
-
-      end
+      def handle_get_authorize(sinatra_handler:, sinatra_request:, sinatra_params:, oauth2_request:, oauth2_response:, client:); end
 
       # Handle POST authorize requests
       #
@@ -48,9 +46,7 @@ module HaveAPI::Authentication
       # @param oauth2_response [Rack::OAuth2::Server::Authorize::Response]
       # @param client [Client]
       # @return [AuthResult, nil]
-      def handle_post_authorize(sinatra_handler:, sinatra_request:, sinatra_params:, oauth2_request:, oauth2_response:, client:)
-
-      end
+      def handle_post_authorize(sinatra_handler:, sinatra_request:, sinatra_params:, oauth2_request:, oauth2_response:, client:); end
 
       # Get oauth2 authorization code
       #
@@ -60,9 +56,7 @@ module HaveAPI::Authentication
       #
       # @param auth_res [AuthResult] value returned by {#handle_post_authorize}
       # @return [String]
-      def get_authorization_code(auth_res)
-
-      end
+      def get_authorization_code(auth_res); end
 
       # Get access token, its expiration date and optionally a refresh token
       #
@@ -73,9 +67,7 @@ module HaveAPI::Authentication
       # @param authorization [Authorization]
       # @param sinatra_request [Sinatra::Request]
       # @return [Array] access token, expiration date and optional refresh token
-      def get_tokens(authorization, sinatra_request)
-
-      end
+      def get_tokens(authorization, sinatra_request); end
 
       # Refresh access token and optionally generate new refresh token
       #
@@ -85,9 +77,7 @@ module HaveAPI::Authentication
       # @param authorization [Authorization]
       # @param sinatra_request [Sinatra::Request]
       # @return [Array] access token, expiration date and optional refresh token
-      def refresh_tokens(authorization, sinatra_request)
-
-      end
+      def refresh_tokens(authorization, sinatra_request); end
 
       # Revoke access or refresh token
       #
@@ -98,40 +88,30 @@ module HaveAPI::Authentication
       # @param token [String]
       # @param token_type_hint [nil, 'access_token', 'refresh_token']
       # @return [:revoked, :unsupported]
-      def handle_post_revoke(sinatra_request, token, token_type_hint: nil)
-
-      end
+      def handle_post_revoke(sinatra_request, token, token_type_hint: nil); end
 
       # Find client by ID
       # @param client_id [String]
       # @return [Client, nil]
-      def find_client_by_id(client_id)
-
-      end
+      def find_client_by_id(client_id); end
 
       # Find authorization by code
       # @param client [Client]
       # @param code [String]
       # @return [Authorization, nil]
-      def find_authorization_by_code(client, code)
-
-      end
+      def find_authorization_by_code(client, code); end
 
       # Find authorization by refresh token
       # @param client [Client]
       # @param refresh_token [String]
       # @return [Authorization, nil]
-      def find_authorization_by_refresh_token(client, refresh_token)
-
-      end
+      def find_authorization_by_refresh_token(client, refresh_token); end
 
       # Find user by the bearer token sent in HTTP header or as a query parameter
       # @param sinatra_request [Sinatra::Request]
       # @param access_token [String]
       # @return [Object, nil] user
-      def find_user_by_access_token(request, access_token)
-
-      end
+      def find_user_by_access_token(request, access_token); end
 
       # Base URL of the authorization server, including protocol
       #
@@ -173,13 +153,13 @@ module HaveAPI::Authentication
           response_type: req.response_type,
           redirect_uri: req.redirect_uri,
           scope: req.scope.join(' '),
-          state: req.state,
+          state: req.state
         }
 
         if req.code_challenge.present? && req.code_challenge_method.present?
           ret.update(
             code_challenge: req.code_challenge,
-            code_challenge_method: req.code_challenge_method,
+            code_challenge_method: req.code_challenge_method
           )
         end
 

@@ -8,7 +8,7 @@ describe HaveAPI::Common do
     expect(Test1.attr1).to be_nil
     expect(Test1.attr2).to eq(42)
   end
-  
+
   class Test2 < HaveAPI::Common
     has_attr :attr1
     has_attr :attr2, 42

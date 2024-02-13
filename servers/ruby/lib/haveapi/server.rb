@@ -6,34 +6,34 @@ require 'haveapi/hooks'
 
 module HaveAPI
   class Server
-    attr_reader :root, :routes, :module_name, :auth_chain, :versions, :default_version,
-                :extensions
-    attr_accessor :action_state
+    attr_accessor :default_version, :action_state
+    attr_reader :root, :routes, :module_name, :auth_chain, :versions, :extensions
 
     include Hookable
 
     # Called after the user was authenticated (or not). The block is passed
     # current user object or nil as an argument.
     has_hook :post_authenticated,
-        desc: 'Called after the user was authenticated',
-        args: {
-          current_user: 'object returned by the authentication backend',
-        }
+             desc: 'Called after the user was authenticated',
+             args: {
+               current_user: 'object returned by the authentication backend'
+             }
 
     has_hook :description_exception,
-        desc: 'Called when an exception occurs when building self-description',
-        args: {
-          context: 'HaveAPI::Context',
-          exception: 'exception instance',
-        },
-        ret: {
-          http_status: 'HTTP status code to send to client',
-          message: 'error message sent to the client',
-        }
+             desc: 'Called when an exception occurs when building self-description',
+             args: {
+               context: 'HaveAPI::Context',
+               exception: 'exception instance'
+             },
+             ret: {
+               http_status: 'HTTP status code to send to client',
+               message: 'error message sent to the client'
+             }
 
     module ServerHelpers
       def setup_formatter
         return if @formatter
+
         @formatter = OutputFormatter.new
 
         unless @formatter.supports?(request.accept)
@@ -57,15 +57,15 @@ module HaveAPI
       end
 
       def access_control
-        if request.env['HTTP_ORIGIN'] && request.env['HTTP_ACCESS_CONTROL_REQUEST_METHOD']
-          halt 200, {
-            'Access-Control-Allow-Origin' => '*',
-            'Access-Control-Allow-Methods' => 'GET,POST,OPTIONS,PATCH,PUT,DELETE',
-            'Access-Control-Allow-Credentials' => 'false',
-            'Access-Control-Allow-Headers' => settings.api_server.allowed_headers,
-            'Access-Control-Max-Age' => (60*60).to_s
-          }, ''
-        end
+        return unless request.env['HTTP_ORIGIN'] && request.env['HTTP_ACCESS_CONTROL_REQUEST_METHOD']
+
+        halt 200, {
+          'Access-Control-Allow-Origin' => '*',
+          'Access-Control-Allow-Methods' => 'GET,POST,OPTIONS,PATCH,PUT,DELETE',
+          'Access-Control-Allow-Credentials' => 'false',
+          'Access-Control-Allow-Headers' => settings.api_server.allowed_headers,
+          'Access-Control-Max-Age' => (60 * 60).to_s
+        }, ''
       end
 
       def current_user
@@ -80,7 +80,7 @@ module HaveAPI
       def require_auth!
         report_error(
           401,
-          {'WWW-Authenticate' => 'Basic realm="Restricted Area"'},
+          { 'WWW-Authenticate' => 'Basic realm="Restricted Area"' },
           'Action requires user to authenticate'
         )
       end
@@ -106,12 +106,12 @@ module HaveAPI
       end
 
       def base_url
-        if request.env['HTTP_X_FORWARDED_SSL'] == 'on'
-          scheme = 'https'
+        scheme = if request.env['HTTP_X_FORWARDED_SSL'] == 'on'
+                   'https'
 
-        else
-          scheme = request.env['rack.url_scheme']
-        end
+                 else
+                   request.env['rack.url_scheme']
+                 end
 
         "#{scheme}://#{request.env['HTTP_HOST']}"
       end
@@ -140,6 +140,7 @@ module HaveAPI
     module DocHelpers
       def format_param_type(param)
         return param[:type] if param[:type] != 'Resource'
+
         "<a href=\"#root-#{param[:resource].join('-')}-show\">#{param[:type]}</a>"
       end
 
@@ -188,14 +189,11 @@ module HaveAPI
     end
 
     # Set default version of API.
-    def default_version=(v)
-      @default_version = v
-    end
 
     # Load routes for all resource from included API versions.
     # All routes are mounted under prefix `path`.
     # If no default version is set, the last included version is used.
-    def mount(prefix='/')
+    def mount(prefix = '/')
       @root = prefix
 
       @sinatra = Sinatra.new do
@@ -246,10 +244,10 @@ module HaveAPI
         authenticated?(settings.api_server.default_version)
 
         @api = settings.api_server.describe(Context.new(
-          settings.api_server,
-          user: current_user,
-          params: params
-        ))
+                                              settings.api_server,
+                                              user: current_user,
+                                              params:
+                                            ))
 
         content_type 'text/html'
         erb :index, layout: :main_layout
@@ -261,27 +259,27 @@ module HaveAPI
         authenticated?(settings.api_server.default_version)
         ret = nil
 
-        case params[:describe]
-        when 'versions'
-          ret = {
-            versions: settings.api_server.versions,
-            default: settings.api_server.default_version
-          }
+        ret = case params[:describe]
+              when 'versions'
+                {
+                  versions: settings.api_server.versions,
+                  default: settings.api_server.default_version
+                }
 
-        when 'default'
-          ret = settings.api_server.describe_version(Context.new(
-            settings.api_server,
-            version: settings.api_server.default_version,
-            user: current_user, params: params
-          ))
+              when 'default'
+                settings.api_server.describe_version(Context.new(
+                                                       settings.api_server,
+                                                       version: settings.api_server.default_version,
+                                                       user: current_user, params:
+                                                     ))
 
-        else
-          ret = settings.api_server.describe(Context.new(
-            settings.api_server,
-            user: current_user,
-            params: params
-          ))
-        end
+              else
+                settings.api_server.describe(Context.new(
+                                               settings.api_server,
+                                               user: current_user,
+                                               params:
+                                             ))
+              end
 
         @formatter.format(true, ret)
       end
@@ -315,7 +313,6 @@ module HaveAPI
         erb :doc_layout, layout: :main_layout do
           begin
             @content = doc(f)
-
           rescue Errno::ENOENT
             halt 404
           end
@@ -359,11 +356,11 @@ module HaveAPI
 
         @v = v
         @help = settings.api_server.describe_version(Context.new(
-          settings.api_server,
-          version: v,
-          user: current_user,
-          params: params
-        ))
+                                                       settings.api_server,
+                                                       version: v,
+                                                       user: current_user,
+                                                       params:
+                                                     ))
 
         content_type 'text/html'
         erb :doc_layout, layout: :main_layout do
@@ -378,11 +375,11 @@ module HaveAPI
         authenticated?(v)
 
         @formatter.format(true, settings.api_server.describe_version(Context.new(
-          settings.api_server,
-          version: v,
-          user: current_user,
-          params: params
-        )))
+                                                                       settings.api_server,
+                                                                       version: v,
+                                                                       user: current_user,
+                                                                       params:
+                                                                     )))
       end
 
       # Register blocking resource
@@ -413,7 +410,7 @@ module HaveAPI
     end
 
     def mount_resource(prefix, v, resource, hash)
-      hash[resource] = {resources: {}, actions: {}}
+      hash[resource] = { resources: {}, actions: {} }
 
       resource.routes(prefix).each do |route|
         if route.is_a?(Hash)
@@ -430,7 +427,7 @@ module HaveAPI
     end
 
     def mount_nested_resource(v, routes)
-      ret = {resources: {}, actions: {}}
+      ret = { resources: {}, actions: {} }
 
       routes.each do |route|
         if route.is_a?(Hash)
@@ -460,27 +457,26 @@ module HaveAPI
         begin
           body = request.body.read
 
-          if body.empty?
-            body = nil
-          else
-            body = JSON.parse(body, symbolize_names: true)
-          end
-
-        rescue => e
+          body = if body.empty?
+                   nil
+                 else
+                   JSON.parse(body, symbolize_names: true)
+                 end
+        rescue StandardError => e
           report_error(400, {}, 'Bad JSON syntax')
         end
 
         action = route.action.new(request, v, params, body, Context.new(
-          settings.api_server,
-          version: v,
-          request: self,
-          action: route.action,
-          path: route.path,
-          params: params,
-          user: current_user,
-          endpoint: true,
-          resource_path: route.resource_path,
-        ))
+                                                              settings.api_server,
+                                                              version: v,
+                                                              request: self,
+                                                              action: route.action,
+                                                              path: route.path,
+                                                              params:,
+                                                              user: current_user,
+                                                              endpoint: true,
+                                                              resource_path: route.resource_path
+                                                            ))
 
         unless action.authorized?(current_user)
           report_error(403, {}, 'Access denied. Insufficient permissions.')
@@ -493,11 +489,11 @@ module HaveAPI
           http_status || 200,
           @formatter.format(
             status,
-            status  ? reply : nil,
-            !status ? reply : nil,
+            status ? reply : nil,
+            status ? nil : reply,
             errors,
             version: false
-          ),
+          )
         ]
       end
 
@@ -520,11 +516,11 @@ module HaveAPI
           request: self,
           action: route.action,
           path: route.path,
-          args: args,
-          params: params,
+          args:,
+          params:,
           user: current_user,
           endpoint: true,
-          resource_path: route.resource_path,
+          resource_path: route.resource_path
         )
 
         begin
@@ -533,8 +529,7 @@ module HaveAPI
           unless desc
             report_error(403, {}, 'Access denied. Insufficient permissions.')
           end
-
-        rescue => e
+        rescue StandardError => e
           tmp = settings.api_server.call_hooks_for(:description_exception, args: [ctx, e])
           report_error(
             tmp[:http_status] || 500,
@@ -552,7 +547,7 @@ module HaveAPI
 
       ret = {
         default_version: @default_version,
-        versions: {default: describe_version(context)},
+        versions: { default: describe_version(context) }
       }
 
       @versions.each do |v|
@@ -571,7 +566,7 @@ module HaveAPI
         help: version_prefix(context.version)
       }
 
-      #puts JSON.pretty_generate(@routes)
+      # puts JSON.pretty_generate(@routes)
 
       @routes[context.version][:resources].each do |resource, children|
         r_name = resource.resource_name.underscore
@@ -601,7 +596,7 @@ module HaveAPI
     end
 
     def add_auth_module(v, name, mod, prefix: '')
-      @routes[v] ||= {authentication: {name => {resources: {}}}}
+      @routes[v] ||= { authentication: { name => { resources: {} } } }
 
       HaveAPI.get_version_resources(mod, v).each do |r|
         mount_resource("#{@root}_auth/#{prefix}/", v, r, @routes[v][:authentication][name][:resources])
@@ -615,6 +610,7 @@ module HaveAPI
 
     def allowed_headers
       return @allowed_headers_str if @allowed_headers_str
+
       @allowed_headers_str = @allowed_headers.join(',')
     end
 
@@ -627,6 +623,7 @@ module HaveAPI
     end
 
     private
+
     def do_authenticate(v, request)
       @auth_chain.authenticate(v, request)
     end

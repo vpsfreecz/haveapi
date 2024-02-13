@@ -1,7 +1,7 @@
 require 'rack/test'
 
 module HaveAPI
-  module Spec ; end
+  module Spec; end
 end
 
 require_relative 'api_builder'

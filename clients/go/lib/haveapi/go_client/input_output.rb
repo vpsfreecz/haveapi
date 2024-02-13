@@ -37,7 +37,7 @@ module HaveAPI::GoClient
       @parameters = desc[:parameters].map do |k, v|
         Parameter.new(role, direction, self, k.to_s, v)
       end.compact.sort!
-      @go_type = action.go_type + (prefix ? prefix : '') + direction.to_s.capitalize
+      @go_type = action.go_type + (prefix || '') + direction.to_s.capitalize
       @go_namespace = camelize(desc[:namespace])
     end
 

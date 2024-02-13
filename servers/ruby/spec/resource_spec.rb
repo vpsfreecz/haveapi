@@ -1,6 +1,5 @@
 describe HaveAPI::Resource do
   class PluralTest < HaveAPI::Resource
-    
   end
 
   class SingularTest < HaveAPI::Resource
@@ -21,14 +20,14 @@ describe HaveAPI::Resource do
   end
 
   class ComplexTest < HaveAPI::Resource
-    class Index < HaveAPI::Actions::Default::Index ; end
-    class Show < HaveAPI::Actions::Default::Show ; end
-    class Create < HaveAPI::Actions::Default::Create ; end
-    class Dummy ; end
+    class Index < HaveAPI::Actions::Default::Index; end
+    class Show < HaveAPI::Actions::Default::Show; end
+    class Create < HaveAPI::Actions::Default::Create; end
+    class Dummy; end
 
     class SubResource < HaveAPI::Resource
-      class Index < HaveAPI::Actions::Default::Index ; end
-      class Show < HaveAPI::Actions::Default::Show ; end
+      class Index < HaveAPI::Actions::Default::Index; end
+      class Show < HaveAPI::Actions::Default::Show; end
     end
   end
 

@@ -65,14 +65,10 @@ module HaveAPI
     end
 
     # @return [Time]
-    def created_at
-
-    end
+    def created_at; end
 
     # @return [Time]
-    def updated_at
-
-    end
+    def updated_at; end
 
     # @return [Boolean] true if the action can be cancelled
     def can_cancel?

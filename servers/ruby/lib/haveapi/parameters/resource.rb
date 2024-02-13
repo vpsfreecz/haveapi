@@ -4,8 +4,8 @@ module HaveAPI::Parameters
                 :choices, :value_params
 
     def initialize(resource, name: nil, label: nil, desc: nil,
-        choices: nil, value_id: :id, value_label: :label, required: nil,
-        db_name: nil, fetch: nil)
+                   choices: nil, value_id: :id, value_label: :label, required: nil,
+                   db_name: nil, fetch: nil)
       @resource = resource
       @resource_path = build_resource_path(resource)
       @name = name || resource.resource_name.underscore.to_sym
@@ -17,7 +17,7 @@ module HaveAPI::Parameters
       @required = required
       @db_name = db_name
       @extra = {
-          fetch: fetch
+          fetch:
       }
     end
 
@@ -65,7 +65,7 @@ module HaveAPI::Parameters
         value: context.action_prepare && {
           path: val_path,
           method: val_method,
-          help: "#{val_path}?method=#{val_method}",
+          help: "#{val_path}?method=#{val_method}"
         },
         choices: {
           path: choices_path,
@@ -76,13 +76,13 @@ module HaveAPI::Parameters
     end
 
     def validate_build_output
-      %i(value_id value_label).each do |name|
+      %i[value_id value_label].each do |name|
         v = instance_variable_get("@#{name}")
 
         [show_action, show_index].each do |klass|
           next unless klass.instance_variable_get('@output')[v].nil?
 
-          fail "association to '#{@resource}': value_label '#{v}' is not an output parameter of '#{klass}'"
+          raise "association to '#{@resource}': value_label '#{v}' is not an output parameter of '#{klass}'"
         end
       end
     end
@@ -106,6 +106,7 @@ module HaveAPI::Parameters
     end
 
     private
+
     def build_resource_path(r)
       path = []
       top_module = Kernel
@@ -115,7 +116,6 @@ module HaveAPI::Parameters
 
         begin
           top_module.obj_type
-
         rescue NoMethodError
           next
         end

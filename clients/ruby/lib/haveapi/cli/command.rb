@@ -41,9 +41,7 @@ module HaveAPI::CLI
       @api = client
     end
 
-    def options(opts)
-
-    end
+    def options(opts); end
 
     def exec(args)
       raise NotImplementedError

@@ -30,8 +30,7 @@ module HaveAPI
       # Register custom path handlers in sinatra
       # @param sinatra [Sinatra::Base]
       # @param prefix [String]
-      def register_routes(sinatra, prefix)
-      end
+      def register_routes(sinatra, prefix); end
 
       # @return [Module, nil]
       def resource_module
@@ -40,9 +39,7 @@ module HaveAPI
 
       # Reimplement this method in your authentication provider.
       # `request` is passed directly from Sinatra.
-      def authenticate(request)
-
-      end
+      def authenticate(request); end
 
       # Reimplement to describe provider.
       def describe
@@ -50,10 +47,9 @@ module HaveAPI
       end
 
       protected
-      # Called during API mount.
-      def setup
 
-      end
+      # Called during API mount.
+      def setup; end
 
       # Immediately return from authentication chain.
       # User is not allowed to authenticate.

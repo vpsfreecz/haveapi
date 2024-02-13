@@ -6,7 +6,6 @@ describe HaveAPI::Params do
     end
 
     class Index < HaveAPI::Actions::Default::Index
-
     end
 
     class Show < HaveAPI::Actions::Default::Show
@@ -16,17 +15,16 @@ describe HaveAPI::Params do
     end
 
     class Create < HaveAPI::Actions::Default::Create
-
     end
   end
 
   it 'executes all blocks' do
     p = HaveAPI::Params.new(:input, MyResource::Index)
-    p.add_block Proc.new { string :param1 }
-    p.add_block Proc.new { string :param2 }
-    p.add_block Proc.new { string :param3 }
+    p.add_block proc { string :param1 }
+    p.add_block proc { string :param2 }
+    p.add_block proc { string :param3 }
     p.exec
-    expect(p.params.map { |p| p.name }).to contain_exactly(*%i(param1 param2 param3))
+    expect(p.params.map { |p| p.name }).to contain_exactly(*%i[param1 param2 param3])
   end
 
   it 'returns deduced singular namespace' do
@@ -48,43 +46,43 @@ describe HaveAPI::Params do
 
   it 'uses params from parent resource' do
     p = HaveAPI::Params.new(:input, MyResource::Index)
-    p.add_block Proc.new { use :all }
+    p.add_block proc { use :all }
     p.exec
-    expect(p.params.map { |p| p.name }).to contain_exactly(*%i(res_param1 res_param2))
+    expect(p.params.map { |p| p.name }).to contain_exactly(*%i[res_param1 res_param2])
   end
 
   it 'has param requires' do
     p = HaveAPI::Params.new(:input, MyResource::Index)
-    p.add_block Proc.new { requires :p_required }
+    p.add_block proc { requires :p_required }
     p.exec
     expect(p.params.first.required?).to be true
   end
 
   it 'has param optional' do
     p = HaveAPI::Params.new(:input, MyResource::Index)
-    p.add_block Proc.new { optional :p_optional }
+    p.add_block proc { optional :p_optional }
     p.exec
     expect(p.params.first.required?).to be false
   end
 
   it 'has param string' do
     p = HaveAPI::Params.new(:input, MyResource::Index)
-    p.add_block Proc.new { string :p_string }
+    p.add_block proc { string :p_string }
     p.exec
     expect(p.params.first.type).to eq(String)
   end
 
   it 'has param text' do
     p = HaveAPI::Params.new(:input, MyResource::Index)
-    p.add_block Proc.new { text :p_text }
+    p.add_block proc { text :p_text }
     p.exec
     expect(p.params.first.type).to eq(Text)
   end
 
-  %i(id integer foreign_key).each do |type|
+  %i[id integer foreign_key].each do |type|
     it "has param #{type}" do
       p = HaveAPI::Params.new(:input, MyResource::Index)
-      p.add_block Proc.new { send(type, :"p_#{type}") }
+      p.add_block proc { send(type, :"p_#{type}") }
       p.exec
       expect(p.params.first.type).to eq(Integer)
     end
@@ -92,42 +90,42 @@ describe HaveAPI::Params do
 
   it 'has param float' do
     p = HaveAPI::Params.new(:input, MyResource::Index)
-    p.add_block Proc.new { float :p_float }
+    p.add_block proc { float :p_float }
     p.exec
     expect(p.params.first.type).to eq(Float)
   end
 
   it 'has param bool' do
     p = HaveAPI::Params.new(:input, MyResource::Index)
-    p.add_block Proc.new { bool :p_bool }
+    p.add_block proc { bool :p_bool }
     p.exec
     expect(p.params.first.type).to eq(Boolean)
   end
 
   it 'has param datetime' do
     p = HaveAPI::Params.new(:input, MyResource::Index)
-    p.add_block Proc.new { datetime :p_datetime }
+    p.add_block proc { datetime :p_datetime }
     p.exec
     expect(p.params.first.type).to eq(Datetime)
   end
 
   it 'has param param' do
     p = HaveAPI::Params.new(:input, MyResource::Index)
-    p.add_block Proc.new { param :p_param, type: Integer }
+    p.add_block proc { param :p_param, type: Integer }
     p.exec
     expect(p.params.first.type).to eq(Integer)
   end
 
   it 'has param resource' do
     p = HaveAPI::Params.new(:input, MyResource::Index)
-    p.add_block Proc.new { resource MyResource }
+    p.add_block proc { resource MyResource }
     p.exec
     expect(p.params.first).to be_an_instance_of(HaveAPI::Parameters::Resource)
   end
 
   it 'patches params' do
     p = HaveAPI::Params.new(:input, MyResource::Index)
-    p.add_block(Proc.new do
+    p.add_block(proc do
       string :param1, label: 'Param 1'
       string :param2, label: 'Param 2', desc: 'Implicit description'
     end)
@@ -140,7 +138,7 @@ describe HaveAPI::Params do
 
   it 'validates upon build' do
     p = HaveAPI::Params.new(:output, MyResource::Index)
-    p.add_block Proc.new { resource MyResource }
+    p.add_block proc { resource MyResource }
     p.exec
     expect(p.params.first).to be_an_instance_of(HaveAPI::Parameters::Resource)
     expect { p.validate_build }.to raise_error(RuntimeError)
@@ -148,7 +146,7 @@ describe HaveAPI::Params do
 
   it 'accepts valid input layout' do
     p = HaveAPI::Params.new(:input, MyResource::Index)
-    p.add_block(Proc.new do
+    p.add_block(proc do
       string :param1, required: true
       string :param2
     end)
@@ -163,7 +161,7 @@ describe HaveAPI::Params do
 
   it 'rejects invalid input layout' do
     p = HaveAPI::Params.new(:input, MyResource::Index)
-    p.add_block(Proc.new do
+    p.add_block(proc do
       string :param1, required: true
       string :param2
     end)
@@ -178,7 +176,7 @@ describe HaveAPI::Params do
 
   it 'indexes parameters by name' do
     p = HaveAPI::Params.new(:input, MyResource::Index)
-    p.add_block(Proc.new do
+    p.add_block(proc do
       string :param1
       string :param2
     end)

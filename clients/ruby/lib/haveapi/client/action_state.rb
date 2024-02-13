@@ -11,7 +11,7 @@ module HaveAPI::Client
       end
     end
 
-    attr_reader :progress
+    attr_reader :progress, :cancel_block
 
     def initialize(response)
       @data = response.response
@@ -26,7 +26,7 @@ module HaveAPI::Client
     def status
       @data[:status] === true
     end
-    
+
     def finished?
       @data[:finished] === true
     end
@@ -40,7 +40,7 @@ module HaveAPI::Client
     # is used only if the cancel operation is blocking.
     def cancel(&block)
       unless can_cancel?
-        fail "action ##{@data[:id]} (#{label}) cannot be cancelled"
+        raise "action ##{@data[:id]} (#{label}) cannot be cancelled"
       end
 
       @cancel = true
@@ -51,10 +51,6 @@ module HaveAPI::Client
       @cancel === true
     end
 
-    def cancel_block
-      @cancel_block
-    end
-    
     # Stop monitoring the action's state, the call from Action.wait_for_completion
     # will return.
     def stop

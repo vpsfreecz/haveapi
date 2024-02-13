@@ -7,61 +7,61 @@ module HaveAPI::ClientExamples
     order 10
 
     def init
-      <<END
-import HaveAPI from 'haveapi-client'
+      <<~END
+        import HaveAPI from 'haveapi-client'
 
-var api = new HaveAPI.Client("#{base_url}", {version: "#{version}"});
-END
+        var api = new HaveAPI.Client("#{base_url}", {version: "#{version}"});
+      END
     end
 
     def auth(method, desc)
       case method
       when :basic
-        <<END
-#{init}
+        <<~END
+          #{init}
 
-api.authenticate("basic", {
-  user: "user",
-  password: "secret"
-}, function (client, status) {
-  console.log("Authenticated?", status);
-});
-END
+          api.authenticate("basic", {
+            user: "user",
+            password: "secret"
+          }, function (client, status) {
+            console.log("Authenticated?", status);
+          });
+        END
 
       when :token
-        <<END
-#{init}
+        <<~END
+          #{init}
 
-// Request a new token
-api.authenticate("token", {
-  #{auth_token_credentials(desc).map { |k, v| "#{k}: \"#{v}\"" }.join(",\n  ")}
-}, function (client, status) {
-  console.log("Authenticated?", status);
+          // Request a new token
+          api.authenticate("token", {
+            #{auth_token_credentials(desc).map { |k, v| "#{k}: \"#{v}\"" }.join(",\n  ")}
+          }, function (client, status) {
+            console.log("Authenticated?", status);
 
-  if (status)
-    console.log("Token is", client.authProvider.token);
-});
+            if (status)
+              console.log("Token is", client.authProvider.token);
+          });
 
-// Use an existing token
-api.authenticate("token", {
-  token: "qwertyuiop..."
-}, function (client, status) {
-  console.log("Authenticated?", status);
-});
-END
+          // Use an existing token
+          api.authenticate("token", {
+            token: "qwertyuiop..."
+          }, function (client, status) {
+            console.log("Authenticated?", status);
+          });
+        END
 
       when :oauth2
-        <<END
-#{init}
-// The JavaScript client must be configured with OAuth2 access token, it does not
-// support the authorization procedure to obtain a new access token.
-var accessToken = {
-  access_token: "the access token"
-};
+        <<~END
+          #{init}
+          // The JavaScript client must be configured with OAuth2 access token, it does not
+          // support the authorization procedure to obtain a new access token.
+          var accessToken = {
+            access_token: "the access token"
+          };
 
-// The client is authenticated immediately, no need for a callback
-api.authenticate("oauth2", {access_token: accessToken});
-END
+          // The client is authenticated immediately, no need for a callback
+          api.authenticate("oauth2", {access_token: accessToken});
+        END
       end
     end
 
@@ -82,14 +82,14 @@ END
       callback = "function (client, reply) {\n"
       callback << "  console.log('Response', reply);\n"
 
-      if sample[:status]
-        callback << response(sample)
+      callback << if sample[:status]
+                    response(sample)
 
-      else
-        callback << error(sample)
-      end
+                  else
+                    error(sample)
+                  end
 
-      callback << "}"
+      callback << '}'
 
       out << callback.strip
       out << ');'
@@ -124,11 +124,11 @@ END
             out << "  // reply.#{k} = HaveAPI.Client.ResourceInstance("
             out << "resource: #{param[:resource].join('.')}, "
 
-            if v.is_a?(::Hash)
-              out << v.map { |k,v| "#{k}: #{PP.pp(v, '').strip}" }.join(', ')
-            else
-              out << "id: #{v}"
-            end
+            out << if v.is_a?(::Hash)
+                     v.map { |k, v| "#{k}: #{PP.pp(v, '').strip}" }.join(', ')
+                   else
+                     "id: #{v}"
+                   end
 
             out << ")\n"
 
@@ -149,7 +149,6 @@ END
       end
 
       out
-
     end
 
     def error(sample)

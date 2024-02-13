@@ -19,8 +19,8 @@ module HaveAPI
       ret
     end
 
-    def each(&block)
-      @examples.each(&block)
+    def each(&)
+      @examples.each(&)
     end
 
     include Enumerable

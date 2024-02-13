@@ -8,7 +8,7 @@ module HaveAPI::Client::Authentication
       RestClient::Resource.new(@communicator.url, @opts[:user], @opts[:password])
     end
 
-    def user ; @opts[:user] ; end
-    def password ; @opts[:password] ; end
+    def user = @opts.[](:user)
+    def password = @opts.[](:password)
   end
 end

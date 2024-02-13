@@ -23,8 +23,7 @@ module HaveAPI
       @equal = take(:equal, true)
       @message = take(
         :message,
-        @equal ? "must be the same as #{@param}"
-               : "must be different from #{@param}"
+        @equal ? "must be the same as #{@param}" : "must be different from #{@param}"
       )
     end
 
@@ -32,7 +31,7 @@ module HaveAPI
       {
         equal: @equal ? true : false,
         parameter: @param,
-        message: @message,
+        message: @message
       }
     end
 

@@ -1,5 +1,5 @@
 module HaveAPI::Client
-  class ProtocolError < StandardError ; end
+  class ProtocolError < StandardError; end
 
   class ActionFailed < StandardError
     attr_reader :response

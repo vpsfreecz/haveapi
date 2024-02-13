@@ -2,11 +2,12 @@ require 'haveapi/go_client/parameters/base'
 
 module HaveAPI::GoClient
   class Parameters::Typed < Parameters::Base
-    handle do |role, direction, name, desc|
-      !%w(Custom Resource).include?(desc[:type])
+    handle do |_role, _direction, _name, desc|
+      !%w[Custom Resource].include?(desc[:type])
     end
 
     protected
+
     def do_resolve
       @go_in_type = get_go_type(desc[:type])
       @go_out_type = get_go_type(desc[:type])
@@ -23,7 +24,7 @@ module HaveAPI::GoClient
       when 'Boolean'
         'bool'
       else
-        fail "unsupported data type '#{v}'"
+        raise "unsupported data type '#{v}'"
       end
     end
   end

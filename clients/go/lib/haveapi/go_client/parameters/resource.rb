@@ -2,7 +2,7 @@ require 'haveapi/go_client/parameters/base'
 
 module HaveAPI::GoClient
   class Parameters::Resource < Parameters::Base
-    handle do |role, direction, name, desc|
+    handle do |_role, _direction, _name, desc|
       desc[:type] == 'Resource'
     end
 
@@ -15,6 +15,7 @@ module HaveAPI::GoClient
     end
 
     protected
+
     def do_resolve
       @association = Parameters::Association.new(self, desc)
       @go_in_type = 'int64'

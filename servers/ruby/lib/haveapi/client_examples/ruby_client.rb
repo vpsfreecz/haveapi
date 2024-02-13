@@ -8,34 +8,34 @@ module HaveAPI::ClientExamples
     order 0
 
     def init
-      <<END
-require 'haveapi-client'
+      <<~END
+        require 'haveapi-client'
 
-client = HaveAPI::Client.new("#{base_url}", version: "#{version}")
-END
+        client = HaveAPI::Client.new("#{base_url}", version: "#{version}")
+      END
     end
 
     def auth(method, desc)
       case method
       when :basic
-        <<END
-#{init}
+        <<~END
+          #{init}
 
-client.authenticate(:basic, user: "user", password: "secret")
-END
+          client.authenticate(:basic, user: "user", password: "secret")
+        END
 
       when :token
-        <<END
-#{init}
+        <<~END
+          #{init}
 
-# Get token using username and password
-client.authenticate(:token, #{auth_token_credentials(desc).map { |k, v| "#{k}: \"#{v}\"" }.join(', ')})
+          # Get token using username and password
+          client.authenticate(:token, #{auth_token_credentials(desc).map { |k, v| "#{k}: \"#{v}\"" }.join(', ')})
 
-puts "Token = \#{client.auth.token}"
+          puts "Token = \#{client.auth.token}"
 
-# Next time, the client can authenticate using the token directly
-client.authenticate(:token, token: saved_token)
-END
+          # Next time, the client can authenticate using the token directly
+          client.authenticate(:token, token: saved_token)
+        END
 
       when :oauth2
         '# OAuth2 is not supported by HaveAPI Ruby client.'
@@ -58,7 +58,7 @@ END
       return (out << response(sample)) if sample[:status]
 
       out << "\n"
-      out << "# Raises exception HaveAPI::Client::ActionFailed"
+      out << '# Raises exception HaveAPI::Client::ActionFailed'
       out
     end
 
@@ -86,11 +86,11 @@ END
             out << "# reply.#{k} = HaveAPI::Client::ResourceInstance("
             out << "resource: #{param[:resource].join('.')}, "
 
-            if v.is_a?(::Hash)
-              out << v.map { |k,v| "#{k}: #{PP.pp(v, '').strip}" }.join(', ')
-            else
-              out << "id: #{v}"
-            end
+            out << if v.is_a?(::Hash)
+                     v.map { |k, v| "#{k}: #{PP.pp(v, '').strip}" }.join(', ')
+                   else
+                     "id: #{v}"
+                   end
 
             out << ")\n"
 
@@ -101,7 +101,7 @@ END
 
       when :object_list
         out << "# reply is an instance of HaveAPI::Client::ResourceInstanceList,\n"
-        out << "# which is a subclass of Array"
+        out << '# which is a subclass of Array'
       end
 
       out

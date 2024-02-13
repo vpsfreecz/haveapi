@@ -6,7 +6,7 @@ module HaveAPI::ModelAdapters
     register
 
     def self.handle?(layout, klass)
-      klass < ::ActiveRecord::Base && %i(object object_list).include?(layout)
+      klass < ::ActiveRecord::Base && %i[object object_list].include?(layout)
     end
 
     def self.load_validators(model, params)
@@ -34,10 +34,10 @@ module HaveAPI::ModelAdapters
           # it well, it is not necessary to fix.
           args.concat(ar_default_includes).uniq
 
-          if !args.empty?
-            q.includes(*args)
-          else
+          if args.empty?
             q
+          else
+            q.includes(*args)
           end
         end
 
@@ -45,6 +45,7 @@ module HaveAPI::ModelAdapters
         # in an array of symbols and hashes.
         def ar_parse_includes(raw)
           return @ar_parsed_includes if @ar_parsed_includes
+
           @ar_parsed_includes = ar_inner_includes(raw).select do |inc|
             # Drop associations that are not registered in the AR:
             #   The API resource may have associations that are not based on
@@ -115,39 +116,37 @@ module HaveAPI::ModelAdapters
         action.meta(:object) do
           output do
             custom :path_params, label: 'URL parameters',
-                   desc: 'An array of parameters needed to resolve URL to this object'
+                                 desc: 'An array of parameters needed to resolve URL to this object'
             bool :resolved, label: 'Resolved', desc: 'True if the association is resolved'
           end
         end
 
-        if %i(object object_list).include?(action.input.layout)
-          clean = Proc.new do |raw|
-            if raw.is_a?(String)
-              raw.strip.split(',')
-            elsif raw.is_a?(Array)
-              raw
-            else
-              nil
-            end
+        return unless %i[object object_list].include?(action.input.layout)
+
+        clean = proc do |raw|
+          if raw.is_a?(String)
+            raw.strip.split(',')
+          elsif raw.is_a?(Array)
+            raw
           end
-
-          desc = <<END
-A list of names of associated resources separated by a comma.
-Nested associations are declared with '__' between resource names.
-For example, 'user,node' will resolve the two associations.
-To resolve further associations of node, use e.g. 'user,node__location',
-to go even deeper, use e.g. 'user,node__location__environment'.
-END
-
-          action.meta(:global) do
-            input do
-              custom :includes, label: 'Included associations',
-                     desc: desc, &clean
-            end
-          end
-
-          action.send(:include, Action::InstanceMethods)
         end
+
+        desc = <<~END
+          A list of names of associated resources separated by a comma.
+          Nested associations are declared with '__' between resource names.
+          For example, 'user,node' will resolve the two associations.
+          To resolve further associations of node, use e.g. 'user,node__location',
+          to go even deeper, use e.g. 'user,node__location__environment'.
+        END
+
+        action.meta(:global) do
+          input do
+            custom :includes, label: 'Included associations',
+                              desc:, &clean
+          end
+        end
+
+        action.send(:include, Action::InstanceMethods)
       end
 
       def has_param?(name)
@@ -169,14 +168,14 @@ END
       def meta
         res = @context.action.resource
 
-        if @context.action.name.demodulize == 'Index' \
+        params = if @context.action.name.demodulize == 'Index' \
            && !@context.action.resolve \
            && res.const_defined?(:Show)
-          params = res::Show.resolve_path_params(@object)
+                   res::Show.resolve_path_params(@object)
 
-        else
-          params = @context.action.resolve_path_params(@object)
-        end
+                 else
+                   @context.action.resolve_path_params(@object)
+                 end
 
         {
           path_params: params.is_a?(Array) ? params : [params],
@@ -185,6 +184,7 @@ END
       end
 
       protected
+
       # Return representation of an associated resource `param`
       # with its instance in `val`.
       #
@@ -223,7 +223,7 @@ END
           @context.action_instance = push_ins
           @context.action = push_cls
 
-          fail "#{res_show.to_s} resolve failed" unless ret[0]
+          raise "#{res_show} resolve failed" unless ret[0]
 
           ret[1][res_show.output.namespace].update({
               _meta: ret[1][:_meta].update(resolved: true)
@@ -234,8 +234,8 @@ END
             param.value_id => val.send(res_output[param.value_id].db_name),
             param.value_label => val.send(res_output[param.value_label].db_name),
             _meta: {
-              :path_params => args.is_a?(Array) ? args : [args],
-              :resolved => false
+              path_params: args.is_a?(Array) ? args : [args],
+              resolved: false
             }
           }
         end
@@ -254,8 +254,8 @@ END
           includes.each do |v|
             if v.is_a?(::Hash)
               return true if v.has_key?(name)
-            else
-              return true if v == name
+            elsif v == name
+              return true
             end
           end
 
@@ -271,8 +271,8 @@ END
           includes.each do |v|
             if v.is_a?(::Hash)
               return true if v.has_key?(name)
-            else
-              return true if v == name
+            elsif v == name
+              return true
             end
           end
 
@@ -283,10 +283,10 @@ END
       # Create an array of includes that is passed to child association.
       def includes_pass_on_to(assoc)
         parsed = if @context.action_instance.flags[:inner_assoc]
-          @context.action_instance.meta[:includes]
-        else
-          @context.action_instance.ar_parse_includes([])
-        end
+                   @context.action_instance.meta[:includes]
+                 else
+                   @context.action_instance.ar_parse_includes([])
+                 end
 
         ret = []
 
@@ -402,13 +402,13 @@ END
 
       def translate(v)
         self.class.handlers.each do |klass, translator|
-          if v.is_a?(klass)
-            v.attributes.each do |attr|
-              @attr = attr
-              instance_exec(v, &translator)
-            end
-            break
+          next unless v.is_a?(klass)
+
+          v.attributes.each do |attr|
+            @attr = attr
+            instance_exec(v, &translator)
           end
+          break
         end
       end
     end

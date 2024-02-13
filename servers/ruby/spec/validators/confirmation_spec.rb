@@ -1,11 +1,11 @@
 describe HaveAPI::Validators::Confirmation do
   shared_examples(:all) do
     it 'accepts the same value' do
-      expect(@v.validate('foo', {other_param: 'foo'})).to be true
+      expect(@v.validate('foo', { other_param: 'foo' })).to be true
     end
 
-    it "rejects a different value" do
-      expect(@v.validate('bar', {other_param: 'foo'})).to be false
+    it 'rejects a different value' do
+      expect(@v.validate('bar', { other_param: 'foo' })).to be false
     end
   end
 
@@ -36,11 +36,11 @@ describe HaveAPI::Validators::Confirmation do
     end
 
     it 'rejects the same value' do
-      expect(@v.validate('foo', {other_param: 'foo'})).to be false
+      expect(@v.validate('foo', { other_param: 'foo' })).to be false
     end
 
     it 'accepts a different value' do
-      expect(@v.validate('bar', {other_param: 'foo'})).to be true
+      expect(@v.validate('bar', { other_param: 'foo' })).to be true
     end
   end
 end

@@ -36,7 +36,7 @@ module HaveAPI::GoClient
       if self.module
         ErbTemplate.render_to_if_changed(
           'go.mod',
-          {mod: self.module},
+          { mod: self.module },
           File.join(dst, 'go.mod')
         )
 
@@ -44,12 +44,12 @@ module HaveAPI::GoClient
         FileUtils.mkpath(dst)
       end
 
-      %w(client authentication request response types).each do |v|
+      %w[client authentication request response types].each do |v|
         ErbTemplate.render_to_if_changed(
           "#{v}.go",
           {
-            package: package,
-            api: api,
+            package:,
+            api:
           },
           File.join(dst, "#{v}.go")
         )
@@ -60,12 +60,13 @@ module HaveAPI::GoClient
     end
 
     def go_fmt
-      unless system('go', 'fmt', chdir: dst)
-        fail "go fmt failed"
-      end
+      return if system('go', 'fmt', chdir: dst)
+
+      raise 'go fmt failed'
     end
 
     protected
+
     attr_reader :api
   end
 end

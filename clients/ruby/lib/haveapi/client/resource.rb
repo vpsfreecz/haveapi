@@ -71,6 +71,7 @@ module HaveAPI::Client
     end
 
     protected
+
     # Define access/write methods for action +action+.
     def define_action(action)
       action.aliases(true).each do |name|
@@ -116,7 +117,7 @@ module HaveAPI::Client
             if user_params.has_key?(:meta)
               meta = user_params[:meta]
 
-              %i(block block_interval block_timeout).each do |p|
+              %i[block block_interval block_timeout].each do |p|
                 client_opts[p] = meta.delete(p) if meta.has_key?(p)
               end
             end
@@ -126,21 +127,21 @@ module HaveAPI::Client
 
           ret = Response.new(action, action.execute(input_params))
 
-          raise ActionFailed.new(ret) unless ret.ok?
+          raise ActionFailed, ret unless ret.ok?
 
           return_value = case action.output && action.output_layout
-            when :object
-              ResourceInstance.new(@client, @api, self, action: action, response: ret)
+                         when :object
+                           ResourceInstance.new(@client, @api, self, action:, response: ret)
 
-            when :object_list
-              ResourceInstanceList.new(@client, @api, self, action, ret)
+                         when :object_list
+                           ResourceInstanceList.new(@client, @api, self, action, ret)
 
-            when :hash, :hash_list
-              ret
+                         when :hash, :hash_list
+                           ret
 
-            else
-              ret
-          end
+                         else
+                           ret
+                         end
 
           if action.blocking? && client_opts[:block]
             wait_opts = {}
@@ -165,7 +166,8 @@ module HaveAPI::Client
     # Called before defining a method named +name+ that will
     # invoke +action+.
     def define_method?(action, name)
-      return false if %i(new).include?(name.to_sym)
+      return false if %i[new].include?(name.to_sym)
+
       true
     end
 

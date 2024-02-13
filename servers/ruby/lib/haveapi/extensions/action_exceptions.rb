@@ -4,7 +4,7 @@ module HaveAPI::Extensions
   class ActionExceptions < Base
     class << self
       def enabled(server)
-        HaveAPI::Action.connect_hook(:exec_exception) do |ret, context, e|
+        HaveAPI::Action.connect_hook(:exec_exception) do |ret, _context, e|
           break(ret) unless @exceptions
 
           @exceptions.each do |handler|
@@ -20,7 +20,7 @@ module HaveAPI::Extensions
 
       def rescue(klass, &block)
         @exceptions ||= []
-        @exceptions << {klass: klass, block: block}
+        @exceptions << { klass:, block: }
       end
     end
   end

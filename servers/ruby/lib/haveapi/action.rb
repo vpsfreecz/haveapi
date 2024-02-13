@@ -17,29 +17,29 @@ module HaveAPI
     include Hookable
 
     has_hook :pre_authorize,
-      desc: 'Called to provide additional authorization blocks. These blocks are '+
-            'called before action\'s own authorization block. Note that if any '+
-            'of the blocks uses allow/deny rule, it will be the final authorization '+
-            'decision and even action\'s own authorization block will not be called.',
-      args: {
-        context: 'HaveAPI::Context instance',
-      },
-      ret: {
-        blocks: 'array of authorization blocks',
-      }
+             desc: 'Called to provide additional authorization blocks. These blocks are ' +
+                   'called before action\'s own authorization block. Note that if any ' +
+                   'of the blocks uses allow/deny rule, it will be the final authorization ' +
+                   'decision and even action\'s own authorization block will not be called.',
+             args: {
+               context: 'HaveAPI::Context instance'
+             },
+             ret: {
+               blocks: 'array of authorization blocks'
+             }
 
     has_hook :exec_exception,
-        desc: 'Called when unhandled exceptions occurs during Action.exec',
-        args: {
-            context: 'HaveAPI::Context instance',
-            exception: 'exception instance',
-        },
-        ret: {
-            status: 'true or false, indicating whether error should be reported',
-            message: 'error message sent to the user',
-        }
+             desc: 'Called when unhandled exceptions occurs during Action.exec',
+             args: {
+                 context: 'HaveAPI::Context instance',
+                 exception: 'exception instance'
+             },
+             ret: {
+                 status: 'true or false, indicating whether error should be reported',
+                 message: 'error message sent to the user'
+             }
 
-    attr_reader :message, :errors, :version
+    attr_reader :message, :errors, :version, :current_user, :request
     attr_accessor :flags
 
     class << self
@@ -51,10 +51,10 @@ module HaveAPI
 
         subclass.instance_variable_set(:@obj_type, obj_type)
 
-        if subclass.name
-          # not an anonymouse class
-          delayed_inherited(subclass)
-        end
+        return unless subclass.name
+
+        # not an anonymouse class
+        delayed_inherited(subclass)
       end
 
       def delayed_inherited(subclass)
@@ -71,9 +71,10 @@ module HaveAPI
 
         m = {}
 
-        @meta.each do |k,v|
+        @meta.each do |k, v|
           m[k] = v && v.clone
           next unless v
+
           m[k].action = subclass
         end
 
@@ -86,7 +87,7 @@ module HaveAPI
           subclass.instance_variable_set(:@model, resource.model)
           resource.action_defined(subclass)
         rescue NoMethodError
-          return
+          nil
         end
       end
 
@@ -109,9 +110,9 @@ module HaveAPI
           meta(:global) do
             output do
               integer :action_state_id,
-                  label: 'Action state ID',
-                  desc: 'ID of ActionState object for state querying. When null, the action '+
-                        'is not blocking for the current invocation.'
+                      label: 'Action state ID',
+                      desc: 'ID of ActionState object for state querying. When null, the action ' +
+                            'is not blocking for the current invocation.'
             end
           end
         end
@@ -171,7 +172,7 @@ module HaveAPI
 
       def meta(type = :object, &block)
         if block
-          @meta ||= {object: nil, global: nil}
+          @meta ||= { object: nil, global: nil }
           @meta[type] ||= Metadata::ActionMetadata.new
           @meta[type].action = self
           @meta[type].instance_exec(&block)
@@ -180,14 +181,14 @@ module HaveAPI
         end
       end
 
-      def authorize(&block)
-        @authorization = Authorization.new(&block)
+      def authorize(&)
+        @authorization = Authorization.new(&)
       end
 
-      def example(title = '', &block)
+      def example(title = '', &)
         @examples ||= ExampleList.new
         e = Example.new(title)
-        e.instance_eval(&block)
+        e.instance_eval(&)
         @examples << e
       end
 
@@ -195,25 +196,23 @@ module HaveAPI
         (@action_name ? @action_name.to_s : to_s).demodulize
       end
 
-      def action_name=(name)
-        @action_name = name
-      end
+      attr_writer :action_name
 
       def build_route(prefix)
         route = @route || action_name.underscore
-          if @route
-            @route
-          elsif action_name
-            action_name.to_s.demodulize.underscore
-          else
-            to_s.demodulize.underscore
-          end
-
-        if !route.is_a?(String) && route.respond_to?(:call)
-          route = route.call(self.resource)
+        if @route
+          @route
+        elsif action_name
+          action_name.to_s.demodulize.underscore
+        else
+          to_s.demodulize.underscore
         end
 
-        prefix + route % {resource: self.resource.resource_name.underscore}
+        if !route.is_a?(String) && route.respond_to?(:call)
+          route = route.call(resource)
+        end
+
+        prefix + format(route, resource: resource.resource_name.underscore)
       end
 
       def describe(context)
@@ -242,14 +241,14 @@ module HaveAPI
           description: @desc,
           aliases: @aliases,
           blocking: @blocking ? true : false,
-          input: @input ? @input.describe(context) : {parameters: {}},
-          output: @output ? @output.describe(context) : {parameters: {}},
+          input: @input ? @input.describe(context) : { parameters: {} },
+          output: @output ? @output.describe(context) : { parameters: {} },
           meta: @meta ? @meta.merge(@meta) { |_, v| v && v.describe(context) } : nil,
           examples: @examples ? @examples.describe(context) : [],
           scope: context.action_scope,
           path: context.resolved_path,
           method: route_method,
-          help: "#{context.path}?method=#{route_method}",
+          help: "#{context.path}?method=#{route_method}"
         }
       end
 
@@ -257,7 +256,6 @@ module HaveAPI
       def inherit_attrs_from_resource(action, r, attrs)
         begin
           return unless r.obj_type == :resource
-
         rescue NoMethodError
           return
         end
@@ -279,8 +277,8 @@ module HaveAPI
       end
 
       def resolve_path_params(object)
-        if self.resolve
-          self.resolve.call(object)
+        if resolve
+          resolve.call(object)
 
         else
           object.respond_to?(:id) ? object.id : nil
@@ -297,22 +295,22 @@ module HaveAPI
       @context.action = self.class
       @context.action_instance = self
       @metadata = {}
-      @reply_meta = {object: {}, global: {}}
+      @reply_meta = { object: {}, global: {} }
       @flags = {}
 
       class_auth = self.class.authorization
 
-      if class_auth
-        @authorization = class_auth.clone
-      else
-        @authorization = Authorization.new {}
-      end
+      @authorization = if class_auth
+                         class_auth.clone
+                       else
+                         Authorization.new {}
+                       end
 
       ret = call_class_hooks_as_for(
         Action,
         :pre_authorize,
         args: [@context],
-        initial: {blocks: []},
+        initial: { blocks: [] }
       )
 
       ret[:blocks].reverse_each do |block|
@@ -321,11 +319,9 @@ module HaveAPI
     end
 
     def validate!
-      begin
-        @params = validate
-      rescue ValidationError => e
-        error(e.message, e.to_hash)
-      end
+      @params = validate
+    rescue ValidationError => e
+      error(e.message, e.to_hash)
     end
 
     def authorized?(user)
@@ -333,20 +329,12 @@ module HaveAPI
       @authorization.authorized?(user, extract_path_params)
     end
 
-    def current_user
-      @current_user
-    end
-
     def params
       @safe_params
     end
 
     def input
-      @safe_params[ self.class.input.namespace ] if self.class.input
-    end
-
-    def request
-      @request
+      @safe_params[self.class.input.namespace] if self.class.input
     end
 
     def meta
@@ -364,13 +352,9 @@ module HaveAPI
     # --
     # FIXME: is this correct behaviour?
     # ++
-    def prepare
+    def prepare; end
 
-    end
-
-    def pre_exec
-
-    end
+    def pre_exec; end
 
     # This method must be reimplemented in every action.
     # It must not be invoked directly, only via safe_exec, which restricts output.
@@ -383,23 +367,21 @@ module HaveAPI
     # Return array +[status, data|error, errors]+
     def safe_exec
       exec_ret = catch(:return) do
-        begin
-          validate!
-          prepare
-          pre_exec
-          exec
-        rescue Exception => e
-          tmp = call_class_hooks_as_for(Action, :exec_exception, args: [@context, e])
+        validate!
+        prepare
+        pre_exec
+        exec
+      rescue Exception => e
+        tmp = call_class_hooks_as_for(Action, :exec_exception, args: [@context, e])
 
-          if tmp.empty?
-            p e.message
-            puts e.backtrace
-            error('Server error occurred')
-          end
+        if tmp.empty?
+          p e.message
+          puts e.backtrace
+          error('Server error occurred')
+        end
 
-          unless tmp[:status]
-            error(tmp[:message], {}, http_status: tmp[:http_status] || 500)
-          end
+        unless tmp[:status]
+          error(tmp[:message], {}, http_status: tmp[:http_status] || 500)
         end
       end
 
@@ -415,7 +397,7 @@ module HaveAPI
           tmp[:status] || false,
           tmp[:message] || 'Server error occurred',
           {},
-          tmp[:http_status] || 500,
+          tmp[:http_status] || 500
         ]
       end
 
@@ -436,55 +418,55 @@ module HaveAPI
           out_params = self.class.output.params
 
           case output.layout
-            when :object
-              out = adapter.output(@context, ret)
-              safe_ret = @authorization.filter_output(
+          when :object
+            out = adapter.output(@context, ret)
+            safe_ret = @authorization.filter_output(
+              out_params,
+              out,
+              true
+            )
+            @reply_meta[:global].update(out.meta)
+
+          when :object_list
+            safe_ret = []
+
+            ret.each do |obj|
+              out = adapter.output(@context, obj)
+
+              safe_ret << @authorization.filter_output(
                 out_params,
                 out,
                 true
               )
-              @reply_meta[:global].update(out.meta)
+              safe_ret.last.update({ Metadata.namespace => out.meta }) unless meta[:no]
+            end
 
-            when :object_list
-              safe_ret = []
+          when :hash
+            safe_ret = @authorization.filter_output(
+              out_params,
+              adapter.output(@context, ret),
+              true
+            )
 
-              ret.each do |obj|
-                out = adapter.output(@context, obj)
-
-                safe_ret << @authorization.filter_output(
-                  out_params,
-                  out,
-                  true
-                )
-                safe_ret.last.update({Metadata.namespace => out.meta}) unless meta[:no]
-              end
-
-            when :hash
-              safe_ret = @authorization.filter_output(
+          when :hash_list
+            safe_ret = ret
+            safe_ret.map! do |hash|
+              @authorization.filter_output(
                 out_params,
-                adapter.output(@context, ret),
+                adapter.output(@context, hash),
                 true
               )
+            end
 
-            when :hash_list
-              safe_ret = ret
-              safe_ret.map! do |hash|
-                @authorization.filter_output(
-                  out_params,
-                  adapter.output(@context, hash),
-                  true
-                )
-              end
-
-            else
-              safe_ret = ret
+          else
+            safe_ret = ret
           end
 
           if self.class.blocking
             @reply_meta[:global][:action_state_id] = state_id
           end
 
-          ns = {output.namespace => safe_ret}
+          ns = { output.namespace => safe_ret }
           ns[Metadata.namespace] = @reply_meta[:global] unless meta[:no]
 
           [true, ns]
@@ -507,6 +489,7 @@ module HaveAPI
     end
 
     protected
+
     def with_restricted(**kwargs)
       if kwargs.empty?
         @authorization.restrictions
@@ -517,7 +500,7 @@ module HaveAPI
 
     # Convert parameter names to corresponding DB names.
     # By default, input parameters are used for the translation.
-    def to_db_names(hash, src=:input)
+    def to_db_names(hash, src = :input)
       return {} unless hash
 
       params = self.class.method(src).call.params
@@ -528,11 +511,11 @@ module HaveAPI
         hit = false
 
         params.each do |p|
-          if k == p.name
-            ret[p.db_name] = v
-            hit = true
-            break
-          end
+          next unless k == p.name
+
+          ret[p.db_name] = v
+          hit = true
+          break
         end
 
         ret[k] = v unless hit
@@ -543,7 +526,7 @@ module HaveAPI
 
     # Convert DB names to corresponding parameter names.
     # By default, output parameters are used for the translation.
-    def to_param_names(hash, src=:output)
+    def to_param_names(hash, src = :output)
       return {} unless hash
 
       params = self.class.method(src).call.params
@@ -554,11 +537,11 @@ module HaveAPI
         hit = false
 
         params.each do |p|
-          if k == p.db_name
-            ret[p.name] = v
-            hit = true
-            break
-          end
+          next unless k == p.db_name
+
+          ret[p.name] = v
+          hit = true
+          break
         end
 
         ret[k] = v unless hit
@@ -587,6 +570,7 @@ module HaveAPI
     end
 
     private
+
     def validate
       # Validate standard input
       @safe_params = @params.dup
@@ -598,19 +582,19 @@ module HaveAPI
 
         # Then filter allowed params
         case input.layout
-          when :object_list, :hash_list
-            @safe_params[input.namespace].map! do |obj|
-              @authorization.filter_input(
-                self.class.input.params,
-                self.class.model_adapter(self.class.input.layout).input(obj)
-              )
-            end
-
-          else
-            @safe_params[input.namespace] = @authorization.filter_input(
+        when :object_list, :hash_list
+          @safe_params[input.namespace].map! do |obj|
+            @authorization.filter_input(
               self.class.input.params,
-              self.class.model_adapter(self.class.input.layout).input(@safe_params[input.namespace])
+              self.class.model_adapter(self.class.input.layout).input(obj)
             )
+          end
+
+        else
+          @safe_params[input.namespace] = @authorization.filter_input(
+            self.class.input.params,
+            self.class.model_adapter(self.class.input.layout).input(@safe_params[input.namespace])
+          )
         end
 
         # Now check required params, convert types and set defaults
@@ -621,9 +605,9 @@ module HaveAPI
       auth = Authorization.new { allow }
       @metadata = {}
 
-      return if input && %i(object_list hash_list).include?(input.layout)
+      return if input && %i[object_list hash_list].include?(input.layout)
 
-      [:object, :global].each do |v|
+      %i[object global].each do |v|
         meta = self.class.meta(v)
         next unless meta
 

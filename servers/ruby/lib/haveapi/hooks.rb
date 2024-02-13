@@ -116,7 +116,7 @@ module HaveAPI
         instance.instance_variable_set(INSTANCE_VARIABLE, hooks)
       end
 
-      hooks[name] ||= {listeners: []}
+      hooks[name] ||= { listeners: [] }
       hooks[name][:listeners] << block
     end
 
@@ -143,36 +143,37 @@ module HaveAPI
     # @param initial [Hash] initial return value
     # @param instance [Boolean] call instance hooks or not; nil means auto-detect
     def self.call_for(
-        klass,
-        name,
-        where = nil,
-        args: [],
-        kwargs: {},
-        initial: {},
-        instance: nil
+      klass,
+      name,
+      where = nil,
+      args: [],
+      kwargs: {},
+      initial: {},
+      instance: nil
     )
       classified = hook_classify(klass)
 
-      if (instance.nil? && !classified.is_a?(Class)) || instance
-        all_hooks = klass.instance_variable_get(INSTANCE_VARIABLE)
+      all_hooks = if (instance.nil? && !classified.is_a?(Class)) || instance
+                    klass.instance_variable_get(INSTANCE_VARIABLE)
 
-      else
-        all_hooks = @hooks[classified]
-      end
+                  else
+                    @hooks[classified]
+                  end
 
       catch(:stop) do
         return initial unless all_hooks
         return initial unless all_hooks[name]
+
         hooks = all_hooks[name][:listeners]
         return initial unless hooks
 
         hooks.each do |hook|
-          if where
-            ret = where.instance_exec(initial, *args, **kwargs, &hook)
+          ret = if where
+                  where.instance_exec(initial, *args, **kwargs, &hook)
 
-          else
-            ret = hook.call(initial, *args, **kwargs)
-          end
+                else
+                  hook.call(initial, *args, **kwargs)
+                end
 
           initial.update(ret) if ret
         end
@@ -195,60 +196,60 @@ module HaveAPI
     module ClassMethods
       # Register a hook named `name`.
       def has_hook(name, opts = {})
-        Hooks.register_hook(self.to_s, name, opts)
+        Hooks.register_hook(to_s, name, opts)
       end
 
       # Connect `block` to registered hook with `name`.
-      def connect_hook(name, &block)
-        Hooks.connect_hook(self.to_s, name, &block)
+      def connect_hook(name, &)
+        Hooks.connect_hook(to_s, name, &)
       end
 
       # Call all hooks for `name`. see {Hooks.call_for}.
-      def call_hooks(*args, **kwargs)
-        Hooks.call_for(self.to_s, *args, **kwargs)
+      def call_hooks(*, **)
+        Hooks.call_for(to_s, *, **)
       end
     end
 
     module InstanceMethods
       # Call all instance and class hooks.
-      def call_hooks_for(*args, **kwargs)
-        ret = call_instance_hooks_for(*args, **kwargs)
+      def call_hooks_for(*, **kwargs)
+        ret = call_instance_hooks_for(*, **kwargs)
 
         kwargs[:initial] = ret
-        call_class_hooks_for(*args, **kwargs)
+        call_class_hooks_for(*, **kwargs)
       end
 
       # Call only instance hooks.
       def call_instance_hooks_for(name, where = nil, args: [], kwargs: {}, initial: {})
-        Hooks.call_for(self, name, where, args: args, kwargs: kwargs, initial: initial)
+        Hooks.call_for(self, name, where, args:, kwargs:, initial:)
       end
 
       # Call only class hooks.
-      def call_class_hooks_for(name, where  = nil, args: [], kwargs: {}, initial: {})
-        Hooks.call_for(self.class, name, where, args: args, kwargs: kwargs, initial: initial)
+      def call_class_hooks_for(name, where = nil, args: [], kwargs: {}, initial: {})
+        Hooks.call_for(self.class, name, where, args:, kwargs:, initial:)
       end
 
       # Call hooks for different `klass`.
-      def call_hooks_as_for(klass, *args, **kwargs)
-        ret = call_instance_hooks_as_for(klass, *args, **kwargs)
+      def call_hooks_as_for(klass, *, **kwargs)
+        ret = call_instance_hooks_as_for(klass, *, **kwargs)
 
         kwargs[:initial] = ret
-        call_class_hooks_as_for(klass.class, *args, **kwargs)
+        call_class_hooks_as_for(klass.class, *, **kwargs)
       end
 
       # Call only instance hooks for different `klass`.
-      def call_instance_hooks_as_for(klass, *args, **kwargs)
-        Hooks.call_for(klass, *args, **kwargs)
+      def call_instance_hooks_as_for(klass, *, **)
+        Hooks.call_for(klass, *, **)
       end
 
       # Call only class hooks for different `klass`.
-      def call_class_hooks_as_for(klass, *args, **kwargs)
-        Hooks.call_for(klass, *args, **kwargs)
+      def call_class_hooks_as_for(klass, *, **)
+        Hooks.call_for(klass, *, **)
       end
 
       # Connect instance level hook `name` to `block`.
-      def connect_hook(name, &block)
-        Hooks.connect_instance_hook(self, name, &block)
+      def connect_hook(name, &)
+        Hooks.connect_instance_hook(self, name, &)
       end
     end
 

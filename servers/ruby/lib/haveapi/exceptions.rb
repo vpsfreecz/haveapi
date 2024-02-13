@@ -5,5 +5,5 @@ module HaveAPI
     include Nesty::NestedError
   end
 
-  class AuthenticationError < StandardError ; end
+  class AuthenticationError < StandardError; end
 end

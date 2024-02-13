@@ -96,7 +96,7 @@ module HaveAPI::GoClient
     end
 
     def input_output
-      %i(input output).select do |v|
+      %i[input output].select do |v|
         send(v) && send(v).parameters.any?
       end.map { |v| send(v) }
     end
@@ -118,6 +118,7 @@ module HaveAPI::GoClient
     end
 
     protected
+
     attr_reader :prefix
 
     def full_go_type

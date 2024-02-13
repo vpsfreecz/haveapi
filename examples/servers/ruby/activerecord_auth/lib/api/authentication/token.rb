@@ -7,10 +7,10 @@ module API::Authentication
         user = ::User.authenticate(
           req.request,
           req.input[:user],
-          req.input[:password],
+          req.input[:password]
         )
 
-        if !user
+        unless user
           res.error = 'invalid user or password'
           next res
         end
@@ -24,12 +24,12 @@ module API::Authentication
           end
 
         ::AuthToken.create!(
-          user: user,
-          token: token,
-          valid_to: valid_to,
+          user:,
+          token:,
+          valid_to:,
           lifetime: req.input[:lifetime],
           interval: req.input[:interval],
-          label: req.request.user_agent,
+          label: req.request.user_agent
         )
 
         res.token = token

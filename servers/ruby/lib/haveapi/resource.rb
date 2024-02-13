@@ -28,8 +28,8 @@ module HaveAPI
       end
     end
 
-    def self.actions(&block)
-      (@actions || []).each(&block)
+    def self.actions(&)
+      (@actions || []).each(&)
     end
 
     def self.resources
@@ -40,7 +40,6 @@ module HaveAPI
           if obj.obj_type == :resource
             yield obj
           end
-
         rescue NoMethodError
           next
         end
@@ -51,15 +50,15 @@ module HaveAPI
       (@resource_name ? @resource_name.to_s : to_s).demodulize
     end
 
-    def self.resource_name=(name)
-      @resource_name = name
+    class << self
+      attr_writer :resource_name
     end
 
     def self.rest_name
       singular ? resource_name.singularize.underscore : resource_name.tableize
     end
 
-    def self.routes(prefix='/', resource_path: [])
+    def self.routes(prefix = '/', resource_path: [])
       ret = []
       prefix = "#{prefix}#{@route || rest_name}/"
       new_resource_path = resource_path + [resource_name.underscore]
@@ -73,14 +72,14 @@ module HaveAPI
       end
 
       resources do |r|
-        ret << {r => r.routes(prefix, resource_path: new_resource_path)}
+        ret << { r => r.routes(prefix, resource_path: new_resource_path) }
       end
 
       ret
     end
 
     def self.describe(hash, context)
-      ret = {description: self.desc, actions: {}, resources: {}}
+      ret = { description: desc, actions: {}, resources: {} }
 
       context.resource = self
 

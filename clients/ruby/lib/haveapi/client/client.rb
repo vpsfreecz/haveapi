@@ -53,8 +53,8 @@ class HaveAPI::Client::Client
   end
 
   # See Communicator#authenticate.
-  def authenticate(auth_method, **options, &block)
-    @api.authenticate(auth_method, options, &block)
+  def authenticate(auth_method, **options, &)
+    @api.authenticate(auth_method, options, &)
   end
 
   # Get uthentication provider
@@ -92,13 +92,13 @@ class HaveAPI::Client::Client
 
   # Initialize the client if it is not yet initialized and call the resource
   # if it exists.
-  def method_missing(symbol, *args)
+  def method_missing(symbol, *)
     return super(symbol, *args) if @setup
 
     setup_api
 
     if @resources.include?(symbol)
-      method(symbol).call(*args)
+      method(symbol).call(*)
 
     else
       super(symbol, *args)
@@ -106,6 +106,7 @@ class HaveAPI::Client::Client
   end
 
   private
+
   # Get the description from the API and setup resource methods.
   def setup_api
     @description = @api.describe_api(@version)

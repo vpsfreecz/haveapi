@@ -29,7 +29,7 @@ module HaveAPI
     def describe
       {
         values: @values,
-        message: @message,
+        message: @message
       }
     end
 

@@ -7,6 +7,7 @@ module HaveAPI::Client
     def valid?
       if value.is_a?(::String)
         return false if /\A\d+\z/ !~ value
+
         v = value.to_i
 
       else
@@ -18,7 +19,7 @@ module HaveAPI::Client
       ret = false if opts[:max] && v > opts[:max]
       ret = false if opts[:step] && (v - (opts[:min] || 0)) % opts[:step] != 0
       ret = false if opts[:mod] && v % opts[:mod] != 0
-      ret = false if opts[:odd] && v % 2 == 0
+      ret = false if opts[:odd] && v.even?
       ret = false if opts[:even] && v % 2 > 0
       ret
     end

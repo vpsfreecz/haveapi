@@ -1,6 +1,5 @@
 module HaveAPI
   module Parameters
-
   end
 
   class ValidationError < Exception
@@ -57,7 +56,7 @@ module HaveAPI
     def layout
       return @cache[:layout] if @cache[:layout]
 
-      @cache[:layout] = @layout ? @layout : :object
+      @cache[:layout] = @layout || :object
     end
 
     def layout=(l)
@@ -69,7 +68,7 @@ module HaveAPI
       return @cache[:namespace] = @namespace unless @namespace.nil?
 
       n = @action.resource.resource_name.underscore
-      n = n.pluralize if %i(object_list hash_list).include?(layout)
+      n = n.pluralize if %i[object_list hash_list].include?(layout)
       @cache[:namespace] = n.to_sym
     end
 
@@ -106,8 +105,8 @@ module HaveAPI
       add_param(name, apply(kwargs, type: Integer))
     end
 
-    alias_method :id, :integer
-    alias_method :foreign_key, :integer
+    alias id integer
+    alias foreign_key integer
 
     def float(name, **kwargs)
       add_param(name, apply(kwargs, type: Float))
@@ -127,33 +126,33 @@ module HaveAPI
 
       block = @action.resource.params(name)
 
-      if block
-        @include_back << @include.clone if @include
-        @exclude_back << @exclude.clone if @exclude
+      return unless block
 
-        if include
-          @include ||= []
-          @include.concat(include)
-        end
+      @include_back << @include.clone if @include
+      @exclude_back << @exclude.clone if @exclude
 
-        if exclude
-          @exclude ||= []
-          @exclude.concat(exclude)
-        end
-
-        instance_eval(&block)
-
-        @include = @include_back.pop if @include
-        @exclude = @exclude_back.pop if @exclude
+      if include
+        @include ||= []
+        @include.concat(include)
       end
+
+      if exclude
+        @exclude ||= []
+        @exclude.concat(exclude)
+      end
+
+      instance_eval(&block)
+
+      @include = @include_back.pop if @include
+      @exclude = @exclude_back.pop if @exclude
     end
 
     def resource(name, **kwargs)
       add_resource(name, kwargs)
     end
 
-    alias_method :references, :resource
-    alias_method :belongs_to, :resource
+    alias references resource
+    alias belongs_to resource
 
     def patch(name, **changes)
       @params.detect { |p| p.name == name }.patch(changes)
@@ -167,7 +166,7 @@ module HaveAPI
     def describe(context)
       context.layout = layout
 
-      ret = {parameters: {}}
+      ret = { parameters: {} }
       ret[:layout] = layout
       ret[:namespace] = namespace
       ret[:format] = @structure if @structure
@@ -176,17 +175,17 @@ module HaveAPI
         ret[:parameters][p.name] = p.describe(context)
       end
 
-      if @direction == :input
-        ret[:parameters] = context.authorization.filter_input(
-          @params,
-          ModelAdapters::Hash.output(context, ret[:parameters])
-        )
-      else
-        ret[:parameters] = context.authorization.filter_output(
-          @params,
-          ModelAdapters::Hash.output(context, ret[:parameters])
-        )
-      end
+      ret[:parameters] = if @direction == :input
+                           context.authorization.filter_input(
+                             @params,
+                             ModelAdapters::Hash.output(context, ret[:parameters])
+                           )
+                         else
+                           context.authorization.filter_output(
+                             @params,
+                             ModelAdapters::Hash.output(context, ret[:parameters])
+                           )
+                         end
 
       ret
     end
@@ -235,7 +234,6 @@ module HaveAPI
 
           begin
             cleaned = p.clean(input[p.name])
-
           rescue ValidationError => e
             errors[p.name] ||= []
             errors[p.name] << e.message
@@ -271,6 +269,7 @@ module HaveAPI
     end
 
     private
+
     def add_param(name, kwargs)
       p = Parameters::Typed.new(name, kwargs)
 
@@ -311,7 +310,7 @@ module HaveAPI
       end
     end
 
-    def layout_aware(params)
+    def layout_aware(params, &)
       ns = namespace
 
       case layout
@@ -319,9 +318,7 @@ module HaveAPI
         yield(ns ? params[namespace] : params)
 
       when :object_list, :hash_list
-        (ns ? params[namespace] : params).each do |object|
-          yield(object)
-        end
+        (ns ? params[namespace] : params).each(&)
 
       else
         false

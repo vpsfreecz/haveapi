@@ -38,13 +38,15 @@ module HaveAPI::Authentication
       end
 
       private
+
       def check!(name)
-        fail "#{name} cannot be configured" unless @opts[name]
+        raise "#{name} cannot be configured" unless @opts[name]
+
         true
       end
 
       def with_defaults(opts)
-        Hash[%i(input handle).map do |v|
+        Hash[%i[input handle].map do |v|
           [v, opts.has_key?(v) ? opts[v] : true]
         end]
       end

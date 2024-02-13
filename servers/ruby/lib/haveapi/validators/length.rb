@@ -23,31 +23,31 @@ module HaveAPI
       @equals = take(:equals)
 
       if (@min || @max) && @equals
-        fail 'cannot mix min/max with equals'
+        raise 'cannot mix min/max with equals'
 
       elsif !@min && !@max && !@equals
-        fail 'must use either min, max or equals'
+        raise 'must use either min, max or equals'
       end
 
       msg = if @equals
-        "length has to be #{@equals}"
+              "length has to be #{@equals}"
 
-      elsif @min && !@max
-        "length has to be minimally #{@min}"
+            elsif @min && !@max
+              "length has to be minimally #{@min}"
 
-      elsif !@min && @max
-        "length has to be maximally #{@max}"
+            elsif !@min && @max
+              "length has to be maximally #{@max}"
 
-      else
-        "length has to be in range <#{@min}, #{@max}>"
-      end
+            else
+              "length has to be in range <#{@min}, #{@max}>"
+            end
 
       @message = take(:message, msg)
     end
 
     def describe
       ret = {
-        message: @message,
+        message: @message
       }
 
       if @equals
@@ -67,6 +67,7 @@ module HaveAPI
       return len == @equals if @equals
       return len >= @min if @min && !@max
       return len <= @max if !@min && @max
+
       len >= @min && len <= @max
     end
   end

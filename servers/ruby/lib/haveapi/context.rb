@@ -5,8 +5,8 @@ module HaveAPI
                   :action_instance, :action_prepare, :layout
 
     def initialize(server, version: nil, request: nil, resource: [], action: nil,
-                  path: nil, args: nil, params: nil, user: nil,
-                  authorization: nil, endpoint: nil, resource_path: [])
+                   path: nil, args: nil, params: nil, user: nil,
+                   authorization: nil, endpoint: nil, resource_path: [])
       @server = server
       @version = version
       @request = request
@@ -33,7 +33,7 @@ module HaveAPI
       ret
     end
 
-    def path_for(action, args=nil)
+    def path_for(action, args = nil)
       top_module = Kernel
       top_route = @server.routes[@version]
 
@@ -42,16 +42,15 @@ module HaveAPI
 
         begin
           top_module.obj_type
-
         rescue NoMethodError
           next
         end
 
-        if top_module.obj_type == :resource
-          top_route = top_route[:resources][top_module]
-        else
-          top_route = top_route[:actions][top_module]
-        end
+        top_route = if top_module.obj_type == :resource
+                      top_route[:resources][top_module]
+                    else
+                      top_route[:actions][top_module]
+                    end
       end
 
       ret = top_route.dup
@@ -65,6 +64,7 @@ module HaveAPI
       ret = params && action.resolve_path_params(obj)
 
       return [ret] if ret && !ret.is_a?(Array)
+
       ret
     end
 
@@ -91,6 +91,7 @@ module HaveAPI
     end
 
     private
+
     def resolve_arg!(path, arg)
       path.sub!(/\{[a-zA-Z\-_]+\}/, arg.to_s)
     end

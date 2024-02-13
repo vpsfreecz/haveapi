@@ -1,7 +1,7 @@
 module API::Resources
   class User < HaveAPI::Resource
     desc 'Manage users'
-    
+
     # Associate this resource with ActiveRecord model.
     # This will let us return AR models and HaveAPI will know how to work
     # with them, i.e. extract parameters. HaveAPI will also fetch validators
@@ -13,7 +13,7 @@ module API::Resources
       string :username
       bool :is_admin
     end
-    
+
     params(:all) do
       id :id
       use :common
@@ -30,7 +30,7 @@ module API::Resources
 
       # Allow access to everyone
       authorize { allow }
-      
+
       # Return a prepared query object
       def query
         ::User.all
@@ -74,10 +74,9 @@ module API::Resources
 
       # Allow access to everyone
       authorize { allow }
-      
+
       def exec
         ::User.find(params[:user_id])
-
       rescue ActiveRecord::RecordNotFound => e
         error("user with id '#{params[:user_id]}' not found")
       end
@@ -85,14 +84,14 @@ module API::Resources
 
     class Create < HaveAPI::Actions::Default::Create
       desc 'Create a user'
-      
+
       input do
         use :common
 
         # Ensure that username is always set
         patch :username, required: true
 
-        string :password, required: true, length: {min: 5}
+        string :password, required: true, length: { min: 5 }
       end
 
       output do
@@ -105,9 +104,8 @@ module API::Resources
       def exec
         ::User.create!(
           username: input[:username],
-          password: ::User.hash_password(input[:password]),
+          password: ::User.hash_password(input[:password])
         )
-
       rescue ActiveRecord::RecordInvalid => e
         errors('create failed', e.errors.to_hash)
       end
@@ -123,7 +121,6 @@ module API::Resources
 
         # This action returns no parameters, just indicate success
         ok
-
       rescue ActiveRecord::RecordNotFound
         error("user with id '#{params[:user_id]}' not found")
       end

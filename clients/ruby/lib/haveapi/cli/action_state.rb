@@ -26,31 +26,30 @@ module HaveAPI::CLI
       id ||= @id
 
       if cancel
-        puts "Waiting for the action to cancel (hit Ctrl+C to skip)..."
+        puts 'Waiting for the action to cancel (hit Ctrl+C to skip)...'
       else
-        puts "Waiting for the action to complete (hit Ctrl+C to skip)..."
+        puts 'Waiting for the action to complete (hit Ctrl+C to skip)...'
       end
-      
+
       last_status = false
       can_cancel = false
-    
+
       begin
         ret = HaveAPI::Client::Action.wait_for_completion(
-            @client,
-            id,
-            timeout: timeout,
+          @client,
+          id,
+          timeout:
         ) do |state|
           last_status = state.status
           can_cancel = state.can_cancel?
-          
+
           update_progress(state, cancel)
         end
-
       rescue Interrupt
         @pb && @pb.stop
         puts
 
-        cancel_action(timeout: timeout) if can_cancel && !cancel && last_status
+        cancel_action(timeout:) if can_cancel && !cancel && last_status
 
         puts
         print_help(id)
@@ -70,67 +69,67 @@ module HaveAPI::CLI
     # and call self.wait_for_completion on the cancellation, if it is blocking
     # operation.
     def cancel_action(timeout: nil)
-      STDOUT.write("Do you wish to cancel the action? [y/N]: ")
+      STDOUT.write('Do you wish to cancel the action? [y/N]: ')
       STDOUT.flush
 
-      if STDIN.readline.strip.downcase == 'y'
-        begin
-          res = HaveAPI::Client::Action.cancel(@client, @id)
+      return unless STDIN.readline.strip.downcase == 'y'
 
-        rescue HaveAPI::Client::ActionFailed => e
-          res = e.response
-        end
-    
-        if res.is_a?(HaveAPI::Client::Response) && res.ok?
-          puts "Cancelled"
-          exit
-
-        elsif res
-          @pb.resume
-
-          wait_for_completion(
-              id: res,
-              timeout: timeout,
-              cancel: true,
-          )
-          exit
-        end
-
-        warn "Cancel failed: #{res.message}"
-        exit(false)
+      begin
+        res = HaveAPI::Client::Action.cancel(@client, @id)
+      rescue HaveAPI::Client::ActionFailed => e
+        res = e.response
       end
+
+      if res.is_a?(HaveAPI::Client::Response) && res.ok?
+        puts 'Cancelled'
+        exit
+
+      elsif res
+        @pb.resume
+
+        wait_for_completion(
+          id: res,
+          timeout:,
+          cancel: true
+        )
+        exit
+      end
+
+      warn "Cancel failed: #{res.message}"
+      exit(false)
     end
 
     def print_help(id = nil)
       id ||= @id
 
-      puts "Run"
+      puts 'Run'
       puts "  #{$0} action_state show #{id}"
-      puts "or"
+      puts 'or'
       puts "  #{$0} action_state wait #{id}"
       puts "to check the action's progress."
     end
 
     protected
+
     def update_progress(state, cancel)
       @pb ||= ProgressBar.create(
-          title: cancel ? 'Cancelling' : 'Executing',
-          total: state.progress.total,
-          format: if state.progress.total && state.progress.total > 0
-                    "%t: [%B] %c/%C #{state.progress.unit}"
-                  else
-                    '%t: [%B]'
-                  end,
-          starting_at: state.progress.current,
-          autofinish: false,
+        title: cancel ? 'Cancelling' : 'Executing',
+        total: state.progress.total,
+        format: if state.progress.total && state.progress.total > 0
+                  "%t: [%B] %c/%C #{state.progress.unit}"
+                else
+                  '%t: [%B]'
+                end,
+        starting_at: state.progress.current,
+        autofinish: false
       )
 
-      if state.status
-        @pb.title = cancel ? 'Cancelling' : 'Executing'
+      @pb.title = if state.status
+                    cancel ? 'Cancelling' : 'Executing'
 
-      else
-        @pb.title = 'Failing'
-      end
+                  else
+                    'Failing'
+                  end
 
       if state.progress.total && state.progress.total > 0
         @pb.progress = state.progress.current

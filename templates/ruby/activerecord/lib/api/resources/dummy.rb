@@ -2,7 +2,7 @@ module API::Resources
   class Dummy < HaveAPI::Resource
     desc 'Dummy resource'
     # version '1.0'
-    
+
     # Associate this resource with ActiveRecord model.
     # This will let us return AR models and HaveAPI will know how to work
     # with them, i.e. extract parameters. HaveAPI will also fetch validators
@@ -13,7 +13,7 @@ module API::Resources
     params(:common) do
       string :name
     end
-    
+
     params(:all) do
       id :id
       use :common
@@ -31,7 +31,7 @@ module API::Resources
 
       # Allow access to everyone
       authorize { allow }
-      
+
       # Return a prepared query object
       def query
         ::Dummy.all
@@ -62,10 +62,9 @@ module API::Resources
 
       # Allow access to everyone
       authorize { allow }
-      
+
       def exec
         ::Dummy.find(params[:dummy_id])
-
       rescue ActiveRecord::RecordNotFound => e
         error("dummy with id '#{params[:dummy_id]}' not found")
       end
@@ -74,7 +73,7 @@ module API::Resources
     class Create < HaveAPI::Actions::Default::Create
       desc 'Create a dummy'
       auth false
-      
+
       input do
         use :common
 
@@ -90,7 +89,6 @@ module API::Resources
 
       def exec
         ::Dummy.create!(input)
-
       rescue ActiveRecord::RecordInvalid => e
         errors('create failed', e.errors.to_hash)
       end
@@ -107,7 +105,6 @@ module API::Resources
 
         # This action returns no parameters, just indicate success
         ok
-
       rescue ActiveRecord::RecordNotFound
         error("dummy with id '#{params[:dummy_id]}' not found")
       end

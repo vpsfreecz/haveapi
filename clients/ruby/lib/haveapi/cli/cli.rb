@@ -12,9 +12,8 @@ module HaveAPI::CLI
 
       def run
         c = new
-
       rescue Interrupt
-        warn "Interrupted"
+        warn 'Interrupted'
         exit(false)
       end
 
@@ -38,7 +37,7 @@ module HaveAPI::CLI
       connect_api unless @api
 
       if @action
-        method(@action.first).call( * @action[1..-1] )
+        method(@action.first).call(* @action[1..-1])
         exit
       end
 
@@ -73,7 +72,7 @@ module HaveAPI::CLI
         end
 
         if sep = ARGV.index('--')
-          cmd_opt.parse!(ARGV[sep+1..-1])
+          cmd_opt.parse!(ARGV[sep + 1..-1])
         end
 
         c.exec(args[2..-1] || [])
@@ -97,24 +96,23 @@ module HaveAPI::CLI
       if authenticate(action) && !action.unresolved_args?
         begin
           action.update_description(@api.describe_action(action))
-
         rescue RestClient::ResourceNotFound => e
           format_errors(action, 'Object not found', {})
           exit(false)
         end
       end
 
-      @selected_params = @opts[:output] ? @opts[:output].split(',').uniq
-                                        : nil
+      @selected_params = if @opts[:output]
+                           @opts[:output].split(',').uniq
+                         end
 
       @input_params = parameters(action)
 
       includes = build_includes(action) if @selected_params
-      @input_params[:meta] = { includes: includes } if includes
+      @input_params[:meta] = { includes: } if includes
 
       begin
         ret = action.execute(@input_params, raw: @opts[:raw])
-
       rescue HaveAPI::Client::ValidationError => e
         format_errors(action, 'input parameters not valid', e.errors)
         exit(false)
@@ -128,30 +126,30 @@ module HaveAPI::CLI
         exit(false)
       end
 
-      if action.blocking?
-        res = HaveAPI::Client::Response.new(action, ret)
+      return unless action.blocking?
 
-        if res.meta[:action_state_id]
-          state = ActionState.new(
-              @opts,
-              HaveAPI::Client::Client.new(@api.url, communicator: @api, block: false),
-              res.meta[:action_state_id]
-          )
+      res = HaveAPI::Client::Response.new(action, ret)
 
-          if @opts[:block]
-            puts
-            action_ret = state.wait_for_completion(timeout: @opts[:timeout])
+      return unless res.meta[:action_state_id]
 
-            if action_ret.nil?
-              warn "Timeout"
-              exit(false)
-            end
+      state = ActionState.new(
+        @opts,
+        HaveAPI::Client::Client.new(@api.url, communicator: @api, block: false),
+        res.meta[:action_state_id]
+      )
 
-          else
-            puts
-            state.print_help
-          end
+      if @opts[:block]
+        puts
+        action_ret = state.wait_for_completion(timeout: @opts[:timeout])
+
+        if action_ret.nil?
+          warn 'Timeout'
+          exit(false)
         end
+
+      else
+        puts
+        state.print_help
       end
     end
 
@@ -163,7 +161,7 @@ module HaveAPI::CLI
       options = {
           client: default_url,
           block: true,
-          verbose: false,
+          verbose: false
       }
 
       @global_opt = OptionParser.new do |opts|
@@ -211,11 +209,11 @@ module HaveAPI::CLI
           options[:layout] = :columns
         end
 
-        opts.on('-H', '--no-header', 'Hide header row') do |h|
+        opts.on('-H', '--no-header', 'Hide header row') do |_h|
           options[:header] = false
         end
 
-        opts.on('-L', '--list-parameters', 'List output parameters') do |l|
+        opts.on('-L', '--list-parameters', 'List output parameters') do |_l|
           options[:list_output] = true
         end
 
@@ -260,9 +258,9 @@ module HaveAPI::CLI
         end
 
         opts.on(
-            '--timeout SEC',
-            Float,
-            'Fail when the action does not finish within the timeout'
+          '--timeout SEC',
+          Float,
+          'Fail when the action does not finish within the timeout'
         ) do |v|
           options[:timeout] = v.to_f
         end
@@ -291,11 +289,9 @@ module HaveAPI::CLI
       args = []
 
       ARGV.each do |arg|
-        if arg == '--'
-          break
-        else
-          args << arg
-        end
+        break if arg == '--'
+
+        args << arg
       end
 
       @global_opt.parse!(args)
@@ -308,7 +304,7 @@ module HaveAPI::CLI
           @auth = Cli.auth_methods[m].new(
             @api,
             @api.describe_api(options[:version])[:authentication][m],
-            cfg[:auth][m],
+            cfg[:auth][m]
           )
         end
       end
@@ -328,12 +324,12 @@ module HaveAPI::CLI
             opts.on(param_option(name, p), p[:description] || p[:label] || ' ') do |*args|
               arg = args.first
 
-              if arg.nil?
-                options[name] = read_param(name, p)
+              options[name] = if arg.nil?
+                                read_param(name, p)
 
-              else
-                options[name] = args.first
-              end
+                              else
+                                args.first
+                              end
             end
           end
         end
@@ -353,7 +349,7 @@ module HaveAPI::CLI
           puts 'Output parameters:'
 
           action.params.each do |name, param|
-            puts sprintf("    %-32s %s", name, param[:description])
+            puts format('    %-32s %s', name, param[:description])
           end
 
           print_examples(action)
@@ -367,7 +363,7 @@ module HaveAPI::CLI
 
       return {} unless sep
 
-      @action_opt.parse!(ARGV[sep+1..-1])
+      @action_opt.parse!(ARGV[sep + 1..-1])
 
       options
     end
@@ -384,7 +380,7 @@ module HaveAPI::CLI
       end
     end
 
-    def list_auth(v=nil)
+    def list_auth(v = nil)
       desc = @api.describe_api(v)
 
       desc[:authentication].each_key do |auth|
@@ -392,7 +388,7 @@ module HaveAPI::CLI
       end
     end
 
-    def list_resources(v=nil)
+    def list_resources(v = nil)
       desc = @api.describe_api(v)
 
       sort_by_key(desc[:resources]).each do |resource, children|
@@ -400,7 +396,7 @@ module HaveAPI::CLI
       end
     end
 
-    def list_actions(v=nil)
+    def list_actions(v = nil)
       desc = @api.describe_api(v)
 
       sort_by_key(desc[:resources]).each do |resource, children|
@@ -450,16 +446,16 @@ module HaveAPI::CLI
 
       puts '' if !desc[:resources].empty? && !desc[:actions].empty?
 
-      unless desc[:actions].empty?
-        puts 'Actions:'
+      return if desc[:actions].empty?
 
-        desc[:actions].keys.sort.each do |a|
-          puts "  #{a}"
-        end
+      puts 'Actions:'
+
+      desc[:actions].keys.sort.each do |a|
+        puts "  #{a}"
       end
     end
 
-    def nested_resource(prefix, children, actions=false)
+    def nested_resource(prefix, children, actions = false)
       if actions
         children[:actions].keys.sort.each do |action|
           puts "#{prefix}##{action}"
@@ -480,10 +476,10 @@ module HaveAPI::CLI
         puts
         puts 'Commands:'
         Cli.commands.each do |cmd|
-          puts sprintf(
-              '%-36s %s',
-              "#{cmd.resource.join('.')} #{cmd.action} #{cmd.args}",
-              cmd.desc
+          puts format(
+            '%-36s %s',
+            "#{cmd.resource.join('.')} #{cmd.action} #{cmd.args}",
+            cmd.desc
           )
         end
       end
@@ -493,10 +489,10 @@ module HaveAPI::CLI
     end
 
     def print_examples(action)
-      unless action.examples.empty?
-        puts "\nExamples:\n"
-        ExampleFormatter.format_examples(self, action)
-      end
+      return if action.examples.empty?
+
+      puts "\nExamples:\n"
+      ExampleFormatter.format_examples(self, action)
     end
 
     def format_output(action, response, out = $>)
@@ -510,7 +506,7 @@ module HaveAPI::CLI
       namespace = action.namespace(:output).to_sym
 
       if action.output_layout.to_sym == :custom
-          return PP.pp(response[namespace], out)
+        return PP.pp(response[namespace], out)
       end
 
       cols = []
@@ -528,7 +524,7 @@ module HaveAPI::CLI
           top = action.params
 
           parts.each do |part|
-            fail "'#{part}' not found" unless top.has_key?(part)
+            raise "'#{part}' not found" unless top.has_key?(part)
 
             if top[part][:type] == 'Resource'
               param = top[part]
@@ -540,19 +536,20 @@ module HaveAPI::CLI
             end
           end
 
-          col[:display] = Proc.new do |r|
+          col[:display] = proc do |r|
             next '' unless r
 
             top = r
             parts[1..-1].each do |part|
-              fail "'#{part}' not found" unless top.has_key?(part)
+              raise "'#{part}' not found" unless top.has_key?(part)
               break if top[part].nil?
+
               top = top[part]
             end
 
             case param[:type]
             when 'Resource'
-              "#{top[ param[:value_label].to_sym ]} (##{top[ param[:value_id].to_sym ]})"
+              "#{top[param[:value_label].to_sym]} (##{top[param[:value_id].to_sym]})"
 
             when 'Datetime'
               format_date(top)
@@ -567,12 +564,13 @@ module HaveAPI::CLI
         else # directly accessible parameter
           name = raw_name.to_sym
           param = action.params[name]
-          fail "parameter '#{name}' does not exist" if param.nil?
+          raise "parameter '#{name}' does not exist" if param.nil?
 
           if param[:type] == 'Resource'
-            col[:display] = Proc.new do |r|
+            col[:display] = proc do |r|
               next '' unless r
-              "#{r[ param[:value_label].to_sym ]} (##{r[ param[:value_id].to_sym ]})"
+
+              "#{r[param[:value_label].to_sym]} (##{r[param[:value_id].to_sym]})"
             end
 
           elsif param[:type] == 'Datetime'
@@ -581,8 +579,8 @@ module HaveAPI::CLI
         end
 
         col.update({
-            name: name,
-            align: %w(Integer Float).include?(param[:type]) ? 'right' : 'left',
+            name:,
+            align: %w[Integer Float].include?(param[:type]) ? 'right' : 'left'
         })
 
         col[:label] ||= param[:label] && !param[:label].empty? ? param[:label] : name.upcase
@@ -591,11 +589,11 @@ module HaveAPI::CLI
       end
 
       OutputFormatter.print(
-          response[namespace],
-          cols,
-          header: @opts[:header].nil?,
-          sort: @opts[:sort] && @opts[:sort].to_sym,
-          layout: @opts[:layout]
+        response[namespace],
+        cols,
+        header: @opts[:header].nil?,
+        sort: @opts[:sort] && @opts[:sort].to_sym,
+        layout: @opts[:layout]
       )
     end
 
@@ -625,10 +623,11 @@ module HaveAPI::CLI
         # FIXME: exit as auth is needed and has not been selected
       end
 
-      return true
+      true
     end
 
     protected
+
     def default_url
       'http://localhost:4567'
     end
@@ -638,18 +637,16 @@ module HaveAPI::CLI
     end
 
     def write_config
-      File.open(config_path, 'w') do |f|
-        f.write(YAML.dump(@config))
-      end
+      File.write(config_path, YAML.dump(@config))
     end
 
     def read_config
-      @config = YAML.load_file(config_path) if File.exists?(config_path)
+      @config = YAML.load_file(config_path) if File.exist?(config_path)
     end
 
     def server_config(url)
       unless @config[:servers]
-        @config[:servers] = [{url: url, auth: {}}]
+        @config[:servers] = [{ url:, auth: {} }]
         return @config[:servers].first
       end
 
@@ -657,7 +654,7 @@ module HaveAPI::CLI
         return s if s[:url] == url
       end
 
-      @config[:servers] << {url: url, auth: {}}
+      @config[:servers] << { url:, auth: {} }
       @config[:servers].last
     end
 
@@ -728,25 +725,25 @@ module HaveAPI::CLI
 
       t = DateTime.iso8601(date).to_time
       ret = case @opts[:datetime]
-      when :timestamp
-        t.to_i
+            when :timestamp
+              t.to_i
 
-      when :utc
-        t.utc
+            when :utc
+              t.utc
 
-      when :local
-        t.localtime
+            when :local
+              t.localtime
 
-      else
-        t.localtime
-      end
+            else
+              t.localtime
+            end
 
       @opts[:date_format] ? ret.strftime(@opts[:date_format]) : ret
     end
 
     def sort_by_key(hash)
       hash.sort do |a, b|
-        a[0]<=> b[0]
+        a[0] <=> b[0]
       end
     end
   end

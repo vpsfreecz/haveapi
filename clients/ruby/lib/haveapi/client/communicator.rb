@@ -34,10 +34,12 @@ module HaveAPI::Client
     # @return [:imperfect] if minor version differs
     # @return [false] if not compatible
     def compatible?
-      description_for(path_for, {describe: :versions})
-      @proto_version == HaveAPI::Client::PROTOCOL_VERSION ? :compatible
-                                                          : :imperfect
-
+      description_for(path_for, { describe: :versions })
+      if @proto_version == HaveAPI::Client::PROTOCOL_VERSION
+        :compatible
+      else
+        :imperfect
+      end
     rescue ProtocolError
       false
     end
@@ -45,14 +47,14 @@ module HaveAPI::Client
     # Authenticate user with selected +auth_method+.
     # +auth_method+ is a name of registered authentication provider.
     # +options+ are specific for each authentication provider.
-    def authenticate(auth_method, options = {}, &block)
+    def authenticate(auth_method, options = {}, &)
       desc = describe_api(@version)
 
       @auth = self.class.auth_methods[auth_method].new(
         self,
         desc[:authentication][auth_method],
         options,
-        &block
+        &
       )
       @rest = @auth.resource || @rest
     end
@@ -62,11 +64,11 @@ module HaveAPI::Client
     end
 
     def available_versions
-      description_for(path_for, {describe: :versions})
+      description_for(path_for, { describe: :versions })
     end
 
-    def describe_api(v=nil)
-      description_for(path_for(v), v.nil? ? {describe: :default} : {})
+    def describe_api(v = nil)
+      description_for(path_for(v), v.nil? ? { describe: :default } : {})
     end
 
     def describe_resource(path)
@@ -97,7 +99,7 @@ module HaveAPI::Client
       a = tmp[:actions][action]
 
       unless a # search in aliases
-         tmp[:actions].each do |_, v|
+        tmp[:actions].each do |_, v|
           if v[:aliases].include?(action.to_s)
             a = v
             break
@@ -124,43 +126,40 @@ module HaveAPI::Client
         params.delete(:meta)
       end
 
-      if %w(POST PUT).include?(action.http_method)
+      if %w[POST PUT].include?(action.http_method)
         ns = {}
         ns[input_namespace] = params if input_namespace
         ns[:_meta] = meta if meta
         ns.update(@auth.request_payload)
 
         args << ns.to_json
-        args << {content_type: :json, accept: :json, user_agent: @identity}.update(@auth.request_headers)
+        args << { content_type: :json, accept: :json, user_agent: @identity }.update(@auth.request_headers)
 
-      elsif %w(GET DELETE).include?(action.http_method)
+      elsif %w[GET DELETE].include?(action.http_method)
         get_params = {}
 
         params.each do |k, v|
           get_params["#{input_namespace}[#{k}]"] = v
         end
 
-        meta.each do |k, v|
-          get_params["_meta[#{k}]"] = v # FIXME: read _meta namespace from the description
+        if meta
+          meta.each do |k, v|
+            get_params["_meta[#{k}]"] = v # FIXME: read _meta namespace from the description
+          end
+        end
 
-        end if meta
-
-        args << {params: get_params.update(@auth.request_query_params), accept: :json, user_agent: @identity}.update(@auth.request_headers)
+        args << { params: get_params.update(@auth.request_query_params), accept: :json, user_agent: @identity }.update(@auth.request_headers)
       end
 
       begin
         response = parse(@rest[action.prepared_path].method(action.http_method.downcase.to_sym).call(*args))
-
       rescue RestClient::Forbidden
         return error('Access forbidden. Bad user name or password? Not authorized?')
-
       rescue RestClient::ResourceNotFound => e
         response = parse(e.http_body)
-
       rescue RestClient::BadRequest => e
         response = parse(e.http_body)
-
-      rescue => e
+      rescue StandardError => e
         return error("Fatal API error: #{e.inspect}")
       end
 
@@ -177,15 +176,16 @@ module HaveAPI::Client
     end
 
     private
+
     def ok(response)
-      {status: true, response: response}
+      { status: true, response: }
     end
 
-    def error(msg, errors={})
-      {status: false, message: msg, errors: errors}
+    def error(msg, errors = {})
+      { status: false, message: msg, errors: }
     end
 
-    def path_for(v=nil, r=nil)
+    def path_for(v = nil, r = nil)
       ret = '/'
 
       ret += "v#{v}/" if v
@@ -194,7 +194,7 @@ module HaveAPI::Client
       ret
     end
 
-    def description_for(path, query_params={})
+    def description_for(path, query_params = {})
       ret = parse(@rest[path].get_options({
           params: @auth.request_payload.update(@auth.request_query_params).update(query_params),
           user_agent: @identity
@@ -206,8 +206,8 @@ module HaveAPI::Client
 
       unless ret[:version]
         raise ProtocolError,
-            "Incompatible protocol version: the client uses v#{p_v} "+
-            "while the API server uses an unspecified version (pre 1.0)"
+              "Incompatible protocol version: the client uses v#{p_v} " +
+              'while the API server uses an unspecified version (pre 1.0)'
       end
 
       major1, minor1 = ret[:version].split('.')
@@ -215,8 +215,8 @@ module HaveAPI::Client
 
       if major1 != major2
         raise ProtocolError,
-            "Incompatible protocol version: the client uses v#{p_v} "+
-            "while the API server uses v#{ret[:version]}"
+              "Incompatible protocol version: the client uses v#{p_v} " +
+              "while the API server uses v#{ret[:version]}"
       end
 
       warn "The client uses protocol v#{p_v} while the API server uses v#{ret[:version]}"

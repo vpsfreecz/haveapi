@@ -2,7 +2,7 @@ require 'date'
 
 module HaveAPI::Parameters
   class Typed
-    ATTRIBUTES = %i(label desc type db_name default fill clean protected load_validators)
+    ATTRIBUTES = %i[label desc type db_name default fill clean protected load_validators]
 
     attr_reader :name, :label, :desc, :type, :default
 
@@ -14,14 +14,14 @@ module HaveAPI::Parameters
       @label = myargs.delete(:label) || name.to_s.capitalize
       @layout = :custom
 
-      (ATTRIBUTES - %i(label)).each do |attr|
+      (ATTRIBUTES - %i[label]).each do |attr|
         instance_variable_set("@#{attr}", myargs.delete(attr))
       end
 
       @type ||= String
 
       @validators = HaveAPI::ValidatorChain.new(myargs) unless myargs.empty?
-      fail "unused arguments #{myargs}" unless myargs.empty?
+      raise "unused arguments #{myargs}" unless myargs.empty?
     end
 
     def db_name
@@ -52,7 +52,7 @@ module HaveAPI::Parameters
         type: @type ? @type.to_s : String.to_s,
         validators: @validators ? @validators.describe : {},
         default: @default,
-        protected: @protected || false,
+        protected: @protected || false
       }
     end
 
@@ -75,7 +75,7 @@ module HaveAPI::Parameters
     def clean(raw)
       return instance_exec(raw, &@clean) if @clean
 
-      val = if raw.nil?
+      if raw.nil?
         @default
 
       elsif @type.nil?
@@ -93,16 +93,13 @@ module HaveAPI::Parameters
       elsif @type == ::Datetime
         begin
           DateTime.iso8601(raw).to_time
-
         rescue ArgumentError
-          raise HaveAPI::ValidationError.new("not in ISO 8601 format '#{raw}'")
+          raise HaveAPI::ValidationError, "not in ISO 8601 format '#{raw}'"
         end
 
       else
         raw
       end
-
-      val
     end
 
     def validate(v, params)

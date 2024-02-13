@@ -5,7 +5,7 @@ module HaveAPI::GoClient
   class Cli
     def self.run
       options = {
-        package: 'client',
+        package: 'client'
       }
 
       parser = OptionParser.new do |opts|

@@ -20,21 +20,22 @@ module HaveAPI
 
       @empty = take(:empty, false)
       @message = take(
-          :message,
-          @empty ? 'must be present' : 'must be present and non-empty'
+        :message,
+        @empty ? 'must be present' : 'must be present and non-empty'
       )
     end
 
     def describe
       {
         empty: @empty,
-        message: @message,
+        message: @message
       }
     end
 
     def valid?(v)
       return false if v.nil?
       return !v.strip.empty? if !@empty && v.is_a?(::String)
+
       # FIXME: other data types?
       true
     end

@@ -6,7 +6,7 @@ module HaveAPI::Authentication
   module Token
     # Exception that has to be raised when generated token already exists.
     # Provider will catch it and generate another token.
-    class TokenExists < Exception
+    class TokenExists < StandardError
     end
 
     # Provider for token authentication.

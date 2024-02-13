@@ -2,7 +2,7 @@ module HaveAPI
   module Parameters
   end
 
-  class ValidationError < Exception
+  class ValidationError < StandardError
     def initialize(msg, errors = {})
       super(msg)
       @errors = errors

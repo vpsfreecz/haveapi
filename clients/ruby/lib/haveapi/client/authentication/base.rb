@@ -4,7 +4,7 @@ module HaveAPI::Client
   module Authentication
     # Raise this exception when authentication process fails somewhere
     # outside action execution (in which access forbidden is raised from RestClient).
-    class AuthenticationFailed < Exception
+    class AuthenticationFailed < StandardError
       def initialize(msg)
         super
         @msg = msg

@@ -22,7 +22,7 @@ module HaveAPI
     def add_or_replace(name, opt)
       args = { name => opt }
 
-      unless v_class = find_validator(args)
+      unless (v_class = find_validator(args))
         raise "validator for '#{name}' not found"
       end
 

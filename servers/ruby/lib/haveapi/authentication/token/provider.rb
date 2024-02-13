@@ -190,7 +190,7 @@ module HaveAPI::Authentication
             http_method :post
 
             input(:hash) do
-              if block = provider.config.class.request.input
+              if (block = provider.config.class.request.input)
                 instance_exec(&block)
               end
 

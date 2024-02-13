@@ -50,7 +50,7 @@ module HaveAPI::CLI
 
       resources = args[0].split('.')
 
-      if cmd = find_command(resources, args[1])
+      if (cmd = find_command(resources, args[1]))
         authenticate if @auth
         c = cmd.new(@opts, HaveAPI::Client::Client.new(nil, communicator: @api))
 
@@ -71,7 +71,7 @@ module HaveAPI::CLI
           end
         end
 
-        if sep = ARGV.index('--')
+        if (sep = ARGV.index('--'))
           cmd_opt.parse!(ARGV[sep + 1..])
         end
 
@@ -300,7 +300,7 @@ module HaveAPI::CLI
         cfg = server_config(options[:client])
         connect_api(url: options[:client], version: options[:version]) unless @api
 
-        if m = cfg[:last_auth]
+        if (m = cfg[:last_auth])
           @auth = Cli.auth_methods[m].new(
             @api,
             @api.describe_api(options[:version])[:authentication][m],

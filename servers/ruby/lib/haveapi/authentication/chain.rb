@@ -102,7 +102,8 @@ module HaveAPI::Authentication
 
       @server.add_auth_routes(v, instance, prefix: instance.name.to_s)
 
-      return unless resource_module = instance.resource_module
+      resource_module = instance.resource_module
+      return if resource_module.nil?
 
       @server.add_auth_module(
         v,

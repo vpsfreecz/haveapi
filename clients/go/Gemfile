@@ -2,3 +2,8 @@ source 'https://rubygems.org'
 gemspec
 
 gem 'haveapi-client', path: '../ruby'
+
+group :development do
+  gem 'bundler'
+  gem 'rake'
+end

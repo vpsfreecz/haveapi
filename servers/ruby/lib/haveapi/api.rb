@@ -1,6 +1,7 @@
 module HaveAPI
   # Return a list of all resources or yield them if block is given.
-  def self.resources(module_name) # yields: resource
+  # @yieldparam [Resource] resource
+  def self.resources(module_name)
     ret = []
 
     module_name.constants.select do |c|

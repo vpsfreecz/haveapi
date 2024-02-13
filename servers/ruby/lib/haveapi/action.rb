@@ -17,10 +17,7 @@ module HaveAPI
     include Hookable
 
     has_hook :pre_authorize,
-             desc: 'Called to provide additional authorization blocks. These blocks are ' +
-                   'called before action\'s own authorization block. Note that if any ' +
-                   'of the blocks uses allow/deny rule, it will be the final authorization ' +
-                   'decision and even action\'s own authorization block will not be called.',
+             desc: "Called to provide additional authorization blocks. These blocks are called before action's own authorization block. Note that if any of the blocks uses allow/deny rule, it will be the final authorization decision and even action's own authorization block will not be called.",
              args: {
                context: 'HaveAPI::Context instance'
              },

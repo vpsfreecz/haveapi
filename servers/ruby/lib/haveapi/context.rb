@@ -87,7 +87,7 @@ module HaveAPI
     end
 
     def action_scope
-      resource_path.map(&:downcase).join('.') + '#' + action.action_name.underscore
+      "#{resource_path.map(&:downcase).join('.')}##{action.action_name.underscore}"
     end
 
     private

@@ -206,8 +206,7 @@ module HaveAPI::Client
 
       unless ret[:version]
         raise ProtocolError,
-              "Incompatible protocol version: the client uses v#{p_v} " +
-              'while the API server uses an unspecified version (pre 1.0)'
+              "Incompatible protocol version: the client uses v#{p_v} while the API server uses an unspecified version (pre 1.0)"
       end
 
       major1, minor1 = ret[:version].split('.')

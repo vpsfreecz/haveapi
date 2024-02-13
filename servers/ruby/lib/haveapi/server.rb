@@ -201,8 +201,8 @@ module HaveAPI
         # for markdown files with extension .md, only .markdown
         Tilt[:md]
 
-        set :views, settings.root + '/views'
-        set :public_folder, settings.root + '/public'
+        set :views, "#{settings.root}/views"
+        set :public_folder, "#{settings.root}/public"
         set :bind, '0.0.0.0'
 
         if settings.development?
@@ -296,7 +296,7 @@ module HaveAPI
         content_type 'text/html'
 
         erb :main_layout do
-          GitHub::Markdown.render(File.new(settings.views + '/../../../README.md').read)
+          GitHub::Markdown.render(File.new("#{settings.views}/../../../README.md").read)
         end
       end
 

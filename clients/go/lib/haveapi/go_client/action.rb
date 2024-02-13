@@ -59,12 +59,12 @@ module HaveAPI::GoClient
       @name = name.to_s
       @prefix = prefix
       @aliases = desc[:aliases]
-      @full_dot_name = resource.full_dot_name + '#' + @name.capitalize
+      @full_dot_name = "#{resource.full_dot_name}##{@name.capitalize}"
       @go_name = camelize(name)
       @go_type = full_go_type
-      @go_invocation_type = go_type + 'Invocation'
-      @go_request_type = go_type + 'Request'
-      @go_response_type = go_type + 'Response'
+      @go_invocation_type = "#{go_type}Invocation"
+      @go_request_type = "#{go_type}Request"
+      @go_response_type = "#{go_type}Response"
       @input = desc[:input] && InputOutput.new(self, :io, :input, desc[:input])
       @output = desc[:output] && InputOutput.new(self, :io, :output, desc[:output])
       @http_method = desc[:method]

@@ -47,9 +47,7 @@ module HaveAPI::ClientExamples
 
       unless class_action?
         if !sample[:path_params] || sample[:path_params].empty?
-          raise "example {#{sample}} of action #{resource_path.join('.')}" +
-                ".#{action_name} is for an instance action but does not include " +
-                'URL parameters'
+          raise "example {#{sample}} of action #{resource_path.join('.')}.#{action_name} is for an instance action but does not include URL parameters"
         end
 
         path << sample[:path_params].first.to_s

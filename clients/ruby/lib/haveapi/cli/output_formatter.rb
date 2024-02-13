@@ -146,7 +146,7 @@ module HaveAPI::CLI
 
     def line(str = '')
       if @out
-        @out += str + "\n"
+        @out += "#{str}\n"
 
       else
         puts str

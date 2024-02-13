@@ -21,6 +21,8 @@ module HaveAPI::CLI::Authentication
         q.default = nil
         q.echo = false
       end.to_s
+
+      nil
     end
 
     def authenticate

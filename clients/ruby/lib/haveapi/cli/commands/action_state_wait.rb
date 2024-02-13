@@ -7,7 +7,7 @@ module HaveAPI::CLI::Commands
     desc 'Block until the action is finished'
 
     def exec(args)
-      if args.size < 1
+      if args.empty?
         warn 'Provide argument STATE ID'
         exit(false)
       end

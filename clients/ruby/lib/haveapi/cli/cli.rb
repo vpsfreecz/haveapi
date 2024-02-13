@@ -605,19 +605,16 @@ module HaveAPI::CLI
     end
 
     def authenticate(action = nil)
-      if @auth
-        @auth.validate
-        @auth.authenticate
+      raise 'auth is needed and has not been selected' unless @auth
 
-        if @opts[:save]
-          cfg = server_config(api_url)
-          cfg[:auth][@opts[:auth]] = @auth.save
-          cfg[:last_auth] = @opts[:auth]
-          write_config
-        end
+      @auth.validate
+      @auth.authenticate
 
-      else
-        # FIXME: exit as auth is needed and has not been selected
+      if @opts[:save]
+        cfg = server_config(api_url)
+        cfg[:auth][@opts[:auth]] = @auth.save
+        cfg[:last_auth] = @opts[:auth]
+        write_config
       end
 
       true

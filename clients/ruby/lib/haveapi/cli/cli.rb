@@ -464,8 +464,8 @@ module HaveAPI::CLI
         puts prefix
       end
 
-      sort_by_key(children[:resources]).each do |resource, children|
-        nested_resource("#{prefix}.#{resource}", children, actions)
+      sort_by_key(children[:resources]).each do |resource, grandchildren|
+        nested_resource("#{prefix}.#{resource}", grandchildren, actions)
       end
     end
 

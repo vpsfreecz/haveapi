@@ -314,7 +314,7 @@ module HaveAPI::ModelAdapters
 
       handle ::ActiveModel::Validations::ExclusionValidator do |v|
         opts = {
-          values: v.options[:in].map { |v| v }
+          values: v.options[:in]
         }
         opts[:message] = v.options[:message] if v.options[:message]
 
@@ -332,7 +332,7 @@ module HaveAPI::ModelAdapters
 
       handle ::ActiveModel::Validations::InclusionValidator do |v|
         opts = {
-          values: v.options[:in].map { |v| v }
+          values: v.options[:in]
         }
         opts[:message] = v.options[:message] if v.options[:message]
 

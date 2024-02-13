@@ -23,7 +23,7 @@ module HaveAPI
       def for(layout, obj)
         return ModelAdapters::Hash if !obj || %i[hash hash_list].include?(layout)
 
-        adapter = @adapters.detect { |adapter| adapter.handle?(layout, obj) }
+        adapter = @adapters.detect { |a| a.handle?(layout, obj) }
         adapter || ModelAdapters::Hash
       end
 

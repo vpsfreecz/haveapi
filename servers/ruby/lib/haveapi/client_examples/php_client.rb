@@ -116,26 +116,26 @@ module HaveAPI::ClientExamples
       when :object
         out << "// $reply is an instance of \\HaveAPI\\Client\\ResourceInstance\n"
 
-        (sample[:response] || {}).each do |k, v|
-          param = action[:output][:parameters][k]
+        (sample[:response] || {}).each do |pn, pv|
+          param = action[:output][:parameters][pn]
 
           if param[:type] == 'Resource'
-            out << "// $reply->#{k} = \\HaveAPI\\Client\\ResourceInstance("
+            out << "// $reply->#{pn} = \\HaveAPI\\Client\\ResourceInstance("
             out << "resource: #{param[:resource].join('.')}, "
 
-            out << if v.is_a?(::Hash)
-                     v.map { |k, v| "#{k}: #{PP.pp(v, '').strip}" }.join(', ')
+            out << if pv.is_a?(::Hash)
+                     pv.map { |k, v| "#{k}: #{PP.pp(v, '').strip}" }.join(', ')
                    else
-                     "id: #{v}"
+                     "id: #{pv}"
                    end
 
             out << ")\n"
 
           elsif param[:type] == 'Custom'
-            out << "// $reply->#{k} is a custom type"
+            out << "// $reply->#{pn} is a custom type"
 
           else
-            out << "// $reply->#{k} = #{PP.pp(v, '')}"
+            out << "// $reply->#{pn} = #{PP.pp(pv, '')}"
           end
         end
 

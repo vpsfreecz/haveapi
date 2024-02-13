@@ -88,7 +88,7 @@ module HaveAPI
         params.reject! { |param| passwords.include?(param) }
       end
 
-      Hash[params.map do |param|
+      params.to_h do |param|
         value =
           if passwords.include?(param)
             'secret'
@@ -97,7 +97,7 @@ module HaveAPI
           end
 
         [param, value]
-      end]
+      end
     end
   end
 end

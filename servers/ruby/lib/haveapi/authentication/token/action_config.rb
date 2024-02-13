@@ -46,9 +46,9 @@ module HaveAPI::Authentication
       end
 
       def with_defaults(opts)
-        Hash[%i[input handle].map do |v|
+        %i[input handle].to_h do |v|
           [v, opts.has_key?(v) ? opts[v] : true]
-        end]
+        end
       end
     end
   end

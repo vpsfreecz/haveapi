@@ -16,6 +16,7 @@ class User < ActiveRecord::Base
     begin
       return user if ::BCrypt::Password.new(user.password) == password
     rescue BCrypt::Errors::InvalidHash
+      # returning false
     end
 
     false

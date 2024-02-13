@@ -50,6 +50,7 @@ module HaveAPI::Extensions
           lines = ::File.readlines(frame.filename)
           frame.context_line = lines[lineno].chomp
         rescue StandardError
+          # ignore
         end
 
         frame

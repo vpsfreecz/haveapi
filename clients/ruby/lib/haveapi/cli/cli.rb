@@ -528,12 +528,9 @@ module HaveAPI::CLI
 
             param = top[part]
 
-            if param[:type] == 'Resource'
-              top = @api.get_action(param[:resource], :show, []).params
+            break if param[:type] != 'Resource'
 
-            else
-              break
-            end
+            top = @api.get_action(param[:resource], :show, []).params
           end
 
           col[:display] = proc do |r|

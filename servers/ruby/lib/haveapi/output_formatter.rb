@@ -45,7 +45,7 @@ module HaveAPI
 
     protected
 
-    def header(status, response, message = nil, errors = nil, version)
+    def header(status, response, message = nil, errors = nil, version = nil)
       ret = {}
       ret[:version] = HaveAPI::PROTOCOL_VERSION if version
       ret.update({

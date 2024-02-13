@@ -190,11 +190,8 @@ module HaveAPI::Authentication
               client:
             )
 
-            if auth_res.nil?
-              # Authentication failed
-              req.access_denied!
-            elsif auth_res.cancel
-              # Cancel the process
+            if auth_res.nil? || auth_res.cancel
+              # Authentication failed / cancel requested
               req.access_denied!
             elsif auth_res.authenticated && auth_res.complete
               # Authentication was successful
@@ -267,12 +264,6 @@ module HaveAPI::Authentication
               bearer_token.refresh_token = refresh_token if refresh_token
               bearer_token
 
-            when :password
-              req.unsupported_grant_type!
-
-            when :client_credentials
-              req.unsupported_grant_type!
-
             when :refresh_token
               authorization = config.find_authorization_by_refresh_token(client, req.refresh_token)
 
@@ -289,7 +280,7 @@ module HaveAPI::Authentication
               bearer_token.refresh_token = refresh_token if refresh_token
               bearer_token
 
-            else
+            else # :password, :client_credentials
               req.unsupported_grant_type!
             end
         end

@@ -136,10 +136,7 @@ module HaveAPI::Client
                          when :object_list
                            ResourceInstanceList.new(@client, @api, self, action, ret)
 
-                         when :hash, :hash_list
-                           ret
-
-                         else
+                         else # :hash, :hash_list
                            ret
                          end
 

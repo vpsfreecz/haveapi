@@ -731,9 +731,6 @@ module HaveAPI::CLI
             when :utc
               t.utc
 
-            when :local
-              t.localtime
-
             else
               t.localtime
             end

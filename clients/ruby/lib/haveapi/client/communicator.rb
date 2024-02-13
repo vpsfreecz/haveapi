@@ -155,9 +155,8 @@ module HaveAPI::Client
         response = parse(@rest[action.prepared_path].method(action.http_method.downcase.to_sym).call(*args))
       rescue RestClient::Forbidden
         return error('Access forbidden. Bad user name or password? Not authorized?')
-      rescue RestClient::ResourceNotFound => e
-        response = parse(e.http_body)
-      rescue RestClient::BadRequest => e
+      rescue RestClient::ResourceNotFound,
+             RestClient::BadRequest => e
         response = parse(e.http_body)
       rescue StandardError => e
         return error("Fatal API error: #{e.inspect}")

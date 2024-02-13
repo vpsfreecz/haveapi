@@ -369,7 +369,7 @@ module HaveAPI
         prepare
         pre_exec
         exec
-      rescue Exception => e
+      rescue Exception => e # rubocop:disable Lint/RescueException
         tmp = call_class_hooks_as_for(Action, :exec_exception, args: [@context, e])
 
         if tmp.empty?
@@ -385,7 +385,7 @@ module HaveAPI
 
       begin
         output_ret = safe_output(exec_ret)
-      rescue Exception => e
+      rescue Exception => e # rubocop:disable Lint/RescueException
         tmp = call_class_hooks_as_for(Action, :exec_exception, args: [@context, e])
 
         p e.message

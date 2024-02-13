@@ -37,7 +37,7 @@ module HaveAPI
 
       # True if this validator uses any of options in hash `opts`.
       def use?(opts)
-        !(opts.keys & @takes).empty?
+        opts.keys.intersect?(@takes)
       end
 
       # Use the validator on given set of options in hash `opts`. Used

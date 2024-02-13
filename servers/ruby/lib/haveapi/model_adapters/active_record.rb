@@ -71,7 +71,7 @@ module HaveAPI::ModelAdapters
             if assoc.index('__')
               tmp = {}
               parts = assoc.split('__')
-              tmp[parts.first.to_sym] = ar_inner_includes([parts[1..-1].join('__')])
+              tmp[parts.first.to_sym] = ar_inner_includes([parts[1..].join('__')])
 
               args << tmp
             else

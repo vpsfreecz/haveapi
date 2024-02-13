@@ -37,7 +37,7 @@ module HaveAPI::CLI
       connect_api unless @api
 
       if @action
-        method(@action.first).call(* @action[1..-1])
+        method(@action.first).call(* @action[1..])
         exit
       end
 
@@ -72,10 +72,10 @@ module HaveAPI::CLI
         end
 
         if sep = ARGV.index('--')
-          cmd_opt.parse!(ARGV[sep + 1..-1])
+          cmd_opt.parse!(ARGV[sep + 1..])
         end
 
-        c.exec(args[2..-1] || [])
+        c.exec(args[2..] || [])
 
         exit
       end
@@ -85,7 +85,7 @@ module HaveAPI::CLI
         exit(true)
       end
 
-      action = @api.get_action(resources, args[1].to_sym, args[2..-1])
+      action = @api.get_action(resources, args[1].to_sym, args[2..])
 
       unless action
         warn "Resource or action '#{args[0]} #{args[1]}' not found"
@@ -363,7 +363,7 @@ module HaveAPI::CLI
 
       return {} unless sep
 
-      @action_opt.parse!(ARGV[sep + 1..-1])
+      @action_opt.parse!(ARGV[sep + 1..])
 
       options
     end
@@ -540,7 +540,7 @@ module HaveAPI::CLI
             next '' unless r
 
             top = r
-            parts[1..-1].each do |part|
+            parts[1..].each do |part|
               raise "'#{part}' not found" unless top.has_key?(part)
               break if top[part].nil?
 

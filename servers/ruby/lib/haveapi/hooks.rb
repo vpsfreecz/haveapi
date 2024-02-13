@@ -77,7 +77,7 @@ module HaveAPI
   #   p MyClass.call_hooks(:myhook, args: [1, 2, 3], initial: {counter: 0})
   #   => {:counter=>5}
   module Hooks
-    INSTANCE_VARIABLE = '@_haveapi_hooks'
+    INSTANCE_VARIABLE = '@_haveapi_hooks'.freeze
 
     # Register a hook defined by `klass` with `name`.
     # @param klass [Class]  an instance of Class, that is class name, not it's instance

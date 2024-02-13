@@ -4,7 +4,7 @@ module API::Resources
     # version '1.0'
 
     # Some data this resource will serve
-    DUMMIES = %w[First Second Third]
+    DUMMIES = %w[First Second Third].freeze
 
     # Create a named group of parameters
     params(:all) do

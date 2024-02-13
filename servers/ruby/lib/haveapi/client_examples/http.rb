@@ -1,4 +1,3 @@
-require 'pp'
 require 'cgi'
 require 'rack/utils'
 require 'haveapi/client_example'

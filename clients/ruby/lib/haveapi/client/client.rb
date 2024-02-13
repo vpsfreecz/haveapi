@@ -1,5 +1,3 @@
-require 'pp'
-
 # HaveAPI client interface.
 class HaveAPI::Client::Client
   attr_reader :resources

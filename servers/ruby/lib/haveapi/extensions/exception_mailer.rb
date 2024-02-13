@@ -10,6 +10,8 @@ module HaveAPI::Extensions
   # functions are removed, since e-mail doesn't support it. HaveAPI-specific content
   # is added. Some helper methods are taken either from Sinatra or Rack.
   class ExceptionMailer < Base
+    Frame = Struct.new(:filename, :lineno, :function, :context_line)
+
     # @param opts [Hash] options
     # @option opts to [String] recipient address
     # @option opts from [String] sender address
@@ -37,7 +39,7 @@ module HaveAPI::Extensions
       path = (req.script_name + req.path_info).squeeze('/')
 
       frames = exception.backtrace.map do |line|
-        frame = OpenStruct.new
+        frame = Frame.new
 
         next unless line =~ /(.*?):(\d+)(:in `(.*)')?/
 

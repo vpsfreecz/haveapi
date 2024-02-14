@@ -101,7 +101,7 @@ module HaveAPI::ClientExamples
         cols << col
       end
 
-      res << "\n" << HaveAPI::CLI::OutputFormatter.format(
+      res << "\n" << HaveAPI::CLI::OutputFormatter.to_s(
         sample[:response],
         cols
       )

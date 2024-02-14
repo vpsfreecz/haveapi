@@ -1,8 +1,8 @@
 module HaveAPI::CLI
   class OutputFormatter
-    def self.format(*)
+    def self.to_s(*)
       f = new(*)
-      f.format
+      f.to_s
     end
 
     def self.print(*, **)
@@ -40,7 +40,7 @@ module HaveAPI::CLI
       end
     end
 
-    def format
+    def to_s
       @out = ''
       generate
       @out

@@ -10,7 +10,7 @@ use Httpful\Request;
  */
 class Basic extends Base {
 
-	public function authenticate(Request $request) {
-		$request->authenticateWith($this->opts['user'], $this->opts['password']);
-	}
+    public function authenticate(Request $request) {
+        $request->authenticateWith($this->opts['user'], $this->opts['password']);
+    }
 }

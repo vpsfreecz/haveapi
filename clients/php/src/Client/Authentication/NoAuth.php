@@ -9,7 +9,7 @@ use Httpful\Request;
  */
 class NoAuth extends Base {
 
-	public function authenticate(Request $request) {
+    public function authenticate(Request $request) {
 
-	}
+    }
 }

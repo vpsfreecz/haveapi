@@ -27,251 +27,251 @@ use Httpful\Request;
  * to Token::HTTP_HEADER.
  */
 class Token extends Base {
-	const HTTP_HEADER = 0;
-	const QUERY_PARAMETER = 1;
+    const HTTP_HEADER = 0;
+    const QUERY_PARAMETER = 1;
 
-	/**
-	 * @var \HaveAPI\Client\Resource
-	 */
-	private $rs;
+    /**
+     * @var \HaveAPI\Client\Resource
+     */
+    private $rs;
 
-	private $configured = false;
+    private $configured = false;
 
-	private $token;
+    private $token;
 
-	private $validTo = null;
+    private $validTo = null;
 
-	private $via;
+    private $via;
 
-	/**
-	 * Request a new token if it isn't in the options.
-	 */
-	protected function setup() {
-		$this->rs = new \HaveAPI\Client\Resource($this->client, 'token', $this->description->resources->token, array());
-		$this->via = isSet($this->opts['via']) ? $this->opts['via'] : self::HTTP_HEADER;
+    /**
+     * Request a new token if it isn't in the options.
+     */
+    protected function setup() {
+        $this->rs = new \HaveAPI\Client\Resource($this->client, 'token', $this->description->resources->token, array());
+        $this->via = isSet($this->opts['via']) ? $this->opts['via'] : self::HTTP_HEADER;
 
-		if (isSet($this->opts['token'])) {
-			$this->configured = true;
-			$this->token = $this->opts['token'];
-			return;
-		} elseif (isSet($this->opts['resume'])) {
-			$r = $this->opts['resume'];
-			$this->resumeAuthentication($r['action'], $r['token'], $r['input']);
-			return;
-		}
+        if (isSet($this->opts['token'])) {
+            $this->configured = true;
+            $this->token = $this->opts['token'];
+            return;
+        } elseif (isSet($this->opts['resume'])) {
+            $r = $this->opts['resume'];
+            $this->resumeAuthentication($r['action'], $r['token'], $r['input']);
+            return;
+        }
 
-		$this->requestToken();
-	}
+        $this->requestToken();
+    }
 
-	/**
-	 * Resume multi-step authentication
-	 * @param string $action
-	 * @param string $token intermediate token
-	 * @param array $input
-	 */
-	public function resumeAuthentication($action, $token, $input) {
-		$this->runAuthentication($action, array_merge(
-			$input,
-			['token' => $token]
-		));
-	}
+    /**
+     * Resume multi-step authentication
+     * @param string $action
+     * @param string $token intermediate token
+     * @param array $input
+     */
+    public function resumeAuthentication($action, $token, $input) {
+        $this->runAuthentication($action, array_merge(
+            $input,
+            ['token' => $token]
+        ));
+    }
 
-	/**
-	 * Add token header if configured. Checks token validity.
-	 * @param Request $request
-	 */
-	public function authenticate(Request $request) {
-		if(!$this->configured)
-			return;
+    /**
+     * Add token header if configured. Checks token validity.
+     * @param Request $request
+     */
+    public function authenticate(Request $request) {
+        if(!$this->configured)
+            return;
 
-		$this->checkValidity();
+        $this->checkValidity();
 
-		if($this->via == self::HTTP_HEADER){
-			$request->addHeader($this->description->http_header, $this->token);
-		}
-	}
+        if($this->via == self::HTTP_HEADER){
+            $request->addHeader($this->description->http_header, $this->token);
+        }
+    }
 
-	/**
-	 * Returns token query parameter if configured.
-	 */
-	public function queryParameters() {
-		if(!$this->configured || $this->via != self::QUERY_PARAMETER)
-			return array();
+    /**
+     * Returns token query parameter if configured.
+     */
+    public function queryParameters() {
+        if(!$this->configured || $this->via != self::QUERY_PARAMETER)
+            return array();
 
-		return array($this->description->query_parameter => $this->token);
-	}
+        return array($this->description->query_parameter => $this->token);
+    }
 
-	/**
-	 * Revoke the token.
-	 */
-	public function logout() {
-		$this->rs->revoke();
-	}
+    /**
+     * Revoke the token.
+     */
+    public function logout() {
+        $this->rs->revoke();
+    }
 
-	/**
-	 * Request a new token from the API.
-	 */
-	protected function requestToken() {
-		$input = [
-			'lifetime' => $this->opts['lifetime'] ?? 'renewable_auto',
-			'interval' => $this->opts['interval'] ?? 300,
-		];
+    /**
+     * Request a new token from the API.
+     */
+    protected function requestToken() {
+        $input = [
+            'lifetime' => $this->opts['lifetime'] ?? 'renewable_auto',
+            'interval' => $this->opts['interval'] ?? 300,
+        ];
 
-		foreach ($this->getRequestCredentials() as $param) {
-			if (isSet($this->opts[$param]))
-				$input[$param] = $this->opts[$param];
-		}
+        foreach ($this->getRequestCredentials() as $param) {
+            if (isSet($this->opts[$param]))
+                $input[$param] = $this->opts[$param];
+        }
 
-		$this->runAuthentication('request', $input);
-	}
+        $this->runAuthentication('request', $input);
+    }
 
-	/**
-	 * Execute authentication steps until it succeeds, fails or is stopped
-	 *
-	 * The first step is executed immediately. All subsequent steps invoke the
-	 * callback to get action credentials. The callback can also decide to stop
-	 * or pause the authentication process.
-	 * @param string $action
-	 * @param array $input
-	 */
-	protected function runAuthentication($action, $input) {
-		list($cont, $nextAction, $token) = $this->authenticationStep($action, $input);
+    /**
+     * Execute authentication steps until it succeeds, fails or is stopped
+     *
+     * The first step is executed immediately. All subsequent steps invoke the
+     * callback to get action credentials. The callback can also decide to stop
+     * or pause the authentication process.
+     * @param string $action
+     * @param array $input
+     */
+    protected function runAuthentication($action, $input) {
+        list($cont, $nextAction, $token) = $this->authenticationStep($action, $input);
 
-		if ($cont == 'done')
-			return;
+        if ($cont == 'done')
+            return;
 
-		if (!isSet($this->opts['callback']) || !is_callable($this->opts['callback'])) {
-			throw new BadFunctionCallException(
-				'add callback to handle multi-step authentication'
-			);
-		}
+        if (!isSet($this->opts['callback']) || !is_callable($this->opts['callback'])) {
+            throw new BadFunctionCallException(
+                'add callback to handle multi-step authentication'
+            );
+        }
 
-		for (;;) {
-			$cb = $this->opts['callback'](
-				$nextAction,
-				$token,
-				$this->getCustomActionCredentials($nextAction)
-			);
+        for (;;) {
+            $cb = $this->opts['callback'](
+                $nextAction,
+                $token,
+                $this->getCustomActionCredentials($nextAction)
+            );
 
-			if ($cb === 'stop') {
-				return;
-			} elseif (!is_array($cb)) {
-				throw new RuntimeException("callback has to return an array or 'stop'");
-			}
+            if ($cb === 'stop') {
+                return;
+            } elseif (!is_array($cb)) {
+                throw new RuntimeException("callback has to return an array or 'stop'");
+            }
 
-			$input = array_merge($cb, ['token' => $token]);
+            $input = array_merge($cb, ['token' => $token]);
 
-			list($cont, $nextAction, $token) = $this->authenticationStep($nextAction, $input);
+            list($cont, $nextAction, $token) = $this->authenticationStep($nextAction, $input);
 
-			if ($cont == 'done')
-				return;
-		}
-	}
+            if ($cont == 'done')
+                return;
+        }
+    }
 
-	/**
-	 * Perform one authentication step and return results
-	 * @param string $action
-	 * @param array $input
-	 * @return array
-	 */
-	protected function authenticationStep($action, $input) {
-		$ret = $this->rs->{$action}($input);
+    /**
+     * Perform one authentication step and return results
+     * @param string $action
+     * @param array $input
+     * @return array
+     */
+    protected function authenticationStep($action, $input) {
+        $ret = $this->rs->{$action}($input);
 
-		if ($ret['complete']) {
-			$this->token = $ret['token'];
+        if ($ret['complete']) {
+            $this->token = $ret['token'];
 
-			if($ret['valid_to'])
-				$this->validTo = strtotime($ret['valid_to']);
+            if($ret['valid_to'])
+                $this->validTo = strtotime($ret['valid_to']);
 
-			$this->configured = true;
-			return ['done', null, null];
-		}
+            $this->configured = true;
+            return ['done', null, null];
+        }
 
-		return ['continue', $ret['next_action'], $ret['token']];
-	}
+        return ['continue', $ret['next_action'], $ret['token']];
+    }
 
-	/**
-	 * Return names of parameters used as credentials for action Request
-	 * @return array
-	 */
-	protected function getRequestCredentials() {
-		$ret = [];
-		$params = $this->rs->request->getParameters('input');
+    /**
+     * Return names of parameters used as credentials for action Request
+     * @return array
+     */
+    protected function getRequestCredentials() {
+        $ret = [];
+        $params = $this->rs->request->getParameters('input');
 
-		foreach ($params as $name => $desc) {
-			if ($name != 'lifetime' && $params != 'interval')
-				$ret[] = $name;
-		}
+        foreach ($params as $name => $desc) {
+            if ($name != 'lifetime' && $params != 'interval')
+                $ret[] = $name;
+        }
 
-		return $ret;
-	}
+        return $ret;
+    }
 
-	/**
-	 * Return name and description of parameters used as credentials for custom
-	 * authentication action
-	 * @param string action
-	 * @return array
-	 */
-	protected function getCustomActionCredentials($action) {
-		$ret = [];
-		$params = $this->rs->{$action}->getParameters('input');
+    /**
+     * Return name and description of parameters used as credentials for custom
+     * authentication action
+     * @param string action
+     * @return array
+     */
+    protected function getCustomActionCredentials($action) {
+        $ret = [];
+        $params = $this->rs->{$action}->getParameters('input');
 
-		foreach ($params as $name => $desc) {
-			if ($name != 'token')
-				$ret[$name] = $desc;
-		}
+        foreach ($params as $name => $desc) {
+            if ($name != 'token')
+                $ret[$name] = $desc;
+        }
 
-		return $ret;
-	}
+        return $ret;
+    }
 
-	/**
-	 * Get a new token if the current one expired.
-	 */
-	protected function checkValidity() {
-		if ($this->validTo && $this->validTo < time() && $this->hasRequestCredentials())
-			$this->requestToken();
-	}
+    /**
+     * Get a new token if the current one expired.
+     */
+    protected function checkValidity() {
+        if ($this->validTo && $this->validTo < time() && $this->hasRequestCredentials())
+            $this->requestToken();
+    }
 
-	/**
-	 * Check if all request credentials are provided
-	 * @return boolean
-	 */
-	protected function hasRequestCredentials() {
-		foreach ($this->getRequestCredentials() as $name) {
-			if (!isSet($this->opts[$name]))
-				return false;
-		}
+    /**
+     * Check if all request credentials are provided
+     * @return boolean
+     */
+    protected function hasRequestCredentials() {
+        foreach ($this->getRequestCredentials() as $name) {
+            if (!isSet($this->opts[$name]))
+                return false;
+        }
 
-		return true;
-	}
+        return true;
+    }
 
-	/**
-	 * Return the token resource
-	 * @return \HaveAPI\Client\Resource
-	 */
-	public function getResource() {
-		return $this->rs;
-	}
+    /**
+     * Return the token resource
+     * @return \HaveAPI\Client\Resource
+     */
+    public function getResource() {
+        return $this->rs;
+    }
 
-	/**
-	 * @return string the token
-	 */
-	public function getToken() {
-		return $this->token;
-	}
+    /**
+     * @return string the token
+     */
+    public function getToken() {
+        return $this->token;
+    }
 
-	/**
-	 * @return int expiration time
-	 */
-	public function getValidTo() {
-		return $this->validTo;
-	}
+    /**
+     * @return int expiration time
+     */
+    public function getValidTo() {
+        return $this->validTo;
+    }
 
-	/**
-	 * Return true if the authentication process is complete
-	 * @return boolean
-	 */
-	public function isComplete() {
-		return $this->configured;
-	}
+    /**
+     * Return true if the authentication process is complete
+     * @return boolean
+     */
+    public function isComplete() {
+        return $this->configured;
+    }
 }

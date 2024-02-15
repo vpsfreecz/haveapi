@@ -16,108 +16,108 @@ namespace HaveAPI\Client\Authentication;
  * are read from HaveAPI description.
  */
 class OAuth2 extends Base {
-	private $genericProvider;
+    private $genericProvider;
 
-	private $accessToken;
+    private $accessToken;
 
-	public function setup() {
-		$apiUri = $this->client->getUri();
+    public function setup() {
+        $apiUri = $this->client->getUri();
 
-		if (isset($this->opts['client_id'])) {
-			$headers = [
-				'User-Agent' => $this->client->getIdentity(),
-			];
+        if (isset($this->opts['client_id'])) {
+            $headers = [
+                'User-Agent' => $this->client->getIdentity(),
+            ];
 
-			$ip = $this->client->getClientIp();
+            $ip = $this->client->getClientIp();
 
-			if ($ip)
-				$headers['Client-IP'] = $ip;
+            if ($ip)
+                $headers['Client-IP'] = $ip;
 
-			$httpClient = new \GuzzleHttp\Client([
-				'headers' => $headers,
-			]);
+            $httpClient = new \GuzzleHttp\Client([
+                'headers' => $headers,
+            ]);
 
-			$this->genericProvider = new \League\OAuth2\Client\Provider\GenericProvider(
-				[
-					'clientId' => $this->opts['client_id'],
-					'clientSecret' => $this->opts['client_secret'],
-					'redirectUri' => $this->opts['redirect_uri'],
-					'urlAuthorize' => $this->description->authorize_url,
-					'urlAccessToken' => $this->description->token_url,
-					'urlResourceOwnerDetails' => 'ENOTSUPPORTED',
-					'pkceMethod' => \League\OAuth2\Client\Provider\GenericProvider::PKCE_METHOD_S256,
-					'scopes' => $this->opts['scope'],
-					'scopeSeparator' => ' ',
-				],
-				[
-					'httpClient' => $httpClient,
-				]
-			);
-		}
+            $this->genericProvider = new \League\OAuth2\Client\Provider\GenericProvider(
+                [
+                    'clientId' => $this->opts['client_id'],
+                    'clientSecret' => $this->opts['client_secret'],
+                    'redirectUri' => $this->opts['redirect_uri'],
+                    'urlAuthorize' => $this->description->authorize_url,
+                    'urlAccessToken' => $this->description->token_url,
+                    'urlResourceOwnerDetails' => 'ENOTSUPPORTED',
+                    'pkceMethod' => \League\OAuth2\Client\Provider\GenericProvider::PKCE_METHOD_S256,
+                    'scopes' => $this->opts['scope'],
+                    'scopeSeparator' => ' ',
+                ],
+                [
+                    'httpClient' => $httpClient,
+                ]
+            );
+        }
 
-		if (isset($this->opts['access_token'])) {
-			$this->accessToken = new \League\OAuth2\Client\Token\AccessToken($this->opts['access_token']);
-		}
-	}
+        if (isset($this->opts['access_token'])) {
+            $this->accessToken = new \League\OAuth2\Client\Token\AccessToken($this->opts['access_token']);
+        }
+    }
 
-	/**
-	 * Redirect the user to the authorization endpoint to request authorization code
-	 */
-	public function requestAuthorizationCode() {
-		$authorizationUrl = $this->genericProvider->getAuthorizationUrl();
+    /**
+     * Redirect the user to the authorization endpoint to request authorization code
+     */
+    public function requestAuthorizationCode() {
+        $authorizationUrl = $this->genericProvider->getAuthorizationUrl();
 
-		$_SESSION['oauth2state'] = $this->genericProvider->getState();
-		$_SESSION['oauth2pkceCode'] = $this->genericProvider->getPkceCode();
+        $_SESSION['oauth2state'] = $this->genericProvider->getState();
+        $_SESSION['oauth2pkceCode'] = $this->genericProvider->getPkceCode();
 
-		header('Accept: text/html');
-		header('Location: ' . $authorizationUrl);
-		exit;
-	}
+        header('Accept: text/html');
+        header('Location: ' . $authorizationUrl);
+        exit;
+    }
 
-	/**
-	 * Request access token based on authorization code
-	 */
-	public function requestAccessToken() {
-		if (!isset($_GET['state']) || $_GET['state'] != $_SESSION['oauth2state'])
-			throw new \HaveAPI\Client\Exception\AuthenticationFailed('Invalid OAuth2 state');
+    /**
+     * Request access token based on authorization code
+     */
+    public function requestAccessToken() {
+        if (!isset($_GET['state']) || $_GET['state'] != $_SESSION['oauth2state'])
+            throw new \HaveAPI\Client\Exception\AuthenticationFailed('Invalid OAuth2 state');
 
         $this->genericProvider->setPkceCode($_SESSION['oauth2pkceCode']);
 
         $this->accessToken = $this->genericProvider->getAccessToken('authorization_code', [
             'code' => $_GET['code']
-		]);
+        ]);
 
-		if (isset($_SESSION['oauth2state']))
-			unset($_SESSION['oauth2state']);
+        if (isset($_SESSION['oauth2state']))
+            unset($_SESSION['oauth2state']);
 
-		if (isset($_SESSION['oauth2pkceCode']))
-			unset($_SESSION['oauth2pkceCode']);
-	}
+        if (isset($_SESSION['oauth2pkceCode']))
+            unset($_SESSION['oauth2pkceCode']);
+    }
 
-	/**
-	 * Add authorization header to the request
-	 */
-	public function authenticate(\Httpful\Request $request) {
-		if ($this->accessToken) {
-			$request->addHeader('Authorization', 'Bearer '.$this->accessToken->getToken());
-		}
-	}
+    /**
+     * Add authorization header to the request
+     */
+    public function authenticate(\Httpful\Request $request) {
+        if ($this->accessToken) {
+            $request->addHeader('Authorization', 'Bearer '.$this->accessToken->getToken());
+        }
+    }
 
-	/*
-	 * Revoke the access token
-	 */
-	public function logout() {
-		$request = $this->client->getRequest('post', $this->description->revoke_url);
-		$request->sendsForm();
-		$request->body("token=".$this->accessToken->getToken());
-		$request->send();
-	}
+    /*
+     * Revoke the access token
+     */
+    public function logout() {
+        $request = $this->client->getRequest('post', $this->description->revoke_url);
+        $request->sendsForm();
+        $request->body("token=".$this->accessToken->getToken());
+        $request->send();
+    }
 
-	/**
-	 * Return access token serialized in an array
-	 * @return array
-	 */
-	public function jsonSerialize() {
-		return $this->accessToken->jsonSerialize();
-	}
+    /**
+     * Return access token serialized in an array
+     * @return array
+     */
+    public function jsonSerialize() {
+        return $this->accessToken->jsonSerialize();
+    }
 }

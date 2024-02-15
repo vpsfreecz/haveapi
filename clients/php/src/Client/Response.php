@@ -5,7 +5,8 @@ namespace HaveAPI\Client;
 /**
  * Response from the API.
  */
-class Response implements \ArrayAccess {
+class Response implements \ArrayAccess
+{
     private $action;
     private $envelope;
     private $time;
@@ -15,9 +16,11 @@ class Response implements \ArrayAccess {
      * @param \Httpful\Response $response envelope received response
      * @param float $time time spent communicating with the API
      */
-    public function __construct($action, $response, $time) {
-        if($response->code == 401)
+    public function __construct($action, $response, $time)
+    {
+        if($response->code == 401) {
             throw new Exception\AuthenticationFailed($response->body->message);
+        }
 
         $this->action = $action;
         $this->envelope = $response->body;
@@ -27,14 +30,16 @@ class Response implements \ArrayAccess {
     /**
      * @return boolean
      */
-    public function isOk() {
+    public function isOk()
+    {
         return $this->envelope->status;
     }
 
     /**
      * @return string
      */
-    public function getMessage() {
+    public function getMessage()
+    {
         return $this->envelope->message;
     }
 
@@ -42,7 +47,8 @@ class Response implements \ArrayAccess {
      * For known layouts, namespaced response is returned, or else the data is returned as is.
      * @return \stdClass
      */
-    public function getResponse() {
+    public function getResponse()
+    {
         $l = $this->action->layout('output');
 
         switch($l) {
@@ -57,7 +63,8 @@ class Response implements \ArrayAccess {
         }
     }
 
-    public function getMeta() {
+    public function getMeta()
+    {
         $s = $this->action->getClient()->getSettings();
         $ns = $s['meta']->{'namespace'};
 
@@ -67,11 +74,13 @@ class Response implements \ArrayAccess {
     /**
      * @return \stdClass
      */
-    public function getErrors() {
+    public function getErrors()
+    {
         return $this->envelope->errors;
     }
 
-    public function __toString() {
+    public function __toString()
+    {
         return json_encode($this->getResponse());
     }
 
@@ -79,30 +88,35 @@ class Response implements \ArrayAccess {
      * Return time spent communicating with the API to get this response.
      * @return float spent time
      */
-    public function getSpentTime() {
+    public function getSpentTime()
+    {
         return $this->time;
     }
 
     // ArrayAccess
-    public function offsetExists($offset): bool {
+    public function offsetExists($offset): bool
+    {
         $r = $this->getResponse();
 
-        return isSet($r->{$offset});
+        return isset($r->{$offset});
     }
 
-    public function offsetGet($offset): mixed {
+    public function offsetGet($offset): mixed
+    {
         $r = $this->getResponse();
 
         return $r->{$offset};
     }
 
-    public function offsetSet($offset, $value): void {
+    public function offsetSet($offset, $value): void
+    {
         $r = $this->getResponse();
 
         $r->{$offset} = $value;
     }
 
-    public function offsetUnset($offset): void {
+    public function offsetUnset($offset): void
+    {
         $r = $this->getResponse();
 
         unset($r->{$offset});

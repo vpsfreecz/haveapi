@@ -7,7 +7,8 @@ use HaveAPI\Client;
 /**
  * Represents a callable resource action.
  */
-class Action {
+class Action
+{
     private $m_name;
     private $description;
 
@@ -19,7 +20,7 @@ class Action {
     private $resource;
     private $prepared_path;
     private $args;
-    private $lastArgs = array();
+    private $lastArgs = [];
 
     /**
      * @param Client $client
@@ -28,7 +29,8 @@ class Action {
      * @param \stdClass $description action description
      * @param array $args arguments passed from the parent
      */
-    public function __construct(Client $client, Resource $resource, $name, $description, $args) {
+    public function __construct(Client $client, Resource $resource, $name, $description, $args)
+    {
         $this->client = $client;
         $this->resource = $resource;
         $this->m_name = $name;
@@ -47,7 +49,8 @@ class Action {
      * @throws Exception\UnresolvedArguments
      * @throws Exception\ActionFailed
      */
-    public function call() {
+    public function call()
+    {
         $params = $this->prepareCall(func_get_args());
 
         $ret = $this->client->call($this, $params);
@@ -62,7 +65,8 @@ class Action {
      * @return \stdClass response body
      * @throws Exception\UnresolvedArguments
      */
-    public function directCall() {
+    public function directCall()
+    {
         $params = $this->prepareCall(func_get_args());
 
         $ret = $this->client->directCall($this, $params);
@@ -75,16 +79,18 @@ class Action {
     /**
      * Prepare parameters for the action invocation.
      */
-    protected function prepareCall($func_args) {
-        if(!$this->prepared_path)
+    protected function prepareCall($func_args)
+    {
+        if(!$this->prepared_path) {
             $this->prepared_path = $this->path();
+        }
 
         $args = array_merge($this->args, $func_args);
 
         $cnt = count($args);
         $replaced_cnt = 0;
-        $params = array();
-        $this->lastArgs = array();
+        $params = [];
+        $this->lastArgs = [];
 
         for($i = 0; $i < $cnt; $i++) {
             $arg = $args[$i];
@@ -105,8 +111,9 @@ class Action {
             }
         }
 
-        if(preg_match("/\{[a-zA-Z0-9\-_]+\}/", $this->prepared_path))
+        if(preg_match("/\{[a-zA-Z0-9\-_]+\}/", $this->prepared_path)) {
             throw new Exception\UnresolvedArguments("Cannot call action '{$this->resource->getName()}#{$this->m_name}': unresolved arguments.");
+        }
 
         return $params;
     }
@@ -114,23 +121,27 @@ class Action {
     /**
      * Set action URL.
      */
-    public function preparePath($path) {
+    public function preparePath($path)
+    {
         $this->prepared_path = $path;
     }
 
     /**
      * @return string HTTP method
      */
-    public function httpMethod() {
+    public function httpMethod()
+    {
         return $this->description->method;
     }
 
     /**
      * @return string raw or prepared URL
      */
-    public function path() {
-        if($this->prepared_path)
+    public function path()
+    {
+        if($this->prepared_path) {
             return $this->prepared_path;
+        }
 
         return $this->description->path;
     }
@@ -139,54 +150,63 @@ class Action {
      * @param string $src direction, input or output
      * @return string layout for direction
      */
-    public function layout($src) {
+    public function layout($src)
+    {
         return $this->description->$src->layout;
     }
 
     /**
      * @return string namespace
      */
-    public function getNamespace($src) {
+    public function getNamespace($src)
+    {
         return $this->description->$src->{'namespace'};
     }
 
     /**
      * @return \stdClass parameters
      */
-    public function getParameters($direction) {
+    public function getParameters($direction)
+    {
         return $this->description->{$direction}->parameters;
     }
 
     /**
      * @return string action name
      */
-    public function name() {
+    public function name()
+    {
         return $this->m_name;
     }
 
-    public function getClient() {
+    public function getClient()
+    {
         return $this->client;
     }
 
     /**
      * @return Resource parent
      */
-    public function getResource() {
+    public function getResource()
+    {
         return $this->resource;
     }
 
     /**
      * @return array an array of arguments that resulted in creation of this action
      */
-    public function getLastArgs() {
+    public function getLastArgs()
+    {
         return $this->lastArgs;
     }
 
-    public function applyArgs($args) {
+    public function applyArgs($args)
+    {
         $this->args = array_merge($this->args, $args);
     }
 
-    public function __toString() {
+    public function __toString()
+    {
         return $this->m_name;
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-$_haveapi_client_classes = array(
+$_haveapi_client_classes = [
     'Client/Authentication/Base',
     'Client/Authentication/NoAuth',
     'Client/Authentication/Basic',
@@ -17,8 +17,8 @@ $_haveapi_client_classes = array(
     'Client/ResourceInstance',
     'Client/ResourceInstanceList',
     'Client/Response',
-    'Client'
-);
+    'Client',
+];
 
 foreach($_haveapi_client_classes as $class) {
     include "src/$class.php";

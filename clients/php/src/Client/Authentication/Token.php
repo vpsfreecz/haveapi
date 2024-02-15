@@ -1,6 +1,7 @@
 <?php
 
 namespace HaveAPI\Client\Authentication;
+
 use HaveAPI\Client\Resource;
 use Httpful\Request;
 
@@ -26,9 +27,10 @@ use Httpful\Request;
  * Option `via` determines how the token is sent to the API. It defaults
  * to Token::HTTP_HEADER.
  */
-class Token extends Base {
-    const HTTP_HEADER = 0;
-    const QUERY_PARAMETER = 1;
+class Token extends Base
+{
+    public const HTTP_HEADER = 0;
+    public const QUERY_PARAMETER = 1;
 
     /**
      * @var \HaveAPI\Client\Resource
@@ -46,15 +48,16 @@ class Token extends Base {
     /**
      * Request a new token if it isn't in the options.
      */
-    protected function setup() {
-        $this->rs = new \HaveAPI\Client\Resource($this->client, 'token', $this->description->resources->token, array());
-        $this->via = isSet($this->opts['via']) ? $this->opts['via'] : self::HTTP_HEADER;
+    protected function setup()
+    {
+        $this->rs = new \HaveAPI\Client\Resource($this->client, 'token', $this->description->resources->token, []);
+        $this->via = $this->opts['via'] ?? self::HTTP_HEADER;
 
-        if (isSet($this->opts['token'])) {
+        if (isset($this->opts['token'])) {
             $this->configured = true;
             $this->token = $this->opts['token'];
             return;
-        } elseif (isSet($this->opts['resume'])) {
+        } elseif (isset($this->opts['resume'])) {
             $r = $this->opts['resume'];
             $this->resumeAuthentication($r['action'], $r['token'], $r['input']);
             return;
@@ -69,7 +72,8 @@ class Token extends Base {
      * @param string $token intermediate token
      * @param array $input
      */
-    public function resumeAuthentication($action, $token, $input) {
+    public function resumeAuthentication($action, $token, $input)
+    {
         $this->runAuthentication($action, array_merge(
             $input,
             ['token' => $token]
@@ -80,13 +84,15 @@ class Token extends Base {
      * Add token header if configured. Checks token validity.
      * @param Request $request
      */
-    public function authenticate(Request $request) {
-        if(!$this->configured)
+    public function authenticate(Request $request)
+    {
+        if(!$this->configured) {
             return;
+        }
 
         $this->checkValidity();
 
-        if($this->via == self::HTTP_HEADER){
+        if($this->via == self::HTTP_HEADER) {
             $request->addHeader($this->description->http_header, $this->token);
         }
     }
@@ -94,32 +100,37 @@ class Token extends Base {
     /**
      * Returns token query parameter if configured.
      */
-    public function queryParameters() {
-        if(!$this->configured || $this->via != self::QUERY_PARAMETER)
-            return array();
+    public function queryParameters()
+    {
+        if(!$this->configured || $this->via != self::QUERY_PARAMETER) {
+            return [];
+        }
 
-        return array($this->description->query_parameter => $this->token);
+        return [$this->description->query_parameter => $this->token];
     }
 
     /**
      * Revoke the token.
      */
-    public function logout() {
+    public function logout()
+    {
         $this->rs->revoke();
     }
 
     /**
      * Request a new token from the API.
      */
-    protected function requestToken() {
+    protected function requestToken()
+    {
         $input = [
             'lifetime' => $this->opts['lifetime'] ?? 'renewable_auto',
             'interval' => $this->opts['interval'] ?? 300,
         ];
 
         foreach ($this->getRequestCredentials() as $param) {
-            if (isSet($this->opts[$param]))
+            if (isset($this->opts[$param])) {
                 $input[$param] = $this->opts[$param];
+            }
         }
 
         $this->runAuthentication('request', $input);
@@ -134,13 +145,15 @@ class Token extends Base {
      * @param string $action
      * @param array $input
      */
-    protected function runAuthentication($action, $input) {
-        list($cont, $nextAction, $token) = $this->authenticationStep($action, $input);
+    protected function runAuthentication($action, $input)
+    {
+        [$cont, $nextAction, $token] = $this->authenticationStep($action, $input);
 
-        if ($cont == 'done')
+        if ($cont == 'done') {
             return;
+        }
 
-        if (!isSet($this->opts['callback']) || !is_callable($this->opts['callback'])) {
+        if (!isset($this->opts['callback']) || !is_callable($this->opts['callback'])) {
             throw new BadFunctionCallException(
                 'add callback to handle multi-step authentication'
             );
@@ -161,10 +174,11 @@ class Token extends Base {
 
             $input = array_merge($cb, ['token' => $token]);
 
-            list($cont, $nextAction, $token) = $this->authenticationStep($nextAction, $input);
+            [$cont, $nextAction, $token] = $this->authenticationStep($nextAction, $input);
 
-            if ($cont == 'done')
+            if ($cont == 'done') {
                 return;
+            }
         }
     }
 
@@ -174,14 +188,16 @@ class Token extends Base {
      * @param array $input
      * @return array
      */
-    protected function authenticationStep($action, $input) {
+    protected function authenticationStep($action, $input)
+    {
         $ret = $this->rs->{$action}($input);
 
         if ($ret['complete']) {
             $this->token = $ret['token'];
 
-            if($ret['valid_to'])
+            if($ret['valid_to']) {
                 $this->validTo = strtotime($ret['valid_to']);
+            }
 
             $this->configured = true;
             return ['done', null, null];
@@ -194,13 +210,15 @@ class Token extends Base {
      * Return names of parameters used as credentials for action Request
      * @return array
      */
-    protected function getRequestCredentials() {
+    protected function getRequestCredentials()
+    {
         $ret = [];
         $params = $this->rs->request->getParameters('input');
 
         foreach ($params as $name => $desc) {
-            if ($name != 'lifetime' && $params != 'interval')
+            if ($name != 'lifetime' && $params != 'interval') {
                 $ret[] = $name;
+            }
         }
 
         return $ret;
@@ -212,13 +230,15 @@ class Token extends Base {
      * @param string action
      * @return array
      */
-    protected function getCustomActionCredentials($action) {
+    protected function getCustomActionCredentials($action)
+    {
         $ret = [];
         $params = $this->rs->{$action}->getParameters('input');
 
         foreach ($params as $name => $desc) {
-            if ($name != 'token')
+            if ($name != 'token') {
                 $ret[$name] = $desc;
+            }
         }
 
         return $ret;
@@ -227,19 +247,23 @@ class Token extends Base {
     /**
      * Get a new token if the current one expired.
      */
-    protected function checkValidity() {
-        if ($this->validTo && $this->validTo < time() && $this->hasRequestCredentials())
+    protected function checkValidity()
+    {
+        if ($this->validTo && $this->validTo < time() && $this->hasRequestCredentials()) {
             $this->requestToken();
+        }
     }
 
     /**
      * Check if all request credentials are provided
      * @return boolean
      */
-    protected function hasRequestCredentials() {
+    protected function hasRequestCredentials()
+    {
         foreach ($this->getRequestCredentials() as $name) {
-            if (!isSet($this->opts[$name]))
+            if (!isset($this->opts[$name])) {
                 return false;
+            }
         }
 
         return true;
@@ -249,21 +273,24 @@ class Token extends Base {
      * Return the token resource
      * @return \HaveAPI\Client\Resource
      */
-    public function getResource() {
+    public function getResource()
+    {
         return $this->rs;
     }
 
     /**
      * @return string the token
      */
-    public function getToken() {
+    public function getToken()
+    {
         return $this->token;
     }
 
     /**
      * @return int expiration time
      */
-    public function getValidTo() {
+    public function getValidTo()
+    {
         return $this->validTo;
     }
 
@@ -271,7 +298,8 @@ class Token extends Base {
      * Return true if the authentication process is complete
      * @return boolean
      */
-    public function isComplete() {
+    public function isComplete()
+    {
         return $this->configured;
     }
 }

@@ -7,8 +7,8 @@ use HaveAPI\Client;
 /**
  * A resource in the API.
  */
-class Resource implements \ArrayAccess {
-
+class Resource implements \ArrayAccess
+{
     /**
      * @var \stdClass
      */
@@ -27,7 +27,7 @@ class Resource implements \ArrayAccess {
     /**
      * @var array
      */
-    protected $args = array();
+    protected $args = [];
 
 
     /**
@@ -36,7 +36,8 @@ class Resource implements \ArrayAccess {
      * @param \stdClass $description
      * @param array $args arguments passed from the parent
      */
-    public function __construct(Client $client, $name, $description, array $args) {
+    public function __construct(Client $client, $name, $description, array $args)
+    {
         $this->client = $client;
         $this->name = $name;
         $this->description = $description;
@@ -47,7 +48,8 @@ class Resource implements \ArrayAccess {
      * Set client instance.
      * @param Client $client
      */
-    public function setApiClient(Client $client) {
+    public function setApiClient(Client $client)
+    {
         $this->client = $client;
     }
 
@@ -55,7 +57,8 @@ class Resource implements \ArrayAccess {
      * Set an array of arguments.
      * @param array $args
      */
-    public function setArguments(array $args) {
+    public function setArguments(array $args)
+    {
         ;
         $this->args = $args;
     }
@@ -63,18 +66,21 @@ class Resource implements \ArrayAccess {
     /**
      * @return string resource name
      */
-    public function getName() {
+    public function getName()
+    {
         return $this->name;
     }
 
     /**
      * @return \stdClass description
      */
-    public function getDescription() {
+    public function getDescription()
+    {
         return $this->description;
     }
 
-    public function offsetExists($offset): bool {
+    public function offsetExists($offset): bool
+    {
         return false;
     }
 
@@ -84,7 +90,8 @@ class Resource implements \ArrayAccess {
      * @return mixed
      * @throws \Exception
      */
-    public function offsetGet($offset): mixed {
+    public function offsetGet($offset): mixed
+    {
         if (strpos($offset, '.') === false) {
             return $this->findObject($offset);
         } else {
@@ -92,15 +99,12 @@ class Resource implements \ArrayAccess {
         }
     }
 
-    public function offsetSet($offset, $value): void {
+    public function offsetSet($offset, $value): void {}
 
-    }
+    public function offsetUnset($offset): void {}
 
-    public function offsetUnset($offset): void {
-
-    }
-
-    public function __toString() {
+    public function __toString()
+    {
         return $this->name;
     }
 
@@ -108,7 +112,8 @@ class Resource implements \ArrayAccess {
      * Return child resource or action.
      * @return mixed
      */
-    public function __get($name) {
+    public function __get($name)
+    {
         return $this->findObject($name);
     }
 
@@ -119,11 +124,13 @@ class Resource implements \ArrayAccess {
      * @return mixed
      * @throws Exception\ObjectNotFound
      */
-    public function __call($name, $arguments) {
+    public function __call($name, $arguments)
+    {
         $obj = $this->findObject($name);
 
-        if ($obj instanceof Action)
-            return call_user_func_array(array($obj, 'call'), $arguments);
+        if ($obj instanceof Action) {
+            return call_user_func_array([$obj, 'call'], $arguments);
+        }
 
         if ($obj instanceof Resource) {
             $obj->setArguments(array_merge($this->args, $arguments));
@@ -137,7 +144,8 @@ class Resource implements \ArrayAccess {
      * Create a new resource object instance.
      * @return ResourceInstance
      */
-    public function newInstance() {
+    public function newInstance()
+    {
         return new ResourceInstance($this->client, $this->create, null);
     }
 
@@ -147,14 +155,15 @@ class Resource implements \ArrayAccess {
      * @param \stdClass description to be searched in
      * @return bool|Action|Resource
      */
-    protected function findObject($name, $description = null) {
+    protected function findObject($name, $description = null)
+    {
         $this->client->setup();
 
         if (!$description) {
             $description = $this->description;
         }
 
-        if (isSet($description->actions)) {
+        if (isset($description->actions)) {
             foreach ($description->actions as $searched_name => $desc) {
                 if ($searched_name == $name || in_array($name, $desc->aliases)) {
                     return new Action($this->client, $this, $searched_name, $description->actions->$searched_name, $this->args);
@@ -177,7 +186,8 @@ class Resource implements \ArrayAccess {
      * @return mixed
      * @throws \Exception
      */
-    protected function findNestedObject($path, $description) {
+    protected function findNestedObject($path, $description)
+    {
         $parts = explode('.', $path);
         $ask = $this;
         $len = count($parts);
@@ -191,10 +201,10 @@ class Resource implements \ArrayAccess {
                 $ask = $obj;
                 $description = null;
 
-            } else if ($obj === null) {
+            } elseif ($obj === null) {
                 throw new \Exception("Resource or action '$name' not found.");
 
-            } else if ($obj instanceof Action && $i < $len - 1) {
+            } elseif ($obj instanceof Action && $i < $len - 1) {
                 throw new \Exception("Found action '$name' but path does not end here.");
 
             } else {

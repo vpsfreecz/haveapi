@@ -1,6 +1,7 @@
 <?php
 
 namespace HaveAPI\Client\Authentication;
+
 use Httpful\Request;
 
 /**
@@ -8,9 +9,10 @@ use Httpful\Request;
  *
  * It accepts `user` and `password` as options.
  */
-class Basic extends Base {
-
-    public function authenticate(Request $request) {
+class Basic extends Base
+{
+    public function authenticate(Request $request)
+    {
         $request->authenticateWith($this->opts['user'], $this->opts['password']);
     }
 }

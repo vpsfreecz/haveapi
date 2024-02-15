@@ -1,14 +1,16 @@
 <?php
 
 namespace HaveAPI;
+
 use HaveAPI\Client\Action;
 
 /**
  * A client for a HaveAPI based API.
  */
-class Client extends Client\Resource {
-    const VERSION = '0.20.0';
-    const PROTOCOL_VERSION = '2.0';
+class Client extends Client\Resource
+{
+    public const VERSION = '0.20.0';
+    public const PROTOCOL_VERSION = '2.0';
 
     private $uri;
     private $version;
@@ -16,7 +18,7 @@ class Client extends Client\Resource {
     private $authProvider;
     private $queryParams;
     private $descCallback = null;
-    private static $authProviders = array();
+    private static $authProviders = [];
     private $spentTime = 0.0;
     private $protocol_version;
 
@@ -26,9 +28,11 @@ class Client extends Client\Resource {
      * @param string $class name of a class
      * @param boolean $force replace the provider if it already exists
      */
-    public static function registerAuthProvider($name, $class, $force = true) {
-        if(!$force && in_array($name, self::$authProviders))
+    public static function registerAuthProvider($name, $class, $force = true)
+    {
+        if(!$force && in_array($name, self::$authProviders)) {
             return;
+        }
 
         self::$authProviders[$name] = $class;
     }
@@ -38,7 +42,8 @@ class Client extends Client\Resource {
      * @param mixed $version API version to use, defaults to default version
      * @param string $identity string to be sent in User-Agent in every request
      */
-    public function __construct($uri = 'http://localhost:4567', $version = null, $identity = 'haveapi-client-php') {
+    public function __construct($uri = 'http://localhost:4567', $version = null, $identity = 'haveapi-client-php')
+    {
         $this->client = $this;
         $this->uri = chop($uri, '/');
         $this->version = $version;
@@ -49,16 +54,18 @@ class Client extends Client\Resource {
         self::registerAuthProvider('oauth2', 'HaveAPI\Client\Authentication\OAuth2');
         self::registerAuthProvider('token', 'HaveAPI\Client\Authentication\Token');
 
-        $this->authProvider = new Client\Authentication\NoAuth($this, array(), array());
+        $this->authProvider = new Client\Authentication\NoAuth($this, [], []);
     }
 
     /**
      * Fetch the API description if it isn't fetched yet.
      * @param boolean $force fetch even it is already fetched
      */
-    public function setup($force = false) {
-        if(!$force && $this->description)
+    public function setup($force = false)
+    {
+        if(!$force && $this->description) {
             return;
+        }
 
         $this->changeDescription($this->fetchDescription());
     }
@@ -67,7 +74,8 @@ class Client extends Client\Resource {
      * Return the API description.
      * @return \stdClass may be NULL if the client is not set up yet
      */
-    public function getDescription() {
+    public function getDescription()
+    {
         return $this->description;
     }
 
@@ -76,7 +84,8 @@ class Client extends Client\Resource {
      * and will not ask the API about it.
      * @param \stdClass $desc
      */
-    public function setDescription($desc) {
+    public function setDescription($desc)
+    {
         $this->description = $desc;
     }
 
@@ -85,7 +94,8 @@ class Client extends Client\Resource {
      * is changed. The function is passed instance of Client as an argument.
      * @param callable $fn
      */
-    public function registerDescriptionChangeFunc($fn) {
+    public function registerDescriptionChangeFunc($fn)
+    {
         $this->descCallback = $fn;
     }
 
@@ -94,12 +104,14 @@ class Client extends Client\Resource {
      * @return "imperfect" if the minor version differs
      * @return false if the client is not compatible with the API server
      */
-    public function isCompatible() {
+    public function isCompatible()
+    {
         try {
             $this->setup();
 
-            if ($this->protocol_version == self::PROTOCOL_VERSION)
+            if ($this->protocol_version == self::PROTOCOL_VERSION) {
                 return 'compatible';
+            }
 
             return 'imperfect';
 
@@ -114,9 +126,11 @@ class Client extends Client\Resource {
      * @param array $opts options passed to the provider
      * @param boolean $forceSetup force reloading the description of the API
      */
-    public function authenticate($method, $opts, $forceSetup = true) {
-        if(!array_key_exists($method, self::$authProviders))
+    public function authenticate($method, $opts, $forceSetup = true)
+    {
+        if(!array_key_exists($method, self::$authProviders)) {
             throw new Client\Exception\AuthenticationFailed("Auth method '$method' is not registered");
+        }
 
         $this->setup();
 
@@ -128,17 +142,19 @@ class Client extends Client\Resource {
     /**
      * Logout the authenticated user and destroy the authentication provider.
      */
-    public function logout() {
+    public function logout()
+    {
         $this->authProvider->logout();
-        $this->authProvider = new Client\Authentication\NoAuth($this, array(), array());
-        $this->changeDescription(NULL);
+        $this->authProvider = new Client\Authentication\NoAuth($this, [], []);
+        $this->changeDescription(null);
     }
 
     /**
      * Return the authentication provider.
      * @return Client\Authentication\Base
      */
-    public function getAuthenticationProvider() {
+    public function getAuthenticationProvider()
+    {
         return $this->authProvider;
     }
 
@@ -146,20 +162,23 @@ class Client extends Client\Resource {
      * Return time spent communicating with the API.
      * @return float spent time
      */
-    public function getSpentTime() {
+    public function getSpentTime()
+    {
         return $this->spentTime;
     }
 
     /**
      * @return array settings
      */
-    public function getSettings($key = null) {
-        $s = array(
-            'meta' => $this->description->meta
-        );
+    public function getSettings($key = null)
+    {
+        $s = [
+            'meta' => $this->description->meta,
+        ];
 
-        if ($key)
+        if ($key) {
             return $s[$key];
+        }
 
         return $s;
     }
@@ -167,14 +186,16 @@ class Client extends Client\Resource {
     /**
      * @return string
      */
-    public function getUri() {
+    public function getUri()
+    {
         return $this->uri;
     }
 
     /**
      * @return string
      */
-    public function getIdentity() {
+    public function getIdentity()
+    {
         return $this->identity;
     }
 
@@ -186,12 +207,13 @@ class Client extends Client\Resource {
      * @throws Client\Exception\AuthenticationFailed
      * @throws Client\Exception\ActionFailed
      */
-    public function call($action, $params = array()) {
+    public function call($action, $params = [])
+    {
         $time = 0.0;
         $response = new Client\Response($action, $this->directCall($action, $params, $time), $time);
 
         if(!$response->isOk()) {
-            throw new Client\Exception\ActionFailed($response, "Action '".$action->name()."' failed: ".$response->getMessage());
+            throw new Client\Exception\ActionFailed($response, "Action '" . $action->name() . "' failed: " . $response->getMessage());
         }
 
         switch($action->layout('output')) {
@@ -213,13 +235,14 @@ class Client extends Client\Resource {
      * @param float &$time set to time spent communicating with the API, if not null
      * @return \Httpful\Response response
      */
-    public function directCall(Action $action, $params = array(), &$time = NULL) {
+    public function directCall(Action $action, $params = [], &$time = null)
+    {
         $fn = strtolower($action->httpMethod());
 
-// 		echo "execute {$action->httpMethod()} {$action->path()}\n<br>\n";
+        // 		echo "execute {$action->httpMethod()} {$action->path()}\n<br>\n";
 
         $request = $this->getRequest($fn, $this->uri . $action->path());
-        $res = array();
+        $res = [];
 
         if (array_key_exists('meta', $params)) {
             $s = $this->getSettings();
@@ -229,8 +252,9 @@ class Client extends Client\Resource {
 
         $res[ $action->getNamespace('input') ] = $params;
 
-        if(!$this->sendAsQueryParams($fn))
+        if(!$this->sendAsQueryParams($fn)) {
             $request->body(empty($params) ? '{}' : json_encode($res));
+        }
 
         $this->authProvider->authenticate($request);
 
@@ -240,8 +264,9 @@ class Client extends Client\Resource {
 
         $this->accountTime($diff);
 
-        if($time !== NULL)
+        if($time !== null) {
             $time = $diff;
+        }
 
         return $ret;
     }
@@ -251,8 +276,9 @@ class Client extends Client\Resource {
      * @param string $method HTTP method
      * @param string $url
      */
-    public function getRequest($method, $url) {
-        $this->queryParams = array();
+    public function getRequest($method, $url)
+    {
+        $this->queryParams = [];
 
         $request = \Httpful\Request::$method($url);
         $request->sendsJson();
@@ -261,8 +287,9 @@ class Client extends Client\Resource {
 
         $ip = $this->getClientIp();
 
-        if ($ip)
+        if ($ip) {
             $request->addHeader('Client-IP', $ip);
+        }
 
         return $request;
     }
@@ -271,16 +298,17 @@ class Client extends Client\Resource {
      * Return client's IP address
      * @return string|false
      */
-    public function getClientIp() {
+    public function getClientIp()
+    {
         if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
             $ips = array_values(array_filter(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])));
 
             return end($ips);
 
-        } else if (isset($_SERVER['REMOTE_ADDR'])) {
+        } elseif (isset($_SERVER['REMOTE_ADDR'])) {
             return $_SERVER["REMOTE_ADDR"];
 
-        } else if (isset($_SERVER['HTTP_CLIENT_IP'])) {
+        } elseif (isset($_SERVER['HTTP_CLIENT_IP'])) {
             return $_SERVER["HTTP_CLIENT_IP"];
 
         } else {
@@ -294,13 +322,14 @@ class Client extends Client\Resource {
      * @param Action $action
      * @param array $params
      */
-    protected function sendRequest($request, $action = null, $params = array()) {
+    protected function sendRequest($request, $action = null, $params = [])
+    {
         $this->queryParams += $this->authProvider->queryParameters();
 
         if($action && $this->sendAsQueryParams($action->httpMethod())) {
             foreach ($params as $ns => $arr) {
                 foreach ($arr as $k => $v) {
-                    $this->queryParams[ $ns."[$k]" ] = $v;
+                    $this->queryParams[ $ns . "[$k]" ] = $v;
                 }
             }
         }
@@ -313,9 +342,11 @@ class Client extends Client\Resource {
                 if($first) {
                     $url .= '?';
                     $first = false;
-                } else $url .= '&';
+                } else {
+                    $url .= '&';
+                }
 
-                $url .= $k.'='.(is_null($v) ? '' : urlencode($v));
+                $url .= $k . '=' . (is_null($v) ? '' : urlencode($v));
             }
 
             $request->uri = $url;
@@ -328,24 +359,28 @@ class Client extends Client\Resource {
      * @param string $method
      * @return boolean true for HTTP methods GET and OPTIONS.
      */
-    protected function sendAsQueryParams($method) {
-        return in_array(strtolower($method), array('get', 'options'));
+    protected function sendAsQueryParams($method)
+    {
+        return in_array(strtolower($method), ['get', 'options']);
     }
 
     /**
      * Fetch the description.
      * @return \stdClass
      */
-    protected function fetchDescription() {
+    protected function fetchDescription()
+    {
         $url = $this->uri;
 
-        if($this->version)
-            $url .= "/v".$this->version."/";
+        if($this->version) {
+            $url .= "/v" . $this->version . "/";
+        }
 
         $request = $this->getRequest('options', $url);
 
-        if(!$this->version)
+        if(!$this->version) {
             $this->queryParams['describe'] = 'default';
+        }
 
         $this->authProvider->authenticate($request);
 
@@ -353,23 +388,24 @@ class Client extends Client\Resource {
 
         if (!isset($ret->version)) {
             throw new Client\Exception\ProtocolError(
-                "Incompatible protocol version: the client uses v".self::PROTOCOL_VERSION.
+                "Incompatible protocol version: the client uses v" . self::PROTOCOL_VERSION .
                 " while the API server uses an unspecified version (pre 1.0)"
             );
         }
 
         $this->protocol_version = $ret->version;
 
-        if ($ret->version == self::PROTOCOL_VERSION)
+        if ($ret->version == self::PROTOCOL_VERSION) {
             return $ret->response;
+        }
 
-        list($major1, $minor1) = explode('.', $ret->version);
-        list($major2, $minor2) = explode('.', self::PROTOCOL_VERSION);
+        [$major1, $minor1] = explode('.', $ret->version);
+        [$major2, $minor2] = explode('.', self::PROTOCOL_VERSION);
 
         if ($major1 != $major2) {
             throw new Client\Exception\ProtocolError(
-                "Incompatible protocol version: the client uses v".self::PROTOCOL_VERSION.
-                " while the API server uses v".$ret->version
+                "Incompatible protocol version: the client uses v" . self::PROTOCOL_VERSION .
+                " while the API server uses v" . $ret->version
             );
         }
 
@@ -382,11 +418,13 @@ class Client extends Client\Resource {
      * Account spent time.
      * @param float $t
      */
-    protected function accountTime($t) {
+    protected function accountTime($t)
+    {
         $this->spentTime += $t;
     }
 
-    protected function findObject($name, $description = null) {
+    protected function findObject($name, $description = null)
+    {
         $obj = parent::findObject($name, $description);
 
         if($obj instanceof Client\Resource) {
@@ -396,10 +434,12 @@ class Client extends Client\Resource {
         return $obj;
     }
 
-    private function changeDescription($d) {
+    private function changeDescription($d)
+    {
         $this->description = $d;
 
-        if($this->descCallback)
+        if($this->descCallback) {
             call_user_func($this->descCallback, $this);
+        }
     }
 }

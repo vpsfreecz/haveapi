@@ -15,12 +15,14 @@ namespace HaveAPI\Client\Authentication;
  * conform to the format returned by jsonSerialize(). Other OAuth2 parameters
  * are read from HaveAPI description.
  */
-class OAuth2 extends Base {
+class OAuth2 extends Base
+{
     private $genericProvider;
 
     private $accessToken;
 
-    public function setup() {
+    public function setup()
+    {
         $apiUri = $this->client->getUri();
 
         if (isset($this->opts['client_id'])) {
@@ -30,8 +32,9 @@ class OAuth2 extends Base {
 
             $ip = $this->client->getClientIp();
 
-            if ($ip)
+            if ($ip) {
                 $headers['Client-IP'] = $ip;
+            }
 
             $httpClient = new \GuzzleHttp\Client([
                 'headers' => $headers,
@@ -63,7 +66,8 @@ class OAuth2 extends Base {
     /**
      * Redirect the user to the authorization endpoint to request authorization code
      */
-    public function requestAuthorizationCode() {
+    public function requestAuthorizationCode()
+    {
         $authorizationUrl = $this->genericProvider->getAuthorizationUrl();
 
         $_SESSION['oauth2state'] = $this->genericProvider->getState();
@@ -77,39 +81,45 @@ class OAuth2 extends Base {
     /**
      * Request access token based on authorization code
      */
-    public function requestAccessToken() {
-        if (!isset($_GET['state']) || $_GET['state'] != $_SESSION['oauth2state'])
+    public function requestAccessToken()
+    {
+        if (!isset($_GET['state']) || $_GET['state'] != $_SESSION['oauth2state']) {
             throw new \HaveAPI\Client\Exception\AuthenticationFailed('Invalid OAuth2 state');
+        }
 
         $this->genericProvider->setPkceCode($_SESSION['oauth2pkceCode']);
 
         $this->accessToken = $this->genericProvider->getAccessToken('authorization_code', [
-            'code' => $_GET['code']
+            'code' => $_GET['code'],
         ]);
 
-        if (isset($_SESSION['oauth2state']))
+        if (isset($_SESSION['oauth2state'])) {
             unset($_SESSION['oauth2state']);
+        }
 
-        if (isset($_SESSION['oauth2pkceCode']))
+        if (isset($_SESSION['oauth2pkceCode'])) {
             unset($_SESSION['oauth2pkceCode']);
+        }
     }
 
     /**
      * Add authorization header to the request
      */
-    public function authenticate(\Httpful\Request $request) {
+    public function authenticate(\Httpful\Request $request)
+    {
         if ($this->accessToken) {
-            $request->addHeader('Authorization', 'Bearer '.$this->accessToken->getToken());
+            $request->addHeader('Authorization', 'Bearer ' . $this->accessToken->getToken());
         }
     }
 
     /*
      * Revoke the access token
      */
-    public function logout() {
+    public function logout()
+    {
         $request = $this->client->getRequest('post', $this->description->revoke_url);
         $request->sendsForm();
-        $request->body("token=".$this->accessToken->getToken());
+        $request->body("token=" . $this->accessToken->getToken());
         $request->send();
     }
 
@@ -117,7 +127,8 @@ class OAuth2 extends Base {
      * Return access token serialized in an array
      * @return array
      */
-    public function jsonSerialize() {
+    public function jsonSerialize()
+    {
         return $this->accessToken->jsonSerialize();
     }
 }

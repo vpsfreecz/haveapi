@@ -12,7 +12,7 @@ Gem::Specification.new do |s|
   s.files       = `git ls-files -z`.split("\x0") + Dir.glob('doc/*')
   s.license     = 'MIT'
 
-  s.required_ruby_version = '>= 3.2.0'
+  s.required_ruby_version = ">= #{File.read('../../.ruby-version').strip}"
 
   s.add_runtime_dependency 'activesupport', '>= 7.1'
   s.add_runtime_dependency 'github-markdown'

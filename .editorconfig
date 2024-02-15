@@ -10,9 +10,13 @@ trim_trailing_whitespace = true
 indent_size = 2
 indent_style = space
 
-[*.{go.erb,php}]
+[*.{go.erb}]
 indent_size = 4
 indent_style = tab
+
+[*.php]
+indent_size = 4
+indent_style = space
 
 [*.plantuml]
 indent_size = 2

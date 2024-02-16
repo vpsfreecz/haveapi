@@ -1,3 +1,13 @@
+# Fri Feb 16 2024 - version 0.21.0
+## Ruby server, Ruby client and Golang client generator
+- Introduce RuboCop and fix offenses
+- Require Ruby 3.2
+
+## PHP client
+- Introduce PHP CS Fixer and apply fixes
+
+## PHP client
+
 # Sun Jan 21 2023 - version 0.20.0
 ## Ruby server
 - Require ActiveSupport and ActiveRecord >= 7.1

@@ -4,6 +4,11 @@ module HaveAPI
       @blocks = [block]
     end
 
+    def initialize_clone(other)
+      super
+      @blocks = other.instance_variable_get('@blocks').clone
+    end
+
     # Returns true if user is authorized.
     # Block must call allow to authorize user, default rule is deny.
     def authorized?(user, path_params)

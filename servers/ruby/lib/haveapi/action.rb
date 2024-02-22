@@ -214,6 +214,7 @@ module HaveAPI
 
       def describe(context)
         authorization = (@authorization && @authorization.clone) || Authorization.new
+        add_pre_authorize_blocks(authorization, context)
 
         if (context.endpoint || context.current_user) \
             && !authorization.authorized?(context.current_user, context.path_params_from_args)
@@ -281,6 +282,18 @@ module HaveAPI
           object.respond_to?(:id) ? object.id : nil
         end
       end
+
+      def add_pre_authorize_blocks(authorization, context)
+        ret = Action.call_hooks(
+          :pre_authorize,
+          args: [context],
+          initial: { blocks: [] }
+        )
+
+        ret[:blocks].reverse_each do |block|
+          authorization.prepend_block(block)
+        end
+      end
     end
 
     def initialize(request, version, params, body, context)
@@ -304,16 +317,7 @@ module HaveAPI
                          Authorization.new {}
                        end
 
-      ret = call_class_hooks_as_for(
-        Action,
-        :pre_authorize,
-        args: [@context],
-        initial: { blocks: [] }
-      )
-
-      ret[:blocks].reverse_each do |block|
-        @authorization.prepend_block(block)
-      end
+      self.class.add_pre_authorize_blocks(@authorization, @context)
     end
 
     def validate!

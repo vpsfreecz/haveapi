@@ -1,3 +1,8 @@
+# Thu Feb 22 2024 - version 0.21.1
+## Ruby server
+- Fix memory leak in action authorization
+- Call pre\_authorize hook when generation API description
+
 # Fri Feb 16 2024 - version 0.21.0
 ## Ruby server, Ruby client and Golang client generator
 - Introduce RuboCop and fix offenses

@@ -65,13 +65,17 @@ class OAuth2 extends Base
 
     /**
      * Redirect the user to the authorization endpoint to request authorization code
+     * @param array $queryParams custom query parameters
      */
-    public function requestAuthorizationCode()
+    public function requestAuthorizationCode($queryParams = [])
     {
         $authorizationUrl = $this->genericProvider->getAuthorizationUrl();
 
         $_SESSION['oauth2state'] = $this->genericProvider->getState();
         $_SESSION['oauth2pkceCode'] = $this->genericProvider->getPkceCode();
+
+        foreach ($queryParams as $k => $v)
+            $authorizationUrl .= '&'.urlencode($k).'='.urlencode($v);
 
         header('Accept: text/html');
         header('Location: ' . $authorizationUrl);

@@ -117,9 +117,34 @@ class OAuth2 extends Base
      */
     public function logout()
     {
+        $this->revokeAccessToken();
+    }
+
+    /*
+     * Revoke the access token
+     * @param array $params additional parameters to be sent to the server
+     */
+    public function revokeAccessToken($params = [])
+    {
+        $this->revokeToken(array_merge($params, ['token' => $this->accessToken->getToken()]));
+    }
+
+    /*
+     * Send request to token revocation endpoint
+     * @param array $params
+     */
+    public function revokeToken($params)
+    {
         $request = $this->client->getRequest('post', $this->description->revoke_url);
         $request->sendsForm();
-        $request->body("token=" . $this->accessToken->getToken());
+
+        $encodedParams = [];
+
+        foreach ($params as $k => $v) {
+            $encodedParams[] = $k."=".urlencode($v);
+        }
+
+        $request->body(implode('&', $encodedParams));
         $request->send();
     }
 

@@ -1,3 +1,8 @@
+# Thu Mar 14 2024 - version 0.22.0
+## PHP client
+- Add option to send custom query parameters to the OAuth2 authorization
+  request and token revocation endpoint
+
 # Fri Feb 16 2024 - version 0.21.0
 ## Ruby server, Ruby client and Golang client generator
 - Introduce RuboCop and fix offenses

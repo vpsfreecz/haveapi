@@ -6,7 +6,7 @@ in stdenv.mkDerivation rec {
   name = "haveapi";
 
   buildInputs = with pkgs;[
-    ruby
+    ruby_3_2
     git
     openssl
   ];

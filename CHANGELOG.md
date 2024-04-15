@@ -1,3 +1,7 @@
+# Mon Apr 15 2024 - version 0.22.1
+## Ruby server
+- Fix ruby client example generation
+
 # Thu Mar 14 2024 - version 0.22.0
 ## PHP client
 - Add option to send custom query parameters to the OAuth2 authorization

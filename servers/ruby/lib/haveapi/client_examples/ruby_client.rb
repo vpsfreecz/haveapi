@@ -80,7 +80,7 @@ module HaveAPI::ClientExamples
         out << "# reply is an instance of HaveAPI::Client::ResourceInstance\n"
 
         (sample[:response] || {}).each do |pn, pv|
-          param = action[:output][:parameters][k]
+          param = action[:output][:parameters][pn]
 
           if param[:type] == 'Resource'
             out << "# reply.#{pn} = HaveAPI::Client::ResourceInstance("

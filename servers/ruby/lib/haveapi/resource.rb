@@ -116,7 +116,7 @@ module HaveAPI
       cls
     end
 
-    def self.define_action(name, superclass: Action, &block)
+    def self.define_action(name, superclass: Action, &)
       return false if const_defined?(name)
 
       cls = Class.new(superclass)
@@ -124,7 +124,7 @@ module HaveAPI
       cls.resource = self
       cls.action_name = name
       superclass.delayed_inherited(cls)
-      cls.class_exec(&block)
+      cls.class_exec(&)
     end
   end
 end

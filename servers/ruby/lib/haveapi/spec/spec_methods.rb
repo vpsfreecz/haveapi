@@ -74,12 +74,12 @@ module HaveAPI::Spec
     # @param version [any] API version, if not specified, the default version is used
     # @param user [any] object representing authenticated user
     # @yield [self] the block is executed in the action instance
-    def mock_action(r_name, a_name, params, version: nil, user: nil, &block)
+    def mock_action(r_name, a_name, params, version: nil, user: nil, &)
       app
       v = version || @api.default_version
       action, path = find_action(v, r_name, a_name)
       m = MockAction.new(self, @api, action, path, v)
-      m.call(params, user:, &block)
+      m.call(params, user:, &)
     end
 
     # Return parsed API response.

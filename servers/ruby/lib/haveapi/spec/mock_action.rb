@@ -8,7 +8,7 @@ module HaveAPI::Spec
       @v = v
     end
 
-    def call(input, user: nil, &block)
+    def call(input, user: nil, &)
       action = @action.new(nil, @v, input, nil, HaveAPI::Context.new(
                                                   @server,
                                                   version: @v,
@@ -26,7 +26,7 @@ module HaveAPI::Spec
       status, data, errors = action.safe_exec
       raise(data || 'action failed') unless status
 
-      action.instance_exec(@test, &block)
+      action.instance_exec(@test, &)
       data
     end
   end

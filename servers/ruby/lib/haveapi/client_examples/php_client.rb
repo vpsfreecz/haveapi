@@ -147,15 +147,12 @@ module HaveAPI::ClientExamples
     end
 
     def format_parameters(dir, params, prefix = '')
-      ret = []
-
-      params.each do |k, v|
-        ret << if action[dir][:parameters][k][:type] == 'Custom'
-                 "#{prefix}  \"#{k}\" => custom type}"
-
-               else
-                 "#{prefix}  \"#{k}\" => #{value(v)}"
-               end
+      ret = params.map do |k, v|
+        if action[dir][:parameters][k][:type] == 'Custom'
+          "#{prefix}  \"#{k}\" => custom type}"
+        else
+          "#{prefix}  \"#{k}\" => #{value(v)}"
+        end
       end
 
       "#{prefix}[\n#{ret.join(",\n")}\n#{prefix}]"

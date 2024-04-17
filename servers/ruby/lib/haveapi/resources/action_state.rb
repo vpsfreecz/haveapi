@@ -61,7 +61,6 @@ module HaveAPI::Resources
       authorize { allow }
 
       def exec
-        ret = []
         actions = @context.server.action_state.list_pending(
           current_user,
           input[:offset],
@@ -69,11 +68,9 @@ module HaveAPI::Resources
           input[:order].to_sym
         )
 
-        actions.each do |state|
-          ret << state_to_hash(state)
+        actions.map do |state|
+          state_to_hash(state)
         end
-
-        ret
       end
     end
 

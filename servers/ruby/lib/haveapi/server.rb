@@ -11,6 +11,20 @@ module HaveAPI
 
     include Hookable
 
+    has_hook :pre_mount,
+             desc: 'Called before API actions are mounted in sinatra',
+             args: {
+               server: 'HaveAPI::Server',
+               sinatra: 'Sinatra::Base'
+             }
+
+    has_hook :post_mount,
+             desc: 'Called after API actions are mounted in sinatra',
+             args: {
+               server: 'HaveAPI::Server',
+               sinatra: 'Sinatra::Base'
+             }
+
     # Called after the user was authenticated (or not). The block is passed
     # current user object or nil as an argument.
     has_hook :post_authenticated,
@@ -339,12 +353,16 @@ module HaveAPI
 
       @extensions.each { |e| e.enabled(self) }
 
+      call_hooks_for(:pre_mount, args: [self, @sinatra])
+
       # Mount default version first
       mount_version(@root, @default_version)
 
       @versions.each do |v|
         mount_version(version_prefix(v), v)
       end
+
+      call_hooks_for(:post_mount, args: [self, @sinatra])
     end
 
     def mount_version(prefix, v)

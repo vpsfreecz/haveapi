@@ -1,3 +1,8 @@
+# Fri Apr 19 2024 - version 0.23.0
+## Ruby server
+- Add mount hooks to `HaveAPI::Server`, allowing the developer to register custom Sinatra endpoints
+- Fix Ruby client example generation
+
 # Thu Mar 14 2024 - version 0.22.0
 ## PHP client
 - Add option to send custom query parameters to the OAuth2 authorization

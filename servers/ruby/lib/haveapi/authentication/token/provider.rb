@@ -281,11 +281,11 @@ module HaveAPI::Authentication
 
             def exec
               provider = self.class.resource.token_instance
-              result = provider.config.renew_token(ActionRequest.new(
-                                                     request:,
-                                                     user: current_user,
-                                                     token: provider.token(request)
-                                                   ), ActionResult.new)
+              result = provider.config.renew.handle.call(ActionRequest.new(
+                                                           request:,
+                                                           user: current_user,
+                                                           token: provider.token(request)
+                                                         ), ActionResult.new)
 
               if result.ok?
                 { valid_to: result.valid_to }

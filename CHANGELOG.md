@@ -1,3 +1,6 @@
+## Ruby server
+- Fix token auth renewal
+
 # Fri Apr 19 2024 - version 0.23.0
 ## Ruby server
 - Add mount hooks to `HaveAPI::Server`, allowing the developer to register custom Sinatra endpoints

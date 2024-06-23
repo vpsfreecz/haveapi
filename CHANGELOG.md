@@ -1,3 +1,7 @@
+# Sun Jun 23 - version 0.23.3
+## Ruby server
+- Add validator to offset/limit pagination parameters
+
 # Wed Jun 05 2024 - version 0.23.2
 ## Ruby server
 - Another fix token auth renewal

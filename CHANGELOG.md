@@ -1,3 +1,7 @@
+# Sun Jul 14 - version 0.23.4
+## Ruby client
+- Fix boolean input parameter conversion on Ruby 3.2
+
 # Sun Jun 23 - version 0.23.3
 ## Ruby server
 - Add validator to offset/limit pagination parameters

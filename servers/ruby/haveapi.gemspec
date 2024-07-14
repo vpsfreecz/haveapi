@@ -16,7 +16,7 @@ Gem::Specification.new do |s|
 
   s.add_dependency 'activesupport', '>= 7.1'
   s.add_dependency 'github-markdown'
-  s.add_dependency 'haveapi-client', '~> 0.23.3'
+  s.add_dependency 'haveapi-client', '~> 0.23.4'
   s.add_dependency 'json'
   s.add_dependency 'mail'
   s.add_dependency 'nesty', '~> 1.0'

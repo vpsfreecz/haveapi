@@ -1,7 +1,7 @@
 source 'https://rubygems.org'
 
 gem 'activerecord', '~> 7.0.8'
-gem 'haveapi', '~> 0.23.3', path: '../../../../servers/ruby'
+gem 'haveapi', '~> 0.23.4', path: '../../../../servers/ruby'
 gem 'rake'
 gem 'sinatra-activerecord', '~> 2.0.26'
 

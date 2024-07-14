@@ -1,6 +1,6 @@
 {
 	"name": "haveapi-client",
-	"version": "0.23.3",
+	"version": "0.23.4",
 	"description": "Client for HaveAPI based APIs",
 	"license": "MIT",
 	"author": {

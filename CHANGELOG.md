@@ -1,3 +1,7 @@
+# Sun Jul 28 - version 0.23.5
+## Ruby client
+- Fix token auth save and load from config used by the CLI
+
 # Sun Jul 14 - version 0.23.4
 ## Ruby client
 - Fix boolean input parameter conversion on Ruby 3.2

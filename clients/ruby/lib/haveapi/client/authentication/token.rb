@@ -8,7 +8,14 @@ module HaveAPI::Client::Authentication
     def setup
       @via = @opts[:via] || :header
       @token = @opts[:token]
-      @valid_to = @opts[:valid_to]
+
+      @valid_to =
+        case @opts[:valid_to]
+        when Time # usually given at runtime
+          @opts[:valid_to]
+        when Integer # loaded from config
+          Time.at(@opts[:valid_to])
+        end
 
       request_token unless @token
 
@@ -30,12 +37,7 @@ module HaveAPI::Client::Authentication
     end
 
     def save
-      { token: @token, valid_to: @valid_to }
-    end
-
-    def load(hash)
-      @token = hash[:token]
-      @valid_to = hash[:valid_to]
+      { token: @token, valid_to: @valid_to && @valid_to.to_i }
     end
 
     def renew

@@ -73,11 +73,6 @@ module HaveAPI::Client
       def save
         @opts
       end
-
-      # Load auth provider attributes from previous #save call.
-      def load(hash)
-        @opts = hash
-      end
     end
   end
 end

@@ -19,7 +19,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   spec.add_dependency 'activesupport', '>= 7.0'
-  spec.add_dependency 'highline', '~> 2.1.0'
+  spec.add_dependency 'highline', '~> 3.1'
   spec.add_dependency 'json'
   spec.add_dependency 'require_all', '~> 2.0.0'
   spec.add_dependency 'rest-client', '~> 2.1.0'

@@ -61,10 +61,10 @@ class HaveAPI::Client::Response
   # it is regularly called with the action's state.
   #
   # @see HaveAPI::Client::Action#wait_for_completion
-  def wait_for_completion(**, &)
+  def wait_for_completion(...)
     id = meta[:action_state_id]
     return nil unless id
 
-    HaveAPI::Client::Action.wait_for_completion(@action.client, id, **, &)
+    HaveAPI::Client::Action.wait_for_completion(@action.client, id, ...)
   end
 end

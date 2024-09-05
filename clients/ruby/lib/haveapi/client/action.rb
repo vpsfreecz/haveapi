@@ -29,7 +29,7 @@ module HaveAPI::Client
         params_arg = params.to_api
       end
 
-      ret = @api.call(self, params_arg, raw:)
+      ret = @api.call(self, params_arg, raw: raw)
       reset
       ret
     end
@@ -165,7 +165,7 @@ module HaveAPI::Client
         res = client.action_state.poll(
           id,
           timeout: interval,
-          update_in:,
+          update_in: update_in,
           status: last[:status],
           current: last[:current],
           total: last[:total]
@@ -198,9 +198,9 @@ module HaveAPI::Client
             return wait_for_completion(
               client,
               ret,
-              interval:,
-              timeout:,
-              update_in:,
+              interval: interval,
+              timeout: timeout,
+              update_in: update_in,
               &cancel_block
             )
           end

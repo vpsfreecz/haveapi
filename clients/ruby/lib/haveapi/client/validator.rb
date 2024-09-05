@@ -35,7 +35,7 @@ module HaveAPI::Client
     end
 
     def errors
-      @errors || [format(opts[:message], value:)]
+      @errors || [format(opts[:message], value: value)]
     end
 
     def valid?

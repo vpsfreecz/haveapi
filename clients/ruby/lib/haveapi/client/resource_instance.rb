@@ -163,8 +163,8 @@ module HaveAPI::Client
     end
 
     # Define method +name+ with +block+ if it isn't defined yet.
-    def ensure_method(name, &)
-      define_singleton_method(name, &) unless respond_to?(name)
+    def ensure_method(name, &block)
+      define_singleton_method(name, &block) unless respond_to?(name)
     end
 
     # Define nil references to resource attributes.

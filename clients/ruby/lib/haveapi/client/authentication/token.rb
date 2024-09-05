@@ -84,7 +84,7 @@ module HaveAPI::Client::Authentication
       end
 
       loop do
-        input = { token: }
+        input = { token: token }
         input.update(@block.call(next_action, auth_action_input(next_action)))
 
         cont, next_action, token = login_step(next_action, input)

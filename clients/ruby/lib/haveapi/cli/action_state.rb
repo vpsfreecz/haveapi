@@ -38,7 +38,7 @@ module HaveAPI::CLI
         ret = HaveAPI::Client::Action.wait_for_completion(
           @client,
           id,
-          timeout:
+          timeout: timeout
         ) do |state|
           last_status = state.status
           can_cancel = state.can_cancel?
@@ -49,7 +49,7 @@ module HaveAPI::CLI
         @pb && @pb.stop
         puts
 
-        cancel_action(timeout:) if can_cancel && !cancel && last_status
+        cancel_action(timeout: timeout) if can_cancel && !cancel && last_status
 
         puts
         print_help(id)
@@ -89,7 +89,7 @@ module HaveAPI::CLI
 
         wait_for_completion(
           id: res,
-          timeout:,
+          timeout: timeout,
           cancel: true
         )
         exit

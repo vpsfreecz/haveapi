@@ -1,3 +1,7 @@
+# Thu Sep 05 -- version 0.23.6
+## Ruby client
+- Remove requirement on Ruby 3.2, ensure compabitility with Ruby >=3.0
+
 # Sun Jul 28 - version 0.23.5
 ## Ruby client
 - Fix token auth save and load from config used by the CLI

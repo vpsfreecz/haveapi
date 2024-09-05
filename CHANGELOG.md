@@ -1,3 +1,7 @@
+# Thu Sep 05 -- version 0.23.7
+## Ruby client
+- Update highline to 3.1
+
 # Thu Sep 05 -- version 0.23.6
 ## Ruby client
 - Remove requirement on Ruby 3.2, ensure compabitility with Ruby >=3.0

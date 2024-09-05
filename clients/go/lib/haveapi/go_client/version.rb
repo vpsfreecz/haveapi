@@ -1,5 +1,5 @@
 module HaveAPI
   module GoClient
-    VERSION = '0.23.6'.freeze
+    VERSION = '0.23.7'.freeze
   end
 end

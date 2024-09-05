@@ -47,14 +47,14 @@ module HaveAPI::Client
     # Authenticate user with selected +auth_method+.
     # +auth_method+ is a name of registered authentication provider.
     # +options+ are specific for each authentication provider.
-    def authenticate(auth_method, options = {}, &)
+    def authenticate(auth_method, options = {}, &block)
       desc = describe_api(@version)
 
       @auth = self.class.auth_methods[auth_method].new(
         self,
         desc[:authentication][auth_method],
         options,
-        &
+        &block
       )
       @rest = @auth.resource || @rest
     end
@@ -177,11 +177,11 @@ module HaveAPI::Client
     private
 
     def ok(response)
-      { status: true, response: }
+      { status: true, response: response }
     end
 
     def error(msg, errors = {})
-      { status: false, message: msg, errors: }
+      { status: false, message: msg, errors: errors }
     end
 
     def path_for(v = nil, r = nil)

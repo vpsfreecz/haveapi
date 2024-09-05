@@ -109,7 +109,7 @@ module HaveAPI::CLI
       @input_params = parameters(action)
 
       includes = build_includes(action) if @selected_params
-      @input_params[:meta] = { includes: } if includes
+      @input_params[:meta] = { includes: includes } if includes
 
       begin
         ret = action.execute(@input_params, raw: @opts[:raw])
@@ -576,7 +576,7 @@ module HaveAPI::CLI
         end
 
         col.update({
-            name:,
+            name: name,
             align: %w[Integer Float].include?(param[:type]) ? 'right' : 'left'
         })
 
@@ -640,7 +640,7 @@ module HaveAPI::CLI
 
     def server_config(url)
       unless @config[:servers]
-        @config[:servers] = [{ url:, auth: {} }]
+        @config[:servers] = [{ url: url, auth: {} }]
         return @config[:servers].first
       end
 
@@ -648,7 +648,7 @@ module HaveAPI::CLI
         return s if s[:url] == url
       end
 
-      @config[:servers] << { url:, auth: {} }
+      @config[:servers] << { url: url, auth: {} }
       @config[:servers].last
     end
 

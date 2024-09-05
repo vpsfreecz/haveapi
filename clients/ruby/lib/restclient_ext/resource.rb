@@ -4,8 +4,8 @@ module RestClient
       headers = (options[:headers] || {}).merge(additional_headers)
       Request.execute(options.merge(
                         method: :options,
-                        url:,
-                        headers:
+                        url: url,
+                        headers: headers
                       ), &block || @block)
     end
   end

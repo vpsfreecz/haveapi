@@ -1,12 +1,12 @@
 module HaveAPI::CLI
   class OutputFormatter
-    def self.to_s(*)
-      f = new(*)
+    def self.to_s(*args)
+      f = new(*args)
       f.to_s
     end
 
-    def self.print(*, **)
-      f = new(*, **)
+    def self.print(*args, **kwargs)
+      f = new(*args, **kwargs)
       f.print
     end
 
@@ -214,9 +214,9 @@ module HaveAPI::CLI
       w + 1
     end
 
-    def each_object(&)
+    def each_object(&block)
       if @objects.is_a?(::Array)
-        @objects.each(&)
+        @objects.each(&block)
 
       else
         yield(@objects)

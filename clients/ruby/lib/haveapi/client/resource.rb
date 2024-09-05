@@ -131,7 +131,7 @@ module HaveAPI::Client
 
           return_value = case action.output && action.output_layout
                          when :object
-                           ResourceInstance.new(@client, @api, self, action:, response: ret)
+                           ResourceInstance.new(@client, @api, self, action: action, response: ret)
 
                          when :object_list
                            ResourceInstanceList.new(@client, @api, self, action, ret)

@@ -114,7 +114,7 @@ module HaveAPI::Authentication
 
       def authenticate(request)
         tokens = [
-          request['access_token'],
+          request.params['access_token'],
           token_from_authorization_header(request),
           token_from_haveapi_header(request)
         ].compact

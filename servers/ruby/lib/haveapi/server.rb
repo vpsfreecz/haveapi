@@ -74,11 +74,11 @@ module HaveAPI
         return unless request.env['HTTP_ORIGIN'] && request.env['HTTP_ACCESS_CONTROL_REQUEST_METHOD']
 
         halt 200, {
-          'Access-Control-Allow-Origin' => '*',
-          'Access-Control-Allow-Methods' => 'GET,POST,OPTIONS,PATCH,PUT,DELETE',
-          'Access-Control-Allow-Credentials' => 'false',
-          'Access-Control-Allow-Headers' => settings.api_server.allowed_headers,
-          'Access-Control-Max-Age' => (60 * 60).to_s
+          'access-control-allow-origin' => '*',
+          'access-control-allow-methods' => 'GET,POST,OPTIONS,PATCH,PUT,DELETE',
+          'access-control-allow-credentials' => 'false',
+          'access-control-allow-headers' => settings.api_server.allowed_headers,
+          'access-control-max-age' => (60 * 60).to_s
         }, ''
       end
 
@@ -94,7 +94,7 @@ module HaveAPI
       def require_auth!
         report_error(
           401,
-          { 'WWW-Authenticate' => 'Basic realm="Restricted Area"' },
+          { 'www-authenticate' => 'Basic realm="Restricted Area"' },
           'Action requires user to authenticate'
         )
       end
@@ -231,8 +231,8 @@ module HaveAPI
 
         before do
           if request.env['HTTP_ORIGIN']
-            headers 'Access-Control-Allow-Origin' => '*',
-                    'Access-Control-Allow-Credentials' => 'false'
+            headers 'access-control-allow-origin' => '*',
+                    'access-control-allow-credentials' => 'false'
           end
         end
 
@@ -467,8 +467,6 @@ module HaveAPI
         else
           authenticated?(v)
         end
-
-        request.body.rewind
 
         begin
           body = request.body.read

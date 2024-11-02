@@ -24,7 +24,7 @@ Gem::Specification.new do |s|
   s.add_dependency 'rake'
   s.add_dependency 'redcarpet', '~> 3.6'
   s.add_dependency 'require_all', '~> 2.0.0'
-  s.add_dependency 'sinatra', '~> 3.1.0'
-  s.add_dependency 'sinatra-contrib', '~> 3.1.0'
-  s.add_dependency 'tilt', '~> 2.3.0'
+  s.add_dependency 'sinatra', '~> 4.0'
+  s.add_dependency 'sinatra-contrib', '~> 4.0'
+  s.add_dependency 'tilt', '~> 2.4'
 end

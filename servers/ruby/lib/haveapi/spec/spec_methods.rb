@@ -42,7 +42,7 @@ module HaveAPI::Spec
         method(action.http_method).call(
           path,
           params && params.to_json,
-          { 'Content-Type' => 'application/json' }
+          { 'content-type' => 'application/json' }
         )
 
       else
@@ -51,7 +51,7 @@ module HaveAPI::Spec
         method(http_method).call(
           path,
           params && params.to_json,
-          { 'Content-Type' => 'application/json' }
+          { 'content-type' => 'application/json' }
         )
       end
     end

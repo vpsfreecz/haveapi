@@ -43,7 +43,7 @@ version:
 	@sed -ri "s/Client\.Version = '[^']+'/Client.Version = '$(VERSION)'/" clients/js/dist/haveapi-client.js
 	@sed -ri "s/\"version\": \"[^\"]+\"/\"version\": \"$(VERSION)\"/" clients/php/composer.json
 	@sed -ri "s/const VERSION = '[^']+'/const VERSION = '$(VERSION)'/" clients/php/src/Client.php
-	@sed -ri "s/s.add_runtime_dependency 'haveapi-client', '~> [^']+'/s.add_runtime_dependency 'haveapi-client', '~> $(VERSION)'/" servers/ruby/haveapi.gemspec
-	@sed -ri "s/spec.add_runtime_dependency 'haveapi-client', '~> [^']+'/spec.add_runtime_dependency 'haveapi-client', '~> $(VERSION)'/" clients/go/haveapi-go-client.gemspec
+	@sed -ri "s/s.add_dependency 'haveapi-client', '~> [^']+'/s.add_dependency 'haveapi-client', '~> $(VERSION)'/" servers/ruby/haveapi.gemspec
+	@sed -ri "s/spec.add_dependency 'haveapi-client', '~> [^']+'/spec.add_dependency 'haveapi-client', '~> $(VERSION)'/" clients/go/haveapi-go-client.gemspec
 	@sed -ri "s/gem 'haveapi', '~> [^']+'/gem 'haveapi', '~> $(VERSION)'/" examples/servers/ruby/activerecord_auth/Gemfile
 

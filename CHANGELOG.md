@@ -1,5 +1,13 @@
+# Sun Nov 03 2024 - version 0.24.0
 ## Ruby server
 - Fix token auth renewal
+- Add validator to offset/limit pagination parameters
+- Updated to Sinatra 4.0 and Rack 3
+
+## Ruby client
+- Fix boolean input parameter conversion on Ruby 3.2
+- Fix token auth save and load from config used by the CLI
+- Remove requirement on Ruby 3.2, ensure compabitility with Ruby >=3.0
 
 # Fri Apr 19 2024 - version 0.23.0
 ## Ruby server

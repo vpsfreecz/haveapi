@@ -78,7 +78,7 @@ module API::Resources
       def exec
         ::User.find(params[:user_id])
       rescue ActiveRecord::RecordNotFound => e
-        error("user with id '#{params[:user_id]}' not found")
+        error!("user with id '#{params[:user_id]}' not found")
       end
     end
 
@@ -120,9 +120,9 @@ module API::Resources
         ::User.find(params[:user_id]).destroy!
 
         # This action returns no parameters, just indicate success
-        ok
+        ok!
       rescue ActiveRecord::RecordNotFound
-        error("user with id '#{params[:user_id]}' not found")
+        error!("user with id '#{params[:user_id]}' not found")
       end
     end
   end

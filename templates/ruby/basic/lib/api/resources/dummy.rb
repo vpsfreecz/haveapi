@@ -53,7 +53,7 @@ module API::Resources
         id = params[:dummy_id] && params[:dummy_id].to_i
 
         if DUMMIES[id].nil?
-          error("Dummy with id '#{id}' not found")
+          error!("Dummy with id '#{id}' not found")
         end
 
         { id:, name: DUMMIES[id] }

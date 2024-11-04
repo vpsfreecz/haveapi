@@ -106,7 +106,7 @@ module HaveAPI::Resources
             id: params[:action_state_id]
           )
 
-          error('action state not found') unless state.valid?
+          error!('action state not found') unless state.valid?
 
           if state.finished? || (Time.now - t) >= input[:timeout]
             return state_to_hash(state)
@@ -145,7 +145,7 @@ module HaveAPI::Resources
 
         return state_to_hash(state) if state.valid?
 
-        error('action state not found')
+        error!('action state not found')
       end
     end
 
@@ -164,7 +164,7 @@ module HaveAPI::Resources
           id: params[:action_state_id]
         )
 
-        error('action state not found') unless state.valid?
+        error!('action state not found') unless state.valid?
 
         ret = state.cancel
 
@@ -172,13 +172,13 @@ module HaveAPI::Resources
           @state_id = ret
 
         elsif ret
-          ok
+          ok!
 
         else
-          error('cancellation failed')
+          error!('cancellation failed')
         end
       rescue RuntimeError, NotImplementedError => e
-        error(e.message)
+        error!(e.message)
       end
 
       attr_reader :state_id

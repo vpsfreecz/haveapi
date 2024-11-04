@@ -227,11 +227,11 @@ module HaveAPI::Authentication
                                                             input:
                                                           ), ActionResult.new)
               rescue HaveAPI::AuthenticationError => e
-                error(e.message)
+                error!(e.message)
               end
 
               unless result.ok?
-                error(result.error || 'invalid authentication credentials')
+                error!(result.error || 'invalid authentication credentials')
               end
 
               {
@@ -260,9 +260,9 @@ module HaveAPI::Authentication
                                                                 ), ActionResult.new)
 
               if result.ok?
-                ok
+                ok!
               else
-                error(result.error || 'revoke failed')
+                error!(result.error || 'revoke failed')
               end
             end
           end
@@ -290,7 +290,7 @@ module HaveAPI::Authentication
               if result.ok?
                 { valid_to: result.valid_to }
               else
-                error(result.error || 'renew failed')
+                error!(result.error || 'renew failed')
               end
             end
           end
@@ -324,11 +324,11 @@ module HaveAPI::Authentication
                                                 token: input[:token]
                                               ), ActionResult.new)
                 rescue HaveAPI::AuthenticationError => e
-                  error(e.message)
+                  error!(e.message)
                 end
 
                 unless result.ok?
-                  error(result.error || 'authentication failed')
+                  error!(result.error || 'authentication failed')
                 end
 
                 {

@@ -178,9 +178,9 @@ module MyAPI
         user = ::User.new(input)
 
         if user.save
-          ok(user)
+          ok!(user)
         else
-          error('save failed', user.errors.to_hash)
+          error!('save failed', user.errors.to_hash)
         end
       end
     end

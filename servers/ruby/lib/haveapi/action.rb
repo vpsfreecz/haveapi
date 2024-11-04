@@ -323,7 +323,7 @@ module HaveAPI
     def validate!
       @params = validate
     rescue ValidationError => e
-      error(e.message, e.to_hash)
+      error!(e.message, e.to_hash)
     end
 
     def authorized?(user)
@@ -379,11 +379,11 @@ module HaveAPI
         if tmp.empty?
           p e.message
           puts e.backtrace
-          error('Server error occurred')
+          error!('Server error occurred')
         end
 
         unless tmp[:status]
-          error(tmp[:message], {}, http_status: tmp[:http_status] || 500)
+          error!(tmp[:message], {}, http_status: tmp[:http_status] || 500)
         end
       end
 
@@ -555,7 +555,7 @@ module HaveAPI
     # @param ret [Hash] response
     # @param opts [Hash] options
     # @option opts [Integer] http_status HTTP status code sent to the client
-    def ok(ret = {}, opts = {})
+    def ok!(ret = {}, opts = {})
       @http_status = opts[:http_status]
       throw(:return, ret)
     end
@@ -564,7 +564,7 @@ module HaveAPI
     # @param errs [Hash<Array>] parameter errors sent to the client
     # @param opts [Hash] options
     # @option opts [Integer] http_status HTTP status code sent to the client
-    def error(msg, errs = {}, opts = {})
+    def error!(msg, errs = {}, opts = {})
       @message = msg
       @errors = errs
       @http_status = opts[:http_status]

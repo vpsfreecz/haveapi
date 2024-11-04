@@ -11,11 +11,11 @@ module HaveAPI
   class ActionState
     # Return an array of objects representing actions that are pending completion.
     # @param [Object] user
-    # @param [Integer] offset
+    # @param [Integer] from_id
     # @param [Integer] limit
     # @param [Symbol] order (:newest or :oldest)
     # @return [Array<ActionState>]
-    def self.list_pending(user, offset, limit, order)
+    def self.list_pending(user, from_id, limit, order)
       raise NotImplementedError
     end
 

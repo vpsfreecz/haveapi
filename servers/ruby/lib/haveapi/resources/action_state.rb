@@ -63,7 +63,7 @@ module HaveAPI::Resources
       def exec
         actions = @context.server.action_state.list_pending(
           current_user,
-          input[:offset],
+          input[:from_id],
           input[:limit],
           input[:order].to_sym
         )

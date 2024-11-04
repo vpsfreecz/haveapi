@@ -41,6 +41,27 @@ module HaveAPI::ModelAdapters
           end
         end
 
+        def with_pagination(q = nil)
+          pk = self.class.model.primary_key
+
+          unless pk.is_a?(String)
+            raise 'only simple primary key is supported, ' \
+                  "#{self.class.model} has a composite primary key (#{pk.join(', ')})"
+          end
+
+          q ||= self.class.model.all
+
+          from_id = input[:from_id]
+          limit = input[:limit]
+
+          if from_id
+            q = q.where("`#{self.class.model.table_name}`.`#{self.class.model.primary_key}` > ?", from_id)
+          end
+
+          q = q.limit(limit) if limit
+          q
+        end
+
         # Parse includes sent by the user and return them
         # in an array of symbols and hashes.
         def ar_parse_includes(raw)

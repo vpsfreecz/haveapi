@@ -138,7 +138,7 @@ module MyAPI
 
       # Execute action, return the list
       def exec
-        query.limit(input[:limit]).offset(input[:offset])
+        with_pagination(query)
       end
     end
 

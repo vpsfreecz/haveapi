@@ -154,6 +154,13 @@ module HaveAPI
       @params.detect { |p| p.name == name }.patch(changes)
     end
 
+    def remove(name)
+      i = @params.index { |p| p.name == name }
+      raise "Parameter #{name.inspect} not found" if i.nil?
+
+      @params.delete_at(i)
+    end
+
     # Action returns custom data.
     def custom(name, **kwargs, &block)
       add_param(name, apply(kwargs, type: Custom, clean: block))

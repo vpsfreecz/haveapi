@@ -44,6 +44,14 @@ class ResourceInstanceList implements \ArrayAccess, \Iterator
     }
 
     /**
+     * @return Action
+     */
+    public function getAction()
+    {
+        return $this->response->getAction();
+    }
+
+    /**
      * @return ResourceInstance first object
      */
     public function first()

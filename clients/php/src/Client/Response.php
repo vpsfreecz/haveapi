@@ -93,6 +93,15 @@ class Response implements \ArrayAccess
         return $this->time;
     }
 
+    /**
+     * Action that returned this response
+     * @return Action
+     */
+    public function getAction()
+    {
+        return $this->action;
+    }
+
     // ArrayAccess
     public function offsetExists($offset): bool
     {

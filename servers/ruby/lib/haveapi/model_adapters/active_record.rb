@@ -41,37 +41,43 @@ module HaveAPI::ModelAdapters
           end
         end
 
+        # Apply pagination on query in ascending order
+        # @param q [ActiveRecord::Relation] query to apply pagination on
         def with_asc_pagination(q = nil)
-          ar_with_pagination(q) do |query, from_id|
+          ar_with_pagination(q, check: true) do |query, from_id|
             query.where("`#{self.class.model.table_name}`.`#{self.class.model.primary_key}` > ?", from_id)
           end
         end
 
+        # Apply pagination on query in descending order
+        # @param q [ActiveRecord::Relation] query to apply pagination on
         def with_desc_pagination(q = nil)
-          ar_with_pagination(q) do |query, from_id|
+          ar_with_pagination(q, check: true) do |query, from_id|
             query.where("`#{self.class.model.table_name}`.`#{self.class.model.primary_key}` < ?", from_id)
           end
         end
 
         alias with_pagination with_asc_pagination
 
-        def ar_with_pagination(q)
+        # @param q [ActiveRecord::Relation] query to apply pagination on
+        # @param parameter [Symbol] input parameter used for pagination
+        # @param check [Boolean] raise if the model does not have a simple primary key
+        # @yieldparam q [ActiveRecord::Relation] query to apply pagination on
+        # @yieldparam parameter [any] value of the input parameter
+        def ar_with_pagination(q, parameter: :from_id, check: false)
           pk = self.class.model.primary_key
 
-          unless pk.is_a?(String)
+          if check && !pk.is_a?(String)
             raise 'only simple primary key is supported, ' \
                   "#{self.class.model} has a composite primary key (#{pk.join(', ')})"
           end
 
           q ||= self.class.model.all
 
-          from_id = input[:from_id]
+          paginable = input[parameter]
           limit = input[:limit]
 
-          if from_id
-            q = yield(q, from_id)
-          end
-
+          q = yield(q, paginable) if paginable
           q = q.limit(limit) if limit
           q
         end

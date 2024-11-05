@@ -41,7 +41,21 @@ module HaveAPI::ModelAdapters
           end
         end
 
-        def with_pagination(q = nil)
+        def with_asc_pagination(q = nil)
+          ar_with_pagination(q) do |query, from_id|
+            query.where("`#{self.class.model.table_name}`.`#{self.class.model.primary_key}` > ?", from_id)
+          end
+        end
+
+        def with_desc_pagination(q = nil)
+          ar_with_pagination(q) do |query, from_id|
+            query.where("`#{self.class.model.table_name}`.`#{self.class.model.primary_key}` < ?", from_id)
+          end
+        end
+
+        alias with_pagination with_asc_pagination
+
+        def ar_with_pagination(q)
           pk = self.class.model.primary_key
 
           unless pk.is_a?(String)
@@ -55,7 +69,7 @@ module HaveAPI::ModelAdapters
           limit = input[:limit]
 
           if from_id
-            q = q.where("`#{self.class.model.table_name}`.`#{self.class.model.primary_key}` > ?", from_id)
+            q = yield(q, from_id)
           end
 
           q = q.limit(limit) if limit

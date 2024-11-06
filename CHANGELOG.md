@@ -1,3 +1,17 @@
+# Wed Nov 06 2024 - version 0.25.0
+## Ruby server
+- Replaced `HaveAPI::Action#ok` and `#error` with `#ok!` and `#error!`
+- Pagination is now done by `from_id` parameter, or using a custom parameter. Parameter
+  `offset` was removed.
+- Action input/output DSL now includes method `remove` that removes previously
+  configured parameter
+- Escape HTML in parameter description in API documentation
+- Removed JSON self-description samples from API documentation
+
+## PHP client
+- `\HaveAPI\Client\Response` and `ResourceInstanceList` have new method
+  `getAction()` that returns the `Action` that created it
+
 # Sun Nov 03 2024 - version 0.24.0
 ## Ruby server
 - Fix token auth renewal

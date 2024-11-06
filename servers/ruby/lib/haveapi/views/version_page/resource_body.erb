@@ -54,8 +54,8 @@
                   <td><%= info[:required] ? 'yes' : 'no' %></td>
                   <td><%= format_param_type(info) %></td>
                   <td><%= format_validators(info[:validators]) %></td>
-                  <td><%= info[:default] == :_nil ? '' : info[:default] %></td>
-                  <td><%= info[:description] %></td>
+                  <td><%= info[:default] == :_nil ? '' : escape_html(info[:default]) %></td>
+                  <td><%= escape_html(info[:description]) %></td>
                 </tr>
               <% end %>
             </table>
@@ -86,7 +86,7 @@
                   <td><%= info[:label] %></td>
                   <td><%= param %></td>
                   <td><%= format_param_type(info) %></td>
-                  <td><%= info[:description] %></td>
+                  <td><%= escape_html(info[:description]) %></td>
                 </tr>
               <% end %>
             </table>
@@ -95,7 +95,7 @@
 
         <div class="action-self-description">
           <h4>Self-description</h4>
-          <pre><code><%= JSON.pretty_generate(info) %></code></pre>
+          <pre><code><%= escape_html(JSON.pretty_generate(info)) %></code></pre>
         </div>
 
         <% unless info[:examples].empty? %>

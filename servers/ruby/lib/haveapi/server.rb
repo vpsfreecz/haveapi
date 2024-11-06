@@ -166,12 +166,18 @@ module HaveAPI
           ret += "<h5>#{name.to_s.capitalize}</h5>"
           ret += '<dl>'
           opts.each do |k, v|
-            ret += "<dt>#{k}</dt><dd>#{v}</dd>"
+            ret += "<dt>#{k}</dt><dd>#{escape_html(v.to_s)}</dd>"
           end
           ret += '</dl>'
         end
 
         ret
+      end
+
+      def escape_html(v)
+        return '' if v.nil?
+
+        CGI.escapeHTML(v.to_s)
       end
     end
 

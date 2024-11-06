@@ -111,33 +111,5 @@ nojsTabs({
 
       event.preventDefault();
     });
-
-    // Show/hide button for help messages
-    $('.action .action-self-description').each(function(i, el){
-      // replace text by show/hide button
-      var div = $(el);
-      var pre = div.find('pre');
-      var h4 = div.find('h4');
-      h4.text('');
-
-      h4.append(
-        $('<button>')
-          .attr('type', 'button')
-          .addClass('btn btn-primary btn-sm')
-          .text('Show self-description')
-          .click(function(event) {
-            var button = $(this);
-            button.toggleClass('active');
-            pre.toggle('fast');
-
-            if(button.hasClass('active'))
-              button.text('Hide self-description');
-            else
-              button.text('Show self-description');
-          })
-      );
-
-      $(el).find('pre').hide();
-    });
   });
 </script>

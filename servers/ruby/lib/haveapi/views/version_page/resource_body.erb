@@ -93,11 +93,6 @@
           <% end %>
         </div>
 
-        <div class="action-self-description">
-          <h4>Self-description</h4>
-          <pre><code><%= escape_html(JSON.pretty_generate(info)) %></code></pre>
-        </div>
-
         <% unless info[:examples].empty? %>
           <h4>Examples</h4>
           <% info[:examples].each_with_index do |example, i| %>

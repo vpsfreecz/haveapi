@@ -10,7 +10,7 @@ in stdenv.mkDerivation rec {
     go
     gotools
     openssl
-    ruby
+    ruby_3_2
   ];
 
   shellHook = ''
@@ -18,6 +18,6 @@ in stdenv.mkDerivation rec {
     export PATH="$GEM_HOME/.gems/bin:$PATH"
     gem install bundler
     bundler install
-    #export RUBYOPT=-rbundler/setup
+    export RUBYOPT=-rbundler/setup
   '';
 }

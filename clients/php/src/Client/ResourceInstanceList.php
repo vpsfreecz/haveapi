@@ -7,7 +7,7 @@ use HaveAPI\Client;
 /**
  * A list of resource object instances.
  */
-class ResourceInstanceList implements \ArrayAccess, \Iterator
+class ResourceInstanceList implements \ArrayAccess, \Countable, \Iterator
 {
     private $items = [];
     private $index = 0;
@@ -25,14 +25,6 @@ class ResourceInstanceList implements \ArrayAccess, \Iterator
         foreach($response->getResponse() as $item) {
             $this->items[] = new ResourceInstance($client, $action, $item);
         }
-    }
-
-    /**
-     * @return int object count
-     */
-    public function count()
-    {
-        return count($this->items);
     }
 
     /**
@@ -111,6 +103,15 @@ class ResourceInstanceList implements \ArrayAccess, \Iterator
     public function offsetUnset($offset): void
     {
         unset($this->items[$offset]);
+    }
+
+    // Countable
+    /**
+     * @return int object count
+     */
+    public function count(): int
+    {
+        return count($this->items);
     }
 
     // Iterator

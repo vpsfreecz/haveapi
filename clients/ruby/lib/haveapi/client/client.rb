@@ -14,6 +14,7 @@ class HaveAPI::Client::Client
   # @option opts [Boolean] block
   # @option opts [Integer] block_interval
   # @option opts [Integer] block_timeout
+  # @option opts [Boolean] verify_ssl
   def initialize(url, opts = {})
     @setup = false
     @opts = opts
@@ -25,7 +26,11 @@ class HaveAPI::Client::Client
       @api = @opts[:communicator]
 
     else
-      @api = HaveAPI::Client::Communicator.new(url, @version)
+      @api = HaveAPI::Client::Communicator.new(
+        url,
+        @version,
+        **{ verify_ssl: opts[:verify_ssl] }.compact
+      )
       @api.identity = @opts[:identity]
     end
   end

@@ -15,14 +15,15 @@ module HaveAPI::Client
       end
     end
 
-    attr_reader :url, :auth
+    attr_reader :url, :auth, :verify_ssl
     attr_accessor :identity
 
-    def initialize(url, v = nil)
+    def initialize(url, v = nil, verify_ssl: true)
       @url = url
       @auth = Authentication::NoAuth.new(self, {}, {})
-      @rest = RestClient::Resource.new(@url)
+      @rest = RestClient::Resource.new(@url, verify_ssl: verify_ssl)
       @version = v
+      @verify_ssl = verify_ssl
       @identity = 'haveapi-client-ruby'
     end
 

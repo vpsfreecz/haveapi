@@ -173,7 +173,7 @@ module HaveAPI::CLI
 
         opts.on('-a', '--auth METHOD', Cli.auth_methods.keys, 'Authentication method') do |m|
           options[:auth] = m
-          connect_api(url: options[:client], version: options[:version])
+          connect_api(url: options[:client], version: options[:version], verify_ssl: options[:verify_ssl])
 
           @auth = Cli.auth_methods[m].new(
             @api,
@@ -281,6 +281,10 @@ module HaveAPI::CLI
           @action = [:check_compat]
         end
 
+        opts.on('--[no-]verify-ssl', 'Toggle SSL peer verification') do |v|
+          options[:verify_ssl] = v
+        end
+
         opts.on('-h', '--help', 'Show this message') do
           options[:help] = true
         end
@@ -298,7 +302,10 @@ module HaveAPI::CLI
 
       unless options[:auth]
         cfg = server_config(options[:client])
-        connect_api(url: options[:client], version: options[:version]) unless @api
+
+        unless @api
+          connect_api(url: options[:client], version: options[:version], verify_ssl: options[:verify_ssl])
+        end
 
         if (m = cfg[:last_auth])
           @auth = Cli.auth_methods[m].new(
@@ -652,10 +659,13 @@ module HaveAPI::CLI
       @config[:servers].last
     end
 
-    def connect_api(url: nil, version: nil)
+    def connect_api(url: nil, version: nil, verify_ssl: nil)
+      verify_ssl = @opts && @opts[:verify_ssl] if verify_ssl.nil?
+
       @api = HaveAPI::Client::Communicator.new(
         url || api_url,
-        version || (@opts && @opts[:version])
+        version || (@opts && @opts[:version]),
+        verify_ssl: verify_ssl
       )
       @api.identity = $0.split('/').last
     end

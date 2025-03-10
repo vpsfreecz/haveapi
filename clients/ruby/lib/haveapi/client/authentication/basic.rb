@@ -5,7 +5,12 @@ module HaveAPI::Client::Authentication
     register :basic
 
     def resource
-      RestClient::Resource.new(@communicator.url, @opts[:user], @opts[:password])
+      RestClient::Resource.new(
+        @communicator.url,
+        user: @opts[:user],
+        password: @opts[:password],
+        verify_ssl: @communicator.verify_ssl
+      )
     end
 
     def user = @opts.[](:user)

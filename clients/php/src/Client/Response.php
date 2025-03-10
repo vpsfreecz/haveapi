@@ -18,7 +18,7 @@ class Response implements \ArrayAccess
      */
     public function __construct($action, $response, $time)
     {
-        if($response->code == 401) {
+        if ($response->code == 401) {
             throw new Exception\AuthenticationFailed($response->body->message);
         }
 
@@ -51,7 +51,7 @@ class Response implements \ArrayAccess
     {
         $l = $this->action->layout('output');
 
-        switch($l) {
+        switch ($l) {
             case 'object':
             case 'object_list':
             case 'hash':

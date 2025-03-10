@@ -31,10 +31,10 @@ class ResourceInstance extends Resource
         $this->action = $action;
         $this->response = $response;
 
-        if($response) {
+        if ($response) {
             $this->persistent = true;
 
-            if($response instanceof Response) {
+            if ($response instanceof Response) {
                 $this->attrs = (array) $response->getResponse();
                 $meta = $response->getMeta();
                 $this->args = $meta->path_params ?? [];
@@ -88,7 +88,7 @@ class ResourceInstance extends Resource
     {
         $id = false;
 
-        if(!array_key_exists($name, $this->attrs) && $this->endsWith($name, '_id')) {
+        if (!array_key_exists($name, $this->attrs) && $this->endsWith($name, '_id')) {
             $name = substr($name, 0, -3);
             $id = true;
         }
@@ -99,9 +99,9 @@ class ResourceInstance extends Resource
 
         $param = $this->description->actions->{$this->action->name()}->output->parameters->{$name};
 
-        switch($param->type) {
+        switch ($param->type) {
             case 'Resource':
-                if($id) {
+                if ($id) {
                     if ($this->attrs[$name]) {
                         return $this->attrs[$name]->{ $param->value_id };
                     } else {
@@ -109,7 +109,7 @@ class ResourceInstance extends Resource
                     }
                 }
 
-                if(isset($this->associations[$name])) {
+                if (isset($this->associations[$name])) {
                     return $this->associations[$name];
                 }
 
@@ -144,17 +144,17 @@ class ResourceInstance extends Resource
     {
         $id = false;
 
-        if($this->endsWith($name, '_id')) {
+        if ($this->endsWith($name, '_id')) {
             $name = substr($name, 0, -3);
             $id = true;
         }
 
-        if(array_key_exists($name, $this->attrs)) {
+        if (array_key_exists($name, $this->attrs)) {
             $param = $this->description->actions->{$this->action->name()}->output->parameters->{$name};
 
-            switch($param->type) {
+            switch ($param->type) {
                 case 'Resource':
-                    if($id) {
+                    if ($id) {
                         $this->attrs[$name]->{ $param->value_id } = $value;
                         break;
                     }
@@ -187,7 +187,7 @@ class ResourceInstance extends Resource
      */
     public function save()
     {
-        if($this->persistent) {
+        if ($this->persistent) {
             $action = $this->{'update'};
             $action->directCall($this->attrsForApi($action));
 
@@ -196,7 +196,7 @@ class ResourceInstance extends Resource
             $action = $this->{'create'};
             $ret = new Response($action, $action->directCall($this->attrsForApi($action)));
 
-            if($ret->isOk()) {
+            if ($ret->isOk()) {
                 $this->attrs = array_merge($this->attrs, (array) $ret->getResponse());
 
             } else {
@@ -216,14 +216,14 @@ class ResourceInstance extends Resource
         $ret = [];
         $desc = $this->description->actions->{$action}->input->parameters;
 
-        foreach($this->attrs as $k => $v) {
-            if(!isset($desc->{$k})) {
+        foreach ($this->attrs as $k => $v) {
+            if (!isset($desc->{$k})) {
                 continue;
             }
 
             $param = $desc->{$k};
 
-            switch($param->type) {
+            switch ($param->type) {
                 case 'Resource':
                     $ret[$k] = $v->{ $param->{'value_id'} };
                     break;
@@ -243,8 +243,8 @@ class ResourceInstance extends Resource
     {
         $params = $this->description->actions->{$this->action->name()}->input->parameters;
 
-        foreach($params as $name => $desc) {
-            switch($desc->type) {
+        foreach ($params as $name => $desc) {
+            switch ($desc->type) {
                 case 'Resource':
                     $c = new \stdClass();
                     $c->{$desc->value_id} = null;

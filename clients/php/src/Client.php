@@ -31,7 +31,7 @@ class Client extends Client\Resource
      */
     public static function registerAuthProvider($name, $class, $force = true)
     {
-        if(!$force && in_array($name, self::$authProviders)) {
+        if (!$force && in_array($name, self::$authProviders)) {
             return;
         }
 
@@ -67,7 +67,7 @@ class Client extends Client\Resource
      */
     public function setup($force = false)
     {
-        if(!$force && $this->description) {
+        if (!$force && $this->description) {
             return;
         }
 
@@ -132,7 +132,7 @@ class Client extends Client\Resource
      */
     public function authenticate($method, $opts, $forceSetup = true)
     {
-        if(!array_key_exists($method, self::$authProviders)) {
+        if (!array_key_exists($method, self::$authProviders)) {
             throw new Client\Exception\AuthenticationFailed("Auth method '$method' is not registered");
         }
 
@@ -216,11 +216,11 @@ class Client extends Client\Resource
         $time = 0.0;
         $response = new Client\Response($action, $this->directCall($action, $params, $time), $time);
 
-        if(!$response->isOk()) {
+        if (!$response->isOk()) {
             throw new Client\Exception\ActionFailed($response, "Action '" . $action->name() . "' failed: " . $response->getMessage());
         }
 
-        switch($action->layout('output')) {
+        switch ($action->layout('output')) {
             case 'object':
                 return new Client\ResourceInstance($this->client, $action, $response);
 
@@ -256,7 +256,7 @@ class Client extends Client\Resource
 
         $res[ $action->getNamespace('input') ] = $params;
 
-        if(!$this->sendAsQueryParams($fn)) {
+        if (!$this->sendAsQueryParams($fn)) {
             $request->body(empty($params) ? '{}' : json_encode($res));
         }
 
@@ -268,7 +268,7 @@ class Client extends Client\Resource
 
         $this->accountTime($diff);
 
-        if($time !== null) {
+        if ($time !== null) {
             $time = $diff;
         }
 
@@ -334,7 +334,7 @@ class Client extends Client\Resource
     {
         $this->queryParams += $this->authProvider->queryParameters();
 
-        if($action && $this->sendAsQueryParams($action->httpMethod())) {
+        if ($action && $this->sendAsQueryParams($action->httpMethod())) {
             foreach ($params as $ns => $arr) {
                 foreach ($arr as $k => $v) {
                     $this->queryParams[ $ns . "[$k]" ] = $v;
@@ -342,12 +342,12 @@ class Client extends Client\Resource
             }
         }
 
-        if(count($this->queryParams) > 0) {
+        if (count($this->queryParams) > 0) {
             $url = $request->uri;
             $first = true;
 
-            foreach($this->queryParams as $k => $v) {
-                if($first) {
+            foreach ($this->queryParams as $k => $v) {
+                if ($first) {
                     $url .= '?';
                     $first = false;
                 } else {
@@ -380,13 +380,13 @@ class Client extends Client\Resource
     {
         $url = $this->uri;
 
-        if($this->version) {
+        if ($this->version) {
             $url .= "/v" . $this->version . "/";
         }
 
         $request = $this->getRequest('options', $url);
 
-        if(!$this->version) {
+        if (!$this->version) {
             $this->queryParams['describe'] = 'default';
         }
 
@@ -435,7 +435,7 @@ class Client extends Client\Resource
     {
         $obj = parent::findObject($name, $description);
 
-        if($obj instanceof Client\Resource) {
+        if ($obj instanceof Client\Resource) {
             $obj->setApiClient($this);
         }
 
@@ -446,7 +446,7 @@ class Client extends Client\Resource
     {
         $this->description = $d;
 
-        if($this->descCallback) {
+        if ($this->descCallback) {
             call_user_func($this->descCallback, $this);
         }
     }

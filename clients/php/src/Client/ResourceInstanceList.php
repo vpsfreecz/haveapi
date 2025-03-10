@@ -22,7 +22,7 @@ class ResourceInstanceList implements \ArrayAccess, \Countable, \Iterator
     {
         $this->response = $response;
 
-        foreach($response->getResponse() as $item) {
+        foreach ($response->getResponse() as $item) {
             $this->items[] = new ResourceInstance($client, $action, $item);
         }
     }

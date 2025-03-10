@@ -20,7 +20,7 @@ $_haveapi_client_classes = [
     'Client',
 ];
 
-foreach($_haveapi_client_classes as $class) {
+foreach ($_haveapi_client_classes as $class) {
     include "src/$class.php";
 }
 

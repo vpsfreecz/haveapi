@@ -75,8 +75,9 @@ class OAuth2 extends Base
         $_SESSION['oauth2state'] = $this->genericProvider->getState();
         $_SESSION['oauth2pkceCode'] = $this->genericProvider->getPkceCode();
 
-        foreach ($queryParams as $k => $v)
-            $authorizationUrl .= '&'.urlencode($k).'='.urlencode($v);
+        foreach ($queryParams as $k => $v) {
+            $authorizationUrl .= '&' . urlencode($k) . '=' . urlencode($v);
+        }
 
         header('Accept: text/html');
         header('Location: ' . $authorizationUrl);
@@ -146,7 +147,7 @@ class OAuth2 extends Base
         $encodedParams = [];
 
         foreach ($params as $k => $v) {
-            $encodedParams[] = $k."=".urlencode($v);
+            $encodedParams[] = $k . "=" . urlencode($v);
         }
 
         $request->body(implode('&', $encodedParams));

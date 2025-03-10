@@ -81,7 +81,7 @@ class Action
      */
     protected function prepareCall($func_args)
     {
-        if(!$this->prepared_path) {
+        if (!$this->prepared_path) {
             $this->prepared_path = $this->path();
         }
 
@@ -92,17 +92,17 @@ class Action
         $params = [];
         $this->lastArgs = [];
 
-        for($i = 0; $i < $cnt; $i++) {
+        for ($i = 0; $i < $cnt; $i++) {
             $arg = $args[$i];
 
-            if(is_array($arg)) {
+            if (is_array($arg)) {
                 $params = $arg;
                 break;
             }
 
             $this->prepared_path = preg_replace("/\{[a-zA-Z0-9\-_]+\}/", $arg, $this->prepared_path, 1, $replaced_cnt);
 
-            if($replaced_cnt) {
+            if ($replaced_cnt) {
                 $this->lastArgs[] = $arg;
 
             } else {
@@ -111,7 +111,7 @@ class Action
             }
         }
 
-        if(preg_match("/\{[a-zA-Z0-9\-_]+\}/", $this->prepared_path)) {
+        if (preg_match("/\{[a-zA-Z0-9\-_]+\}/", $this->prepared_path)) {
             throw new Exception\UnresolvedArguments("Cannot call action '{$this->resource->getName()}#{$this->m_name}': unresolved arguments.");
         }
 
@@ -139,7 +139,7 @@ class Action
      */
     public function path()
     {
-        if($this->prepared_path) {
+        if ($this->prepared_path) {
             return $this->prepared_path;
         }
 

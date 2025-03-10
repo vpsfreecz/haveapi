@@ -171,7 +171,7 @@ class Resource implements \ArrayAccess
             }
         }
 
-        if (array_key_exists($name, (array)$description->resources)) {
+        if (array_key_exists($name, (array) $description->resources)) {
             return new Resource($this->client, $name, $description->resources->$name, $this->args);
         }
 

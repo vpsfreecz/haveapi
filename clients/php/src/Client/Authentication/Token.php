@@ -86,13 +86,13 @@ class Token extends Base
      */
     public function authenticate(Request $request)
     {
-        if(!$this->configured) {
+        if (!$this->configured) {
             return;
         }
 
         $this->checkValidity();
 
-        if($this->via == self::HTTP_HEADER) {
+        if ($this->via == self::HTTP_HEADER) {
             $request->addHeader($this->description->http_header, $this->token);
         }
     }
@@ -102,7 +102,7 @@ class Token extends Base
      */
     public function queryParameters()
     {
-        if(!$this->configured || $this->via != self::QUERY_PARAMETER) {
+        if (!$this->configured || $this->via != self::QUERY_PARAMETER) {
             return [];
         }
 
@@ -195,7 +195,7 @@ class Token extends Base
         if ($ret['complete']) {
             $this->token = $ret['token'];
 
-            if($ret['valid_to']) {
+            if ($ret['valid_to']) {
                 $this->validTo = strtotime($ret['valid_to']);
             }
 

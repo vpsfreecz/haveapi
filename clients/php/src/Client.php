@@ -15,6 +15,7 @@ class Client extends Client\Resource
     private $uri;
     private $version;
     private $identity;
+    private $options;
     private $authProvider;
     private $queryParams;
     private $descCallback = null;
@@ -42,12 +43,15 @@ class Client extends Client\Resource
      * @param mixed $version API version to use, defaults to default version
      * @param string $identity string to be sent in User-Agent in every request
      */
-    public function __construct($uri = 'http://localhost:4567', $version = null, $identity = 'haveapi-client-php')
+    public function __construct($uri = 'http://localhost:4567', $version = null, $identity = 'haveapi-client-php', $options = [])
     {
         $this->client = $this;
         $this->uri = chop($uri, '/');
         $this->version = $version;
         $this->identity = $identity;
+        $this->options = [
+            'verify' => $options['verify'] ?? true,
+        ];
 
         self::registerAuthProvider('none', 'HaveAPI\Client\Authentication\NoAuth');
         self::registerAuthProvider('basic', 'HaveAPI\Client\Authentication\Basic');
@@ -284,7 +288,6 @@ class Client extends Client\Resource
         $request->sendsJson();
         $request->expectsJson();
         $request->addHeader('User-Agent', $this->identity);
-
         $ip = $this->getClientIp();
 
         if ($ip) {
@@ -314,6 +317,11 @@ class Client extends Client\Resource
         } else {
             return false;
         }
+    }
+
+    public function verifySsl(): bool
+    {
+        return $this->options['verify'];
     }
 
     /**

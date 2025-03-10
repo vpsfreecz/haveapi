@@ -38,6 +38,7 @@ class OAuth2 extends Base
 
             $httpClient = new \GuzzleHttp\Client([
                 'headers' => $headers,
+                'verify' => $this->client->verifySsl(),
             ]);
 
             $this->genericProvider = new \League\OAuth2\Client\Provider\GenericProvider(

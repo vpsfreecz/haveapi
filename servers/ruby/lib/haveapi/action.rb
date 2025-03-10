@@ -197,13 +197,6 @@ module HaveAPI
 
       def build_route(prefix)
         route = @route || action_name.underscore
-        if @route
-          @route
-        elsif action_name
-          action_name.to_s.demodulize.underscore
-        else
-          to_s.demodulize.underscore
-        end
 
         if !route.is_a?(String) && route.respond_to?(:call)
           route = route.call(resource)

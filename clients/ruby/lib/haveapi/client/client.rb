@@ -80,7 +80,7 @@ class HaveAPI::Client::Client
 
   # @return [Hash] client options
   def opts(*keys)
-    keys.empty? ? @opts.clone : @opts.select { |k, _| keys.include?(k) }
+    keys.empty? ? @opts.clone : @opts.slice(*keys)
   end
 
   # @return [HaveAPI::Client::Communicator]

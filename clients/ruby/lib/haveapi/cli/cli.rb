@@ -160,6 +160,7 @@ module HaveAPI::CLI
     def options
       options = {
           client: default_url,
+          raw_values: false,
           block: true,
           verbose: false
       }
@@ -235,6 +236,10 @@ module HaveAPI::CLI
 
         opts.on('--raw', 'Print raw response as is') do
           options[:raw] = true
+        end
+
+        opts.on('--[no-]raw-values', 'Toggle parameter processing') do |v|
+          options[:raw_values] = v
         end
 
         opts.on('--timestamp', 'Display Datetime parameters as timestamp') do
@@ -670,9 +675,11 @@ module HaveAPI::CLI
     end
 
     def parse_action_param(name, value)
-      if value.start_with?('@@')
+      if @opts[:raw_values] || !value.start_with?('@')
+        value
+      elsif value.start_with?('@@')
         value[1..]
-      elsif value.start_with?('@')
+      else
         file_path = value[1..]
 
         begin
@@ -680,8 +687,6 @@ module HaveAPI::CLI
         rescue SystemCallError => e
           raise "Unable to read parameter #{name} from file '#{file_path}': #{e.message}"
         end
-      else
-        value
       end
     end
 

@@ -333,9 +333,8 @@ module HaveAPI::CLI
 
               options[name] = if arg.nil?
                                 read_param(name, p)
-
                               else
-                                args.first
+                                parse_action_param(name, args.first)
                               end
             end
           end
@@ -668,6 +667,22 @@ module HaveAPI::CLI
         verify_ssl: verify_ssl
       )
       @api.identity = $0.split('/').last
+    end
+
+    def parse_action_param(name, value)
+      if value.start_with?('@@')
+        value[1..]
+      elsif value.start_with?('@')
+        file_path = value[1..]
+
+        begin
+          File.read(file_path)
+        rescue SystemCallError => e
+          raise "Unable to read parameter #{name} from file '#{file_path}': #{e.message}"
+        end
+      else
+        value
+      end
     end
 
     def format_errors(action, msg, errors)

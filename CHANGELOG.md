@@ -1,3 +1,16 @@
+# Web Mar 12 2025 - version 0.26.0
+## Ruby server
+- Removed unused code
+
+## Ruby CLI
+- Add option `--[no-]verify-ssl`
+- Ability to read action parameters from files when the value starts with `@`
+- New option `--raw-values` to disable the detection of file paths above
+
+## PHP client
+- `ResourceInstanceLis`t implements `Countable`
+- Option to disable SSL verification
+
 # Wed Nov 06 2024 - version 0.25.0
 ## Ruby server
 - Replaced `HaveAPI::Action#ok` and `#error` with `#ok!` and `#error!`

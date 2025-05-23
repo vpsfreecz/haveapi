@@ -16,6 +16,12 @@ in stdenv.mkDerivation rec {
   shellHook = ''
     export GEM_HOME=$(pwd)/.gems
     export PATH="$GEM_HOME/bin:$PATH"
-    gem install --no-document bundler overcommit rubocop
+    gem install --no-document bundler
+
+    # Purity disabled because of prism gem, which has a native extension.
+    # The extension has its header files in .gems, which gets stripped but
+    # cc wrapper in Nix. Without NIX_ENFORCE_PURITY=0, we get prism.h not found
+    # error.
+    NIX_ENFORCE_PURITY=0 bundle install
   '';
 }

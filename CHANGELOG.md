@@ -1,3 +1,7 @@
+# Tue May 27 2025 - version 0.26.1
+## Ruby server
+- Use redcarpet instead of github-markdown
+
 # Web Mar 12 2025 - version 0.26.0
 ## Ruby server
 - Removed unused code

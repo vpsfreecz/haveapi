@@ -15,7 +15,6 @@ Gem::Specification.new do |s|
   s.required_ruby_version = ">= #{File.read('../../.ruby-version').strip}"
 
   s.add_dependency 'activesupport', '>= 7.1'
-  s.add_dependency 'github-markdown'
   s.add_dependency 'haveapi-client', '~> 0.26.0'
   s.add_dependency 'json'
   s.add_dependency 'mail'

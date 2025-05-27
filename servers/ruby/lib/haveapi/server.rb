@@ -316,7 +316,7 @@ module HaveAPI
         content_type 'text/html'
 
         erb :main_layout do
-          GitHub::Markdown.render(File.new("#{settings.views}/../../../README.md").read)
+          markdown File.new("#{settings.views}/../../../README.md").read
         end
       end
 

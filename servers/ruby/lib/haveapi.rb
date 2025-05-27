@@ -6,7 +6,6 @@ require 'active_record' if ar
 require 'sinatra/base'
 require 'sinatra/cookies'
 require 'sinatra/activerecord' if ar
-require 'github/markdown'
 require 'json'
 
 module HaveAPI

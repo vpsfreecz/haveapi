@@ -1,3 +1,7 @@
+# Thu Oct 02 2025 - version 0.26.2
+## Ruby client
+- Fix handling of boolean CLI parameters
+
 # Tue May 27 2025 - version 0.26.1
 ## Ruby server
 - Use redcarpet instead of github-markdown

@@ -9,7 +9,7 @@ in stdenv.mkDerivation rec {
     git
     gnumake
     nodejs
-    phpPackages.php-cs-fixer
+    php83Packages.php-cs-fixer
     ruby_3_2
   ];
 

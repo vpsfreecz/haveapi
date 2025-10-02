@@ -675,7 +675,7 @@ module HaveAPI::CLI
     end
 
     def parse_action_param(name, value)
-      if @opts[:raw_values] || !value.start_with?('@')
+      if @opts[:raw_values] || !value.is_a?(::String) || !value.start_with?('@')
         value
       elsif value.start_with?('@@')
         value[1..]

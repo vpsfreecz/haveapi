@@ -2,11 +2,11 @@ module HaveAPI
   class Context
     attr_accessor :server, :version, :request, :resource, :action, :path, :args,
                   :params, :current_user, :authorization, :endpoint, :resource_path,
-                  :action_instance, :action_prepare, :layout
+                  :action_instance, :action_prepare, :layout, :doc
 
     def initialize(server, version: nil, request: nil, resource: [], action: nil,
                    path: nil, args: nil, params: nil, user: nil,
-                   authorization: nil, endpoint: nil, resource_path: [])
+                   authorization: nil, endpoint: nil, resource_path: [], doc: false)
       @server = server
       @version = version
       @request = request
@@ -19,6 +19,7 @@ module HaveAPI
       @authorization = authorization
       @endpoint = endpoint
       @resource_path = resource_path
+      @doc = doc
     end
 
     def resolved_path

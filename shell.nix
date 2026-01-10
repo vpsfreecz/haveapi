@@ -10,7 +10,7 @@ in stdenv.mkDerivation rec {
     gnumake
     nodejs
     php83Packages.php-cs-fixer
-    ruby_3_2
+    ruby_3_3
   ];
 
   shellHook = ''

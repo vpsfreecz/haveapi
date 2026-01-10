@@ -290,13 +290,16 @@ module HaveAPI
                 settings.api_server.describe_version(Context.new(
                                                        settings.api_server,
                                                        version: settings.api_server.default_version,
-                                                       user: current_user, params:
+                                                       user: current_user,
+                                                       doc: true,
+                                                       params:
                                                      ))
 
               else
                 settings.api_server.describe(Context.new(
                                                settings.api_server,
                                                user: current_user,
+                                               doc: true,
                                                params:
                                              ))
               end
@@ -402,6 +405,7 @@ module HaveAPI
                                                                        settings.api_server,
                                                                        version: v,
                                                                        user: current_user,
+                                                                       doc: true,
                                                                        params:
                                                                      )))
       end
@@ -540,7 +544,8 @@ module HaveAPI
           params:,
           user: current_user,
           endpoint: true,
-          resource_path: route.resource_path
+          resource_path: route.resource_path,
+          doc: true
         )
 
         begin

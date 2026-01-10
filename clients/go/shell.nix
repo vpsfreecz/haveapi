@@ -10,7 +10,7 @@ in stdenv.mkDerivation rec {
     go
     gotools
     openssl
-    ruby_3_2
+    ruby_3_3
   ];
 
   shellHook = ''

@@ -40,8 +40,9 @@
 - When releasing a patch version, work within the release branch.
 - `make version VERSION=<major>.<minor>.<patch>` will update versions of all components.
 - Update `CHANGELOG.md` and add a brief description of changes for each component. If there are no changes to a component, it is not mentioned.
-- `make release` will build artifacts of all components.
-- `make publish` will upload the built artifacts to package repositories, e.g. rubygems.org, npmjs.com, etc. Always ask before publishing a new version.
+- Always run `make release` and `make publish` from within the top-level `nix-shell` so the correct toolchain is used; running them outside nix can produce build failures or mismatched Ruby versions.
+- `make release` will build artifacts of all components. Run it inside `nix-shell`.
+- `make publish` will upload the built artifacts to package repositories, e.g. rubygems.org, npmjs.com, etc. Run it inside `nix-shell` and always ask before publishing a new version.
 
 ## PHP client irregularity
 - The PHP client at `clients/php/` must be released separately due to a restriction in `composer` -- it does not support monorepos, the PHP package is expected to live in the top-level directory.

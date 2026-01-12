@@ -323,7 +323,7 @@ module HaveAPI::ModelAdapters
 
         parsed.each do |v|
           if v.is_a?(::Hash)
-            v.each { |k, v| ret << v if k == assoc }
+            v.each { |k, val| ret << val if k == assoc }
           end
         end
 

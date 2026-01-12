@@ -396,8 +396,8 @@ class Client extends Client\Resource
 
         if (!isset($ret->version)) {
             throw new Client\Exception\ProtocolError(
-                "Incompatible protocol version: the client uses v" . self::PROTOCOL_VERSION .
-                " while the API server uses an unspecified version (pre 1.0)"
+                "Incompatible protocol version: the client uses v" . self::PROTOCOL_VERSION
+                . " while the API server uses an unspecified version (pre 1.0)"
             );
         }
 
@@ -412,8 +412,8 @@ class Client extends Client\Resource
 
         if ($major1 != $major2) {
             throw new Client\Exception\ProtocolError(
-                "Incompatible protocol version: the client uses v" . self::PROTOCOL_VERSION .
-                " while the API server uses v" . $ret->version
+                "Incompatible protocol version: the client uses v" . self::PROTOCOL_VERSION
+                . " while the API server uses v" . $ret->version
             );
         }
 

@@ -71,7 +71,7 @@ module HaveAPI
       @validators.each do |validator|
         next if validator.validate(value, params)
 
-        ret << (format(validator.message, value:))
+        ret << format(validator.message, value:)
       end
 
       ret.empty? ? true : ret

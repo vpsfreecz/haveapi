@@ -68,7 +68,7 @@ module HaveAPI
       return len >= @min if @min && !@max
       return len <= @max if !@min && @max
 
-      len >= @min && len <= @max
+      len.between?(@min, @max)
     end
   end
 end

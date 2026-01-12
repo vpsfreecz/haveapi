@@ -1,3 +1,13 @@
+# Mon Jan 12 2026 - version 0.26.3
+## Ruby server
+- Add `Context#doc` flag to distinguish documentation generation from action execution
+
+## Tooling
+- Update Nix shells to Ruby 3.4 for development
+
+## Repository
+- Ignore `node_modules`, document agent guidelines in `AGENTS.md`, and style cleanups in Ruby/PHP
+
 # Thu Oct 02 2025 - version 0.26.2
 ## Ruby client
 - Fix handling of boolean CLI parameters

@@ -1,3 +1,10 @@
+# Mon Jan 26 2026 - version 0.26.4
+## Ruby client
+- CLI falls back to system config at `/etc/haveapi-client.yml` when user config is missing
+
+## Tooling
+- Document running release/publish targets from `nix-shell` to use the correct toolchain
+
 # Mon Jan 12 2026 - version 0.26.3
 ## Ruby server
 - Add `Context#doc` flag to distinguish documentation generation from action execution

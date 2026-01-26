@@ -117,7 +117,7 @@ module HaveAPI::Client
       end
     end
 
-    def call(action, params = {}, raw: false)
+    def call(action, params = {})
       args = []
       input_namespace = action.input && action.namespace(:input)
       meta = nil
@@ -164,11 +164,7 @@ module HaveAPI::Client
       end
 
       if response[:status]
-        if raw
-          ok(JSON.pretty_generate(response[:response]))
-        else
-          ok(response[:response])
-        end
+        ok(response[:response])
 
       else
         error(response[:message], response[:errors])

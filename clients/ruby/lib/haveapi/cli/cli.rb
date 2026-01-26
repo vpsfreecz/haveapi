@@ -112,7 +112,7 @@ module HaveAPI::CLI
       @input_params[:meta] = { includes: includes } if includes
 
       begin
-        ret = action.execute(@input_params, raw: @opts[:raw])
+        ret = action.execute(@input_params)
       rescue HaveAPI::Client::ValidationError => e
         format_errors(action, 'input parameters not valid', e.errors)
         exit(false)
@@ -508,7 +508,7 @@ module HaveAPI::CLI
 
     def format_output(action, response, out = $>)
       if @opts[:raw]
-        puts JSON.generate(response)
+        puts JSON.pretty_generate(response)
         return
       end
 

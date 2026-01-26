@@ -1,7 +1,7 @@
 {
     "name": "haveapi/client",
     "description": "A client for HaveAPI based APIs",
-    "version": "0.26.4",
+    "version": "0.26.5",
     "homepage": "https://github.com/vpsfreecz/haveapi-client-php",
     "license": "MIT",
     "authors": [

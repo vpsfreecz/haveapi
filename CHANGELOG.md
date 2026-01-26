@@ -1,3 +1,8 @@
+# Mon Jan 26 2026 - version 0.26.5
+## Ruby client
+- Send blocking action progress bar output to stderr instead of stdout
+- Apply the `--raw` CLI flag only when formatting output
+
 # Mon Jan 26 2026 - version 0.26.4
 ## Ruby client
 - CLI falls back to system config at `/etc/haveapi-client.yml` when user config is missing

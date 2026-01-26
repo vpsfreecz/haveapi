@@ -641,12 +641,22 @@ module HaveAPI::CLI
       "#{Dir.home}/.haveapi-client.yml"
     end
 
+    def system_config_path
+      '/etc/haveapi-client.yml'
+    end
+
     def write_config
       File.write(config_path, YAML.dump(@config))
     end
 
     def read_config
-      @config = YAML.load_file(config_path) if File.exist?(config_path)
+      path = if File.exist?(config_path)
+               config_path
+             elsif File.exist?(system_config_path)
+               system_config_path
+             end
+
+      @config = YAML.load_file(path) if path
     end
 
     def server_config(url)

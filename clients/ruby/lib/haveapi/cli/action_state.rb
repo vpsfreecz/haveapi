@@ -26,9 +26,9 @@ module HaveAPI::CLI
       id ||= @id
 
       if cancel
-        puts 'Waiting for the action to cancel (hit Ctrl+C to skip)...'
+        warn 'Waiting for the action to cancel (hit Ctrl+C to skip)...'
       else
-        puts 'Waiting for the action to complete (hit Ctrl+C to skip)...'
+        warn 'Waiting for the action to complete (hit Ctrl+C to skip)...'
       end
 
       last_status = false
@@ -47,11 +47,11 @@ module HaveAPI::CLI
         end
       rescue Interrupt
         @pb && @pb.stop
-        puts
+        warn
 
         cancel_action(timeout: timeout) if can_cancel && !cancel && last_status
 
-        puts
+        warn
         print_help(id)
         exit(false)
       end
@@ -81,7 +81,7 @@ module HaveAPI::CLI
       end
 
       if res.is_a?(HaveAPI::Client::Response) && res.ok?
-        puts 'Cancelled'
+        warn 'Cancelled'
         exit
 
       elsif res
@@ -102,11 +102,11 @@ module HaveAPI::CLI
     def print_help(id = nil)
       id ||= @id
 
-      puts 'Run'
-      puts "  #{$0} action_state show #{id}"
-      puts 'or'
-      puts "  #{$0} action_state wait #{id}"
-      puts "to check the action's progress."
+      warn 'Run'
+      warn "  #{$0} action_state show #{id}"
+      warn 'or'
+      warn "  #{$0} action_state wait #{id}"
+      warn "to check the action's progress."
     end
 
     protected
@@ -121,7 +121,8 @@ module HaveAPI::CLI
                   '%t: [%B]'
                 end,
         starting_at: state.progress.current,
-        autofinish: false
+        autofinish: false,
+        output: $stderr
       )
 
       @pb.title = if state.status

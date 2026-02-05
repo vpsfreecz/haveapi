@@ -9,8 +9,6 @@ module HaveAPI
   end
 end
 
-require_rel 'api'
-
 # Configure specs
 RSpec.configure do |config|
   config.order = 'random'

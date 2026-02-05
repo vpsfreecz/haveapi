@@ -1,0 +1,37 @@
+name: RSpec
+
+on:
+  push:
+    paths:
+      - "servers/ruby/**"
+      - ".github/workflows/rspec.yml"
+  pull_request:
+    paths:
+      - "servers/ruby/**"
+      - ".github/workflows/rspec.yml"
+
+jobs:
+  rspec:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Ruby + Bundler cache
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2.0
+          bundler-cache: true
+          working-directory: servers/ruby
+
+      - name: Run RSpec
+        working-directory: servers/ruby
+        shell: bash
+        run: |
+          bundle exec rspec

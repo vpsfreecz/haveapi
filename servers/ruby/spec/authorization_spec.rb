@@ -17,12 +17,12 @@ describe HaveAPI::Authorization do
 
   it 'defaults to deny' do
     auth = HaveAPI::Authorization.new {}
-    expect(auth.authorized?(nil)).to be false
+    expect(auth.authorized?(nil, {})).to be false
   end
 
   it 'can authorize' do
     auth = HaveAPI::Authorization.new { allow }
-    expect(auth.authorized?(nil)).to be true
+    expect(auth.authorized?(nil, {})).to be true
   end
 
   it 'applies restrictions' do
@@ -31,7 +31,7 @@ describe HaveAPI::Authorization do
       allow
     end
 
-    expect(auth.authorized?(nil)).to be true
+    expect(auth.authorized?(nil, {})).to be true
     expect(auth.restrictions[:filter]).to be true
   end
 
@@ -41,7 +41,7 @@ describe HaveAPI::Authorization do
       allow
     end
 
-    expect(auth.authorized?(nil)).to be true
+    expect(auth.authorized?(nil, {})).to be true
 
     action = Resource::Index
 
@@ -60,7 +60,7 @@ describe HaveAPI::Authorization do
       allow
     end
 
-    expect(auth.authorized?(nil)).to be true
+    expect(auth.authorized?(nil, {})).to be true
 
     action = Resource::Index
 
@@ -79,7 +79,7 @@ describe HaveAPI::Authorization do
       allow
     end
 
-    expect(auth.authorized?(nil)).to be true
+    expect(auth.authorized?(nil, {})).to be true
 
     action = Resource::Index
 
@@ -98,7 +98,7 @@ describe HaveAPI::Authorization do
       allow
     end
 
-    expect(auth.authorized?(nil)).to be true
+    expect(auth.authorized?(nil, {})).to be true
 
     action = Resource::Index
 

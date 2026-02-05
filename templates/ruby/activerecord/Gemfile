@@ -1,7 +1,7 @@
 source 'https://rubygems.org'
 
-gem 'activerecord', '~> 7.0.8'
-gem 'haveapi', '~> 0.17.0'
+gem 'activerecord', '~> 8.1.0'
+gem 'haveapi', '~> 0.26.0'
 gem 'sinatra-activerecord', '~> 2.0.26'
 
 # Enable needed database adapters

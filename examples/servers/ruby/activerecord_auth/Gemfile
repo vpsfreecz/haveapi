@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-gem 'activerecord', '~> 7.0.8'
+gem 'activerecord', '~> 8.1.0'
 gem 'haveapi', '~> 0.26.0', path: '../../../../servers/ruby'
 gem 'rake'
 gem 'sinatra-activerecord', '~> 2.0.26'
@@ -8,7 +8,7 @@ gem 'sinatra-activerecord', '~> 2.0.26'
 # Enable needed database adapters
 # gem 'pg'
 # gem 'mysql2'
-gem 'sqlite3', '~> 1.6.6'
+gem 'sqlite3'
 
 # Used to recursively require resources and models
 gem 'require_all'

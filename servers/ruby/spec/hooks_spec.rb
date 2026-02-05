@@ -21,17 +21,17 @@ describe HaveAPI::Hooks do
     @obj.connect_hook(name, &block)
   end
 
-  def call_hooks(*args)
+  def call_hooks(*args, **kwargs)
     case @level
     when :class
-      @obj.call_hooks(*args)
+      @obj.call_hooks(*args, **kwargs)
 
     when :instance
       if @method
-        @obj.method(@method).call(*args)
+        @obj.method(@method).call(*args, **kwargs)
 
       else
-        @obj.call_hooks_for(*args)
+        @obj.call_hooks_for(*args, **kwargs)
       end
 
     else

@@ -1,4 +1,4 @@
-class SetupDatabase < ActiveRecord::Migration
+class SetupDatabase < ActiveRecord::Migration[8.1]
   def change
     create_table :users do |t|
       t.string      :username,   null: false, limit: 50, unique: true

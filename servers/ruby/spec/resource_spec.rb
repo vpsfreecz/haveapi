@@ -11,12 +11,12 @@ describe HaveAPI::Resource do
     expect(SingularTest.obj_type).to eq(:resource)
   end
 
-  it 'has plural name' do
-    expect(PluralTest.resource_name).to eq('plural_tests')
+  it 'has plural rest name' do
+    expect(PluralTest.rest_name).to eq('plural_tests')
   end
 
-  it 'has singular name' do
-    expect(SingularTest.resource_name).to eq('singular_test')
+  it 'has singular rest name' do
+    expect(SingularTest.rest_name).to eq('singular_test')
   end
 
   class ComplexTest < HaveAPI::Resource

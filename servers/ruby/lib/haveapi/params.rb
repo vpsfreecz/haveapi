@@ -64,7 +64,12 @@ module HaveAPI
       return @cache[:namespace] = @namespace unless @namespace.nil?
 
       n = @action.resource.resource_name.underscore
-      n = n.pluralize if %i[object_list hash_list].include?(layout)
+      n = if %i[object_list hash_list].include?(layout)
+            n.pluralize
+          else
+            n.singularize
+          end
+
       @cache[:namespace] = n.to_sym
     end
 

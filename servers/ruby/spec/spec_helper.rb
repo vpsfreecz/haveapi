@@ -1,3 +1,5 @@
+ENV['RACK_ENV'] ||= 'test'
+
 require 'require_all'
 require_relative '../lib/haveapi'
 require_rel '../lib/haveapi/spec/*.rb'

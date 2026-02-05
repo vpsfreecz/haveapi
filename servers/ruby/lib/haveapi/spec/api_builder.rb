@@ -14,7 +14,7 @@ module HaveAPI::Spec
     def api(mod = nil, &block)
       unless mod
         mod = Module.new do
-          def self.define_resource(name, superclass: Resource, &block)
+          def self.define_resource(name, superclass: HaveAPI::Resource, &block)
             return false if const_defined?(name)
 
             cls = Class.new(superclass)

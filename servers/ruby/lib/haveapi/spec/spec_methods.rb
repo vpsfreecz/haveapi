@@ -39,20 +39,28 @@ module HaveAPI::Spec
           r_name, a_name
         )
 
-        method(action.http_method).call(
-          path,
-          params && params.to_json,
-          { 'content-type' => 'application/json' }
-        )
+        json_body = params && params.to_json
+        env = { 'CONTENT_TYPE' => 'application/json' }
+
+        if %i[get head options].include?(action.http_method.to_sym)
+          method(action.http_method).call(path, params, env)
+        else
+          env[:input] = json_body if json_body
+          method(action.http_method).call(path, nil, env)
+        end
 
       else
         http_method, path, params = args
 
-        method(http_method).call(
-          path,
-          params && params.to_json,
-          { 'content-type' => 'application/json' }
-        )
+        json_body = params && params.to_json
+        env = { 'CONTENT_TYPE' => 'application/json' }
+
+        if %i[get head options].include?(http_method.to_sym)
+          method(http_method).call(path, params, env)
+        else
+          env[:input] = json_body if json_body
+          method(http_method).call(path, nil, env)
+        end
       end
     end
 

@@ -116,7 +116,7 @@ module HaveAPI
       cls
     end
 
-    def self.define_action(name, superclass: Action, &)
+    def self.define_action(name, superclass: HaveAPI::Action, &)
       return false if const_defined?(name)
 
       cls = Class.new(superclass)

@@ -159,7 +159,8 @@ module HaveAPI::Authentication
       # @param request [Sinatra::Request]
       # @return [String]
       def token(request)
-        request.params[config.class.query_parameter] || request.env[header_to_env]
+        param = config.class.query_parameter
+        request.params[param] || request.params[param.to_s] || request.env[header_to_env]
       end
 
       def describe

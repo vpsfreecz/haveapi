@@ -49,6 +49,11 @@ module HaveAPI::Spec
       opt(:default_version, v)
     end
 
+    # Set action state backend to mount HaveAPI::Resources::ActionState
+    def action_state(backend)
+      opt(:action_state, backend)
+    end
+
     # Set a custom mount path.
     def mount_to(path)
       opt(:mount, path)

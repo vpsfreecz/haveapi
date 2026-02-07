@@ -13,6 +13,8 @@ module HaveAPI::Spec
       @api.auth_chain << auth if auth
       @api.use_version(get_opt(:versions) || :all)
       @api.default_version = default if default
+      as = get_opt(:action_state)
+      @api.action_state = as if as
       @api.mount(get_opt(:mount) || '/')
       @api.app
     end

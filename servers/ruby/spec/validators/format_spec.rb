@@ -1,5 +1,5 @@
 describe HaveAPI::Validators::Format do
-  shared_examples(:all) do
+  shared_examples('all') do
     it 'accepts a value that matches the regexp' do
       expect(@v.valid?('aab')).to be true
       expect(@v.valid?('aacacb')).to be true
@@ -14,27 +14,27 @@ describe HaveAPI::Validators::Format do
 
   context 'with match = true' do
     context 'short form' do
-      before(:each) do
-        @v = HaveAPI::Validators::Format.new(:format, /^a[^b]+b$/)
+      before do
+        @v = described_class.new(:format, /^a[^b]+b$/)
       end
 
-      include_examples :all
+      it_behaves_like 'all'
     end
 
     context 'full form' do
-      before(:each) do
-        @v = HaveAPI::Validators::Format.new(:format, {
+      before do
+        @v = described_class.new(:format, {
           rx: /^a[^b]+b$/
         })
       end
 
-      include_examples :all
+      it_behaves_like 'all'
     end
   end
 
   context 'with match = false' do
-    before(:each) do
-      @v = HaveAPI::Validators::Format.new(:format, {
+    before do
+      @v = described_class.new(:format, {
         rx: /^a[^b]+b$/,
         match: false
       })

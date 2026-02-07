@@ -40,7 +40,7 @@ describe 'Server integration' do
     post '/v1/tests/echo', '{'
 
     expect(last_response.status).to eq(400)
-    expect(api_response).to_not be_ok
+    expect(api_response).not_to be_ok
     expect(api_response.message).to match(/Bad JSON syntax/)
   end
 
@@ -49,7 +49,7 @@ describe 'Server integration' do
     get '/does-not-exist'
 
     expect(last_response.status).to eq(404)
-    expect(api_response).to_not be_ok
+    expect(api_response).not_to be_ok
   end
 
   it 'handles CORS preflight OPTIONS' do

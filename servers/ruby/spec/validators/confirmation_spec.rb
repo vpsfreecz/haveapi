@@ -1,5 +1,5 @@
 describe HaveAPI::Validators::Confirmation do
-  shared_examples(:all) do
+  shared_examples('all') do
     it 'accepts the same value' do
       expect(@v.validate('foo', { other_param: 'foo' })).to be true
     end
@@ -10,26 +10,26 @@ describe HaveAPI::Validators::Confirmation do
   end
 
   context 'short form' do
-    before(:each) do
-      @v = HaveAPI::Validators::Confirmation.new(:confirm, :other_param)
+    before do
+      @v = described_class.new(:confirm, :other_param)
     end
 
-    include_examples :all
+    it_behaves_like 'all'
   end
 
   context 'full form' do
-    before(:each) do
-      @v = HaveAPI::Validators::Confirmation.new(:confirm, {
+    before do
+      @v = described_class.new(:confirm, {
         param: :other_param
       })
     end
 
-    include_examples :all
+    it_behaves_like 'all'
   end
 
   context 'with equal = false' do
-    before(:each) do
-      @v = HaveAPI::Validators::Confirmation.new(:confirm, {
+    before do
+      @v = described_class.new(:confirm, {
         param: :other_param,
         equal: false
       })

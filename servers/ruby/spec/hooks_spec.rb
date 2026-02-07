@@ -39,7 +39,7 @@ describe HaveAPI::Hooks do
     end
   end
 
-  shared_examples(:common) do
+  shared_examples('common') do
     it 'calls hooks' do
       called = false
 
@@ -109,38 +109,32 @@ describe HaveAPI::Hooks do
   end
 
   context 'on class level' do
-    before(:each) do
+    before do
       @obj = ClassLevel
       @level = :class
     end
 
-    include_examples :common
+    it_behaves_like 'common'
   end
 
   context 'on instance level' do
     context 'all hooks' do
-      before(:each) do
+      before do
         @obj = InstanceLevel.new
         @level = :instance
       end
 
-      include_examples :common
-    end
-
-    context 'only class hooks' do
-      # FIXME: class hooks fail (that is correct, no class hooks are defined)
-      #        must find a way to test failure
-      # include_examples :common
+      it_behaves_like 'common'
     end
 
     context 'only instance hooks' do
-      before(:each) do
+      before do
         @obj = InstanceLevel.new
         @level = :instance
         @method = :call_instance_hooks_for
       end
 
-      include_examples :common
+      it_behaves_like 'common'
     end
   end
 end

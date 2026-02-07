@@ -16,17 +16,17 @@ describe HaveAPI::Authorization do
   end
 
   it 'defaults to deny' do
-    auth = HaveAPI::Authorization.new {}
+    auth = described_class.new {}
     expect(auth.authorized?(nil, {})).to be false
   end
 
   it 'can authorize' do
-    auth = HaveAPI::Authorization.new { allow }
+    auth = described_class.new { allow }
     expect(auth.authorized?(nil, {})).to be true
   end
 
   it 'applies restrictions' do
-    auth = HaveAPI::Authorization.new do
+    auth = described_class.new do
       restrict filter: true
       allow
     end
@@ -36,7 +36,7 @@ describe HaveAPI::Authorization do
   end
 
   it 'whitelists input' do
-    auth = HaveAPI::Authorization.new do
+    auth = described_class.new do
       input whitelist: %i[param1]
       allow
     end
@@ -55,7 +55,7 @@ describe HaveAPI::Authorization do
   end
 
   it 'blacklists input' do
-    auth = HaveAPI::Authorization.new do
+    auth = described_class.new do
       input blacklist: %i[param1]
       allow
     end
@@ -74,7 +74,7 @@ describe HaveAPI::Authorization do
   end
 
   it 'whitelists output' do
-    auth = HaveAPI::Authorization.new do
+    auth = described_class.new do
       output whitelist: %i[param1]
       allow
     end
@@ -93,7 +93,7 @@ describe HaveAPI::Authorization do
   end
 
   it 'blacklists output' do
-    auth = HaveAPI::Authorization.new do
+    auth = described_class.new do
       output blacklist: %i[param1]
       allow
     end

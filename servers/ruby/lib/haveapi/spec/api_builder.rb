@@ -39,7 +39,7 @@ module HaveAPI::Spec
 
     # Select API versions to be used.
     def use_version(v)
-      before(:each) do
+      before do
         self.class.opt(:versions, v)
       end
     end
@@ -61,7 +61,7 @@ module HaveAPI::Spec
 
     # Login using HTTP basic.
     def login(*credentials)
-      before(:each) do
+      before do
         basic_authorize(*credentials)
       end
     end

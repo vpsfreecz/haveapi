@@ -16,7 +16,7 @@ describe 'Parameters::Typed' do
       required: true
     }
     p_arg(kwargs)
-    expect(kwargs.keys).to contain_exactly(*%i[label desc required])
+    expect(kwargs.keys).to match_array(%i[label desc required])
   end
 
   it 'automatically sets label' do

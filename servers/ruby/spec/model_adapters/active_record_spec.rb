@@ -196,7 +196,7 @@ describe 'ActiveRecord adapter' do
     end
   end
 
-  before(:each) do
+  before do
     ARAdapterSpec::User.delete_all
     ARAdapterSpec::Group.delete_all
     ARAdapterSpec::Environment.delete_all
@@ -298,7 +298,7 @@ describe 'ActiveRecord adapter' do
     ret = api_response[:user]
     group_data = ret[:group]
 
-    expect(group_data[:_meta][:resolved]).to eq(false)
+    expect(group_data[:_meta][:resolved]).to be(false)
     expect(group_data).to include(id: group.id, label: group.label)
     expect(group_data).not_to have_key(:note)
   end
@@ -314,9 +314,9 @@ describe 'ActiveRecord adapter' do
     ret = api_response[:user]
     group_data = ret[:group]
 
-    expect(group_data[:_meta][:resolved]).to eq(true)
+    expect(group_data[:_meta][:resolved]).to be(true)
     expect(group_data[:note]).to eq('GRP_NOTE')
-    expect(group_data[:environment][:_meta][:resolved]).to eq(false)
+    expect(group_data[:environment][:_meta][:resolved]).to be(false)
     expect(group_data[:environment]).not_to have_key(:note)
   end
 
@@ -332,8 +332,8 @@ describe 'ActiveRecord adapter' do
     group_data = ret[:group]
     env_data = group_data[:environment]
 
-    expect(group_data[:_meta][:resolved]).to eq(true)
-    expect(env_data[:_meta][:resolved]).to eq(true)
+    expect(group_data[:_meta][:resolved]).to be(true)
+    expect(env_data[:_meta][:resolved]).to be(true)
     expect(env_data[:note]).to eq('ENV_NOTE')
   end
 

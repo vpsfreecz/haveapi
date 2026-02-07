@@ -48,7 +48,7 @@ describe 'Authentication: OAuth2 (smoke)' do
   default_version 1
   auth_chain AuthSpecOAuth2::Provider
 
-  before(:each) do
+  before do
     app
   end
 

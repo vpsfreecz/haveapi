@@ -1,5 +1,5 @@
 describe HaveAPI::Validators::Exclusion do
-  shared_examples(:all) do
+  shared_examples('all') do
     it 'rejects a listed value' do
       expect(@v.valid?('one')).to be false
       expect(@v.valid?('two')).to be false
@@ -13,20 +13,20 @@ describe HaveAPI::Validators::Exclusion do
   end
 
   context 'short form' do
-    before(:each) do
-      @v = HaveAPI::Validators::Exclusion.new(:exclude, %w[one two three])
+    before do
+      @v = described_class.new(:exclude, %w[one two three])
     end
 
-    include_examples :all
+    it_behaves_like 'all'
   end
 
   context 'full form' do
-    before(:each) do
-      @v = HaveAPI::Validators::Exclusion.new(:exclude, {
+    before do
+      @v = described_class.new(:exclude, {
         values: %w[one two three]
       })
     end
 
-    include_examples :all
+    it_behaves_like 'all'
   end
 end

@@ -1,5 +1,5 @@
 describe HaveAPI::Validators::Presence do
-  shared_examples(:all) do
+  shared_examples('all') do
     it 'accepts a present value' do
       expect(@v.valid?('foo')).to be true
     end
@@ -13,25 +13,25 @@ describe HaveAPI::Validators::Presence do
 
   context 'with empty = true' do
     context 'in short form' do
-      before(:each) do
-        @v = HaveAPI::Validators::Presence.new(:required, true)
+      before do
+        @v = described_class.new(:required, true)
       end
 
-      include_examples :all
+      it_behaves_like 'all'
     end
 
     context 'in full form' do
-      before(:each) do
-        @v = HaveAPI::Validators::Presence.new(:required, {})
+      before do
+        @v = described_class.new(:required, {})
       end
 
-      include_examples :all
+      it_behaves_like 'all'
     end
   end
 
   context 'with empty = false' do
-    before(:each) do
-      @v = HaveAPI::Validators::Presence.new(:required, { empty: true })
+    before do
+      @v = described_class.new(:required, { empty: true })
     end
 
     it 'accepts a present value' do

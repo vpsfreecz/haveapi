@@ -1,5 +1,5 @@
 describe HaveAPI::Validators::Acceptance do
-  shared_examples(:all) do
+  shared_examples('all') do
     it 'accepts correct value' do
       expect(@v.valid?('foo')).to be true
     end
@@ -10,20 +10,20 @@ describe HaveAPI::Validators::Acceptance do
   end
 
   context 'short form' do
-    before(:each) do
-      @v = HaveAPI::Validators::Acceptance.new(:accept, 'foo')
+    before do
+      @v = described_class.new(:accept, 'foo')
     end
 
-    include_examples :all
+    it_behaves_like 'all'
   end
 
   context 'full form' do
-    before(:each) do
-      @v = HaveAPI::Validators::Acceptance.new(:accept, {
+    before do
+      @v = described_class.new(:accept, {
         value: 'foo'
       })
     end
 
-    include_examples :all
+    it_behaves_like 'all'
   end
 end

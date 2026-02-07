@@ -89,7 +89,7 @@ describe 'Authentication: Token' do
   default_version 1
   auth_chain AuthSpecToken::Provider
 
-  before(:each) do
+  before do
     AuthSpecToken::Config.reset!
     app
   end

@@ -4,9 +4,7 @@ describe 'Envelope' do
 
     it 'returns correct envelope' do
       call_api(:options, '/')
-      expect(api_response.envelope.keys).to contain_exactly(
-        *%i[version status response message errors]
-      )
+      expect(api_response.envelope.keys).to match_array(%i[version status response message errors])
     end
 
     it 'succeeds' do
@@ -20,14 +18,12 @@ describe 'Envelope' do
 
     it 'returns correct envelope' do
       call_api(:get, '/unknown_resource')
-      expect(api_response.envelope.keys).to contain_exactly(
-        *%i[status response message errors]
-      )
+      expect(api_response.envelope.keys).to match_array(%i[status response message errors])
     end
 
     it 'fails' do
       call_api(:get, '/unknown_resource')
-      expect(api_response).to_not be_ok
+      expect(api_response).not_to be_ok
     end
   end
 end

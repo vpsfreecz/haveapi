@@ -95,7 +95,7 @@ describe 'Documentation' do
 
     expect(api_response.response).to include(:versions, :default)
     expect(api_response[:default]).to eq(1)
-    expect(api_response[:versions]).to match_array([1, 2])
+    expect(api_response[:versions]).to contain_exactly(1, 2)
   end
 
   it 'responds to OPTIONS /?describe=default' do

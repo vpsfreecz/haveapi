@@ -119,8 +119,8 @@ describe HaveAPI::Action do
       input = Resource::SubAction.input.params.map(&:name)
       output = Resource::SubAction.output.params.map(&:name)
 
-      expect(input).to contain_exactly(*%i[inbase1 inbase2 insub1 insub2 insub3])
-      expect(output).to contain_exactly(*%i[outbase1 outbase2 outsub1 outsub2 outsub3])
+      expect(input).to match_array(%i[inbase1 inbase2 insub1 insub2 insub3])
+      expect(output).to match_array(%i[outbase1 outbase2 outsub1 outsub2 outsub3])
     end
 
     it 'sets layout' do

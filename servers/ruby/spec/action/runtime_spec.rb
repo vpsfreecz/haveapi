@@ -177,7 +177,7 @@ describe 'Action runtime' do
 
     call_api([:Test], :abort, {})
 
-    expect(api_response).to_not be_ok
+    expect(api_response).not_to be_ok
     expect(api_response.message).to eq('nope')
     expect(action_class(:abort).calls).to include(:exec)
     expect(action_class(:abort).calls).not_to include(:after_error)
@@ -188,7 +188,7 @@ describe 'Action runtime' do
       call_api([:Test], :boom, {})
 
       expect(last_response.status).to eq(422)
-      expect(api_response).to_not be_ok
+      expect(api_response).not_to be_ok
       expect(api_response.message).to eq('boom')
       expect(last_response.body).not_to match(/<html/i)
     end

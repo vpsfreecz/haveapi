@@ -100,7 +100,7 @@ describe 'ActionState resource' do
       get_action '/v1/action_states'
 
       expect(last_response.status).to eq(404)
-      expect(api_response).to_not be_ok
+      expect(api_response).not_to be_ok
       expect(api_response.message).to eq('Action not found')
     end
   end
@@ -111,7 +111,7 @@ describe 'ActionState resource' do
     default_version 1
     action_state ActionStateSpec::Backend
 
-    before(:each) do
+    before do
       ActionStateSpec::Backend.reset!
       header 'Accept', 'application/json'
     end
@@ -166,13 +166,13 @@ describe 'ActionState resource' do
       expect(state[:current]).to eq(0)
       expect(state[:total]).to eq(0)
       expect(state[:unit]).to be_nil
-      expect(state[:can_cancel]).to eq(true)
+      expect(state[:can_cancel]).to be(true)
     end
 
     it 'returns error when state invalid' do
       get_action '/v1/action_states/999'
 
-      expect(api_response).to_not be_ok
+      expect(api_response).not_to be_ok
       expect(api_response.message).to eq('action state not found')
     end
 
@@ -188,7 +188,7 @@ describe 'ActionState resource' do
 
       expect(api_response).to be_ok
       ret = api_response[:action_state]
-      expect(ret[:finished]).to eq(true)
+      expect(ret[:finished]).to be(true)
       expect(ret[:current]).to eq(5)
       expect(ret[:total]).to eq(10)
       expect(ret[:unit]).to eq('items')
@@ -227,7 +227,7 @@ describe 'ActionState resource' do
 
       expect(api_response).to be_ok
       ret = api_response[:action_state]
-      expect(ret[:status]).to eq(true)
+      expect(ret[:status]).to be(true)
       expect(ret[:current]).to eq(1)
       expect(ret[:total]).to eq(10)
       expect(state.poll_calls).to eq(0)
@@ -252,7 +252,7 @@ describe 'ActionState resource' do
     it 'poll returns error when state invalid' do
       get_action '/v1/action_states/999/poll', action_state: { timeout: 0 }
 
-      expect(api_response).to_not be_ok
+      expect(api_response).not_to be_ok
       expect(api_response.message).to eq('action state not found')
     end
 
@@ -281,7 +281,7 @@ describe 'ActionState resource' do
 
       call_api(:post, '/v1/action_states/1/cancel', {})
 
-      expect(api_response).to_not be_ok
+      expect(api_response).not_to be_ok
       expect(api_response.message).to eq('cancellation failed')
     end
 
@@ -294,7 +294,7 @@ describe 'ActionState resource' do
 
       call_api(:post, '/v1/action_states/1/cancel', {})
 
-      expect(api_response).to_not be_ok
+      expect(api_response).not_to be_ok
       expect(api_response.message).to eq('not supported')
     end
   end

@@ -53,7 +53,7 @@ describe 'Authentication: Basic' do
   default_version 1
   auth_chain AuthSpecBasic::Provider
 
-  before(:each) do
+  before do
     app
 
     @seen_users = []

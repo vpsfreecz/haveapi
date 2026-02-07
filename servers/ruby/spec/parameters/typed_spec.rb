@@ -38,16 +38,34 @@ describe 'Parameters::Typed' do
   it 'can be required' do
     p = p_arg(required: true)
     expect(p.required?).to be true
+    expect(p.optional?).to be false
   end
 
   it 'can be optional' do
     p = p_arg
+    expect(p.required?).to be false
     expect(p.optional?).to be true
 
     p = p_arg(required: false)
+    expect(p.required?).to be false
     expect(p.optional?).to be true
 
     p = p_arg(required: nil)
+    expect(p.required?).to be false
+    expect(p.optional?).to be true
+  end
+
+  it 'updates optional? when required is patched' do
+    p = p_arg(required: false)
+    expect(p.required?).to be false
+    expect(p.optional?).to be true
+
+    p.patch(required: true)
+    expect(p.required?).to be true
+    expect(p.optional?).to be false
+
+    p.patch(required: nil)
+    expect(p.required?).to be false
     expect(p.optional?).to be true
   end
 

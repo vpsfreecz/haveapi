@@ -33,7 +33,7 @@ module HaveAPI::Parameters
     end
 
     def optional?
-      !@required
+      !required?
     end
 
     def fill?

@@ -9,7 +9,7 @@ describe HaveAPI::Validators::Confirmation do
     end
   end
 
-  context 'short form' do
+  context 'with short form' do
     before do
       @v = described_class.new(:confirm, :other_param)
     end
@@ -17,7 +17,7 @@ describe HaveAPI::Validators::Confirmation do
     it_behaves_like 'all'
   end
 
-  context 'full form' do
+  context 'with full form' do
     before do
       @v = described_class.new(:confirm, {
         param: :other_param

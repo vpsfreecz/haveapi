@@ -13,7 +13,7 @@ describe HaveAPI::Validators::Format do
   end
 
   context 'with match = true' do
-    context 'short form' do
+    context 'with short form' do
       before do
         @v = described_class.new(:format, /^a[^b]+b$/)
       end
@@ -21,7 +21,7 @@ describe HaveAPI::Validators::Format do
       it_behaves_like 'all'
     end
 
-    context 'full form' do
+    context 'with full form' do
       before do
         @v = described_class.new(:format, {
           rx: /^a[^b]+b$/

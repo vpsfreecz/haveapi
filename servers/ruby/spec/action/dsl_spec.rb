@@ -1,5 +1,5 @@
 describe HaveAPI::Action do
-  context 'DSL' do
+  context 'with DSL' do
     it 'inherits input' do
       class Resource < HaveAPI::Resource
         class InputAction < HaveAPI::Action

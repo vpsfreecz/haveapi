@@ -21,7 +21,7 @@ describe HaveAPI::Validators::Inclusion do
     }
   ].each do |include|
     context "with include as a '#{include.class}'" do
-      context 'short form' do
+      context 'with short form' do
         before do
           @v = described_class.new(:include, %w[one two three])
         end
@@ -29,7 +29,7 @@ describe HaveAPI::Validators::Inclusion do
         it_behaves_like 'all'
       end
 
-      context 'full form' do
+      context 'with full form' do
         before do
           @v = described_class.new(:include, {
             values: %w[one two three]

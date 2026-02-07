@@ -12,7 +12,7 @@ describe HaveAPI::Validators::Presence do
   end
 
   context 'with empty = true' do
-    context 'in short form' do
+    context 'with short form' do
       before do
         @v = described_class.new(:required, true)
       end
@@ -20,7 +20,7 @@ describe HaveAPI::Validators::Presence do
       it_behaves_like 'all'
     end
 
-    context 'in full form' do
+    context 'with full form' do
       before do
         @v = described_class.new(:required, {})
       end

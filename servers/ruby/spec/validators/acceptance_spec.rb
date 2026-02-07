@@ -9,7 +9,7 @@ describe HaveAPI::Validators::Acceptance do
     end
   end
 
-  context 'short form' do
+  context 'with short form' do
     before do
       @v = described_class.new(:accept, 'foo')
     end
@@ -17,7 +17,7 @@ describe HaveAPI::Validators::Acceptance do
     it_behaves_like 'all'
   end
 
-  context 'full form' do
+  context 'with full form' do
     before do
       @v = described_class.new(:accept, {
         value: 'foo'

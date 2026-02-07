@@ -11,7 +11,7 @@ describe HaveAPI::Resource do
     expect(SingularTest.obj_type).to eq(:resource)
   end
 
-  context 'plural resource' do
+  context 'when resource is plural' do
     it 'has singular resource name' do
       expect(PluralTest.resource_name).to eq('PluralTest')
     end
@@ -21,7 +21,7 @@ describe HaveAPI::Resource do
     end
   end
 
-  context 'singular resource' do
+  context 'when resource is singular' do
     it 'has singular resource name' do
       expect(SingularTest.resource_name).to eq('SingularTest')
     end

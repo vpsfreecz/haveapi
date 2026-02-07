@@ -108,7 +108,7 @@ describe HaveAPI::Hooks do
     end
   end
 
-  context 'on class level' do
+  context 'when on class level' do
     before do
       @obj = ClassLevel
       @level = :class
@@ -117,8 +117,8 @@ describe HaveAPI::Hooks do
     it_behaves_like 'common'
   end
 
-  context 'on instance level' do
-    context 'all hooks' do
+  context 'when on instance level' do
+    context 'with all hooks' do
       before do
         @obj = InstanceLevel.new
         @level = :instance
@@ -127,7 +127,7 @@ describe HaveAPI::Hooks do
       it_behaves_like 'common'
     end
 
-    context 'only instance hooks' do
+    context 'with only instance hooks' do
       before do
         @obj = InstanceLevel.new
         @level = :instance

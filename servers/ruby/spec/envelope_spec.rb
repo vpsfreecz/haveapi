@@ -1,5 +1,5 @@
 describe 'Envelope' do
-  context 'documentation' do
+  context 'with documentation' do
     empty_api
 
     it 'returns correct envelope' do
@@ -13,7 +13,7 @@ describe 'Envelope' do
     end
   end
 
-  context 'data' do
+  context 'with data' do
     empty_api
 
     it 'returns correct envelope' do

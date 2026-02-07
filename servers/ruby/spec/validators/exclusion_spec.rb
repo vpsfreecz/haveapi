@@ -12,7 +12,7 @@ describe HaveAPI::Validators::Exclusion do
     end
   end
 
-  context 'short form' do
+  context 'with short form' do
     before do
       @v = described_class.new(:exclude, %w[one two three])
     end
@@ -20,7 +20,7 @@ describe HaveAPI::Validators::Exclusion do
     it_behaves_like 'all'
   end
 
-  context 'full form' do
+  context 'with full form' do
     before do
       @v = described_class.new(:exclude, {
         values: %w[one two three]

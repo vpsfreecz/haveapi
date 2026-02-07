@@ -17,25 +17,29 @@ describe HaveAPI::Hooks do
     has_hook :context_hook
   end
 
+  let(:hook_target) { nil }
+  let(:hook_level) { nil }
+  let(:hook_method) { nil }
+
   def connect_hook(name, &block)
-    @obj.connect_hook(name, &block)
+    hook_target.connect_hook(name, &block)
   end
 
   def call_hooks(*args, **kwargs)
-    case @level
+    case hook_level
     when :class
-      @obj.call_hooks(*args, **kwargs)
+      hook_target.call_hooks(*args, **kwargs)
 
     when :instance
-      if @method
-        @obj.method(@method).call(*args, **kwargs)
+      if hook_method
+        hook_target.method(hook_method).call(*args, **kwargs)
 
       else
-        @obj.call_hooks_for(*args, **kwargs)
+        hook_target.call_hooks_for(*args, **kwargs)
       end
 
     else
-      raise "unknown level '#{@level}'"
+      raise "unknown level '#{hook_level}'"
     end
   end
 
@@ -109,30 +113,24 @@ describe HaveAPI::Hooks do
   end
 
   context 'when on class level' do
-    before do
-      @obj = ClassLevel
-      @level = :class
-    end
+    let(:hook_target) { ClassLevel }
+    let(:hook_level) { :class }
 
     it_behaves_like 'common'
   end
 
   context 'when on instance level' do
     context 'with all hooks' do
-      before do
-        @obj = InstanceLevel.new
-        @level = :instance
-      end
+      let(:hook_target) { InstanceLevel.new }
+      let(:hook_level) { :instance }
 
       it_behaves_like 'common'
     end
 
     context 'with only instance hooks' do
-      before do
-        @obj = InstanceLevel.new
-        @level = :instance
-        @method = :call_instance_hooks_for
-      end
+      let(:hook_target) { InstanceLevel.new }
+      let(:hook_level) { :instance }
+      let(:hook_method) { :call_instance_hooks_for }
 
       it_behaves_like 'common'
     end

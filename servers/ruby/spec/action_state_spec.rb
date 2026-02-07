@@ -1,86 +1,87 @@
 require 'time'
 
-describe HaveAPI::Resources::ActionState do
-  module ActionStateSpec
-    FIXED_TIME = Time.utc(2020, 1, 1, 0, 0, 0)
+module ActionStateSpec
+  FIXED_TIME = Time.utc(2020, 1, 1, 0, 0, 0)
 
-    class State
-      attr_reader :id, :label, :created_at, :updated_at, :status, :progress, :poll_calls
+  class State
+    attr_reader :id, :label, :created_at, :updated_at, :status, :progress, :poll_calls
 
-      def initialize(id:, label: 'job', status: true, finished: false, can_cancel: false,
-                     progress: {}, valid: true, cancel_ret: true)
-        @id = id
-        @label = label
-        @status = status
-        @finished = finished
-        @can_cancel = can_cancel
-        @progress = progress
-        @valid = valid
-        @cancel_ret = cancel_ret
-        @poll_calls = 0
-        @created_at = FIXED_TIME
-        @updated_at = FIXED_TIME
-      end
-
-      def valid?
-        @valid
-      end
-
-      def finished?
-        @finished
-      end
-
-      def can_cancel?
-        @can_cancel
-      end
-
-      def poll(_input)
-        @poll_calls += 1
-
-        if @progress[:current]
-          @progress = @progress.merge(current: @progress[:current] + 1)
-        end
-
-        @updated_at = Time.utc(2020, 1, 1, 0, 0, @poll_calls)
-        self
-      end
-
-      def cancel
-        @cancel_ret
-      end
+    def initialize(id:, label: 'job', status: true, finished: false, can_cancel: false,
+                   progress: {}, valid: true, cancel_ret: true)
+      @id = id
+      @label = label
+      @status = status
+      @finished = finished
+      @can_cancel = can_cancel
+      @progress = progress
+      @valid = valid
+      @cancel_ret = cancel_ret
+      @poll_calls = 0
+      @created_at = FIXED_TIME
+      @updated_at = FIXED_TIME
     end
 
-    module Backend
-      class << self
-        attr_reader :states, :list_calls, :new_calls
+    def valid?
+      @valid
+    end
 
-        def reset!
-          @states = {}
-          @list_calls = []
-          @new_calls = []
-        end
+    def finished?
+      @finished
+    end
 
-        def add_state(state)
-          @states[state.id] = state
-        end
+    def can_cancel?
+      @can_cancel
+    end
 
-        def list_pending(user, from_id, limit, order)
-          @list_calls << {
-            user: user,
-            from_id: from_id,
-            limit: limit,
-            order: order
-          }
-          @states.values
-        end
+    def poll(_input)
+      @poll_calls += 1
 
-        def new(user, id:)
-          @new_calls << { user: user, id: id.to_i }
-          @states[id.to_i] || State.new(id: id.to_i, valid: false)
-        end
+      if @progress[:current]
+        @progress = @progress.merge(current: @progress[:current] + 1)
+      end
+
+      @updated_at = Time.utc(2020, 1, 1, 0, 0, @poll_calls)
+      self
+    end
+
+    def cancel
+      @cancel_ret
+    end
+  end
+
+  module Backend
+    class << self
+      attr_reader :states, :list_calls, :new_calls
+
+      def reset!
+        @states = {}
+        @list_calls = []
+        @new_calls = []
+      end
+
+      def add_state(state)
+        @states[state.id] = state
+      end
+
+      def list_pending(user, from_id, limit, order)
+        @list_calls << {
+          user: user,
+          from_id: from_id,
+          limit: limit,
+          order: order
+        }
+        @states.values
+      end
+
+      def new(user, id:)
+        @new_calls << { user: user, id: id.to_i }
+        @states[id.to_i] || State.new(id: id.to_i, valid: false)
       end
     end
   end
+end
+
+describe HaveAPI::Resources::ActionState do
 
   def get_action(path, params = nil)
     if params

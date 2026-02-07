@@ -1,14 +1,14 @@
 describe HaveAPI::Validators::Inclusion do
   shared_examples('all') do
     it 'accepts a listed value' do
-      expect(@v.valid?('one')).to be true
-      expect(@v.valid?('two')).to be true
-      expect(@v.valid?('three')).to be true
+      expect(validator.valid?('one')).to be true
+      expect(validator.valid?('two')).to be true
+      expect(validator.valid?('three')).to be true
     end
 
     it 'rejects an unlisted value' do
-      expect(@v.valid?('zero')).to be false
-      expect(@v.valid?('four')).to be false
+      expect(validator.valid?('zero')).to be false
+      expect(validator.valid?('four')).to be false
     end
   end
 
@@ -22,16 +22,14 @@ describe HaveAPI::Validators::Inclusion do
   ].each do |include|
     context "with include as a '#{include.class}'" do
       context 'with short form' do
-        before do
-          @v = described_class.new(:include, %w[one two three])
-        end
+        let(:validator) { described_class.new(:include, %w[one two three]) }
 
         it_behaves_like 'all'
       end
 
       context 'with full form' do
-        before do
-          @v = described_class.new(:include, {
+        let(:validator) do
+          described_class.new(:include, {
             values: %w[one two three]
           })
         end

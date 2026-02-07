@@ -139,8 +139,9 @@ describe 'Documentation' do
 
   it 'responds to OPTIONS for every action with ?method=' do
     app # ensure @api is built/mounted
+    api_instance = instance_variable_get(:@api)
 
-    @api.routes.each_value do |tree|
+    api_instance.routes.each_value do |tree|
       next unless tree[:resources]
 
       each_action_route(tree) do |action, template_path|

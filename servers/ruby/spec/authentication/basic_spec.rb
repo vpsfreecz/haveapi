@@ -53,12 +53,15 @@ describe HaveAPI::Authentication::Basic::Provider do
   default_version 1
   auth_chain AuthSpecBasic::Provider
 
-  before do
+  let(:seen_users) { [] }
+  let(:api_instance) do
     app
+    instance_variable_get(:@api)
+  end
 
-    @seen_users = []
-    @api.connect_hook(:post_authenticated) do |ret, current_user|
-      @seen_users << current_user
+  before do
+    api_instance.connect_hook(:post_authenticated) do |ret, current_user|
+      seen_users << current_user
       ret
     end
   end
@@ -71,7 +74,7 @@ describe HaveAPI::Authentication::Basic::Provider do
 
     expect(api_response).to be_failed
     expect(api_response.message).to include('authenticate')
-    expect(@seen_users.last).to be_nil
+    expect(seen_users.last).to be_nil
   end
 
   it 'returns 401 with wrong credentials' do
@@ -80,7 +83,7 @@ describe HaveAPI::Authentication::Basic::Provider do
 
     expect(last_response.status).to eq(401)
     expect(api_response).to be_failed
-    expect(@seen_users.last).to be_nil
+    expect(seen_users.last).to be_nil
   end
 
   it 'authenticates with correct credentials' do
@@ -91,7 +94,7 @@ describe HaveAPI::Authentication::Basic::Provider do
     expect(api_response).to be_ok
     expect(api_response[:secure][:user_id]).to eq(1)
     expect(api_response[:secure][:login]).to eq('user')
-    expect(@seen_users.last).to be_a(AuthSpecBasic::User)
+    expect(seen_users.last).to be_a(AuthSpecBasic::User)
   end
 
   it 'handles AuthenticationError raised by backend' do
@@ -100,6 +103,6 @@ describe HaveAPI::Authentication::Basic::Provider do
 
     expect(last_response.status).to eq(401)
     expect(api_response).to be_failed
-    expect(@seen_users.last).to be_nil
+    expect(seen_users.last).to be_nil
   end
 end

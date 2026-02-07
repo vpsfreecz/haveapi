@@ -6,9 +6,9 @@ gem 'haveapi-client', path: '../../clients/ruby'
 group :test do
   gem 'rack-test'
   gem 'rspec'
-end
 
-group :activerecord do
-  gem 'activerecord', '>= 6.0'
+  # ActiveRecord adapter specs (always run)
+  gem 'activerecord', '>= 8.0'
   gem 'sinatra-activerecord'
+  gem 'sqlite3'
 end

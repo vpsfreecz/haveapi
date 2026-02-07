@@ -2,22 +2,23 @@
 
 require 'spec_helper'
 
-describe HaveAPI::Authentication::Basic::Provider do
-  module AuthSpecBasic
-    User = Struct.new(:id, :login)
+module AuthSpecBasic
+  User = Struct.new(:id, :login)
 
-    class Provider < HaveAPI::Authentication::Basic::Provider
-      protected
+  class Provider < HaveAPI::Authentication::Basic::Provider
+    protected
 
-      def find_user(_request, username, password)
-        return User.new(1, username) if username == 'user' && password == 'pass'
-        return nil unless username == 'error'
+    def find_user(_request, username, password)
+      return User.new(1, username) if username == 'user' && password == 'pass'
+      return nil unless username == 'error'
 
-        # Exercise the rescue path in Basic::Provider#authenticate
-        raise HaveAPI::AuthenticationError, 'backend failed'
-      end
+      # Exercise the rescue path in Basic::Provider#authenticate
+      raise HaveAPI::AuthenticationError, 'backend failed'
     end
   end
+end
+
+describe HaveAPI::Authentication::Basic::Provider do
 
   api do
     define_resource(:Secure) do

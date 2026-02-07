@@ -1,4 +1,4 @@
-describe HaveAPI::Hooks do
+module HooksSpec
   class ClassLevel
     include HaveAPI::Hookable
 
@@ -16,6 +16,9 @@ describe HaveAPI::Hooks do
     has_hook :ret_hook
     has_hook :context_hook
   end
+end
+
+describe HaveAPI::Hooks do
 
   let(:hook_target) { nil }
   let(:hook_level) { nil }
@@ -96,7 +99,7 @@ describe HaveAPI::Hooks do
     end
 
     it 'executes block in given context' do
-      class CustomEnv
+      custom_env_class = Class.new do
         def foo
           'bar'
         end
@@ -107,13 +110,13 @@ describe HaveAPI::Hooks do
         ret
       end
 
-      res = call_hooks(:context_hook, CustomEnv.new)
+      res = call_hooks(:context_hook, custom_env_class.new)
       expect(res[:val]).to eq('bar')
     end
   end
 
   context 'when on class level' do
-    let(:hook_target) { ClassLevel }
+    let(:hook_target) { HooksSpec::ClassLevel }
     let(:hook_level) { :class }
 
     it_behaves_like 'common'
@@ -121,14 +124,14 @@ describe HaveAPI::Hooks do
 
   context 'when on instance level' do
     context 'with all hooks' do
-      let(:hook_target) { InstanceLevel.new }
+      let(:hook_target) { HooksSpec::InstanceLevel.new }
       let(:hook_level) { :instance }
 
       it_behaves_like 'common'
     end
 
     context 'with only instance hooks' do
-      let(:hook_target) { InstanceLevel.new }
+      let(:hook_target) { HooksSpec::InstanceLevel.new }
       let(:hook_level) { :instance }
       let(:hook_method) { :call_instance_hooks_for }
 

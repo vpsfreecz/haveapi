@@ -1,15 +1,27 @@
 describe HaveAPI::Action do
+  def stub_resource_class(const_name)
+    resource_class = Class.new(HaveAPI::Resource)
+    stub_const(const_name, resource_class)
+    resource_class
+  end
+
+  def build_action(resource_const, action_const, superclass = HaveAPI::Action, &block)
+    klass = Class.new(superclass)
+    stub_const("#{resource_const}::#{action_const}", klass)
+    klass.superclass.delayed_inherited(klass)
+    klass.class_exec(&block) if block
+    klass
+  end
+
   context 'with DSL' do
     it 'inherits input' do
-      class Resource < HaveAPI::Resource
-        class InputAction < HaveAPI::Action
-          input do
-            string :param
-          end
+      stub_resource_class('Resource')
+      input_action_class = build_action('Resource', 'InputAction') do
+        input do
+          string :param
         end
-
-        class SubInputAction < InputAction; end
       end
+      build_action('Resource', 'SubInputAction', input_action_class)
 
       # Invokes execution of input/output blocks
       Resource.routes
@@ -17,15 +29,13 @@ describe HaveAPI::Action do
     end
 
     it 'inherits output' do
-      class Resource < HaveAPI::Resource
-        class OutputAction < HaveAPI::Action
-          output do
-            string :param
-          end
+      stub_resource_class('Resource')
+      output_action_class = build_action('Resource', 'OutputAction') do
+        output do
+          string :param
         end
-
-        class SubOutputAction < OutputAction; end
       end
+      build_action('Resource', 'SubOutputAction', output_action_class)
 
       # Invokes execution of input/output blocks
       Resource.routes
@@ -33,15 +43,14 @@ describe HaveAPI::Action do
     end
 
     it 'chains input' do
-      class Resource < HaveAPI::Resource
-        class InputChainAction < HaveAPI::Action
-          input do
-            string :param1
-          end
+      stub_resource_class('Resource')
+      build_action('Resource', 'InputChainAction') do
+        input do
+          string :param1
+        end
 
-          input do
-            string :param2
-          end
+        input do
+          string :param2
         end
       end
 
@@ -53,15 +62,14 @@ describe HaveAPI::Action do
     end
 
     it 'chains output' do
-      class Resource < HaveAPI::Resource
-        class OutputChainAction < HaveAPI::Action
-          output do
-            string :param1
-          end
+      stub_resource_class('Resource')
+      build_action('Resource', 'OutputChainAction') do
+        output do
+          string :param1
+        end
 
-          output do
-            string :param2
-          end
+        output do
+          string :param2
         end
       end
 
@@ -73,43 +81,41 @@ describe HaveAPI::Action do
     end
 
     it 'can combine chaining and inheritance' do
-      class Resource < HaveAPI::Resource
-        class BaseAction < HaveAPI::Action
-          input do
-            string :inbase1
-          end
-
-          input do
-            string :inbase2
-          end
-
-          output do
-            string :outbase1
-          end
-
-          output do
-            string :outbase2
-          end
+      stub_resource_class('Resource')
+      base_action_class = build_action('Resource', 'BaseAction') do
+        input do
+          string :inbase1
         end
 
-        class SubAction < BaseAction
-          input do
-            string :insub1
-            string :insub2
-          end
+        input do
+          string :inbase2
+        end
 
-          input do
-            string :insub3
-          end
+        output do
+          string :outbase1
+        end
 
-          output do
-            string :outsub1
-            string :outsub2
-          end
+        output do
+          string :outbase2
+        end
+      end
+      build_action('Resource', 'SubAction', base_action_class) do
+        input do
+          string :insub1
+          string :insub2
+        end
 
-          output do
-            string :outsub3
-          end
+        input do
+          string :insub3
+        end
+
+        output do
+          string :outsub1
+          string :outsub2
+        end
+
+        output do
+          string :outsub3
         end
       end
 
@@ -124,33 +130,27 @@ describe HaveAPI::Action do
     end
 
     it 'sets layout' do
-      class Resource < HaveAPI::Resource
-        class DefaultLayoutAction < HaveAPI::Action; end
-
-        class ObjectLayoutAction < HaveAPI::Action
-          input(:object) {}
-          output(:object) {}
-        end
-
-        class ObjectListLayoutAction < HaveAPI::Action
-          input(:object_list) {}
-          output(:object_list) {}
-        end
-
-        class HashLayoutAction < HaveAPI::Action
-          input(:hash) {}
-          output(:hash) {}
-        end
-
-        class HashListLayoutAction < HaveAPI::Action
-          input(:hash_list) {}
-          output(:hash_list) {}
-        end
-
-        class CombinedLayoutAction < HaveAPI::Action
-          input(:hash) {}
-          output(:object_list) {}
-        end
+      stub_resource_class('Resource')
+      build_action('Resource', 'DefaultLayoutAction')
+      build_action('Resource', 'ObjectLayoutAction') do
+        input(:object) {}
+        output(:object) {}
+      end
+      build_action('Resource', 'ObjectListLayoutAction') do
+        input(:object_list) {}
+        output(:object_list) {}
+      end
+      build_action('Resource', 'HashLayoutAction') do
+        input(:hash) {}
+        output(:hash) {}
+      end
+      build_action('Resource', 'HashListLayoutAction') do
+        input(:hash_list) {}
+        output(:hash_list) {}
+      end
+      build_action('Resource', 'CombinedLayoutAction') do
+        input(:hash) {}
+        output(:object_list) {}
       end
 
       expect(Resource::DefaultLayoutAction.input.layout).to eq(:object)
@@ -173,11 +173,10 @@ describe HaveAPI::Action do
     end
 
     it 'catches exceptions in input' do
-      class ExResourceIn < HaveAPI::Resource
-        class ExInputAction < HaveAPI::Action
-          input do
-            raise 'this is terrible!'
-          end
+      stub_resource_class('ExResourceIn')
+      build_action('ExResourceIn', 'ExInputAction') do
+        input do
+          raise 'this is terrible!'
         end
       end
 
@@ -185,11 +184,10 @@ describe HaveAPI::Action do
     end
 
     it 'catches exceptions in output' do
-      class ExResourceOut < HaveAPI::Resource
-        class ExOutputAction < HaveAPI::Action
-          output do
-            raise 'this is terrible!'
-          end
+      stub_resource_class('ExResourceOut')
+      build_action('ExResourceOut', 'ExOutputAction') do
+        output do
+          raise 'this is terrible!'
         end
       end
 

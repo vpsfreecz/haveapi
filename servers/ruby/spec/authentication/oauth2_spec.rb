@@ -2,22 +2,23 @@
 
 require 'spec_helper'
 
-describe HaveAPI::Authentication::OAuth2, 'smoke' do
-  module AuthSpecOAuth2
-    User = Struct.new(:id, :login)
+module AuthSpecOAuth2
+  User = Struct.new(:id, :login)
 
-    class Config < HaveAPI::Authentication::OAuth2::Config
-      def base_url
-        'https://example.test'
-      end
-
-      def find_user_by_access_token(_request, access_token)
-        access_token == 'abc' ? User.new(1, 'user') : nil
-      end
+  class Config < HaveAPI::Authentication::OAuth2::Config
+    def base_url
+      'https://example.test'
     end
 
-    Provider = HaveAPI::Authentication::OAuth2.with_config(Config)
+    def find_user_by_access_token(_request, access_token)
+      access_token == 'abc' ? User.new(1, 'user') : nil
+    end
   end
+
+  Provider = HaveAPI::Authentication::OAuth2.with_config(Config)
+end
+
+describe HaveAPI::Authentication::OAuth2, 'smoke' do
 
   api do
     define_resource(:Secure) do

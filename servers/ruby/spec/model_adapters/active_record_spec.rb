@@ -5,32 +5,33 @@ require 'active_record'
 require 'sqlite3'
 require_relative '../../lib/haveapi/model_adapters/active_record'
 
-describe HaveAPI::ModelAdapters::ActiveRecord do
-  module ARAdapterSpec
-    class Environment < ActiveRecord::Base
-      has_many :groups, class_name: 'ARAdapterSpec::Group'
-    end
-
-    class Group < ActiveRecord::Base
-      belongs_to :environment, class_name: 'ARAdapterSpec::Environment', optional: true
-      has_many :users, class_name: 'ARAdapterSpec::User'
-    end
-
-    class User < ActiveRecord::Base
-      belongs_to :group, class_name: 'ARAdapterSpec::Group', optional: true
-
-      validates :name, length: { minimum: 3, maximum: 20 }
-      validates :email, format: { with: /\A.+@.+\z/ }
-      validates :role, inclusion: { in: %w[user admin] }
-      validates :state, exclusion: { in: %w[banned] }
-      validates :age, numericality: {
-        greater_than_or_equal_to: 18,
-        less_than_or_equal_to: 100
-      }
-      validates :score, numericality: { equal_to: 7 }
-      validates :name, presence: true
-    end
+module ARAdapterSpec
+  class Environment < ActiveRecord::Base
+    has_many :groups, class_name: 'ARAdapterSpec::Group'
   end
+
+  class Group < ActiveRecord::Base
+    belongs_to :environment, class_name: 'ARAdapterSpec::Environment', optional: true
+    has_many :users, class_name: 'ARAdapterSpec::User'
+  end
+
+  class User < ActiveRecord::Base
+    belongs_to :group, class_name: 'ARAdapterSpec::Group', optional: true
+
+    validates :name, length: { minimum: 3, maximum: 20 }
+    validates :email, format: { with: /\A.+@.+\z/ }
+    validates :role, inclusion: { in: %w[user admin] }
+    validates :state, exclusion: { in: %w[banned] }
+    validates :age, numericality: {
+      greater_than_or_equal_to: 18,
+      less_than_or_equal_to: 100
+    }
+    validates :score, numericality: { equal_to: 7 }
+    validates :name, presence: true
+  end
+end
+
+describe HaveAPI::ModelAdapters::ActiveRecord do
 
   api do
     env_resource = define_resource(:Environment) do

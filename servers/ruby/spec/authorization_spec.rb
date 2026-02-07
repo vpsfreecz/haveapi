@@ -1,6 +1,12 @@
 describe HaveAPI::Authorization do
-  class Resource < HaveAPI::Resource
-    class Index < HaveAPI::Actions::Default::Index
+  let(:resource_class) { Class.new(HaveAPI::Resource) }
+  let(:index_action_class) { Class.new(HaveAPI::Actions::Default::Index) }
+
+  before do
+    stub_const('Resource', resource_class)
+    stub_const('Resource::Index', index_action_class)
+    index_action_class.superclass.delayed_inherited(index_action_class)
+    index_action_class.class_exec do
       input do
         string :param1
         string :param2
@@ -11,8 +17,7 @@ describe HaveAPI::Authorization do
         string :param2
       end
     end
-
-    routes
+    Resource.routes
   end
 
   it 'defaults to deny' do

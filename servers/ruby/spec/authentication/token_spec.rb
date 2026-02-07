@@ -3,62 +3,63 @@
 require 'spec_helper'
 require 'securerandom'
 
-describe HaveAPI::Authentication::Token do
-  module AuthSpecToken
-    User = Struct.new(:id, :login)
+module AuthSpecToken
+  User = Struct.new(:id, :login)
 
-    class Config < HaveAPI::Authentication::Token::Config
-      class << self
-        def reset!
-          @tokens = {}
-        end
-
-        def tokens
-          @tokens ||= {}
-        end
+  class Config < HaveAPI::Authentication::Token::Config
+    class << self
+      def reset!
+        @tokens = {}
       end
 
-      request do
-        handle do |req, res|
-          input = req.input
-
-          if input[:user] == 'user' && input[:password] == 'pass'
-            token = "t-#{SecureRandom.hex(8)}"
-            user = User.new(1, 'user')
-            Config.tokens[token] = user
-
-            res.token = token
-            res.valid_to = Time.now + input[:interval].to_i
-            res.complete = true
-            res.ok
-          else
-            res.error = 'invalid credentials'
-            res
-          end
-        end
-      end
-
-      renew do
-        handle do |_req, res|
-          res.valid_to = Time.now + 3600
-          res.ok
-        end
-      end
-
-      revoke do
-        handle do |req, res|
-          Config.tokens.delete(req.token)
-          res.ok
-        end
-      end
-
-      def find_user_by_token(_request, token)
-        self.class.tokens[token]
+      def tokens
+        @tokens ||= {}
       end
     end
 
-    Provider = HaveAPI::Authentication::Token.with_config(Config)
+    request do
+      handle do |req, res|
+        input = req.input
+
+        if input[:user] == 'user' && input[:password] == 'pass'
+          token = "t-#{SecureRandom.hex(8)}"
+          user = User.new(1, 'user')
+          Config.tokens[token] = user
+
+          res.token = token
+          res.valid_to = Time.now + input[:interval].to_i
+          res.complete = true
+          res.ok
+        else
+          res.error = 'invalid credentials'
+          res
+        end
+      end
+    end
+
+    renew do
+      handle do |_req, res|
+        res.valid_to = Time.now + 3600
+        res.ok
+      end
+    end
+
+    revoke do
+      handle do |req, res|
+        Config.tokens.delete(req.token)
+        res.ok
+      end
+    end
+
+    def find_user_by_token(_request, token)
+      self.class.tokens[token]
+    end
   end
+
+  Provider = HaveAPI::Authentication::Token.with_config(Config)
+end
+
+describe HaveAPI::Authentication::Token do
 
   api do
     define_resource(:Secure) do

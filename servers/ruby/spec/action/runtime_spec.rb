@@ -204,5 +204,4 @@ describe HaveAPI::Action do
       expect(meta).to have_key(:action_state_id)
     end
   end
-
 end

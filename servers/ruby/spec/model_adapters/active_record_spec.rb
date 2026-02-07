@@ -32,7 +32,6 @@ module ARAdapterSpec
 end
 
 describe HaveAPI::ModelAdapters::ActiveRecord do
-
   api do
     env_resource = define_resource(:Environment) do
       version 1

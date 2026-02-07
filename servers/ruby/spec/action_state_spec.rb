@@ -82,7 +82,6 @@ module ActionStateSpec
 end
 
 describe HaveAPI::Resources::ActionState do
-
   def get_action(path, params = nil)
     if params
       get path, params, input: ''

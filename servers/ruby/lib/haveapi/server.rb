@@ -65,7 +65,16 @@ module HaveAPI
       def authenticated?(v)
         return @current_user if @current_user
 
-        @current_user = settings.api_server.send(:do_authenticate, v, request)
+        begin
+          @current_user = settings.api_server.send(:do_authenticate, v, request)
+        rescue HaveAPI::Authentication::TokenConflict => e
+          unless @formatter
+            @formatter = OutputFormatter.new
+            @formatter.supports?([])
+          end
+
+          report_error(400, {}, e.message)
+        end
         settings.api_server.call_hooks_for(:post_authenticated, args: [@current_user])
         @current_user
       end

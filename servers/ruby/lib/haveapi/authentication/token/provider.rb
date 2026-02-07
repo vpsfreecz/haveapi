@@ -160,7 +160,23 @@ module HaveAPI::Authentication
       # @return [String]
       def token(request)
         param = config.class.query_parameter
-        request.params[param] || request.params[param.to_s] || request.env[header_to_env]
+        query_token = [
+          request.params[param],
+          request.params[param.to_s]
+        ].find { |value| token_present?(value) }
+        header_token = request.env[header_to_env]
+
+        tokens = [query_token, header_token].select { |value| token_present?(value) }
+
+        case tokens.length
+        when 0
+          nil
+        when 1
+          tokens.first
+        else
+          raise HaveAPI::Authentication::TokenConflict,
+                'Multiple authentication tokens provided'
+        end
       end
 
       def describe
@@ -175,6 +191,13 @@ module HaveAPI::Authentication
 
       def header_to_env
         "HTTP_#{config.class.http_header.upcase.gsub('-', '_')}"
+      end
+
+      def token_present?(value)
+        return false if value.nil?
+        return false if value.respond_to?(:empty?) && value.empty?
+
+        true
       end
 
       def token_resource

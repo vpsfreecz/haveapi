@@ -29,7 +29,6 @@ module CommonSpec
 end
 
 describe HaveAPI::Common do
-
   it 'defines attributes' do
     expect(CommonSpec::Test1.attr1).to be_nil
     expect(CommonSpec::Test1.attr2).to eq(42)

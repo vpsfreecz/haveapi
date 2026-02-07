@@ -60,7 +60,6 @@ module AuthSpecToken
 end
 
 describe HaveAPI::Authentication::Token do
-
   api do
     define_resource(:Secure) do
       version 1
@@ -151,6 +150,30 @@ describe HaveAPI::Authentication::Token do
     expect(last_response.status).to eq(200)
     expect(api_response).to be_ok
     expect(api_response[:secure][:user_id]).to eq(1)
+  end
+
+  it 'returns 400 when token is provided in multiple places' do
+    token = request_token!
+    param = AuthSpecToken::Config.query_parameter.to_s
+
+    header AuthSpecToken::Config.http_header, token
+    call_api(:post, "/v1/secures/ping?#{param}=#{token}", {})
+
+    expect(last_response.status).to eq(400)
+    expect(api_response).to be_failed
+    expect(api_response.message).to match(/too many|multiple/i)
+  end
+
+  it 'returns 400 for revoke when multiple tokens are provided' do
+    token = request_token!
+    param = AuthSpecToken::Config.query_parameter.to_s
+
+    header AuthSpecToken::Config.http_header, token
+    call_api(:post, "/_auth/token/tokens/revoke?#{param}=#{token}", {})
+
+    expect(last_response.status).to eq(400)
+    expect(api_response).to be_failed
+    expect(api_response.message).to match(/too many|multiple/i)
   end
 
   it 'requires authentication for renew and revoke endpoints' do

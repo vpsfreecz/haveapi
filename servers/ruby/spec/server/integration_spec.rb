@@ -68,5 +68,4 @@ describe HaveAPI::Server do
       expect(headers['access-control-allow-headers']).to be_a(String)
     end
   end
-
 end

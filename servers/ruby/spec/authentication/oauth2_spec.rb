@@ -20,7 +20,6 @@ end
 
 describe HaveAPI::Authentication::OAuth2 do
   describe 'smoke' do
-
     api do
       define_resource(:Secure) do
         version 1
@@ -85,6 +84,24 @@ describe HaveAPI::Authentication::OAuth2 do
       expect(api_response[:secure][:user_id]).to eq(1)
     end
 
+    it 'returns 400 when bearer and access_token are both provided' do
+      header 'Authorization', 'Bearer abc'
+      call_api(:post, '/v1/secures/ping?access_token=abc', {})
+
+      expect(last_response.status).to eq(400)
+      expect(api_response).to be_failed
+      expect(api_response.message).to match(/too many|multiple/i)
+    end
+
+    it 'returns 400 when HaveAPI header and access_token are both provided' do
+      header 'X-HaveAPI-OAuth2-Token', 'abc'
+      call_api(:post, '/v1/secures/ping?access_token=abc', {})
+
+      expect(last_response.status).to eq(400)
+      expect(api_response).to be_failed
+      expect(api_response.message).to match(/too many|multiple/i)
+    end
+
     it 'exposes oauth2 provider in version description' do
       call_api(:options, '/v1/')
 
@@ -107,5 +124,4 @@ describe HaveAPI::Authentication::OAuth2 do
       expect(desc[:revoke_url]).to end_with(desc[:revoke_path])
     end
   end
-
 end

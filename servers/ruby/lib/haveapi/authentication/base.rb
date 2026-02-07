@@ -1,5 +1,7 @@
 module HaveAPI
   module Authentication
+    class TokenConflict < StandardError; end
+
     # Base class for authentication providers.
     class Base
       # Get or set auth method name

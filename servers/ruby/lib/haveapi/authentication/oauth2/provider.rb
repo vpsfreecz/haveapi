@@ -117,7 +117,7 @@ module HaveAPI::Authentication
           request.params['access_token'],
           token_from_authorization_header(request),
           token_from_haveapi_header(request)
-        ].compact
+        ].select { |value| token_present?(value) }
 
         token =
           case tokens.length
@@ -126,7 +126,8 @@ module HaveAPI::Authentication
           when 1
             tokens.first
           else
-            raise 'Too many oauth2 tokens'
+            raise HaveAPI::Authentication::TokenConflict,
+                  'Multiple OAuth2 tokens provided'
           end
 
         token && config.find_user_by_access_token(request, token)
@@ -309,6 +310,13 @@ module HaveAPI::Authentication
 
       def header_to_env(header)
         "HTTP_#{header.upcase.gsub('-', '_')}"
+      end
+
+      def token_present?(value)
+        return false if value.nil?
+        return false if value.respond_to?(:empty?) && value.empty?
+
+        true
       end
     end
   end

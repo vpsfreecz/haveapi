@@ -19,7 +19,6 @@ module AuthSpecBasic
 end
 
 describe HaveAPI::Authentication::Basic::Provider do
-
   api do
     define_resource(:Secure) do
       version 1

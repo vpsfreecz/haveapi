@@ -19,7 +19,6 @@ module HooksSpec
 end
 
 describe HaveAPI::Hooks do
-
   let(:hook_target) { nil }
   let(:hook_level) { nil }
   let(:hook_method) { nil }

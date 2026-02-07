@@ -3,7 +3,7 @@
 require 'spec_helper'
 require 'securerandom'
 
-describe 'Authentication: Token' do
+describe HaveAPI::Authentication::Token do
   module AuthSpecToken
     User = Struct.new(:id, :login)
 

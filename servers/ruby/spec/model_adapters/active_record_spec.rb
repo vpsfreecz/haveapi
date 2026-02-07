@@ -5,7 +5,7 @@ require 'active_record'
 require 'sqlite3'
 require_relative '../../lib/haveapi/model_adapters/active_record'
 
-describe 'ActiveRecord adapter' do
+describe HaveAPI::ModelAdapters::ActiveRecord do
   module ARAdapterSpec
     class Environment < ActiveRecord::Base
       has_many :groups, class_name: 'ARAdapterSpec::Group'

@@ -2,7 +2,7 @@
 
 require 'spec_helper'
 
-describe 'Authentication: OAuth2 (smoke)' do
+describe HaveAPI::Authentication::OAuth2, 'smoke' do
   module AuthSpecOAuth2
     User = Struct.new(:id, :login)
 

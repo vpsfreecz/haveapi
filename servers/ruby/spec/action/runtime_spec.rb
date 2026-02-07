@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-describe 'Action runtime' do
+describe HaveAPI::Action, 'runtime' do
   api do
     define_resource(:Test) do
       version 1

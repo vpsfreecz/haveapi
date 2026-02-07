@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-describe 'Server integration' do
+describe HaveAPI::Server, 'integration' do
   api do
     define_resource(:Test) do
       version 1

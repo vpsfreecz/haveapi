@@ -2,7 +2,7 @@
 
 require 'spec_helper'
 
-describe 'Authentication: Basic' do
+describe HaveAPI::Authentication::Basic::Provider do
   module AuthSpecBasic
     User = Struct.new(:id, :login)
 

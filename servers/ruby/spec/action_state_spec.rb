@@ -1,6 +1,6 @@
 require 'time'
 
-describe 'ActionState resource' do
+describe HaveAPI::Resources::ActionState do
   module ActionStateSpec
     FIXED_TIME = Time.utc(2020, 1, 1, 0, 0, 0)
 

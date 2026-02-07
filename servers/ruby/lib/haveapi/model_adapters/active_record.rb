@@ -397,7 +397,7 @@ module HaveAPI::ModelAdapters
         opts[:min] = v.options[:greater_than_or_equal_to] if v.options[:greater_than_or_equal_to]
 
         if v.options[:equal_to]
-          validator(accept: v.options[:equal_to])
+          validator(:accept, v.options[:equal_to])
           next
         end
 

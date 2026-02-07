@@ -58,6 +58,8 @@ Naming/PredicateName:
 
 RSpec/ExampleLength:
   Enabled: false
+RSpec/BeforeAfterAll:
+  Enabled: false
 RSpec/SpecFilePathFormat:
   Enabled: false
 RSpec/MultipleExpectations:

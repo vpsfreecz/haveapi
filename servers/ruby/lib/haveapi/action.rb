@@ -372,7 +372,7 @@ module HaveAPI
         if tmp.empty?
           p e.message
           puts e.backtrace
-          error!('Server error occurred')
+          error!('Server error occurred', {}, http_status: 500)
         end
 
         unless tmp[:status]

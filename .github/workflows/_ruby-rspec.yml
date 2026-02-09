@@ -1,0 +1,65 @@
+name: Ruby RSpec (shared)
+
+on:
+  workflow_call:
+    inputs:
+      rspec-working-directory:
+        type: string
+        required: true
+      needs-server-gems:
+        type: boolean
+        required: false
+        default: true
+      setup-go:
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  rspec:
+    name: RSpec (Ruby ${{ matrix.ruby }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby:
+          - "3.2"
+          - "3.3"
+          - "3.4"
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Ruby + Bundler cache (servers/ruby)
+        if: ${{ inputs.needs-server-gems }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+          working-directory: servers/ruby
+
+      - name: Set up Ruby + Bundler cache
+        if: ${{ inputs.rspec-working-directory != 'servers/ruby' }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+          working-directory: ${{ inputs.rspec-working-directory }}
+
+      - name: Set up Go
+        if: ${{ inputs.setup-go }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
+
+      - name: Run RSpec
+        working-directory: ${{ inputs.rspec-working-directory }}
+        shell: bash
+        run: |
+          bundle exec rspec

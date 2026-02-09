@@ -14,46 +14,7 @@ on:
 
 jobs:
   rspec:
-    name: RSpec (Ruby ${{ matrix.ruby }})
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
-    strategy:
-      fail-fast: false
-      matrix:
-        ruby:
-          - "3.2"
-          - "3.3"
-          - "3.4"
-
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Set up Ruby + Bundler cache (servers/ruby)
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: ${{ matrix.ruby }}
-          bundler-cache: true
-          working-directory: servers/ruby
-
-      - name: Set up Ruby + Bundler cache (clients/go)
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: ${{ matrix.ruby }}
-          bundler-cache: true
-          working-directory: clients/go
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "stable"
-
-      - name: Run RSpec
-        working-directory: clients/go
-        shell: bash
-        run: |
-          bundle exec rspec
+    uses: ./.github/workflows/_ruby-rspec.yml
+    with:
+      rspec-working-directory: clients/go
+      setup-go: true

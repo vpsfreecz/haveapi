@@ -1,0 +1,58 @@
+name: clients/php PHPUnit
+
+on:
+  push:
+    paths:
+      - "clients/php/**"
+      - "servers/ruby/**"
+      - ".github/workflows/clients-php-phpunit.yml"
+  pull_request:
+    paths:
+      - "clients/php/**"
+      - "servers/ruby/**"
+      - ".github/workflows/clients-php-phpunit.yml"
+
+jobs:
+  phpunit:
+    name: PHPUnit (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    strategy:
+      fail-fast: false
+      matrix:
+        php:
+          - "8.4"
+          - "8.3"
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer
+
+      - name: Set up Ruby + Bundler cache (servers/ruby)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: servers/ruby
+
+      - name: Install dependencies
+        working-directory: clients/php
+        shell: bash
+        run: |
+          composer install --no-interaction --prefer-dist
+
+      - name: Run PHPUnit
+        working-directory: clients/php
+        shell: bash
+        run: |
+          vendor/bin/phpunit

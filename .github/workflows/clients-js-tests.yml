@@ -1,0 +1,51 @@
+name: clients/js tests
+
+on:
+  push:
+    paths:
+      - "clients/js/**"
+      - "servers/ruby/**"
+      - ".github/workflows/clients-js-tests.yml"
+  pull_request:
+    paths:
+      - "clients/js/**"
+      - "servers/ruby/**"
+      - ".github/workflows/clients-js-tests.yml"
+
+jobs:
+  test:
+    name: JS tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Ruby + Bundler cache (servers/ruby)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: servers/ruby
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Install dependencies
+        working-directory: clients/js
+        shell: bash
+        run: |
+          npm install --no-audit --no-fund
+
+      - name: Run tests
+        working-directory: clients/js
+        shell: bash
+        run: |
+          npm test

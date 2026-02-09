@@ -15,14 +15,19 @@
 		"type": "git",
 		"url": "https://github.com/vpsfreecz/haveapi-client-js"
 	},
+	"scripts": {
+		"test": "mocha"
+	},
 	"dependencies": {
 		"xmlhttprequest": "latest"
 	},
 	"devDependencies": {
+		"chai": "latest",
 		"gulp": "latest",
 		"gulp-concat": "latest",
 		"gulp-umd": "latest",
-		"gulp-jsdoc3": "3.0.0"
+		"gulp-jsdoc3": "3.0.0",
+		"mocha": "latest"
 	},
 	"keywords": [
 		"rest",

@@ -27,6 +27,9 @@ module HaveAPI::GoClient
       @package = opts[:package]
 
       conn = HaveAPI::Client::Communicator.new(url)
+      if opts[:basic_user] && opts[:basic_password]
+        conn.authenticate(:basic, user: opts[:basic_user], password: opts[:basic_password])
+      end
       @api = ApiVersion.new(conn.describe_api(opts[:version]))
     end
 

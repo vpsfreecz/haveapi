@@ -22,6 +22,14 @@ module HaveAPI::GoClient
         opts.on('--package PKG', 'Name of the generated Go package') do |v|
           options[:package] = v
         end
+
+        opts.on('--basic-user USER', 'Basic auth username for API description') do |v|
+          options[:basic_user] = v
+        end
+
+        opts.on('--basic-password PASSWORD', 'Basic auth password for API description') do |v|
+          options[:basic_password] = v
+        end
       end
 
       parser.parse!

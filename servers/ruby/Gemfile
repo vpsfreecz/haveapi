@@ -5,9 +5,11 @@ gem 'haveapi-client', path: '../../clients/ruby'
 
 group :test do
   gem 'rack-test'
+  gem 'rackup'
   gem 'rspec'
   gem 'rubocop', require: false
   gem 'rubocop-rspec', require: false
+  gem 'webrick'
 
   # ActiveRecord adapter specs (always run)
   gem 'activerecord', '>= 8.0'

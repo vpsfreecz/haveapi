@@ -5,7 +5,11 @@ module HaveAPI::Client
     attr_reader :response
 
     def initialize(response)
-      super("#{response.action.name} failed: #{response.message}")
+      if response.respond_to?(:action)
+        super("#{response.action.name} failed: #{response.message}")
+      else
+        super(response.to_s)
+      end
 
       @response = response
     end

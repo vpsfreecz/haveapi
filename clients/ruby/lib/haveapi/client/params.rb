@@ -29,9 +29,12 @@ module HaveAPI::Client
       @action.input_params.each do |name, p|
         next if p[:validators].nil?
 
-        if p[:validators][:presence] && @params[name].nil?
-          error(name, 'required parameter missing')
+        presence_validator =
+          p[:validators][:presence] || p[:validators][:present] || p[:validators][:required]
 
+        if presence_validator && @params[name].nil?
+          error(name, 'required parameter missing')
+          next
         elsif @params[name].nil?
           next
         end

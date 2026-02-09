@@ -1,14 +1,14 @@
-name: RSpec
+name: servers/ruby RSpec
 
 on:
   push:
     paths:
       - "servers/ruby/**"
-      - ".github/workflows/rspec.yml"
+      - ".github/workflows/servers-ruby-rspec.yml"
   pull_request:
     paths:
       - "servers/ruby/**"
-      - ".github/workflows/rspec.yml"
+      - ".github/workflows/servers-ruby-rspec.yml"
 
 jobs:
   rspec:

@@ -365,8 +365,77 @@ func (inv *<%= action.go_invocation_type %>) IsMetaParameterNil(param string) bo
 }
 <% end -%>
 
+func (inv *<%= action.go_invocation_type %>) validate() error {
+	verr := NewValidationError()
+<% if action.has_input? -%>
+	if inv.Input != nil {
+<% action.input.parameters.each do |p| -%>
+<% if %w(Float Datetime Resource).include?(p.type) -%>
+		if inv.IsParameterSelected("<%= p.go_name %>") {
+			if !inv.IsParameterNil("<%= p.go_name %>") {
+<% if p.type == 'Float' -%>
+				if !isFiniteFloat64(inv.Input.<%= p.go_name %>) {
+					verr.Add("<%= p.name %>", "not a valid float")
+				}
+<% elsif p.type == 'Datetime' -%>
+				normalized, ok := normalizeAndCheckDatetimeString(inv.Input.<%= p.go_name %>)
+				if !ok {
+					verr.Add("<%= p.name %>", "not a valid datetime")
+				} else {
+					inv.Input.<%= p.go_name %> = normalized
+				}
+<% elsif p.type == 'Resource' -%>
+				if inv.Input.<%= p.go_name %> < 0 {
+					verr.Add("<%= p.name %>", "not a valid resource id")
+				}
+<% end -%>
+			}
+		}
+<% end -%>
+<% end -%>
+	}
+<% end -%>
+<% if action.metadata.has_global_input? -%>
+	if inv.MetaInput != nil {
+<% action.metadata.global.input.parameters.each do |p| -%>
+<% if %w(Float Datetime Resource).include?(p.type) -%>
+		if inv.IsMetaParameterSelected("<%= p.go_name %>") {
+			if !inv.IsMetaParameterNil("<%= p.go_name %>") {
+<% if p.type == 'Float' -%>
+				if !isFiniteFloat64(inv.MetaInput.<%= p.go_name %>) {
+					verr.Add("<%= p.name %>", "not a valid float")
+				}
+<% elsif p.type == 'Datetime' -%>
+				normalized, ok := normalizeAndCheckDatetimeString(inv.MetaInput.<%= p.go_name %>)
+				if !ok {
+					verr.Add("<%= p.name %>", "not a valid datetime")
+				} else {
+					inv.MetaInput.<%= p.go_name %> = normalized
+				}
+<% elsif p.type == 'Resource' -%>
+				if inv.MetaInput.<%= p.go_name %> < 0 {
+					verr.Add("<%= p.name %>", "not a valid resource id")
+				}
+<% end -%>
+			}
+		}
+<% end -%>
+<% end -%>
+	}
+<% end -%>
+
+	if verr.Empty() {
+		return nil
+	}
+
+	return verr
+}
+
 // Call() invokes the action and returns a response from the API server
 func (inv *<%= action.go_invocation_type %>) Call() (*<%= action.go_response_type %>, error) {
+	if err := inv.validate(); err != nil {
+		return nil, err
+	}
 <% if action.http_method == 'GET' -%>
 	return inv.callAsQuery()
 <% else -%>

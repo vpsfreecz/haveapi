@@ -1,7 +1,11 @@
 package <%= package %>
 
 import (
+	"math"
+	"sort"
 	"strconv"
+	"strings"
+	"time"
 )
 
 type ProgressCallbackReturn int
@@ -18,6 +22,82 @@ type BlockingOperationWatcher interface {
 	OperationStatus() (*ActionActionStateShowResponse, error)
 	WaitForOperation(timeout float64) (*ActionActionStatePollResponse, error)
 	WatchOperation(timeout float64, updateIn float64, callback OperationProgressCallback) (*ActionActionStatePollResponse, error)
+}
+
+type ValidationError struct {
+	Errors map[string][]string
+}
+
+func NewValidationError() *ValidationError {
+	return &ValidationError{
+		Errors: make(map[string][]string),
+	}
+}
+
+func (e *ValidationError) Add(param string, msg string) {
+	if e.Errors == nil {
+		e.Errors = make(map[string][]string)
+	}
+
+	e.Errors[param] = append(e.Errors[param], msg)
+}
+
+func (e *ValidationError) Empty() bool {
+	if e == nil {
+		return true
+	}
+
+	return len(e.Errors) == 0
+}
+
+func (e *ValidationError) Error() string {
+	if e == nil || len(e.Errors) == 0 {
+		return "validation failed"
+	}
+
+	keys := make([]string, 0, len(e.Errors))
+	for key := range e.Errors {
+		keys = append(keys, key)
+	}
+
+	sort.Strings(keys)
+
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		messages := e.Errors[key]
+		if len(messages) == 0 {
+			parts = append(parts, key)
+		} else {
+			parts = append(parts, key+": "+strings.Join(messages, ", "))
+		}
+	}
+
+	return "validation failed: " + strings.Join(parts, "; ")
+}
+
+func isFiniteFloat64(v float64) bool {
+	return !math.IsNaN(v) && !math.IsInf(v, 0)
+}
+
+func normalizeAndCheckDatetimeString(v string) (string, bool) {
+	trimmed := strings.TrimSpace(v)
+	if trimmed == "" {
+		return trimmed, false
+	}
+
+	if _, err := time.Parse("2006-01-02", trimmed); err == nil {
+		return trimmed, true
+	}
+
+	if _, err := time.Parse(time.RFC3339, trimmed); err == nil {
+		return trimmed, true
+	}
+
+	if _, err := time.Parse(time.RFC3339Nano, trimmed); err == nil {
+		return trimmed, true
+	}
+
+	return trimmed, false
 }
 
 func convertInt64ToString(v int64) string {

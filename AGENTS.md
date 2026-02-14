@@ -12,6 +12,7 @@
 - Sync documentation into server packages with `make doc`.
 - Ruby server tests: from `servers/ruby`, run `bundle exec rspec` or `bundle exec rake spec`.
 - JS client build: from `clients/js`, run `./node_modules/.bin/gulp` after installing deps to refresh `dist/haveapi-client.js`.
+- PHP client tests: from `clients/php`, run `composer install` then `php vendor/bin/phpunit`; this boots a local Ruby test server from `servers/ruby/test_support/client_test_server.rb` and needs permission to bind a localhost port.
 
 ## Coding Style & Naming Conventions
 - Ruby code follows the repo `.rubocop.yml` (2-space indent, relaxed metrics); run `bundle exec rubocop` in the relevant Ruby component before submitting.

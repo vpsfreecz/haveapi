@@ -456,6 +456,23 @@ module HaveAPI
             input
           end
         end
+
+        define_action(:EchoResource) do
+          extend DocFilter
+          route 'echo_resource'
+          http_method :post
+          input(:hash) do
+            resource HaveAPI::ClientTestAPI::Resources::Project, required: true
+          end
+          output(:hash) do
+            integer :project, required: true
+          end
+          authorize { allow }
+
+          def exec
+            { project: input[:project] }
+          end
+        end
       end
     end
 

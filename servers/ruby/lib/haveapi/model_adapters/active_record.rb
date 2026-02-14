@@ -142,12 +142,69 @@ module HaveAPI::ModelAdapters
 
     class Input < ::HaveAPI::ModelAdapter::Input
       def self.clean(model, raw, extra)
-        return if (raw.is_a?(String) && raw.empty?) || (!raw.is_a?(String) && !raw)
+        return nil if raw.nil?
+
+        original = raw
+
+        if raw.is_a?(String)
+          stripped = raw.strip
+          raise HaveAPI::ValidationError, "not a valid id #{original.inspect}" if stripped.empty?
+
+          raw = stripped
+
+        elsif [true, false].include?(raw)
+          raise HaveAPI::ValidationError, "not a valid id #{original.inspect}"
+        end
+
+        value = if integer_pk?(model)
+                  id = coerce_integer_id(raw, original)
+                  raise HaveAPI::ValidationError, "not a valid id #{original.inspect}" if id < 0
+
+                  id
+                else
+                  raw
+                end
 
         if extra[:fetch]
-          model.instance_exec(raw, &extra[:fetch])
+          model.instance_exec(value, &extra[:fetch])
         else
-          model.find(raw)
+          model.find(value)
+        end
+      rescue ::ActiveRecord::RecordNotFound
+        raise HaveAPI::ValidationError, 'resource not found'
+      rescue ArgumentError, TypeError
+        raise HaveAPI::ValidationError, "not a valid id #{original.inspect}"
+      end
+
+      def self.integer_pk?(model)
+        pk = model.primary_key
+        return false unless pk.is_a?(String)
+        return false unless model.respond_to?(:type_for_attribute)
+
+        pk_type = model.type_for_attribute(pk).type
+        %i[integer bigint].include?(pk_type)
+      end
+
+      def self.coerce_integer_id(raw, original)
+        case raw
+        when Integer
+          raw
+        when Float
+          unless raw.finite? && (raw % 1) == 0
+            raise HaveAPI::ValidationError, "not a valid id #{original.inspect}"
+          end
+
+          raw.to_i
+        when String
+          s = raw.strip
+
+          if s.empty? || !s.match?(/\A[+-]?\d+\z/)
+            raise HaveAPI::ValidationError, "not a valid id #{original.inspect}"
+          end
+
+          Integer(s, 10)
+        else
+          raise HaveAPI::ValidationError, "not a valid id #{original.inspect}"
         end
       end
     end

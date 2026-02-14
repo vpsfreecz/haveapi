@@ -73,10 +73,26 @@ describe 'Parameters::Typed' do
     # Integer
     p = p_type(Integer)
     expect(p.clean('42')).to eq(42)
+    expect(p.clean('  -7  ')).to eq(-7)
+    expect(p.clean(12)).to eq(12)
+    expect(p.clean(12.0)).to eq(12)
+    expect { p.clean('abc') }.to raise_error(HaveAPI::ValidationError)
+    expect { p.clean('12abc') }.to raise_error(HaveAPI::ValidationError)
+    expect { p.clean('') }.to raise_error(HaveAPI::ValidationError)
+    expect { p.clean('12.0') }.to raise_error(HaveAPI::ValidationError)
+    expect { p.clean(12.3) }.to raise_error(HaveAPI::ValidationError)
+    expect { p.clean(true) }.to raise_error(HaveAPI::ValidationError)
 
     # Float
     p = p_type(Float)
     expect(p.clean('3.1456')).to eq(3.1456)
+    expect(p.clean('1e3')).to eq(1000.0)
+    expect(p.clean(3)).to eq(3.0)
+    expect { p.clean('abc') }.to raise_error(HaveAPI::ValidationError)
+    expect { p.clean('') }.to raise_error(HaveAPI::ValidationError)
+    expect { p.clean('NaN') }.to raise_error(HaveAPI::ValidationError)
+    expect { p.clean(Float::NAN) }.to raise_error(HaveAPI::ValidationError)
+    expect { p.clean(Float::INFINITY) }.to raise_error(HaveAPI::ValidationError)
 
     # Boolean
     p = p_type(Boolean)
@@ -89,6 +105,13 @@ describe 'Parameters::Typed' do
       expect(p.clean(v)).to be false
     end
 
+    expect(p.clean(0)).to be false
+    expect(p.clean(1)).to be true
+    expect(p.clean('  YES ')).to be true
+    expect { p.clean('maybe') }.to raise_error(HaveAPI::ValidationError)
+    expect { p.clean('') }.to raise_error(HaveAPI::ValidationError)
+    expect { p.clean(2) }.to raise_error(HaveAPI::ValidationError)
+
     # Datetime
     p = p_type(Datetime)
     t = Time.now
@@ -96,10 +119,22 @@ describe 'Parameters::Typed' do
 
     expect(p.clean(t.iso8601)).to eq(t2)
     expect { p.clean('bzz') }.to raise_error(HaveAPI::ValidationError)
+    expect { p.clean('') }.to raise_error(HaveAPI::ValidationError)
 
     # String, Text
     p = p_type(String)
     expect(p.clean('bzz')).to eq('bzz')
+    expect(p.clean(123)).to eq('123')
+    expect(p.clean(true)).to eq('true')
+    expect { p.clean([]) }.to raise_error(HaveAPI::ValidationError)
+    expect { p.clean({}) }.to raise_error(HaveAPI::ValidationError)
+
+    p = p_type(Text)
+    expect(p.clean('bzz')).to eq('bzz')
+    expect(p.clean(123)).to eq('123')
+    expect(p.clean(true)).to eq('true')
+    expect { p.clean([]) }.to raise_error(HaveAPI::ValidationError)
+    expect { p.clean({}) }.to raise_error(HaveAPI::ValidationError)
 
     # Defaults
     p = p_type(String)

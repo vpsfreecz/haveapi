@@ -337,6 +337,38 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
     expect(env_data[:note]).to eq('ENV_NOTE')
   end
 
+  it 'cleans resource input ids and maps invalid values to validation errors' do
+    environment = ARAdapterSpec::Environment.create!(id: 1, label: 'env')
+
+    expect(described_class::Input.clean(ARAdapterSpec::Environment, 1, {})).to eq(environment)
+    expect(described_class::Input.clean(ARAdapterSpec::Environment, '1', {})).to eq(environment)
+    expect(described_class::Input.clean(ARAdapterSpec::Environment, 1.0, {})).to eq(environment)
+
+    expect do
+      described_class::Input.clean(ARAdapterSpec::Environment, 'abc', {})
+    end.to raise_error(HaveAPI::ValidationError, /not a valid id/)
+
+    expect do
+      described_class::Input.clean(ARAdapterSpec::Environment, '', {})
+    end.to raise_error(HaveAPI::ValidationError, /not a valid id/)
+
+    expect do
+      described_class::Input.clean(ARAdapterSpec::Environment, 1.2, {})
+    end.to raise_error(HaveAPI::ValidationError, /not a valid id/)
+
+    expect do
+      described_class::Input.clean(ARAdapterSpec::Environment, false, {})
+    end.to raise_error(HaveAPI::ValidationError, /not a valid id/)
+
+    expect do
+      described_class::Input.clean(ARAdapterSpec::Environment, true, {})
+    end.to raise_error(HaveAPI::ValidationError, /not a valid id/)
+
+    expect do
+      described_class::Input.clean(ARAdapterSpec::Environment, 9999, {})
+    end.to raise_error(HaveAPI::ValidationError, /resource not found/)
+  end
+
   it 'applies ascending pagination with with_pagination' do
     5.times do |i|
       create_user(

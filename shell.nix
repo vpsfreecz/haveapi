@@ -17,6 +17,7 @@ in stdenv.mkDerivation rec {
   shellHook = ''
     export GEM_HOME=$(pwd)/.gems
     export PATH="$GEM_HOME/bin:$PATH"
+    export RUBOCOP_CACHE_ROOT=$(pwd)/.rubocop_cache
     gem install --no-document bundler
 
     # Purity disabled because of prism gem, which has a native extension.

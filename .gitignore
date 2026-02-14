@@ -3,6 +3,7 @@
 .bundle
 .config
 .php-cs-fixer.cache
+.rubocop_cache
 .yardoc
 .gems
 Gemfile.lock

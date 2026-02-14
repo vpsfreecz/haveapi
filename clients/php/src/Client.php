@@ -248,10 +248,20 @@ class Client extends Client\Resource
         $request = $this->getRequest($fn, $this->uri . $action->path());
         $res = [];
 
-        if (array_key_exists('meta', $params)) {
+        if (is_array($params) && array_key_exists('meta', $params)) {
             $s = $this->getSettings();
             $res[ $s['meta']->{'namespace'} ] = $params['meta'];
             unset($params['meta']);
+        }
+
+        $inputLayout = $action->layout('input');
+
+        if (($inputLayout === 'hash' || $inputLayout === 'object') && !is_array($params)) {
+            throw new Client\Exception\ValidationError($action, ['base' => ['invalid input layout']]);
+        }
+
+        if (is_array($params)) {
+            $params = $this->coerceAndValidateInput($action, $params);
         }
 
         $res[ $action->getNamespace('input') ] = $params;
@@ -354,6 +364,10 @@ class Client extends Client\Resource
                     $url .= '&';
                 }
 
+                if (is_bool($v)) {
+                    $v = $v ? 'true' : 'false';
+                }
+
                 $url .= $k . '=' . (is_null($v) ? '' : urlencode($v));
             }
 
@@ -440,6 +454,260 @@ class Client extends Client\Resource
         }
 
         return $obj;
+    }
+
+    private function coerceAndValidateInput(Action $action, array $params): array
+    {
+        $descParams = $action->getParameters('input');
+        $descParamsArr = (array) $descParams;
+
+        if (empty($descParamsArr)) {
+            return $params;
+        }
+
+        $errors = [];
+
+        foreach ($descParamsArr as $name => $pdesc) {
+            if (($pdesc->required ?? false) === true) {
+                if (!array_key_exists($name, $params) || $params[$name] === null) {
+                    $errors[$name][] = 'required parameter missing';
+                }
+            }
+        }
+
+        foreach ($params as $name => $value) {
+            if (!array_key_exists($name, $descParamsArr)) {
+                continue;
+            }
+
+            if ($value === null) {
+                unset($params[$name]);
+                continue;
+            }
+
+            try {
+                $params[$name] = $this->coerceTypedValue($descParamsArr[$name]->type, $value);
+            } catch (\InvalidArgumentException $e) {
+                $errors[$name][] = $e->getMessage();
+            }
+        }
+
+        if (!empty($errors)) {
+            throw new Client\Exception\ValidationError($action, $errors);
+        }
+
+        return $params;
+    }
+
+    private function coerceTypedValue(string $type, $raw)
+    {
+        switch ($type) {
+            case 'Integer':
+                if (is_int($raw)) {
+                    return $raw;
+                }
+
+                if (is_float($raw)) {
+                    if (is_finite($raw) && floor($raw) === $raw) {
+                        return (int) $raw;
+                    }
+
+                    throw new \InvalidArgumentException('not a valid integer');
+                }
+
+                if (is_string($raw)) {
+                    $s = trim($raw);
+
+                    if ($s !== '' && preg_match('/^[+-]?\\d+$/', $s)) {
+                        return intval($s, 10);
+                    }
+
+                    throw new \InvalidArgumentException('not a valid integer');
+                }
+
+                throw new \InvalidArgumentException('not a valid integer');
+
+            case 'Float':
+                if (is_int($raw) || is_float($raw)) {
+                    $value = (float) $raw;
+
+                    if (is_finite($value) && !is_nan($value)) {
+                        return $value;
+                    }
+
+                    throw new \InvalidArgumentException('not a valid float');
+                }
+
+                if (is_string($raw)) {
+                    $s = trim($raw);
+
+                    if ($s !== '' && is_numeric($s)) {
+                        $value = (float) $s;
+
+                        if (is_finite($value) && !is_nan($value)) {
+                            return $value;
+                        }
+                    }
+
+                    throw new \InvalidArgumentException('not a valid float');
+                }
+
+                throw new \InvalidArgumentException('not a valid float');
+
+            case 'Boolean':
+                if (is_bool($raw)) {
+                    return $raw;
+                }
+
+                if (is_int($raw)) {
+                    if ($raw === 0) {
+                        return false;
+                    }
+
+                    if ($raw === 1) {
+                        return true;
+                    }
+
+                    throw new \InvalidArgumentException('not a valid boolean');
+                }
+
+                if (is_string($raw)) {
+                    $s = trim($raw);
+
+                    if ($s !== '') {
+                        $token = strtolower($s);
+
+                        if (in_array($token, ['true', 't', 'yes', 'y', '1'], true)) {
+                            return true;
+                        }
+
+                        if (in_array($token, ['false', 'f', 'no', 'n', '0'], true)) {
+                            return false;
+                        }
+                    }
+
+                    throw new \InvalidArgumentException('not a valid boolean');
+                }
+
+                throw new \InvalidArgumentException('not a valid boolean');
+
+            case 'Datetime':
+                if ($raw instanceof \DateTimeInterface) {
+                    return $raw->format(DATE_ATOM);
+                }
+
+                if (is_string($raw)) {
+                    $s = trim($raw);
+
+                    if ($s !== '' && $this->isIso8601Datetime($s)) {
+                        return $s;
+                    }
+
+                    throw new \InvalidArgumentException('not in ISO 8601 format');
+                }
+
+                throw new \InvalidArgumentException('not in ISO 8601 format');
+
+            case 'String':
+            case 'Text':
+                if (is_array($raw) || is_object($raw)) {
+                    throw new \InvalidArgumentException('not a valid string');
+                }
+
+                if (is_bool($raw)) {
+                    return $raw ? 'true' : 'false';
+                }
+
+                if (is_scalar($raw)) {
+                    return (string) $raw;
+                }
+
+                throw new \InvalidArgumentException('not a valid string');
+
+            case 'Resource':
+                $resourceId = $raw;
+
+                if ($raw instanceof Client\ResourceInstance) {
+                    $resourceId = $raw->id;
+                }
+
+                if (is_int($resourceId)) {
+                    if ($resourceId >= 0) {
+                        return $resourceId;
+                    }
+
+                    throw new \InvalidArgumentException('not a valid resource id');
+                }
+
+                if (is_string($resourceId)) {
+                    $s = trim($resourceId);
+
+                    if ($s !== '' && preg_match('/^[+-]?\\d+$/', $s)) {
+                        $id = intval($s, 10);
+
+                        if ($id >= 0) {
+                            return $id;
+                        }
+                    }
+
+                    throw new \InvalidArgumentException('not a valid resource id');
+                }
+
+                throw new \InvalidArgumentException('not a valid resource id');
+
+            default:
+                return $raw;
+        }
+    }
+
+    private function isIso8601Datetime(string $s): bool
+    {
+        $pattern = '/^(\\d{4})-(\\d{2})-(\\d{2})(?:T(\\d{2}):(\\d{2})(?::(\\d{2})(?:\\.(\\d+))?)?(?:Z|([+\\-])(\\d{2}):?(\\d{2}))?)?$/';
+
+        if (!preg_match($pattern, $s, $matches)) {
+            return false;
+        }
+
+        $year = (int) $matches[1];
+        $month = (int) $matches[2];
+        $day = (int) $matches[3];
+
+        if (!checkdate($month, $day, $year)) {
+            return false;
+        }
+
+        if (isset($matches[4]) && $matches[4] !== '') {
+            $hour = (int) $matches[4];
+            $minute = (int) $matches[5];
+            $second = isset($matches[6]) && $matches[6] !== '' ? (int) $matches[6] : 0;
+
+            if ($hour < 0 || $hour > 23) {
+                return false;
+            }
+
+            if ($minute < 0 || $minute > 59) {
+                return false;
+            }
+
+            if ($second < 0 || $second > 59) {
+                return false;
+            }
+        }
+
+        if (isset($matches[8]) && $matches[8] !== '') {
+            $offsetHour = (int) $matches[9];
+            $offsetMinute = (int) $matches[10];
+
+            if ($offsetHour < 0 || $offsetHour > 23) {
+                return false;
+            }
+
+            if ($offsetMinute < 0 || $offsetMinute > 59) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function changeDescription($d)

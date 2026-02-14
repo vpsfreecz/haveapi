@@ -1,9 +1,17 @@
 VERSION=$(shell cat VERSION)
 
-.PHONY: doc publish release version
+.PHONY: doc publish release test version
 
 doc:
 	./utils/copydoc.sh servers/*
+
+# Run component test suites (install deps first or use nix-shell).
+test:
+	cd servers/ruby && bundle exec rspec
+	cd clients/ruby && bundle exec rspec
+	cd clients/go && bundle exec rspec
+	cd clients/js && npm test
+	cd clients/php && vendor/bin/phpunit
 
 release:
 	mkdir -p dist
@@ -46,4 +54,3 @@ version:
 	@sed -ri "s/s.add_dependency 'haveapi-client', '~> [^']+'/s.add_dependency 'haveapi-client', '~> $(VERSION)'/" servers/ruby/haveapi.gemspec
 	@sed -ri "s/spec.add_dependency 'haveapi-client', '~> [^']+'/spec.add_dependency 'haveapi-client', '~> $(VERSION)'/" clients/go/haveapi-go-client.gemspec
 	@sed -ri "s/gem 'haveapi', '~> [^']+'/gem 'haveapi', '~> $(VERSION)'/" examples/servers/ruby/activerecord_auth/Gemfile
-

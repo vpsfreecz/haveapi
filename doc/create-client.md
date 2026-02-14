@@ -91,6 +91,12 @@ sending it to the API, to lessen the API load and make it more user-friendly.
 However, as the input is validated on the server anyway, it does not have
 to be implemented.
 
+Typed parameter validation is separate from validator-based validation and is always
+recommended. A client should enforce the type rules from
+[Typed input validation](typed-input-validation.md) before sending requests. Even in
+strongly typed languages, runtime checks are needed for values like NaN/Inf and for
+datetime string formatting.
+
 ## Metadata channel
 Metadata channel is currently used to specify what associated resources should
 be prefetched and whether an object list should contain total number of items.

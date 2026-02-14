@@ -10,6 +10,7 @@
 - Each component has a `shell.nix` file. Use `nix-shell` to enter individual environments. From within the shell, standard language tools are used.
 - The top-level directory also has a `shell.nix` file, which is used for tree-wide work, e.g. making new releases.
 - Sync documentation into server packages with `make doc`.
+- Run the full suite from repo root with `make test` (install deps first or use `nix-shell`; this starts local test servers and needs permission to bind localhost ports).
 - Ruby server tests: from `servers/ruby`, run `bundle exec rspec` or `bundle exec rake spec`.
 - JS client build: from `clients/js`, run `./node_modules/.bin/gulp` after installing deps to refresh `dist/haveapi-client.js`.
 - PHP client tests: from `clients/php`, run `composer install` then `php vendor/bin/phpunit`; this boots a local Ruby test server from `servers/ruby/test_support/client_test_server.rb` and needs permission to bind a localhost port.

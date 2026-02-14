@@ -238,6 +238,11 @@ The type can be one of:
  - Float
  - Datetime
 
+#### Typed input coercion and validation
+Typed input parameters MUST be validated strictly by servers and clients. Query parameters arrive as
+strings and must be parsed before validation. Canonical rules and examples are documented in
+[Typed input validation](typed-input-validation.md).
+
         "<parameter_name>": {
             "required": true/false/null,
             "label": "Label for this parameter",

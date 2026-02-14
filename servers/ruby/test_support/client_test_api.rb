@@ -429,6 +429,33 @@ module HaveAPI
             error!('forced failure', { base: ['forced failure'] }, http_status: 400)
           end
         end
+
+        define_action(:Echo) do
+          extend DocFilter
+          route 'echo'
+          http_method :post
+          input(:hash) do
+            integer :i, required: true
+            float :f, required: true
+            bool :b, required: true
+            datetime :dt, required: true
+            string :s, required: true
+            text :t, required: true
+          end
+          output(:hash) do
+            integer :i
+            float :f
+            bool :b
+            datetime :dt
+            string :s
+            text :t
+          end
+          authorize { allow }
+
+          def exec
+            input
+          end
+        end
       end
     end
 

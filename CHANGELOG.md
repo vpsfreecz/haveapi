@@ -1,3 +1,29 @@
+# Tue Feb 17 2026 - version 0.27.0
+## Ruby server
+- Enforce strict typed input coercion and ActiveRecord ID validation (invalid values now return validation errors)
+- Reject requests that include multiple authentication tokens and fix token auth parameter extraction
+- Fix default superclass handling in `define_action()`/`define_resource()` and singularize non-list input/output namespaces
+- Switch documentation rendering to `redcarpet` and fix ActiveRecord numericality `equal_to` translation
+
+## Ruby client
+- Enforce strict typed input validation with clearer per-parameter errors
+- CLI: fix boolean parameter handling, apply `--raw` only to output formatting, move progress bar to stderr, and fall back to system config
+
+## JavaScript client
+- Enforce strict typed input validation
+
+## PHP client
+- Enforce strict typed input validation and add a validation error for invalid inputs
+
+## Go client generator
+- Generated clients validate typed input parameters
+
+## Documentation
+- Add typed input validation rules, update protocol/create-client docs, and add PHP client test instructions
+
+## Examples/Templates
+- Update dependencies and set ActiveRecord migration version in Ruby examples
+
 # Web Mar 12 2025 - version 0.26.0
 ## Ruby server
 - Removed unused code

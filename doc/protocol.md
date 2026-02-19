@@ -402,6 +402,10 @@ The _resource_ type also has a different output in action response. It returns
 a hash containing associated resource ID and its label, so that clients
 can show the human-friendly label instead of just an ID.
 
+For input parameters of type `Resource`, empty/whitespace input is treated as
+`null`/omitted when the parameter is optional. Required resource parameters
+still reject empty/whitespace input.
+
     "<parameter_name>": {
         "<value of value_id from description>": <resource id>,
         "<value of value_label from description>": "<label>"

@@ -8,7 +8,9 @@ Invalid values MUST NOT be silently coerced into defaults like `0`, `0.0`, or `f
 ## General rules
 - Scalars only for scalar types: arrays/lists and objects/hashes are invalid for scalar types.
 - `null`/`nil` means "value omitted" (server defaults may apply).
-- Empty strings (`""` or whitespace-only strings) are invalid for Integer, Float, Boolean, Datetime, and Resource IDs.
+- Empty strings (`""` or whitespace-only strings) are invalid for Integer, Float, Boolean, and Datetime.
+  For Resource IDs, empty/whitespace is invalid when the parameter is required; optional Resource
+  parameters treat empty/whitespace as `null`/omitted to support query-string input.
 - Client-side validation is recommended; the server is authoritative.
 
 ## Per-type rules with examples
@@ -78,9 +80,10 @@ Accept:
 - integer id
 - digit-string id after trim
 - (some clients) ResourceInstance -> uses its `id`
+- empty/whitespace string is treated as `null`/omitted when the parameter is optional
 
 Reject:
-- empty/whitespace string
+- empty/whitespace string for required parameters
 - non-digit strings
 - negative ids
 

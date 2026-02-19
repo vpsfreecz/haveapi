@@ -110,4 +110,13 @@ RSpec.describe HaveAPI::Client::Client do
         expect(err.errors[:t]).to include(a_string_matching(/not a valid string/))
       end
   end
+
+  it 'accepts nil for optional resource params' do
+    res = client.test.echo_resource_optional(project: nil)
+
+    expect(res).to be_a(HaveAPI::Client::Response)
+    expect(res[:project_provided]).to be(true)
+    expect(res[:project_nil]).to be(true)
+    expect(res[:project]).to be_nil
+  end
 end

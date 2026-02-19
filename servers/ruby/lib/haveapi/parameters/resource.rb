@@ -92,9 +92,16 @@ module HaveAPI::Parameters
     end
 
     def clean(raw)
+      if raw.is_a?(String)
+        stripped = raw.strip
+        return nil if stripped.empty? && optional?
+      end
+
+      extra = @extra.merge(optional: optional?)
+
       ::HaveAPI::ModelAdapter.for(
         show_action.input.layout, @resource.model
-      ).input_clean(@resource.model, raw, @extra)
+      ).input_clean(@resource.model, raw, extra)
     end
 
     def validate(v, params)

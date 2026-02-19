@@ -148,7 +148,12 @@ module HaveAPI::ModelAdapters
 
         if raw.is_a?(String)
           stripped = raw.strip
-          raise HaveAPI::ValidationError, "not a valid id #{original.inspect}" if stripped.empty?
+
+          if stripped.empty?
+            return nil if extra && extra[:optional]
+
+            raise HaveAPI::ValidationError, "not a valid id #{original.inspect}"
+          end
 
           raw = stripped
 

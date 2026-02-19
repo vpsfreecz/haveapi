@@ -473,6 +473,30 @@ module HaveAPI
             { project: input[:project] }
           end
         end
+
+        define_action(:EchoResourceOptional) do
+          extend DocFilter
+          route 'echo_resource_optional'
+          http_method :get
+          input(:hash) do
+            resource HaveAPI::ClientTestAPI::Resources::Project, required: false
+          end
+          output(:hash) do
+            bool :project_provided, required: true
+            bool :project_nil, required: true
+            integer :project
+          end
+          authorize { allow }
+
+          def exec
+            ret = {
+              project_provided: input.has_key?(:project),
+              project_nil: input[:project].nil?
+            }
+            ret[:project] = input[:project] unless input[:project].nil?
+            ret
+          end
+        end
       end
     end
 

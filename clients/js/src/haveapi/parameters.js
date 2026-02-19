@@ -106,8 +106,14 @@ Parameters.prototype.coerceParams = function (params) {
 
 		var v = params[p];
 
-		if (v === undefined || v === null)
+		if (v === undefined)
 			continue;
+
+		if (v === null) {
+			if (input[p].type === 'Resource')
+				ret[p] = null;
+			continue;
+		}
 
 		switch (input[p].type) {
 			case 'Resource':

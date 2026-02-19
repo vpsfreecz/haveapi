@@ -407,7 +407,8 @@ Client.prototype.directInvoke = function(action, opts) {
 		httpOpts.url = this.addParamsToQuery(
 			httpOpts.url,
 			action.namespace('input'),
-			opts.params
+			opts.params,
+			action.description.input ? action.description.input.parameters : null
 		);
 
 		if (opts.meta) {
@@ -547,10 +548,27 @@ Client.prototype.sendAsQueryParams = function(method) {
  * @param {Object} params
  * @private
  */
-Client.prototype.addParamsToQuery = function(url, namespace, params) {
+Client.prototype.addParamsToQuery = function(url, namespace, params, paramDesc) {
+	if (!params)
+		return url;
+
 	var first = true;
 
 	for (var key in params) {
+		if (!params.hasOwnProperty(key))
+			continue;
+
+		var value = params[key];
+
+		if (value === null) {
+			if (paramDesc && paramDesc.hasOwnProperty(key) && paramDesc[key].type === 'Resource')
+				value = '';
+			else
+				continue;
+		} else if (value === undefined) {
+			continue;
+		}
+
 		if (first) {
 			if (url.indexOf('?') == -1)
 				url += '?';
@@ -562,7 +580,7 @@ Client.prototype.addParamsToQuery = function(url, namespace, params) {
 
 		} else url += '&';
 
-		url += encodeURI(namespace) + '[' + encodeURI(key) + ']=' + encodeURI(params[key]);
+		url += encodeURI(namespace) + '[' + encodeURI(key) + ']=' + encodeURI(value);
 	}
 
 	return url;
@@ -2410,8 +2428,14 @@ Parameters.prototype.coerceParams = function (params) {
 
 		var v = params[p];
 
-		if (v === undefined || v === null)
+		if (v === undefined)
 			continue;
+
+		if (v === null) {
+			if (input[p].type === 'Resource')
+				ret[p] = null;
+			continue;
+		}
 
 		switch (input[p].type) {
 			case 'Resource':

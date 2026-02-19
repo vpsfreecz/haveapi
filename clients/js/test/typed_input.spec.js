@@ -219,4 +219,13 @@ describe('HaveAPI JS client typed input', function () {
     expect(reply.envelope.errors).to.have.property('project');
     expect(reply.envelope.errors.project.join(' ')).to.match(/not a valid resource id/);
   });
+
+  it('accepts null for optional resource params', async () => {
+    await setup(client);
+    const reply = await invoke(client.test.echo_resource_optional, { project: null });
+
+    expect(reply.isOk()).to.equal(true);
+    expect(reply.response().project_provided).to.equal(true);
+    expect(reply.response().project_nil).to.equal(true);
+  });
 });

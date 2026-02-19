@@ -132,6 +132,30 @@ RSpec.describe HaveAPI::GoClient::Generator do
           }
         }
 
+        func TestEchoResourceOptionalAcceptsNil(t *testing.T) {
+          c := newValidationClient()
+          req := c.Test.EchoResourceOptional.Prepare()
+          in := req.NewInput()
+          in.SetProjectNil(true)
+
+          resp, err := req.Call()
+          if err != nil {
+            t.Fatalf("request failed: %v", err)
+          }
+
+          if !resp.Status {
+            t.Fatalf("request failed: %s", resp.Message)
+          }
+
+          if !resp.Output.ProjectNil {
+            t.Fatalf("expected ProjectNil=true, got false")
+          }
+
+          if !resp.Output.ProjectProvided {
+            t.Fatalf("expected ProjectProvided=true, got false")
+          }
+        }
+
         func TestEchoAcceptsValidInput(t *testing.T) {
           c := newValidationClient()
           req := c.Test.Echo.Prepare()

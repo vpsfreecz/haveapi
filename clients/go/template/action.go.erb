@@ -562,11 +562,19 @@ func (resp *<%= action.go_response_type %>) CancelOperation() (*ActionActionStat
 <% if action.http_method == 'GET' && action.has_input? -%>
 func (inv *<%= action.go_invocation_type %>) convertInputToQueryParams(ret map[string]string) {
 	if inv.Input != nil {
-<% action.input.parameters.each do |p| -%>
+	<% action.input.parameters.each do |p| -%>
 		if inv.IsParameterSelected("<%= p.go_name %>") {
+	<% if p.nillable? -%>
+			if inv.IsParameterNil("<%= p.go_name %>") {
+				ret["<%= action.input.namespace %>[<%= p.name %>]"] = ""
+			} else {
+				ret["<%= action.input.namespace %>[<%= p.name %>]"] = <% if p.go_in_type == 'string' %>inv.Input.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.Input.<%= p.go_name %>)<% end %>
+			}
+	<% else -%>
 			ret["<%= action.input.namespace %>[<%= p.name %>]"] = <% if p.go_in_type == 'string' %>inv.Input.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.Input.<%= p.go_name %>)<% end %>
+	<% end -%>
 		}
-<% end -%>
+	<% end -%>
 	}
 }
 <% end -%>

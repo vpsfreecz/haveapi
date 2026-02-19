@@ -1,3 +1,22 @@
+# Thu Feb 19 2026 - version 0.27.1
+## Ruby server
+- Allow optional resource parameters to be blank (treated as nil)
+
+## Ruby client
+- Support null resource parameters
+
+## JavaScript client
+- Support null resource parameters
+
+## PHP client
+- Support null resource parameters
+
+## Go client generator
+- Generated clients accept null resource parameters
+
+## Documentation
+- Clarify optional resource null handling in protocol and typed input validation docs
+
 # Tue Feb 17 2026 - version 0.27.0
 ## Ruby server
 - Enforce strict typed input coercion and ActiveRecord ID validation (invalid values now return validation errors)

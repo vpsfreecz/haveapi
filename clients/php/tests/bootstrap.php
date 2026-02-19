@@ -26,7 +26,21 @@ class ClientTestServer
             escapeshellarg($script)
         );
 
-        $env = array_merge($_SERVER, $_ENV, ['BUNDLE_GEMFILE' => $gemfile]);
+        $env = [];
+
+        foreach ($_ENV as $k => $v) {
+            if (is_scalar($v)) {
+                $env[$k] = (string) $v;
+            }
+        }
+
+        foreach ($_SERVER as $k => $v) {
+            if (!isset($env[$k]) && is_scalar($v)) {
+                $env[$k] = (string) $v;
+            }
+        }
+
+        $env['BUNDLE_GEMFILE'] = $gemfile;
 
         if (!isset($env['PATH']) || $env['PATH'] === '') {
             $path = getenv('PATH');

@@ -223,6 +223,18 @@ final class ClientIntegrationTest extends TestCase
         }, 'project', 'not a valid resource id');
     }
 
+    public function testOptionalResourceNullIsAccepted(): void
+    {
+        $api = new \HaveAPI\Client(self::$baseUrl);
+        $api->authenticate('basic', ['user' => 'user', 'password' => 'pass']);
+
+        $resp = $api->test->echo_resource_optional(['project' => null]);
+        $this->assertTrue($resp->isOk());
+        $this->assertTrue($resp['project_provided']);
+        $this->assertTrue($resp['project_nil']);
+        $this->assertFalse(isset($resp['project']));
+    }
+
     private function assertValidationError(callable $fn, string $param, string $message): void
     {
         try {

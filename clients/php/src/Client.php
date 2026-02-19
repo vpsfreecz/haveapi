@@ -481,6 +481,10 @@ class Client extends Client\Resource
             }
 
             if ($value === null) {
+                if (($descParamsArr[$name]->type ?? null) === 'Resource') {
+                    continue;
+                }
+
                 unset($params[$name]);
                 continue;
             }

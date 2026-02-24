@@ -75,6 +75,11 @@ module HaveAPI::Parameters
     def clean(raw)
       return instance_exec(raw, &@clean) if @clean
 
+      if raw.is_a?(String)
+        stripped = raw.strip
+        return nil if stripped.empty? && optional?
+      end
+
       if raw.nil?
         @default
 

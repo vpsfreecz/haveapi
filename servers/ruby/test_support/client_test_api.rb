@@ -457,6 +457,54 @@ module HaveAPI
           end
         end
 
+        define_action(:EchoOptional) do
+          extend DocFilter
+          route 'echo_optional'
+          http_method :post
+          input(:hash) do
+            datetime :dt, required: false
+          end
+          output(:hash) do
+            bool :dt_provided, required: true
+            bool :dt_nil, required: true
+            datetime :dt
+          end
+          authorize { allow }
+
+          def exec
+            ret = {
+              dt_provided: input.has_key?(:dt),
+              dt_nil: input[:dt].nil?
+            }
+            ret[:dt] = input[:dt] unless input[:dt].nil?
+            ret
+          end
+        end
+
+        define_action(:EchoOptionalGet) do
+          extend DocFilter
+          route 'echo_optional_get'
+          http_method :get
+          input(:hash) do
+            datetime :dt, required: false
+          end
+          output(:hash) do
+            bool :dt_provided, required: true
+            bool :dt_nil, required: true
+            datetime :dt
+          end
+          authorize { allow }
+
+          def exec
+            ret = {
+              dt_provided: input.has_key?(:dt),
+              dt_nil: input[:dt].nil?
+            }
+            ret[:dt] = input[:dt] unless input[:dt].nil?
+            ret
+          end
+        end
+
         define_action(:EchoResource) do
           extend DocFilter
           route 'echo_resource'

@@ -78,10 +78,13 @@ describe 'Parameters::Typed' do
     expect(p.clean(12.0)).to eq(12)
     expect { p.clean('abc') }.to raise_error(HaveAPI::ValidationError)
     expect { p.clean('12abc') }.to raise_error(HaveAPI::ValidationError)
-    expect { p.clean('') }.to raise_error(HaveAPI::ValidationError)
+    expect(p.clean('')).to be_nil
     expect { p.clean('12.0') }.to raise_error(HaveAPI::ValidationError)
     expect { p.clean(12.3) }.to raise_error(HaveAPI::ValidationError)
     expect { p.clean(true) }.to raise_error(HaveAPI::ValidationError)
+
+    p = p_arg(type: Integer, required: true)
+    expect { p.clean('') }.to raise_error(HaveAPI::ValidationError)
 
     # Float
     p = p_type(Float)
@@ -89,10 +92,13 @@ describe 'Parameters::Typed' do
     expect(p.clean('1e3')).to eq(1000.0)
     expect(p.clean(3)).to eq(3.0)
     expect { p.clean('abc') }.to raise_error(HaveAPI::ValidationError)
-    expect { p.clean('') }.to raise_error(HaveAPI::ValidationError)
+    expect(p.clean('')).to be_nil
     expect { p.clean('NaN') }.to raise_error(HaveAPI::ValidationError)
     expect { p.clean(Float::NAN) }.to raise_error(HaveAPI::ValidationError)
     expect { p.clean(Float::INFINITY) }.to raise_error(HaveAPI::ValidationError)
+
+    p = p_arg(type: Float, required: true)
+    expect { p.clean('') }.to raise_error(HaveAPI::ValidationError)
 
     # Boolean
     p = p_type(Boolean)
@@ -109,8 +115,11 @@ describe 'Parameters::Typed' do
     expect(p.clean(1)).to be true
     expect(p.clean('  YES ')).to be true
     expect { p.clean('maybe') }.to raise_error(HaveAPI::ValidationError)
-    expect { p.clean('') }.to raise_error(HaveAPI::ValidationError)
+    expect(p.clean('')).to be_nil
     expect { p.clean(2) }.to raise_error(HaveAPI::ValidationError)
+
+    p = p_arg(type: Boolean, required: true)
+    expect { p.clean('') }.to raise_error(HaveAPI::ValidationError)
 
     # Datetime
     p = p_type(Datetime)
@@ -119,6 +128,9 @@ describe 'Parameters::Typed' do
 
     expect(p.clean(t.iso8601)).to eq(t2)
     expect { p.clean('bzz') }.to raise_error(HaveAPI::ValidationError)
+    expect(p.clean('')).to be_nil
+
+    p = p_arg(type: Datetime, required: true)
     expect { p.clean('') }.to raise_error(HaveAPI::ValidationError)
 
     # String, Text

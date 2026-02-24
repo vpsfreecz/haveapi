@@ -235,6 +235,30 @@ final class ClientIntegrationTest extends TestCase
         $this->assertFalse(isset($resp['project']));
     }
 
+    public function testOptionalTypedNullIsAccepted(): void
+    {
+        $api = new \HaveAPI\Client(self::$baseUrl);
+        $api->authenticate('basic', ['user' => 'user', 'password' => 'pass']);
+
+        $resp = $api->test->echo_optional(['dt' => null]);
+        $this->assertTrue($resp->isOk());
+        $this->assertTrue($resp['dt_provided']);
+        $this->assertTrue($resp['dt_nil']);
+        $this->assertFalse(isset($resp['dt']));
+    }
+
+    public function testOptionalTypedNullIsAcceptedViaGet(): void
+    {
+        $api = new \HaveAPI\Client(self::$baseUrl);
+        $api->authenticate('basic', ['user' => 'user', 'password' => 'pass']);
+
+        $resp = $api->test->echo_optional_get(['dt' => null]);
+        $this->assertTrue($resp->isOk());
+        $this->assertTrue($resp['dt_provided']);
+        $this->assertTrue($resp['dt_nil']);
+        $this->assertFalse(isset($resp['dt']));
+    }
+
     private function assertValidationError(callable $fn, string $param, string $message): void
     {
         try {

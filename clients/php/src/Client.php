@@ -347,6 +347,11 @@ class Client extends Client\Resource
         if ($action && $this->sendAsQueryParams($action->httpMethod())) {
             foreach ($params as $ns => $arr) {
                 foreach ($arr as $k => $v) {
+                    if ($v === null) {
+                        $this->queryParams[ $ns . "[$k]" ] = '';
+                        continue;
+                    }
+
                     $this->queryParams[ $ns . "[$k]" ] = $v;
                 }
             }
@@ -481,11 +486,6 @@ class Client extends Client\Resource
             }
 
             if ($value === null) {
-                if (($descParamsArr[$name]->type ?? null) === 'Resource') {
-                    continue;
-                }
-
-                unset($params[$name]);
                 continue;
             }
 

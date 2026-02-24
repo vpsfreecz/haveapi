@@ -119,4 +119,22 @@ RSpec.describe HaveAPI::Client::Client do
     expect(res[:project_nil]).to be(true)
     expect(res[:project]).to be_nil
   end
+
+  it 'accepts nil for optional typed params' do
+    res = client.test.echo_optional(dt: nil)
+
+    expect(res).to be_a(HaveAPI::Client::Response)
+    expect(res[:dt_provided]).to be(true)
+    expect(res[:dt_nil]).to be(true)
+    expect(res[:dt]).to be_nil
+  end
+
+  it 'accepts nil for optional typed params via GET' do
+    res = client.test.echo_optional_get(dt: nil)
+
+    expect(res).to be_a(HaveAPI::Client::Response)
+    expect(res[:dt_provided]).to be(true)
+    expect(res[:dt_nil]).to be(true)
+    expect(res[:dt]).to be_nil
+  end
 end

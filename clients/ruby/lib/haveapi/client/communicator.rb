@@ -140,19 +140,13 @@ module HaveAPI::Client
         get_params = {}
 
         params.each do |k, v|
-          desc = action.input_params&.[](k) || action.input_params&.[](k.to_sym)
-
           get_params["#{input_namespace}[#{k}]"] =
-            if v.nil? && desc&.[](:type) == 'Resource'
-              ''
-            else
-              v
-            end
+            v.nil? ? '' : v
         end
 
         if meta
           meta.each do |k, v|
-            get_params["_meta[#{k}]"] = v # FIXME: read _meta namespace from the description
+            get_params["_meta[#{k}]"] = v.nil? ? '' : v # FIXME: read _meta namespace from the description
           end
         end
 

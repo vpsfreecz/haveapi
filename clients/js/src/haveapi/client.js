@@ -552,10 +552,7 @@ Client.prototype.addParamsToQuery = function(url, namespace, params, paramDesc) 
 		var value = params[key];
 
 		if (value === null) {
-			if (paramDesc && paramDesc.hasOwnProperty(key) && paramDesc[key].type === 'Resource')
-				value = '';
-			else
-				continue;
+			value = '';
 		} else if (value === undefined) {
 			continue;
 		}

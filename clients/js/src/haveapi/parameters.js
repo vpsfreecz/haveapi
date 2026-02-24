@@ -110,8 +110,7 @@ Parameters.prototype.coerceParams = function (params) {
 			continue;
 
 		if (v === null) {
-			if (input[p].type === 'Resource')
-				ret[p] = null;
+			ret[p] = null;
 			continue;
 		}
 

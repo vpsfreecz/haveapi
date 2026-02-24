@@ -156,6 +156,54 @@ RSpec.describe HaveAPI::GoClient::Generator do
           }
         }
 
+        func TestEchoOptionalAcceptsNil(t *testing.T) {
+          c := newValidationClient()
+          req := c.Test.EchoOptional.Prepare()
+          in := req.NewInput()
+          in.SetDtNil(true)
+
+          resp, err := req.Call()
+          if err != nil {
+            t.Fatalf("request failed: %v", err)
+          }
+
+          if !resp.Status {
+            t.Fatalf("request failed: %s", resp.Message)
+          }
+
+          if !resp.Output.DtNil {
+            t.Fatalf("expected DtNil=true, got false")
+          }
+
+          if !resp.Output.DtProvided {
+            t.Fatalf("expected DtProvided=true, got false")
+          }
+        }
+
+        func TestEchoOptionalGetAcceptsNil(t *testing.T) {
+          c := newValidationClient()
+          req := c.Test.EchoOptionalGet.Prepare()
+          in := req.NewInput()
+          in.SetDtNil(true)
+
+          resp, err := req.Call()
+          if err != nil {
+            t.Fatalf("request failed: %v", err)
+          }
+
+          if !resp.Status {
+            t.Fatalf("request failed: %s", resp.Message)
+          }
+
+          if !resp.Output.DtNil {
+            t.Fatalf("expected DtNil=true, got false")
+          }
+
+          if !resp.Output.DtProvided {
+            t.Fatalf("expected DtProvided=true, got false")
+          }
+        }
+
         func TestEchoAcceptsValidInput(t *testing.T) {
           c := newValidationClient()
           req := c.Test.Echo.Prepare()

@@ -6,6 +6,15 @@ module HaveAPI::GoClient
       !%w[Custom Resource].include?(desc[:type])
     end
 
+    def initialize(io, name, desc)
+      super
+      @required = desc[:required]
+    end
+
+    def nillable?
+      @required != true
+    end
+
     protected
 
     def do_resolve

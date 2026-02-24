@@ -579,17 +579,25 @@ func (inv *<%= action.go_invocation_type %>) convertInputToQueryParams(ret map[s
 }
 <% end -%>
 
-<% if action.http_method == 'GET' && action.metadata.has_global_input? -%>
-func (inv *<%= action.go_invocation_type %>) convertMetaInputToQueryParams(ret map[string]string) {
-	if inv.MetaInput != nil {
-<% action.metadata.global.input.parameters.each do |p| -%>
-		if inv.IsMetaParameterSelected("<%= p.go_name %>") {
-			ret["<%= action.resource.api_version.metadata_namespace %>[<%= p.name %>]"] = <% if p.go_in_type == 'string' %>inv.MetaInput.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.MetaInput.<%= p.go_name %>)<% end %>
+	<% if action.http_method == 'GET' && action.metadata.has_global_input? -%>
+	func (inv *<%= action.go_invocation_type %>) convertMetaInputToQueryParams(ret map[string]string) {
+		if inv.MetaInput != nil {
+	<% action.metadata.global.input.parameters.each do |p| -%>
+			if inv.IsMetaParameterSelected("<%= p.go_name %>") {
+	<% if p.nillable? -%>
+				if inv.IsMetaParameterNil("<%= p.go_name %>") {
+					ret["<%= action.resource.api_version.metadata_namespace %>[<%= p.name %>]"] = ""
+				} else {
+					ret["<%= action.resource.api_version.metadata_namespace %>[<%= p.name %>]"] = <% if p.go_in_type == 'string' %>inv.MetaInput.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.MetaInput.<%= p.go_name %>)<% end %>
+				}
+	<% else -%>
+				ret["<%= action.resource.api_version.metadata_namespace %>[<%= p.name %>]"] = <% if p.go_in_type == 'string' %>inv.MetaInput.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.MetaInput.<%= p.go_name %>)<% end %>
+	<% end -%>
+			}
+	<% end -%>
 		}
-<% end -%>
 	}
-}
-<% end -%>
+	<% end -%>
 
 <% if action.http_method != 'GET' && (action.has_input? || action.metadata.has_global_input?) -%>
 func (inv *<%= action.go_invocation_type %>) makeAllInputParams() *<%= action.go_request_type %> {
@@ -627,19 +635,27 @@ func (inv *<%= action.go_invocation_type %>) makeInputParams() map[string]interf
 }
 <% end -%>
 
-<% if action.metadata.has_global_input? -%>
-func (inv *<%= action.go_invocation_type %>) makeMetaInputParams() map[string]interface{} {
-	ret := make(map[string]interface{})
+	<% if action.metadata.has_global_input? -%>
+	func (inv *<%= action.go_invocation_type %>) makeMetaInputParams() map[string]interface{} {
+		ret := make(map[string]interface{})
 
-	if inv.MetaInput != nil {
-<% action.metadata.global.input.parameters.each do |p| -%>
-		if inv.IsMetaParameterSelected("<%= p.go_name %>") {
-			ret["<%= p.name %>"] = inv.MetaInput.<%= p.go_name %>
+		if inv.MetaInput != nil {
+	<% action.metadata.global.input.parameters.each do |p| -%>
+			if inv.IsMetaParameterSelected("<%= p.go_name %>") {
+	<% if p.nillable? -%>
+				if inv.IsMetaParameterNil("<%= p.go_name %>") {
+					ret["<%= p.name %>"] = nil
+				} else {
+					ret["<%= p.name %>"] = inv.MetaInput.<%= p.go_name %>
+				}
+	<% else -%>
+				ret["<%= p.name %>"] = inv.MetaInput.<%= p.go_name %>
+	<% end -%>
+			}
+	<% end -%>
 		}
-<% end -%>
-	}
 
-	return ret
+		return ret
 }
 <% end -%>
 <% end -%>

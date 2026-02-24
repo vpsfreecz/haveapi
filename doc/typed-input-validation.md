@@ -7,11 +7,20 @@ Invalid values MUST NOT be silently coerced into defaults like `0`, `0.0`, or `f
 
 ## General rules
 - Scalars only for scalar types: arrays/lists and objects/hashes are invalid for scalar types.
-- `null`/`nil` means "value omitted" (server defaults may apply).
+- `null`/`nil` means "value omitted" for validation purposes (server defaults may apply),
+  but explicit `null` is still a valid value for optional parameters. Clients MUST preserve
+  explicit `null` (send it as JSON `null`) so actions can distinguish "omitted" vs
+  "explicitly cleared".
 - Empty strings (`""` or whitespace-only strings) are invalid for Integer, Float, Boolean, and Datetime.
-  For Resource IDs, empty/whitespace is invalid when the parameter is required; optional Resource
-  parameters treat empty/whitespace as `null`/omitted to support query-string input.
+  For optional typed parameters (including Resource IDs), empty/whitespace is treated as
+  `null`/omitted, which lets query-string inputs represent explicit `null`.
 - Client-side validation is recommended; the server is authoritative.
+
+Query-string example (explicit `null` for optional typed param):
+
+    GET /resource/action?resource[dt]=
+
+The empty value is treated as `null` for optional typed parameters.
 
 ## Per-type rules with examples
 

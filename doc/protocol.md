@@ -242,6 +242,14 @@ The type can be one of:
 Typed input parameters MUST be validated strictly by servers and clients. Query parameters arrive as
 strings and must be parsed before validation. Canonical rules and examples are documented in
 [Typed input validation](typed-input-validation.md).
+For optional parameters, explicit `null` is allowed and MUST be preserved by clients
+(send JSON `null`) so the server can distinguish between omitted and explicitly cleared values.
+When using query-string input, explicit `null` is encoded as an empty string; servers treat
+empty/whitespace as `null` for optional typed parameters.
+
+Example (query string, optional typed param set to `null`):
+
+    GET /resource/action?resource[dt]=
 
         "<parameter_name>": {
             "required": true/false/null,

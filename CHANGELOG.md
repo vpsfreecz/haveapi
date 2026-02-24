@@ -1,3 +1,22 @@
+# Tue Feb 24 2026 - version 0.27.2
+## Ruby server
+- Accept empty query values for optional typed params
+
+## Ruby client
+- Send nil as empty query values
+
+## JavaScript client
+- Send null as empty query values
+
+## PHP client
+- Send null as empty query values
+
+## Go client generator
+- Generated clients accept nil for optional typed params
+
+## Documentation
+- Document query null encoding
+
 # Thu Feb 19 2026 - version 0.27.1
 ## Ruby server
 - Allow optional resource parameters to be blank (treated as nil)

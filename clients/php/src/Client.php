@@ -485,12 +485,24 @@ class Client extends Client\Resource
                 continue;
             }
 
+            $pdesc = $descParamsArr[$name];
+            $nullable = ($pdesc->nullable ?? false) === true;
+
             if ($value === null) {
+                if (!$nullable && (($pdesc->required ?? false) !== true)) {
+                    $errors[$name][] = 'cannot be null';
+                }
+
+                continue;
+            }
+
+            if (is_string($value) && trim($value) === '' && $nullable) {
+                $params[$name] = null;
                 continue;
             }
 
             try {
-                $params[$name] = $this->coerceTypedValue($descParamsArr[$name]->type, $value);
+                $params[$name] = $this->coerceTypedValue($pdesc->type, $value);
             } catch (\InvalidArgumentException $e) {
                 $errors[$name][] = $e->getMessage();
             }

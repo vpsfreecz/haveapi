@@ -2424,16 +2424,25 @@ Parameters.prototype.coerceParams = function (params) {
 			continue;
 
 		var v = params[p];
+		var desc = input[p];
 
 		if (v === undefined)
 			continue;
 
 		if (v === null) {
+			if (desc.nullable === true)
+				ret[p] = null;
+			else
+				this._addTypeError(p, 'cannot be null');
+			continue;
+		}
+
+		if (typeof v === 'string' && v.trim() === '' && desc.nullable === true) {
 			ret[p] = null;
 			continue;
 		}
 
-		switch (input[p].type) {
+		switch (desc.type) {
 			case 'Resource':
 				var resourceId = v;
 

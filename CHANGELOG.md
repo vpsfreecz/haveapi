@@ -1,3 +1,22 @@
+# Thu Feb 26 2026 - version 0.27.3
+## Ruby server
+- Allow null inputs only when parameters are marked nullable
+
+## Ruby client
+- Send null inputs only when parameters are marked nullable
+
+## JavaScript client
+- Send null inputs only when parameters are marked nullable
+
+## PHP client
+- Send null inputs only when parameters are marked nullable
+
+## Go client generator
+- Generated clients use nullable for nillable parameters
+
+## Documentation
+- Document nullable input behavior
+
 # Tue Feb 24 2026 - version 0.27.2
 ## Ruby server
 - Accept empty query values for optional typed params

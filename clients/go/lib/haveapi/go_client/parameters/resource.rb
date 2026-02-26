@@ -10,8 +10,13 @@ module HaveAPI::GoClient
     # @return [Parameters::Association]
     attr_reader :association
 
+    def initialize(io, name, desc)
+      super
+      @nullable = desc[:nullable] == true
+    end
+
     def nillable?
-      true
+      @nullable == true
     end
 
     protected

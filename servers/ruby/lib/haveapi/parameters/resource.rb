@@ -5,7 +5,7 @@ module HaveAPI::Parameters
 
     def initialize(resource, name: nil, label: nil, desc: nil,
                    choices: nil, value_id: :id, value_label: :label, required: nil,
-                   db_name: nil, fetch: nil)
+                   db_name: nil, fetch: nil, nullable: nil)
       @resource = resource
       @resource_path = build_resource_path(resource)
       @name = name || resource.resource_name.underscore.to_sym
@@ -15,6 +15,7 @@ module HaveAPI::Parameters
       @value_id = value_id
       @value_label = value_label
       @required = required
+      @nullable = nullable
       @db_name = db_name
       @extra = {
           fetch:
@@ -31,6 +32,10 @@ module HaveAPI::Parameters
 
     def optional?
       !@required
+    end
+
+    def nullable?
+      @nullable == true && optional?
     end
 
     def show_action
@@ -56,6 +61,7 @@ module HaveAPI::Parameters
 
       {
         required: required?,
+        nullable: nullable?,
         label: @label,
         description: @desc,
         type: 'Resource',
@@ -92,12 +98,18 @@ module HaveAPI::Parameters
     end
 
     def clean(raw)
-      if raw.is_a?(String)
-        stripped = raw.strip
-        return nil if stripped.empty? && optional?
+      if raw.nil?
+        return nil if nullable?
+
+        raise HaveAPI::ValidationError, 'cannot be null'
       end
 
-      extra = @extra.merge(optional: optional?)
+      if raw.is_a?(String)
+        stripped = raw.strip
+        return nil if stripped.empty? && nullable?
+      end
+
+      extra = @extra.merge(optional: optional?, nullable: nullable?)
 
       ::HaveAPI::ModelAdapter.for(
         show_action.input.layout, @resource.model

@@ -85,10 +85,11 @@ module HaveAPI::Resources
         float :timeout, label: 'Timeout', desc: 'in seconds', default: 15, fill: true
         float :update_in, label: 'Progress',
                           desc: 'number of seconds after which the state is returned if the progress ' \
-                                'has changed'
-        bool :status, desc: 'status to check with if update_in is set'
-        integer :current, desc: 'progress to check with if update_in is set'
-        integer :total, desc: 'progress to check with if update_in is set'
+                                'has changed',
+                          nullable: true
+        bool :status, desc: 'status to check with if update_in is set', nullable: true
+        integer :current, desc: 'progress to check with if update_in is set', nullable: true
+        integer :total, desc: 'progress to check with if update_in is set', nullable: true
       end
 
       output(:hash) do

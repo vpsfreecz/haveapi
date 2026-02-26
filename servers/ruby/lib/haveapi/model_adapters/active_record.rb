@@ -142,15 +142,22 @@ module HaveAPI::ModelAdapters
 
     class Input < ::HaveAPI::ModelAdapter::Input
       def self.clean(model, raw, extra)
-        return nil if raw.nil?
-
         original = raw
+        allow_null = if extra
+                       extra.has_key?(:nullable) ? extra[:nullable] : extra[:optional]
+                     end
+
+        if raw.nil?
+          return nil if allow_null
+
+          raise HaveAPI::ValidationError, "not a valid id #{original.inspect}"
+        end
 
         if raw.is_a?(String)
           stripped = raw.strip
 
           if stripped.empty?
-            return nil if extra && extra[:optional]
+            return nil if allow_null
 
             raise HaveAPI::ValidationError, "not a valid id #{original.inspect}"
           end

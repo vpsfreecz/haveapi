@@ -462,7 +462,7 @@ module HaveAPI
           route 'echo_optional'
           http_method :post
           input(:hash) do
-            datetime :dt, required: false
+            datetime :dt, required: false, nullable: true
           end
           output(:hash) do
             bool :dt_provided, required: true
@@ -486,7 +486,7 @@ module HaveAPI
           route 'echo_optional_get'
           http_method :get
           input(:hash) do
-            datetime :dt, required: false
+            datetime :dt, required: false, nullable: true
           end
           output(:hash) do
             bool :dt_provided, required: true
@@ -527,7 +527,7 @@ module HaveAPI
           route 'echo_resource_optional'
           http_method :get
           input(:hash) do
-            resource HaveAPI::ClientTestAPI::Resources::Project, required: false
+            resource HaveAPI::ClientTestAPI::Resources::Project, required: false, nullable: true
           end
           output(:hash) do
             bool :project_provided, required: true

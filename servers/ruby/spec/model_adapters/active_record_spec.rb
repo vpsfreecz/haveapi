@@ -343,8 +343,8 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
     expect(described_class::Input.clean(ARAdapterSpec::Environment, 1, {})).to eq(environment)
     expect(described_class::Input.clean(ARAdapterSpec::Environment, '1', {})).to eq(environment)
     expect(described_class::Input.clean(ARAdapterSpec::Environment, 1.0, {})).to eq(environment)
-    expect(described_class::Input.clean(ARAdapterSpec::Environment, '', { optional: true })).to be_nil
-    expect(described_class::Input.clean(ARAdapterSpec::Environment, '   ', { optional: true })).to be_nil
+    expect(described_class::Input.clean(ARAdapterSpec::Environment, '', { nullable: true })).to be_nil
+    expect(described_class::Input.clean(ARAdapterSpec::Environment, '   ', { nullable: true })).to be_nil
 
     expect do
       described_class::Input.clean(ARAdapterSpec::Environment, 'abc', {})

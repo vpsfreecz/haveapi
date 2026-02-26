@@ -2,7 +2,7 @@ require 'date'
 
 module HaveAPI::Parameters
   class Typed
-    ATTRIBUTES = %i[label desc type db_name default fill clean protected load_validators].freeze
+    ATTRIBUTES = %i[label desc type db_name default fill clean protected load_validators nullable].freeze
 
     attr_reader :name, :label, :desc, :type, :default
 
@@ -36,6 +36,10 @@ module HaveAPI::Parameters
       !required?
     end
 
+    def nullable?
+      @nullable == true && optional?
+    end
+
     def fill?
       @fill
     end
@@ -47,6 +51,7 @@ module HaveAPI::Parameters
     def describe(context)
       {
         required: required?,
+        nullable: nullable?,
         label: @label,
         description: @desc,
         type: @type ? @type.to_s : String.to_s,
@@ -75,15 +80,18 @@ module HaveAPI::Parameters
     def clean(raw)
       return instance_exec(raw, &@clean) if @clean
 
-      if raw.is_a?(String)
-        stripped = raw.strip
-        return nil if stripped.empty? && optional?
+      if raw.nil?
+        return nil if nullable?
+
+        raise HaveAPI::ValidationError, 'cannot be null'
       end
 
-      if raw.nil?
-        @default
+      if raw.is_a?(String)
+        stripped = raw.strip
+        return nil if stripped.empty? && nullable?
+      end
 
-      elsif @type.nil?
+      if @type.nil?
         nil
 
       elsif @type == Integer

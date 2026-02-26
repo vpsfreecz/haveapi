@@ -8,11 +8,11 @@ module HaveAPI::GoClient
 
     def initialize(io, name, desc)
       super
-      @required = desc[:required]
+      @nullable = desc[:nullable] == true
     end
 
     def nillable?
-      @required != true
+      @nullable == true
     end
 
     protected

@@ -8,19 +8,19 @@ Invalid values MUST NOT be silently coerced into defaults like `0`, `0.0`, or `f
 ## General rules
 - Scalars only for scalar types: arrays/lists and objects/hashes are invalid for scalar types.
 - `null`/`nil` means "value omitted" for validation purposes (server defaults may apply),
-  but explicit `null` is still a valid value for optional parameters. Clients MUST preserve
-  explicit `null` (send it as JSON `null`) so actions can distinguish "omitted" vs
-  "explicitly cleared".
+  but explicit `null` is a valid value only for parameters marked `nullable` (usually optional).
+  Clients MUST preserve explicit `null` (send it as JSON `null`) so actions can distinguish
+  "omitted" vs "explicitly cleared".
 - Empty strings (`""` or whitespace-only strings) are invalid for Integer, Float, Boolean, and Datetime.
-  For optional typed parameters (including Resource IDs), empty/whitespace is treated as
+  For nullable typed parameters (including Resource IDs), empty/whitespace is treated as
   `null`/omitted, which lets query-string inputs represent explicit `null`.
 - Client-side validation is recommended; the server is authoritative.
 
-Query-string example (explicit `null` for optional typed param):
+Query-string example (explicit `null` for nullable typed param):
 
     GET /resource/action?resource[dt]=
 
-The empty value is treated as `null` for optional typed parameters.
+The empty value is treated as `null` for nullable typed parameters.
 
 ## Per-type rules with examples
 
@@ -89,7 +89,7 @@ Accept:
 - integer id
 - digit-string id after trim
 - (some clients) ResourceInstance -> uses its `id`
-- empty/whitespace string is treated as `null`/omitted when the parameter is optional
+- empty/whitespace string is treated as `null`/omitted when the parameter is nullable
 
 Reject:
 - empty/whitespace string for required parameters
@@ -110,3 +110,4 @@ Recommended canonical messages used by clients:
 - `not in ISO 8601 format`
 - `not a valid string`
 - `not a valid resource id`
+- `cannot be null`

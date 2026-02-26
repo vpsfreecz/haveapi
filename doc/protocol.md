@@ -242,10 +242,12 @@ The type can be one of:
 Typed input parameters MUST be validated strictly by servers and clients. Query parameters arrive as
 strings and must be parsed before validation. Canonical rules and examples are documented in
 [Typed input validation](typed-input-validation.md).
-For optional parameters, explicit `null` is allowed and MUST be preserved by clients
-(send JSON `null`) so the server can distinguish between omitted and explicitly cleared values.
-When using query-string input, explicit `null` is encoded as an empty string; servers treat
-empty/whitespace as `null` for optional typed parameters.
+Explicit `null` is allowed only for parameters marked `nullable` (typically optional) and MUST
+be preserved by clients (send JSON `null`) so the server can distinguish between omitted and
+explicitly cleared values. When using query-string input, explicit `null` is encoded as an
+empty string; servers treat empty/whitespace as `null` only for nullable typed parameters.
+For non-nullable parameters, empty strings are validated normally (string/text can be empty,
+other types reject empty).
 
 Example (query string, optional typed param set to `null`):
 
@@ -253,6 +255,7 @@ Example (query string, optional typed param set to `null`):
 
         "<parameter_name>": {
             "required": true/false/null,
+            "nullable": true/false,
             "label": "Label for this parameter",
             "description": "Describe it's meaning",
             "type": "<one of the data types>",
@@ -388,6 +391,7 @@ This is used for associations between resources, e.g. car has a wheel.
 
     "<parameter_name>": {
         "required": true/false/null,
+        "nullable": true/false,
         "label": "Label for this parameter",
         "description": "Describe it's meaning",
         "type": "Resource",
@@ -411,7 +415,7 @@ a hash containing associated resource ID and its label, so that clients
 can show the human-friendly label instead of just an ID.
 
 For input parameters of type `Resource`, empty/whitespace input is treated as
-`null`/omitted when the parameter is optional. Required resource parameters
+`null`/omitted only when the parameter is nullable. Required resource parameters
 still reject empty/whitespace input.
 
     "<parameter_name>": {

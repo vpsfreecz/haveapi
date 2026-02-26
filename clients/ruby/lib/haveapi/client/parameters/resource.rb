@@ -4,6 +4,7 @@ module HaveAPI::Client
 
     def initialize(params, desc, value)
       @errors = []
+      @desc = desc
       @value = coerce(value)
     end
 
@@ -18,7 +19,19 @@ module HaveAPI::Client
     protected
 
     def coerce(v)
-      return nil if v.nil?
+      if v.nil?
+        return nil if @desc[:nullable]
+
+        @errors << 'cannot be null'
+        return nil
+      end
+
+      if v.is_a?(::String) && v.strip.empty?
+        return nil if @desc[:nullable]
+
+        @errors << 'not a valid resource id'
+        return nil
+      end
 
       if !v.is_a?(::Integer) && /\A\d+\z/ !~ v
         @errors << 'not a valid resource id'

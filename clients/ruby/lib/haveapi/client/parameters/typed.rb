@@ -32,7 +32,16 @@ module HaveAPI::Client
     protected
 
     def coerce(raw)
-      return nil if raw.nil?
+      if raw.nil?
+        return nil if @desc[:nullable]
+
+        @errors << 'cannot be null'
+        return nil
+      end
+
+      if raw.is_a?(::String) && raw.strip.empty? && @desc[:nullable]
+        return nil
+      end
 
       type = @desc[:type]
 

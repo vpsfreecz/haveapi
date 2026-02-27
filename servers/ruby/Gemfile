@@ -7,7 +7,7 @@ group :test do
   gem 'rack-test'
   gem 'rackup'
   gem 'rspec'
-  gem 'rubocop', require: false
+  gem 'rubocop', '~> 1.85.0', require: false
   gem 'rubocop-rspec', require: false
   gem 'webrick'
 

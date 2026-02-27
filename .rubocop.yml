@@ -53,7 +53,9 @@ Naming/HeredocDelimiterNaming:
   Enabled: false
 Naming/MethodParameterName:
   Enabled: false
-Naming/PredicateName:
+Naming/PredicateMethod:
+  Enabled: false
+Naming/PredicatePrefix:
   Enabled: false
 
 RSpec/ExampleLength:
@@ -87,6 +89,8 @@ Style/MultilineBlockChain:
 Style/NumericPredicate:
   Enabled: true
   EnforcedStyle: comparison
+Style/OneClassPerFile:
+  Enabled: false
 Style/PreferredHashMethods:
   Enabled: true
   EnforcedStyle: verbose

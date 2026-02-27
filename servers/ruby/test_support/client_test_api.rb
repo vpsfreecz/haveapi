@@ -270,6 +270,7 @@ module HaveAPI
 
         define_action(:Index, superclass: HaveAPI::Actions::Default::Index) do
           extend DocFilter
+
           resolve { |obj| obj[:id] }
           output(:object_list) { use :all }
           authorize { allow }
@@ -285,6 +286,7 @@ module HaveAPI
 
         define_action(:Show, superclass: HaveAPI::Actions::Default::Show) do
           extend DocFilter
+
           resolve { |obj| obj[:id] }
           output(:object) { use :all }
           authorize { allow }
@@ -298,6 +300,7 @@ module HaveAPI
 
         define_action(:Create, superclass: HaveAPI::Actions::Default::Create) do
           extend DocFilter
+
           resolve { |obj| obj[:id] }
           input(:hash) do
             string :name, required: true
@@ -324,6 +327,7 @@ module HaveAPI
 
           define_action(:Index, superclass: HaveAPI::Actions::Default::Index) do
             extend DocFilter
+
             resolve { |obj| [obj[:project_id], obj[:id]] }
             output(:object_list) { use :all }
             authorize { allow }
@@ -339,6 +343,7 @@ module HaveAPI
 
           define_action(:Show, superclass: HaveAPI::Actions::Default::Show) do
             extend DocFilter
+
             resolve { |obj| [obj[:project_id], obj[:id]] }
             output(:object) { use :all }
             authorize { allow }
@@ -352,6 +357,7 @@ module HaveAPI
 
           define_action(:Create, superclass: HaveAPI::Actions::Default::Create) do
             extend DocFilter
+
             resolve { |obj| [obj[:project_id], obj[:id]] }
             input(:hash) do
               string :label, required: true
@@ -371,6 +377,7 @@ module HaveAPI
 
           define_action(:Update, superclass: HaveAPI::Actions::Default::Update) do
             extend DocFilter
+
             resolve { |obj| [obj[:project_id], obj[:id]] }
             input(:hash) do
               bool :done
@@ -391,6 +398,7 @@ module HaveAPI
 
           define_action(:Run) do
             extend DocFilter
+
             route '{task_id}/run'
             http_method :post
             blocking true
@@ -420,6 +428,7 @@ module HaveAPI
 
         define_action(:Fail) do
           extend DocFilter
+
           route 'fail'
           http_method :get
           output(:hash) {}
@@ -432,6 +441,7 @@ module HaveAPI
 
         define_action(:Echo) do
           extend DocFilter
+
           route 'echo'
           http_method :post
           input(:hash) do
@@ -459,6 +469,7 @@ module HaveAPI
 
         define_action(:EchoOptional) do
           extend DocFilter
+
           route 'echo_optional'
           http_method :post
           input(:hash) do
@@ -483,6 +494,7 @@ module HaveAPI
 
         define_action(:EchoOptionalGet) do
           extend DocFilter
+
           route 'echo_optional_get'
           http_method :get
           input(:hash) do
@@ -507,6 +519,7 @@ module HaveAPI
 
         define_action(:EchoResource) do
           extend DocFilter
+
           route 'echo_resource'
           http_method :post
           input(:hash) do
@@ -524,6 +537,7 @@ module HaveAPI
 
         define_action(:EchoResourceOptional) do
           extend DocFilter
+
           route 'echo_resource_optional'
           http_method :get
           input(:hash) do

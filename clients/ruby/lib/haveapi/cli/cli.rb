@@ -72,7 +72,7 @@ module HaveAPI::CLI
         end
 
         if (sep = ARGV.index('--'))
-          cmd_opt.parse!(ARGV[sep + 1..])
+          cmd_opt.parse!(ARGV[(sep + 1)..])
         end
 
         c.exec(args[2..] || [])
@@ -80,7 +80,7 @@ module HaveAPI::CLI
         exit
       end
 
-      if args.count == 1
+      if args.one?
         describe_resource(resources)
         exit
       end
@@ -374,7 +374,7 @@ module HaveAPI::CLI
 
       return {} unless sep
 
-      @action_opt.parse!(ARGV[sep + 1..])
+      @action_opt.parse!(ARGV[(sep + 1)..])
 
       options
     end

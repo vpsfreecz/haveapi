@@ -94,7 +94,7 @@ module HaveAPI::ClientExamples
       out << "$reply = $api->#{resource_path.join('->')}->#{action_name}"
       out << "(#{args.join(', ')});\n"
 
-      return (out << response(sample)) if sample[:status]
+      return out << response(sample) if sample[:status]
 
       out << '// Throws exception \\HaveAPI\\Client\\Exception\\ActionFailed'
       out

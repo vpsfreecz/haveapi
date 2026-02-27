@@ -55,7 +55,7 @@ module HaveAPI::ClientExamples
       out << "reply = client.#{resource_path.join('.')}.#{action_name}"
       out << "(#{args.join(', ')})" unless args.empty?
 
-      return (out << response(sample)) if sample[:status]
+      return out << response(sample) if sample[:status]
 
       out << "\n"
       out << '# Raises exception HaveAPI::Client::ActionFailed'

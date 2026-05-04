@@ -27,10 +27,21 @@
 - For JS or other clients, add minimal repro scripts or harnesses near the component root if formal tests are absent, and document how to run them.
 
 ## Commit & Pull Request Guidelines
-- Follow the project’s concise commit style: `area: change` (e.g., `servers/ruby: fix token auth`, `clients/js: rebuild dist`). Squash noise; keep each commit scoped.
+- Follow the project’s concise commit style: `area: change` (e.g.,
+  `servers/ruby: fix token auth`, `clients/js: rebuild dist`). Squash noise;
+  keep each commit scoped.
+- Commit messages must say what is changing and why. Describe the problem in
+  the body and summarize the solution.
+- Wrap commit message subject and body lines at 80 characters.
 - Overcommit git hooks must be passing, i.e. reported issues must be resolved.
-- PRs should state purpose, affected components, and test evidence (`bundle exec rspec`, `gulp`, etc.). Link issues when relevant and note backward-compatibility or API surface changes.
-- Avoid mixing version bumps with feature changes; use `make version` to update the shared `VERSION` value when coordinating releases.
+  Do not bypass hooks with `--no-verify`, `SKIP=...`, `LEFTHOOK=0`, or similar.
+- Write commit messages through a temporary file and commit with
+  `git commit -F`.
+- PRs should state purpose, affected components, and test evidence
+  (`bundle exec rspec`, `gulp`, etc.). Link issues when relevant and note
+  backward-compatibility or API surface changes.
+- Avoid mixing version bumps with feature changes; use `make version` to update
+  the shared `VERSION` value when coordinating releases.
 
 ## Branches
 - `master` branch contains the latest development version.

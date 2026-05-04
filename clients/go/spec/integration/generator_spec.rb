@@ -24,7 +24,11 @@ RSpec.describe HaveAPI::GoClient::Generator do
       File.write(File.join(dir, 'client', 'client_integration_test.go'), <<~GO)
         package client
 
-        import "testing"
+        import (
+          "net/http"
+          "testing"
+          "time"
+        )
 
         func TestProjectList(t *testing.T) {
           c := New("#{base_url}")
@@ -41,6 +45,28 @@ RSpec.describe HaveAPI::GoClient::Generator do
 
           if len(resp.Output) < 2 {
             t.Fatalf("expected at least 2 projects, got %d", len(resp.Output))
+          }
+        }
+
+        func TestClientTimeout(t *testing.T) {
+          c := New("#{base_url}")
+          c.SetBasicAuthentication("user", "pass")
+          c.SetTimeout(10 * time.Millisecond)
+
+          _, err := c.Test.Slow.Prepare().Call()
+          if err == nil {
+            t.Fatalf("expected timeout error, got nil")
+          }
+        }
+
+        func TestClientHTTPClient(t *testing.T) {
+          c := New("#{base_url}")
+          c.SetBasicAuthentication("user", "pass")
+          c.SetHTTPClient(&http.Client{Timeout: 10 * time.Millisecond})
+
+          _, err := c.Test.Slow.Prepare().Call()
+          if err == nil {
+            t.Fatalf("expected timeout error, got nil")
           }
         }
       GO

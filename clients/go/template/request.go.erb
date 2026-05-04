@@ -10,7 +10,6 @@ import (
 // DoQueryStringRequests makes a HTTP requests in which input parameters are
 // sent as query parameters.
 func (client *Client) DoQueryStringRequest(path string, queryParams map[string]string, output interface{}) error {
-	httpClient := &http.Client{}
 	url := client.Url + path
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -31,7 +30,7 @@ func (client *Client) DoQueryStringRequest(path string, queryParams map[string]s
 
 	req.URL.RawQuery = q.Encode()
 
-	resp, err := httpClient.Do(req)
+	resp, err := client.do(req)
 
 	if err != nil {
 		return err
@@ -54,7 +53,6 @@ func (client *Client) DoQueryStringRequest(path string, queryParams map[string]s
 // DoBodyRequest makes a HTTP requests in which the input parameters are sent
 // within the request body, encoded in JSON.
 func (client *Client) DoBodyRequest(method string, path string, params interface{}, output interface{}) error {
-	httpClient := &http.Client{}
 	url := client.Url + path
 
 	jsonData, err := json.Marshal(params)
@@ -75,7 +73,7 @@ func (client *Client) DoBodyRequest(method string, path string, params interface
 		client.Authentication.Authenticate(req)
 	}
 
-	resp, err := httpClient.Do(req)
+	resp, err := client.do(req)
 
 	if err != nil {
 		return err

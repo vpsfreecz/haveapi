@@ -96,8 +96,8 @@ func (auth *TokenAuth) setDefaultOptions(options *TokenAuthOptions) {
 func (auth *TokenAuth) nextAuthenticationStep(options *TokenAuthOptions, action string, token string) error {
 <% auth.custom_actions.each do |a| -%>
 	if action == "<%= a.name %>" {
-		action := auth.Resource.<%= a.go_name %>.Prepare()
-		input := action.NewInput()
+		request := auth.Resource.<%= a.go_name %>.Prepare()
+		input := request.NewInput()
 		input.SetToken(token)
 
 		if options.<%= "#{a.go_name}Callback" %> == nil {
@@ -108,7 +108,7 @@ func (auth *TokenAuth) nextAuthenticationStep(options *TokenAuthOptions, action 
 			return fmt.Errorf("<%= "#{a.go_name}Callback" %> failed: %v", err)
 		}
 
-		resp, err := action.Call()
+		resp, err := request.Call()
 
 		if err != nil {
 			return err

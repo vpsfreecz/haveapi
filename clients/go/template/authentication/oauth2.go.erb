@@ -24,8 +24,6 @@ func (client *Client) SetExistingOAuth2Auth(accessToken string) {
 // RevokeAuthToken will revoke the access token and remove authentication
 // from the client
 func (client *Client) RevokeAccessToken() error {
-	httpClient := &http.Client{}
-
 	req, err := http.NewRequest("POST", "<%= auth.revoke_url %>", nil)
 
 	if err != nil {
@@ -36,7 +34,7 @@ func (client *Client) RevokeAccessToken() error {
 		client.Authentication.Authenticate(req)
 	}
 
-	resp, err := httpClient.Do(req)
+	resp, err := client.do(req)
 
 	if err != nil {
 		return err

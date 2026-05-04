@@ -439,6 +439,20 @@ module HaveAPI
           end
         end
 
+        define_action(:Slow) do
+          extend DocFilter
+
+          route 'slow'
+          http_method :get
+          output(:hash) {}
+          authorize { allow }
+
+          def exec
+            sleep 1
+            {}
+          end
+        end
+
         define_action(:Echo) do
           extend DocFilter
 

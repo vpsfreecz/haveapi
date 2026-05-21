@@ -7,10 +7,14 @@
 - `templates/` holds starter projects; `dist/` is for build artifacts; `utils/` contains helper scripts (e.g., doc sync).
 
 ## Build, Test, and Development Commands
-- Each component has a `shell.nix` file. Use `nix-shell` to enter individual environments. From within the shell, standard language tools are used.
-- The top-level directory also has a `shell.nix` file, which is used for tree-wide work, e.g. making new releases.
+- Use `nix develop` from the top-level directory for tree-wide work, e.g. making new releases.
+- Component development shells are available as `nix develop .#server-ruby`,
+  `nix develop .#client-ruby`, `nix develop .#client-js`,
+  `nix develop .#client-go`, and
+  `nix develop .#example-ruby-activerecord-auth`. From within the shell,
+  standard language tools are used.
 - Sync documentation into server packages with `make doc`.
-- Run the full suite from repo root with `make test` (install deps first or use `nix-shell`; this starts local test servers and needs permission to bind localhost ports).
+- Run the full suite from repo root with `make test` (install deps first or use `nix develop`; this starts local test servers and needs permission to bind localhost ports).
 - Ruby server tests: from `servers/ruby`, run `bundle exec rspec` or `bundle exec rake spec`.
 - JS client build: from `clients/js`, run `./node_modules/.bin/gulp` after installing deps to refresh `dist/haveapi-client.js`.
 - PHP client tests: from `clients/php`, run `composer install` then `php vendor/bin/phpunit`; this boots a local Ruby test server from `servers/ruby/test_support/client_test_server.rb` and needs permission to bind a localhost port.
@@ -53,9 +57,9 @@
 - When releasing a patch version, work within the release branch.
 - `make version VERSION=<major>.<minor>.<patch>` will update versions of all components.
 - Update `CHANGELOG.md` and add a brief description of changes for each component. If there are no changes to a component, it is not mentioned.
-- Always run `make release` and `make publish` from within the top-level `nix-shell` so the correct toolchain is used; running them outside nix can produce build failures or mismatched Ruby versions.
-- `make release` will build artifacts of all components. Run it inside `nix-shell`.
-- `make publish` will upload the built artifacts to package repositories, e.g. rubygems.org, npmjs.com, etc. Run it inside `nix-shell` and always ask before publishing a new version.
+- Always run `make release` and `make publish` from within the top-level `nix develop` shell so the correct toolchain is used; running them outside nix can produce build failures or mismatched Ruby versions.
+- `make release` will build artifacts of all components. Run it inside `nix develop`.
+- `make publish` will upload the built artifacts to package repositories, e.g. rubygems.org, npmjs.com, etc. Run it inside `nix develop` and always ask before publishing a new version.
 
 ## PHP client irregularity
 - The PHP client at `clients/php/` must be released separately due to a restriction in `composer` -- it does not support monorepos, the PHP package is expected to live in the top-level directory.

@@ -5,7 +5,7 @@ VERSION=$(shell cat VERSION)
 doc:
 	./utils/copydoc.sh servers/*
 
-# Run component test suites (install deps first or use nix-shell).
+# Run component test suites (install deps first or use nix develop).
 test:
 	cd servers/ruby && bundle exec rspec
 	cd clients/ruby && bundle exec rspec

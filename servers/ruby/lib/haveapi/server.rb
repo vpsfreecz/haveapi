@@ -172,10 +172,14 @@ module HaveAPI
         return ret if validators.nil?
 
         validators.each do |name, opts|
-          ret += "<h5>#{name.to_s.capitalize}</h5>"
+          ret += "<h5>#{escape_html(name.to_s.capitalize)}</h5>"
           ret += '<dl>'
-          opts.each do |k, v|
-            ret += "<dt>#{k}</dt><dd>#{escape_html(v.to_s)}</dd>"
+          if opts.respond_to?(:each_pair)
+            opts.each_pair do |k, v|
+              ret += "<dt>#{escape_html(k)}</dt><dd>#{escape_html(v.to_s)}</dd>"
+            end
+          else
+            ret += "<dt>description</dt><dd>#{escape_html(opts.to_s)}</dd>"
           end
           ret += '</dl>'
         end
@@ -349,7 +353,11 @@ module HaveAPI
             halt 404
           end
 
-          @sidebar = erb :"doc_sidebars/#{f}"
+          begin
+            @sidebar = erb :"doc_sidebars/#{f}"
+          rescue Errno::ENOENT
+            @sidebar = ''
+          end
         end
       end
 

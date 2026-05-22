@@ -27,6 +27,10 @@ describe 'Documentation' do
       define_action(:Update, superclass: HaveAPI::Actions::Default::Update) do
         desc 'Update user'
         authorize { allow }
+
+        input(:hash) do
+          string :otp, validate: 'verified by MFA backend'
+        end
       end
     end
 
@@ -173,10 +177,19 @@ describe 'Documentation' do
     expect(last_response.body).to include('HaveAPI documentation')
   end
 
+  it 'has online index doc page without a sidebar template' do
+    get '/doc/index'
+
+    expect(last_response.status).to eq(200)
+    expect(last_response.headers['Content-Type']).to include('text/html')
+    expect(last_response.body).to include('HaveAPI documentation')
+  end
+
   it 'has online doc for every version' do
     get '/v1/'
     expect(last_response.status).to eq(200)
     expect(last_response.headers['Content-Type']).to include('text/html')
+    expect(last_response.body).to include('verified by MFA backend')
 
     get '/v2/'
     expect(last_response.status).to eq(200)

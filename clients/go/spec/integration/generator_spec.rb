@@ -52,6 +52,18 @@ RSpec.describe HaveAPI::GoClient::Generator do
     }
   end
 
+  def action_description(method:, path:, aliases: [], input: nil, output: nil, meta: {}, blocking: false)
+    {
+      aliases:,
+      input:,
+      output:,
+      method:,
+      path:,
+      meta:,
+      blocking:
+    }
+  end
+
   it 'generates a client that compiles and can call the API' do
     Dir.mktmpdir('haveapi-go-client-') do |dir|
       cmd = [
@@ -411,6 +423,143 @@ RSpec.describe HaveAPI::GoClient::Generator do
             t.Fatalf("expected authentication to be cleared after revoke")
           }
         }
+      GO
+
+      go_out, go_err, go_status = Open3.capture3(
+        { 'CGO_ENABLED' => '0' },
+        'go',
+        'test',
+        './...',
+        chdir: dir
+      )
+      expect(go_status).to be_success, "go test failed: #{go_out}\n#{go_err}"
+    end
+  end
+
+  it 'escapes untrusted API descriptions when generating Go source' do
+    injected_path = <<~PATH.chomp
+      /safe",
+      \t}
+      }
+
+      func init() {
+      \tpanic("generated code executed from API description")
+      }
+
+      func (action *ActionVictimList) unused() *ActionVictimListInvocation {
+      \treturn &ActionVictimListInvocation{
+      \t\tAction: action,
+      \t\tPath: "/safe
+    PATH
+
+    injected_name = "bad\"\nfunc init() { panic(\"name\") }\n"
+    injected_method = "POST\"\nfunc init() { panic(\"method\") }\n"
+    injected_auth = "X-Token\"\nfunc init() { panic(\"auth\") }\n"
+
+    malicious_description = {
+      authentication: {
+        oauth2: {
+          http_header: injected_auth,
+          revoke_url: "https://auth.example/revoke\"\nfunc init() { panic(\"revoke\") }\n"
+        }
+      },
+      meta: { namespace: "_meta#{injected_name}" },
+      resources: {
+        action_state: {
+          resources: {},
+          actions: {
+            show: action_description(
+              method: 'GET',
+              path: '/action_states/{action_state_id}',
+              output: {
+                layout: 'object',
+                namespace: 'action_state',
+                parameters: { id: { type: 'Integer' } }
+              }
+            ),
+            poll: action_description(
+              method: 'GET',
+              path: '/action_states/{action_state_id}/poll',
+              output: {
+                layout: 'object',
+                namespace: 'action_state',
+                parameters: { finished: { type: 'Boolean' } }
+              }
+            )
+          }
+        },
+        victim: {
+          resources: {},
+          actions: {
+            list: action_description(method: 'GET', path: injected_path)
+          }
+        },
+        injected_name => {
+          resources: {},
+          actions: {
+            injected_name => action_description(
+              method: injected_method,
+              path: "/#{injected_name}",
+              aliases: [injected_name],
+              input: {
+                layout: 'object',
+                namespace: "input#{injected_name}",
+                parameters: {
+                  injected_name => { type: 'String', nullable: true }
+                }
+              },
+              output: {
+                layout: 'object',
+                namespace: "output#{injected_name}",
+                parameters: {
+                  injected_name => { type: 'String' }
+                }
+              },
+              meta: {
+                global: {
+                  input: {
+                    layout: 'object',
+                    namespace: "meta#{injected_name}",
+                    parameters: {
+                      "meta#{injected_name}" => { type: 'String' }
+                    }
+                  }
+                }
+              }
+            )
+          }
+        }
+      }
+    }
+
+    Dir.mktmpdir('haveapi-go-client-injection-') do |dir|
+      communicator = instance_double(
+        HaveAPI::Client::Communicator,
+        describe_api: malicious_description
+      )
+      allow(HaveAPI::Client::Communicator).to receive(:new).and_return(communicator)
+
+      generator = described_class.new(
+        'http://unused.example',
+        dir,
+        module: 'example.com/haveapi-injection',
+        package: 'client'
+      )
+      generator.generate
+      generator.go_fmt
+
+      generated_sources = Dir[File.join(dir, 'client', '*.go')].map do |path|
+        File.read(path)
+      end.join("\n")
+
+      expect(generated_sources).not_to match(/^\s*func init\(\)/)
+
+      File.write(File.join(dir, 'client', 'package_load_test.go'), <<~GO)
+        package client
+
+        import "testing"
+
+        func TestGeneratedPackageLoads(t *testing.T) {}
       GO
 
       go_out, go_err, go_status = Open3.capture3(

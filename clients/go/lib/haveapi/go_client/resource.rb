@@ -16,6 +16,10 @@ module HaveAPI::GoClient
     # @return [String]
     attr_reader :full_name
 
+    # Safe full name for generated filenames
+    # @return [String]
+    attr_reader :file_name
+
     # Full name with dots
     # @return [String]
     attr_reader :full_dot_name
@@ -41,6 +45,7 @@ module HaveAPI::GoClient
       @name = name.to_s
       @prefix = prefix
       @full_name = resource_path.map(&:name).join('_')
+      @file_name = resource_path.map { |r| safe_file_component(r.name) }.join('_')
       @full_dot_name = resource_path.map(&:name).map(&:capitalize).join('.')
       @go_name = camelize(name)
       @go_type = full_go_type
@@ -89,7 +94,7 @@ module HaveAPI::GoClient
           package: gen.package,
           resource: self
         },
-        File.join(gen.dst, prefix_underscore("resource_#{full_name}.go"))
+        File.join(gen.dst, prefix_underscore("resource_#{file_name}.go"))
       )
 
       resources.each { |r| r.generate(gen) }
@@ -101,7 +106,7 @@ module HaveAPI::GoClient
             package: gen.package,
             action: a
           },
-          File.join(gen.dst, prefix_underscore("resource_#{full_name}_action_#{a.name}.go"))
+          File.join(gen.dst, prefix_underscore("resource_#{file_name}_action_#{a.file_name}.go"))
         )
       end
     end

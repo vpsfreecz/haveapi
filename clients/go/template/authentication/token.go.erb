@@ -8,10 +8,10 @@ import (
 type Mode int
 
 const (
-	// Send the token via HTTP header <%= auth.http_header %>
+	// Send the token via HTTP header <%= go_comment_text(auth.http_header) %>
 	HttpHeader Mode = iota
 
-	// Send the token via query parameter <%= auth.query_parameter %>
+	// Send the token via query parameter <%= go_comment_text(auth.query_parameter) %>
 	QueryParameter = iota
 )
 
@@ -29,11 +29,11 @@ type TokenAuth struct {
 func (auth *TokenAuth) Authenticate(request *http.Request) {
 	switch auth.Mode {
 	case HttpHeader:
-		request.Header.Set("<%= auth.http_header %>", auth.Token)
+		request.Header.Set(<%= go_string_literal(auth.http_header) %>, auth.Token)
 
 	case QueryParameter:
 		q := request.URL.Query()
-		q.Add("<%= auth.query_parameter %>", auth.Token)
+		q.Add(<%= go_string_literal(auth.query_parameter) %>, auth.Token)
 		request.URL.RawQuery = q.Encode()
 	}
 }
@@ -95,17 +95,17 @@ func (auth *TokenAuth) setDefaultOptions(options *TokenAuthOptions) {
 // the authentication is completed
 func (auth *TokenAuth) nextAuthenticationStep(options *TokenAuthOptions, action string, token string) error {
 <% auth.custom_actions.each do |a| -%>
-	if action == "<%= a.name %>" {
+	if action == <%= go_string_literal(a.name) %> {
 		request := auth.Resource.<%= a.go_name %>.Prepare()
 		input := request.NewInput()
 		input.SetToken(token)
 
 		if options.<%= "#{a.go_name}Callback" %> == nil {
-			return fmt.Errorf("Implement callback <%= "#{a.go_name}Callback" %>")
+			return fmt.Errorf(<%= go_string_literal("Implement callback #{a.go_name}Callback") %>)
 		}
 
 		if err := options.<%= "#{a.go_name}Callback" %>(input); err != nil {
-			return fmt.Errorf("<%= "#{a.go_name}Callback" %> failed: %v", err)
+			return fmt.Errorf(<%= go_string_literal("#{a.go_name}Callback failed: %v") %>, err)
 		}
 
 		resp, err := request.Call()

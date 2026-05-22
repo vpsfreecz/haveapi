@@ -6,7 +6,7 @@ import (
 <% end -%>
 )
 
-// <%= action.go_type %> is a type for action <%= action.full_dot_name %>
+// <%= action.go_type %> is a type for action <%= go_comment_text(action.full_dot_name) %>
 type <%= action.go_type %> struct {
 	// Pointer to client
 	Client *Client
@@ -22,7 +22,7 @@ func New<%= action.go_type %>(client *Client) *<%= action.go_type %> {
 // <%= action.metadata.global.input.go_type %> is a type for action global meta input parameters
 type <%= action.metadata.global.input.go_type %> struct {
 <% action.metadata.global.input.parameters.each do |p| -%>
-	<%= p.go_name %> <%= p.go_in_type %> `json:"<%= p.name %>"`
+	<%= p.go_name %> <%= p.go_in_type %> <%= go_json_tag(p.name) %>
 <% end -%>
 	// Only selected parameters are sent to the API. Ignored if empty.
 	_selectedParameters map[string]interface{}
@@ -42,7 +42,7 @@ func (in *<%= action.metadata.global.input.go_type %>) Set<%= p.go_name %>(value
 <% if p.nillable? -%>
 	in.Set<%= p.go_name %>Nil(false)
 <% end -%>
-	in._selectedParameters["<%= p.go_name %>"] = nil
+	in._selectedParameters[<%= go_string_literal(p.go_name) %>] = nil
 	return in
 }
 <% if p.nillable? -%>
@@ -57,10 +57,10 @@ func (in *<%= action.metadata.global.input.go_type %>) Set<%= p.go_name %>Nil(se
 	}
 
 	if set {
-		in._nilParameters["<%= p.go_name %>"] = nil
-		in.SelectParameters("<%= p.go_name %>")
+		in._nilParameters[<%= go_string_literal(p.go_name) %>] = nil
+		in.SelectParameters(<%= go_string_literal(p.go_name) %>)
 	} else {
-		delete(in._nilParameters, "<%= p.go_name %>")
+		delete(in._nilParameters, <%= go_string_literal(p.go_name) %>)
 	}
 	return in
 }
@@ -95,7 +95,7 @@ func (in *<%= action.metadata.global.input.go_type %>) AnySelected() bool {
 // <%= action.input.go_type %> is a type for action input parameters
 type <%= action.input.go_type %> struct {
 <% action.input.parameters.each do |p| -%>
-	<%= p.go_name %> <%= p.go_in_type %> `json:"<%= p.name %>"`
+	<%= p.go_name %> <%= p.go_in_type %> <%= go_json_tag(p.name) %>
 <% end -%>
 	// Only selected parameters are sent to the API. Ignored if empty.
 	_selectedParameters map[string]interface{}
@@ -115,7 +115,7 @@ func (in *<%= action.input.go_type %>) Set<%= p.go_name %>(value <%= p.go_in_typ
 <% if p.nillable? -%>
 	in.Set<%= p.go_name %>Nil(false)
 <% end -%>
-	in._selectedParameters["<%= p.go_name %>"] = nil
+	in._selectedParameters[<%= go_string_literal(p.go_name) %>] = nil
 	return in
 }
 <% if p.nillable? -%>
@@ -130,10 +130,10 @@ func (in *<%= action.input.go_type %>) Set<%= p.go_name %>Nil(set bool) *<%= act
 	}
 
 	if set {
-		in._nilParameters["<%= p.go_name %>"] = nil
-		in.SelectParameters("<%= p.go_name %>")
+		in._nilParameters[<%= go_string_literal(p.go_name) %>] = nil
+		in.SelectParameters(<%= go_string_literal(p.go_name) %>)
 	} else {
-		delete(in._nilParameters, "<%= p.go_name %>")
+		delete(in._nilParameters, <%= go_string_literal(p.go_name) %>)
 	}
 	return in
 }
@@ -183,10 +183,10 @@ func (in *<%= action.input.go_type %>) AnySelected() bool {
 // <%= action.go_request_type %> is a type for the entire action request
 type <%= action.go_request_type %> struct {
 <% if action.has_input? -%>
-	<%= action.input.go_namespace %> map[string]interface{} `json:"<%= action.input.namespace %>"`
+	<%= action.input.go_namespace %> map[string]interface{} <%= go_json_tag(action.input.namespace) %>
 <% end -%>
 <% if action.metadata.has_global_input? -%>
-	Meta map[string]interface{} `json:"<%= action.resource.api_version.metadata_namespace %>"`
+	Meta map[string]interface{} <%= go_json_tag(action.resource.api_version.metadata_namespace) %>
 <% end -%>
 }
 <% end -%>
@@ -196,9 +196,9 @@ type <%= action.go_request_type %> struct {
 type <%= action.output.go_type %> struct {
 <% action.output.parameters.each do |p| -%>
 <% if p.respond_to?(:association) -%>
-	<%= p.go_name %> *<%= p.go_out_type %> `json:"<%= p.name %>"`
+	<%= p.go_name %> *<%= p.go_out_type %> <%= go_json_tag(p.name) %>
 <% else -%>
-	<%= p.go_name %> <%= p.go_out_type %> `json:"<%= p.name %>"`
+	<%= p.go_name %> <%= p.go_out_type %> <%= go_json_tag(p.name) %>
 <% end -%>
 <% end -%>
 }
@@ -208,23 +208,23 @@ type <%= action.output.go_type %> struct {
 // <%= action.metadata.global.output.go_type %> is a type for global output metadata parameters
 type <%= action.metadata.global.output.go_type %> struct {
 <% action.metadata.global.output.parameters.each do |p| -%>
-	<%= p.go_name %> <%= p.go_out_type %> `json:"<%= p.name %>"`
+	<%= p.go_name %> <%= p.go_out_type %> <%= go_json_tag(p.name) %>
 <% end -%>
 }
 <% end -%>
 
 // Type for action response, including envelope
 type <%= action.go_response_type %> struct {
-	Action *<%= action.go_type %> `json:"-"`
+	Action *<%= action.go_type %> <%= go_json_tag('-') %>
 	*Envelope
 <% if action.has_output? -%>
 <% if %w(hash object).include?(action.output.layout) -%>
 	// Action output encapsulated within a namespace
 	Response *struct {
-		<%= action.output.go_namespace %> *<%= action.output.go_type %> `json:"<%= action.output.namespace %>"`
+		<%= action.output.go_namespace %> *<%= action.output.go_type %> <%= go_json_tag(action.output.namespace) %>
 <% if action.blocking? -%>
 		// Global output metadata
-		Meta *<%= action.metadata.global.output.go_type %> `json:"<%= action.resource.api_version.metadata_namespace %>"`
+		Meta *<%= action.metadata.global.output.go_type %> <%= go_json_tag(action.resource.api_version.metadata_namespace) %>
 <% end -%>
 	}
 
@@ -233,10 +233,10 @@ type <%= action.go_response_type %> struct {
 <% elsif %w(hash_list object_list).include?(action.output.layout) -%>
 	// Action output encapsulated within a namespace
 	Response *struct {
-		<%= action.output.go_namespace %> []*<%= action.output.go_type %> `json:"<%= action.output.namespace %>"`
+		<%= action.output.go_namespace %> []*<%= action.output.go_type %> <%= go_json_tag(action.output.namespace) %>
 <% if action.blocking? -%>
 		// Global output metadata
-		Meta *<%= action.metadata.global.output.go_type %> `json:"<%= action.resource.api_version.metadata_namespace %>"`
+		Meta *<%= action.metadata.global.output.go_type %> <%= go_json_tag(action.resource.api_version.metadata_namespace) %>
 <% end -%>
 	}
 
@@ -247,7 +247,7 @@ type <%= action.go_response_type %> struct {
 	// Action output encapsulated within a namespace
 	Response *struct {
 		// Global output metadata
-		Meta *<%= action.metadata.global.output.go_type %> `json:"<%= action.resource.api_version.metadata_namespace %>"`
+		Meta *<%= action.metadata.global.output.go_type %> <%= go_json_tag(action.resource.api_version.metadata_namespace) %>
 	}
 <% end -%>
 }
@@ -263,7 +263,7 @@ func (action *<%= action.go_type %>) Call() (*<%= action.go_response_type %>, er
 func (action *<%= action.go_type %>) Prepare() *<%= action.go_invocation_type%> {
 	return &<%= action.go_invocation_type %>{
 		Action: action,
-		Path: "<%= action.path %>",
+		Path: <%= go_string_literal(action.path) %>,
 	}
 }
 
@@ -371,23 +371,23 @@ func (inv *<%= action.go_invocation_type %>) validate() error {
 	if inv.Input != nil {
 <% action.input.parameters.each do |p| -%>
 <% if %w(Float Datetime Resource).include?(p.type) -%>
-		if inv.IsParameterSelected("<%= p.go_name %>") {
-			if !inv.IsParameterNil("<%= p.go_name %>") {
+		if inv.IsParameterSelected(<%= go_string_literal(p.go_name) %>) {
+			if !inv.IsParameterNil(<%= go_string_literal(p.go_name) %>) {
 <% if p.type == 'Float' -%>
-				if !isFiniteFloat64(inv.Input.<%= p.go_name %>) {
-					verr.Add("<%= p.name %>", "not a valid float")
-				}
+			if !isFiniteFloat64(inv.Input.<%= p.go_name %>) {
+				verr.Add(<%= go_string_literal(p.name) %>, "not a valid float")
+			}
 <% elsif p.type == 'Datetime' -%>
-				normalized, ok := normalizeAndCheckDatetimeString(inv.Input.<%= p.go_name %>)
-				if !ok {
-					verr.Add("<%= p.name %>", "not a valid datetime")
-				} else {
-					inv.Input.<%= p.go_name %> = normalized
-				}
+			normalized, ok := normalizeAndCheckDatetimeString(inv.Input.<%= p.go_name %>)
+			if !ok {
+				verr.Add(<%= go_string_literal(p.name) %>, "not a valid datetime")
+			} else {
+				inv.Input.<%= p.go_name %> = normalized
+			}
 <% elsif p.type == 'Resource' -%>
-				if inv.Input.<%= p.go_name %> < 0 {
-					verr.Add("<%= p.name %>", "not a valid resource id")
-				}
+			if inv.Input.<%= p.go_name %> < 0 {
+				verr.Add(<%= go_string_literal(p.name) %>, "not a valid resource id")
+			}
 <% end -%>
 			}
 		}
@@ -399,23 +399,23 @@ func (inv *<%= action.go_invocation_type %>) validate() error {
 	if inv.MetaInput != nil {
 <% action.metadata.global.input.parameters.each do |p| -%>
 <% if %w(Float Datetime Resource).include?(p.type) -%>
-		if inv.IsMetaParameterSelected("<%= p.go_name %>") {
-			if !inv.IsMetaParameterNil("<%= p.go_name %>") {
+		if inv.IsMetaParameterSelected(<%= go_string_literal(p.go_name) %>) {
+			if !inv.IsMetaParameterNil(<%= go_string_literal(p.go_name) %>) {
 <% if p.type == 'Float' -%>
-				if !isFiniteFloat64(inv.MetaInput.<%= p.go_name %>) {
-					verr.Add("<%= p.name %>", "not a valid float")
-				}
+			if !isFiniteFloat64(inv.MetaInput.<%= p.go_name %>) {
+				verr.Add(<%= go_string_literal(p.name) %>, "not a valid float")
+			}
 <% elsif p.type == 'Datetime' -%>
-				normalized, ok := normalizeAndCheckDatetimeString(inv.MetaInput.<%= p.go_name %>)
-				if !ok {
-					verr.Add("<%= p.name %>", "not a valid datetime")
-				} else {
-					inv.MetaInput.<%= p.go_name %> = normalized
-				}
+			normalized, ok := normalizeAndCheckDatetimeString(inv.MetaInput.<%= p.go_name %>)
+			if !ok {
+				verr.Add(<%= go_string_literal(p.name) %>, "not a valid datetime")
+			} else {
+				inv.MetaInput.<%= p.go_name %> = normalized
+			}
 <% elsif p.type == 'Resource' -%>
-				if inv.MetaInput.<%= p.go_name %> < 0 {
-					verr.Add("<%= p.name %>", "not a valid resource id")
-				}
+			if inv.MetaInput.<%= p.go_name %> < 0 {
+				verr.Add(<%= go_string_literal(p.name) %>, "not a valid resource id")
+			}
 <% end -%>
 			}
 		}
@@ -471,7 +471,7 @@ func (inv *<%= action.go_invocation_type %>) callAsBody() (*<%= action.go_respon
 	input := make(map[string]interface{})
 <% end -%>
 	resp := &<%= action.go_response_type %>{Action: inv.Action}
-	err := inv.Action.Client.DoBodyRequest("<%= action.http_method %>", inv.Path, input, resp)
+	err := inv.Action.Client.DoBodyRequest(<%= go_string_literal(action.http_method) %>, inv.Path, input, resp)
 <% if action.has_output? -%>
 	if err == nil && resp.Status {
 		resp.Output = resp.Response.<%= action.output.go_namespace %>
@@ -563,15 +563,15 @@ func (resp *<%= action.go_response_type %>) CancelOperation() (*ActionActionStat
 func (inv *<%= action.go_invocation_type %>) convertInputToQueryParams(ret map[string]string) {
 	if inv.Input != nil {
 	<% action.input.parameters.each do |p| -%>
-		if inv.IsParameterSelected("<%= p.go_name %>") {
+		if inv.IsParameterSelected(<%= go_string_literal(p.go_name) %>) {
 	<% if p.nillable? -%>
-			if inv.IsParameterNil("<%= p.go_name %>") {
-				ret["<%= action.input.namespace %>[<%= p.name %>]"] = ""
+			if inv.IsParameterNil(<%= go_string_literal(p.go_name) %>) {
+				ret[<%= go_query_key(action.input.namespace, p.name) %>] = ""
 			} else {
-				ret["<%= action.input.namespace %>[<%= p.name %>]"] = <% if p.go_in_type == 'string' %>inv.Input.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.Input.<%= p.go_name %>)<% end %>
+				ret[<%= go_query_key(action.input.namespace, p.name) %>] = <% if p.go_in_type == 'string' %>inv.Input.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.Input.<%= p.go_name %>)<% end %>
 			}
 	<% else -%>
-			ret["<%= action.input.namespace %>[<%= p.name %>]"] = <% if p.go_in_type == 'string' %>inv.Input.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.Input.<%= p.go_name %>)<% end %>
+			ret[<%= go_query_key(action.input.namespace, p.name) %>] = <% if p.go_in_type == 'string' %>inv.Input.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.Input.<%= p.go_name %>)<% end %>
 	<% end -%>
 		}
 	<% end -%>
@@ -583,15 +583,15 @@ func (inv *<%= action.go_invocation_type %>) convertInputToQueryParams(ret map[s
 	func (inv *<%= action.go_invocation_type %>) convertMetaInputToQueryParams(ret map[string]string) {
 		if inv.MetaInput != nil {
 	<% action.metadata.global.input.parameters.each do |p| -%>
-			if inv.IsMetaParameterSelected("<%= p.go_name %>") {
+			if inv.IsMetaParameterSelected(<%= go_string_literal(p.go_name) %>) {
 	<% if p.nillable? -%>
-				if inv.IsMetaParameterNil("<%= p.go_name %>") {
-					ret["<%= action.resource.api_version.metadata_namespace %>[<%= p.name %>]"] = ""
+				if inv.IsMetaParameterNil(<%= go_string_literal(p.go_name) %>) {
+					ret[<%= go_query_key(action.resource.api_version.metadata_namespace, p.name) %>] = ""
 				} else {
-					ret["<%= action.resource.api_version.metadata_namespace %>[<%= p.name %>]"] = <% if p.go_in_type == 'string' %>inv.MetaInput.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.MetaInput.<%= p.go_name %>)<% end %>
+					ret[<%= go_query_key(action.resource.api_version.metadata_namespace, p.name) %>] = <% if p.go_in_type == 'string' %>inv.MetaInput.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.MetaInput.<%= p.go_name %>)<% end %>
 				}
 	<% else -%>
-				ret["<%= action.resource.api_version.metadata_namespace %>[<%= p.name %>]"] = <% if p.go_in_type == 'string' %>inv.MetaInput.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.MetaInput.<%= p.go_name %>)<% end %>
+				ret[<%= go_query_key(action.resource.api_version.metadata_namespace, p.name) %>] = <% if p.go_in_type == 'string' %>inv.MetaInput.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.MetaInput.<%= p.go_name %>)<% end %>
 	<% end -%>
 			}
 	<% end -%>
@@ -617,15 +617,15 @@ func (inv *<%= action.go_invocation_type %>) makeInputParams() map[string]interf
 
 	if inv.Input != nil {
 <% action.input.parameters.each do |p| -%>
-		if inv.IsParameterSelected("<%= p.go_name %>") {
+		if inv.IsParameterSelected(<%= go_string_literal(p.go_name) %>) {
 <% if p.nillable? -%>
-			if inv.IsParameterNil("<%= p.go_name %>") {
-				ret["<%= p.name %>"] = nil
+			if inv.IsParameterNil(<%= go_string_literal(p.go_name) %>) {
+				ret[<%= go_string_literal(p.name) %>] = nil
 			} else {
-				ret["<%= p.name %>"] = inv.Input.<%= p.go_name %>
+				ret[<%= go_string_literal(p.name) %>] = inv.Input.<%= p.go_name %>
 			}
 <% else -%>
-			ret["<%= p.name %>"] = inv.Input.<%= p.go_name %>
+			ret[<%= go_string_literal(p.name) %>] = inv.Input.<%= p.go_name %>
 <% end -%>
 		}
 <% end -%>
@@ -641,15 +641,15 @@ func (inv *<%= action.go_invocation_type %>) makeInputParams() map[string]interf
 
 		if inv.MetaInput != nil {
 	<% action.metadata.global.input.parameters.each do |p| -%>
-			if inv.IsMetaParameterSelected("<%= p.go_name %>") {
+			if inv.IsMetaParameterSelected(<%= go_string_literal(p.go_name) %>) {
 	<% if p.nillable? -%>
-				if inv.IsMetaParameterNil("<%= p.go_name %>") {
-					ret["<%= p.name %>"] = nil
+				if inv.IsMetaParameterNil(<%= go_string_literal(p.go_name) %>) {
+					ret[<%= go_string_literal(p.name) %>] = nil
 				} else {
-					ret["<%= p.name %>"] = inv.MetaInput.<%= p.go_name %>
+					ret[<%= go_string_literal(p.name) %>] = inv.MetaInput.<%= p.go_name %>
 				}
 	<% else -%>
-				ret["<%= p.name %>"] = inv.MetaInput.<%= p.go_name %>
+				ret[<%= go_string_literal(p.name) %>] = inv.MetaInput.<%= p.go_name %>
 	<% end -%>
 			}
 	<% end -%>

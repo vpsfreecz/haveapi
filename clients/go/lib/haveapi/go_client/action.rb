@@ -15,6 +15,10 @@ module HaveAPI::GoClient
     # @return [Array<String>]
     attr_reader :aliases
 
+    # Safe name for generated filenames
+    # @return [String]
+    attr_reader :file_name
+
     # Full action name, including resource
     # @return [String]
     attr_reader :full_dot_name
@@ -58,6 +62,7 @@ module HaveAPI::GoClient
       @resource = resource
       @name = name.to_s
       @prefix = prefix
+      @file_name = safe_file_component(@name)
       @aliases = desc[:aliases]
       @full_dot_name = "#{resource.full_dot_name}##{@name.capitalize}"
       @go_name = camelize(name)
@@ -75,9 +80,8 @@ module HaveAPI::GoClient
 
     # Return action name with all aliases, camelized
     # @return [Array<String>]
-    def all_names
-      yield(go_name)
-      aliases.each { |v| yield(camelize(v)) }
+    def all_names(&)
+      ([go_name] + aliases.map { |v| camelize(v) }).uniq.each(&)
     end
 
     # @return [Boolean]

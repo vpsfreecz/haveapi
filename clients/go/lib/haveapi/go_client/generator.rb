@@ -1,8 +1,11 @@
 require 'fileutils'
 require 'haveapi/client'
+require 'haveapi/go_client/utils'
 
 module HaveAPI::GoClient
   class Generator
+    include Utils
+
     # Destination directory
     # @return [String]
     attr_reader :dst
@@ -23,8 +26,8 @@ module HaveAPI::GoClient
     # @option opts [String] :package
     def initialize(url, dst, opts)
       @dst = dst
-      @module = opts[:module]
-      @package = opts[:package]
+      @module = opts[:module] && go_module_path(opts[:module])
+      @package = go_package_name(opts[:package])
 
       conn = HaveAPI::Client::Communicator.new(url)
       if opts[:basic_user] && opts[:basic_password]

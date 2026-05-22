@@ -1,8 +1,11 @@
 require 'erb'
 require 'fileutils'
+require 'haveapi/go_client/utils'
 
 module HaveAPI::GoClient
   class ErbTemplate
+    include Utils
+
     def self.render(name, vars)
       t = new(name, vars)
       t.render

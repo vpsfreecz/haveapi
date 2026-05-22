@@ -13,7 +13,7 @@ type OAuth2Auth struct {
 }
 
 func (auth *OAuth2Auth) Authenticate(request *http.Request) {
-	request.Header.Set("<%= auth.http_header %>", auth.AccessToken)
+	request.Header.Set(<%= go_string_literal(auth.http_header) %>, auth.AccessToken)
 }
 
 // SetExistingOAuth2Auth will use a previously acquired access token
@@ -34,7 +34,7 @@ func (client *Client) RevokeAccessToken() error {
 	form := url.Values{}
 	form.Set("token", auth.AccessToken)
 
-	req, err := http.NewRequest("POST", "<%= auth.revoke_url %>", strings.NewReader(form.Encode()))
+	req, err := http.NewRequest("POST", <%= go_string_literal(auth.revoke_url) %>, strings.NewReader(form.Encode()))
 
 	if err != nil {
 		return err

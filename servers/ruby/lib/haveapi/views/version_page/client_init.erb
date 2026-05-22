@@ -1,2 +1,2 @@
 <h4><%= client.label %></h4>
-<pre><code class="<%= client.code %>"><%= client.init(host, base_url, api_version) %></code></pre>
+<pre><code class="<%= client.code %>"><%= escape_html(client.init(host, base_url, api_version)) %></code></pre>

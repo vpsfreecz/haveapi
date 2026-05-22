@@ -1,9 +1,11 @@
 <h1>Authentication</h1>
 <p class="authentication">
   <% if current_user %>
-      Logged as <%= current_user.login %> [<a class="logout" href="<%= logout_url %>">logout</a>]
+      Logged as <%= escape_html(current_user.login) %> [<a class="logout" href="<%= escape_html(logout_url) %>">logout</a>]
+  <% elsif @help[:authentication].any? %>
+      <a class="login btn btn-default" href="<%= escape_html(url("#{root}_login")) %>">Login</a>
   <% else %>
-      <a class="login btn btn-default" href="<%= url("#{root}_login") %>">Login</a>
+      Authentication disabled.
   <% end %>
 </p>
 <p>

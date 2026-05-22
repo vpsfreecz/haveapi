@@ -1,7 +1,7 @@
 <h1 id="api">API v<%= @v %></h1>
 
 <ol class="breadcrumb">
-  <li><a href="<%= root %>"><%= host %></a></li>
+  <li><a href="<%= escape_html(root) %>"><%= escape_html(host) %></a></li>
   <li class="active">v<%= @v %></li>
 </ol>
 
@@ -21,7 +21,7 @@
   <li><a href="https://github.com/vpsfreecz/haveapi-client-php" target="_blank">PHP</a></li>
   <li>
     <a href="https://github.com/vpsfreecz/haveapi-webui" target="_blank">Generic web interface</a>
-    (<a href="https://webui.haveapi.org/v<%= version %>/#<%= escape(base_url) %>" target="_blank">connect to this API</a>)
+    (<a href="https://webui.haveapi.org/v<%= version %>/#<%= urlescape(base_url) %>" target="_blank">connect to this API</a>)
   </li>
   <li><a href="https://github.com/vpsfreecz/haveapi-fs" target="_blank">FUSE-based file system</a></li>
 </ul>

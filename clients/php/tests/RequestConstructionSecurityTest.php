@@ -26,6 +26,33 @@ final class RequestConstructionSecurityTest extends TestCase
 
         $this->assertArrayNotHasKey('_meta', $parsed);
     }
+
+    public function testOAuth2RevocationParameterNamesAreEncoded(): void
+    {
+        $client = new RequestConstructionSecurityOAuthClient();
+        $description = (object) [
+            'revoke_url' => 'https://api.example/_auth/oauth2/revoke',
+        ];
+        $auth = new \HaveAPI\Client\Authentication\OAuth2($client, $description, []);
+
+        $auth->revokeToken([
+            'token=abc&token_type_hint' => 'refresh+token%value',
+        ]);
+
+        $this->assertSame(
+            'token%3Dabc%26token_type_hint=refresh%2Btoken%25value',
+            $client->lastRequest->bodyValue
+        );
+
+        parse_str($client->lastRequest->bodyValue, $parsed);
+
+        $this->assertArrayNotHasKey('token', $parsed);
+        $this->assertArrayNotHasKey('token_type_hint', $parsed);
+        $this->assertSame(
+            'refresh+token%value',
+            $parsed['token=abc&token_type_hint']
+        );
+    }
 }
 
 final class RequestConstructionSecurityTestClient extends \HaveAPI\Client
@@ -43,15 +70,40 @@ final class RequestConstructionSecurityTestClient extends \HaveAPI\Client
 final class RequestConstructionSecurityTestRequest
 {
     public $uri;
+    public $bodyValue;
+    public $sent = false;
 
     public function __construct($uri)
     {
         $this->uri = $uri;
     }
 
-    public function send()
+    public function sendsForm()
     {
         return $this;
+    }
+
+    public function body($body)
+    {
+        $this->bodyValue = $body;
+        return $this;
+    }
+
+    public function send()
+    {
+        $this->sent = true;
+        return $this;
+    }
+}
+
+final class RequestConstructionSecurityOAuthClient extends \HaveAPI\Client
+{
+    public $lastRequest;
+
+    public function getRequest($method, $url)
+    {
+        $this->lastRequest = new RequestConstructionSecurityTestRequest($url);
+        return $this->lastRequest;
     }
 }
 

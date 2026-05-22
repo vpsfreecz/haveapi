@@ -147,7 +147,7 @@ class OAuth2 extends Base
         $encodedParams = [];
 
         foreach ($params as $k => $v) {
-            $encodedParams[] = $k . "=" . urlencode($v);
+            $encodedParams[] = urlencode((string) $k) . "=" . urlencode((string) $v);
         }
 
         $request->body(implode('&', $encodedParams));

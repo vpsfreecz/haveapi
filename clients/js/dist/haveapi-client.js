@@ -30,6 +30,7 @@ function Client(url, opts) {
 		url: url,
 		version: (opts !== undefined && opts.version !== undefined) ? opts.version : null,
 		description: null,
+		attachedResourceNames: Object.create(null),
 		debug: (opts !== undefined && opts.debug !== undefined) ? opts.debug : 0,
 	};
 
@@ -58,11 +59,41 @@ Client.Version = '0.27.0';
 /** @constant HaveAPI.Client.ProtocolVersion */
 Client.ProtocolVersion = '2.0';
 
+Client.unsafeAttachmentNames = Object.create(null);
+Client.unsafeAttachmentNames['__proto__'] = true;
+Client.unsafeAttachmentNames['prototype'] = true;
+Client.unsafeAttachmentNames['constructor'] = true;
+
 /**
  * @namespace Exceptions
  * @memberof HaveAPI.Client
  */
 Client.Exceptions = {};
+
+Client.hasOwn = function(obj, prop) {
+	return Object.prototype.hasOwnProperty.call(obj, prop);
+};
+
+Client.canAttachDescriptionMember = function(target, name, reservedNames) {
+	if (typeof(name) !== 'string')
+		return false;
+
+	if (Client.hasOwn(Client.unsafeAttachmentNames, name))
+		return false;
+
+	if (reservedNames && Client.hasOwn(reservedNames, name))
+		return false;
+
+	return !(name in target);
+};
+
+Client.attachDescriptionMember = function(target, name, value, reservedNames) {
+	if (!Client.canAttachDescriptionMember(target, name, reservedNames))
+		return false;
+
+	target[name] = value;
+	return true;
+};
 
 /**
  * Resolve a URL from an API description and require it to stay on the
@@ -325,11 +356,16 @@ Client.prototype.attachResources = function() {
 		this.destroyResources();
 	}
 
+	this._private.attachedResourceNames = Object.create(null);
+
 	for(var r in this._private.description.resources) {
+		if (!Client.hasOwn(this._private.description.resources, r))
+			continue;
+
 		if (this._private.debug > 10)
 			console.log("Attach resource", r);
 
-		this[r] = new Client.Resource(
+		var resource = new Client.Resource(
 			this,
 			null,
 			r,
@@ -337,7 +373,10 @@ Client.prototype.attachResources = function() {
 			[]
 		);
 
-		this.resources.push(this[r]);
+		this.resources.push(resource);
+
+		if (Client.attachDescriptionMember(this, r, resource))
+			this._private.attachedResourceNames[r] = true;
 	}
 };
 
@@ -581,8 +620,18 @@ Client.prototype.createSettings = function() {
  */
 Client.prototype.destroyResources = function() {
 	while (this.resources.length > 0) {
-		delete this[ this.resources.shift().getName() ];
+		var resource = this.resources.shift();
+		var name = resource.getName();
+
+		if (
+			this._private.attachedResourceNames[name]
+			&& this[name] === resource
+		) {
+			delete this[name];
+		}
 	}
+
+	this._private.attachedResourceNames = Object.create(null);
 };
 
 /**
@@ -1221,6 +1270,12 @@ Authentication.Token.prototype.getCustomActionCredentials = function(action) {
  */
 function BaseResource (){};
 
+BaseResource.reservedAttachmentNames = Object.create(null);
+BaseResource.reservedAttachmentNames['_private'] = true;
+BaseResource.reservedAttachmentNames['resources'] = true;
+BaseResource.reservedAttachmentNames['actions'] = true;
+BaseResource.reservedAttachmentNames['new'] = true;
+
 /**
  * Attach child resources as properties.
  * @method HaveAPI.Client.BaseResource#attachResources
@@ -1232,8 +1287,14 @@ BaseResource.prototype.attachResources = function(description, args) {
 	this.resources = [];
 
 	for(var r in description.resources) {
-		this[r] = new Client.Resource(this._private.client, this, r, description.resources[r], args);
-		this.resources.push(this[r]);
+		if (!Client.hasOwn(description.resources, r))
+			continue;
+
+		var resource = new Client.Resource(this._private.client, this, r, description.resources[r], args);
+
+		this.resources.push(resource);
+
+		Client.attachDescriptionMember(this, r, resource, BaseResource.reservedAttachmentNames);
 	}
 };
 
@@ -1248,14 +1309,19 @@ BaseResource.prototype.attachActions = function(description, args) {
 	this.actions = [];
 
 	for(var a in description.actions) {
-		var names = [a].concat(description.actions[a].aliases);
+		if (!Client.hasOwn(description.actions, a))
+			continue;
+
+		var names = [a].concat(description.actions[a].aliases || []);
 		var actionInstance = new Client.Action(this._private.client, this, a, description.actions[a], args);
 
 		for(var i = 0; i < names.length; i++) {
-			if (names[i] == 'new')
-				continue;
-
-			this[names[i]] = actionInstance;
+			Client.attachDescriptionMember(
+				this,
+				names[i],
+				actionInstance,
+				BaseResource.reservedAttachmentNames
+			);
 		}
 
 		this.actions.push(a);

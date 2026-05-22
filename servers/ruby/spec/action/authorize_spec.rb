@@ -9,6 +9,10 @@ module AuthorizeSpec
     end
   end
 
+  class << self
+    attr_accessor :shared_hash_list
+  end
+
   class BasicProvider < HaveAPI::Authentication::Basic::Provider
     protected
 
@@ -120,6 +124,25 @@ describe AuthorizeSpec do
           items.select { |item| item[:owner_id] == restrictions[:owner_id] }
         end
       end
+
+      define_action(:HashList) do
+        route 'hash_list'
+        http_method :get
+
+        authorize do |user|
+          output blacklist: [:secret] unless user.admin?
+          allow
+        end
+
+        output(:hash_list) do
+          string :public
+          string :secret
+        end
+
+        def exec
+          AuthorizeSpec.shared_hash_list
+        end
+      end
     end
   end
 
@@ -135,6 +158,15 @@ describe AuthorizeSpec do
         'nested.hidden': 'hidden'
       }
     }
+  end
+
+  let(:full_hash_list) do
+    [
+      {
+        public: 'visible',
+        secret: 'admin-only'
+      }
+    ]
   end
 
   def call_get_action(resource, action, params = {})
@@ -224,6 +256,25 @@ describe AuthorizeSpec do
 
     expect(api_response).to be_ok
     expect(api_response[:item]).to have_key(:secret)
+  end
+
+  it 'does not mutate shared hash list output while filtering fields' do
+    described_class.shared_hash_list = full_hash_list.map(&:dup)
+
+    login('user', 'pass')
+    call_get_action([:Item], :hash_list, {})
+
+    expect(last_response.status).to eq(200)
+    expect(api_response).to be_ok
+    expect(api_response[:items]).to eq([{ public: 'visible' }])
+    expect(described_class.shared_hash_list).to eq(full_hash_list)
+
+    login('admin', 'pass')
+    call_get_action([:Item], :hash_list, {})
+
+    expect(last_response.status).to eq(200)
+    expect(api_response).to be_ok
+    expect(api_response[:items]).to eq(full_hash_list)
   end
 
   it 'restricts list results to the current user' do

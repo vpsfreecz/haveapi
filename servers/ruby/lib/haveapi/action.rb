@@ -444,8 +444,7 @@ module HaveAPI
             )
 
           when :hash_list
-            safe_ret = ret
-            safe_ret.map! do |hash|
+            safe_ret = ret.map do |hash|
               @authorization.filter_output(
                 out_params,
                 adapter.output(@context, hash),

@@ -37,6 +37,10 @@ module ARAdapterSpec
   class Invoice < ActiveRecord::Base
     belongs_to :hidden_account, class_name: 'ARAdapterSpec::HiddenAccount'
   end
+
+  class StringAccount < ActiveRecord::Base
+    self.primary_key = 'uuid'
+  end
 end
 
 describe HaveAPI::ModelAdapters::ActiveRecord do
@@ -264,6 +268,11 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
         t.string :label, null: false
         t.integer :hidden_account_id, null: false
       end
+
+      create_table :string_accounts, id: false do |t|
+        t.string :uuid, primary_key: true
+        t.string :label, null: false
+      end
     end
   end
 
@@ -273,6 +282,7 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
     ARAdapterSpec::Environment.delete_all
     ARAdapterSpec::Invoice.delete_all
     ARAdapterSpec::HiddenAccount.delete_all
+    ARAdapterSpec::StringAccount.delete_all
   end
 
   let(:dummy_action) do
@@ -496,6 +506,48 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
     expect do
       described_class::Input.clean(ARAdapterSpec::Environment, 9999, {})
     end.to raise_error(HaveAPI::ValidationError, /resource not found/)
+  end
+
+  it 'rejects nil results from non-nullable custom resource fetchers' do
+    fetch = proc { |id| find_by(id:) }
+
+    expect do
+      described_class::Input.clean(ARAdapterSpec::Environment, 9999, { fetch: })
+    end.to raise_error(HaveAPI::ValidationError, /resource not found/)
+
+    cleaned = described_class::Input.clean(
+      ARAdapterSpec::Environment,
+      9999,
+      { fetch:, nullable: true }
+    )
+    expect(cleaned).to be_nil
+  end
+
+  it 'rejects arrays and hashes for singular string primary-key resources' do
+    ARAdapterSpec::StringAccount.create!(uuid: 'acct-alpha', label: 'Alpha')
+    ARAdapterSpec::StringAccount.create!(uuid: 'acct-beta', label: 'Beta')
+
+    expect do
+      described_class::Input.clean(ARAdapterSpec::StringAccount, %w[acct-alpha acct-beta], {})
+    end.to raise_error(HaveAPI::ValidationError, /not a valid id/)
+
+    expect do
+      described_class::Input.clean(ARAdapterSpec::StringAccount, { id: 'acct-alpha' }, {})
+    end.to raise_error(HaveAPI::ValidationError, /not a valid id/)
+  end
+
+  it 'rejects non-string includes metadata entries' do
+    app
+    show_action = action_class(:User, :show)
+    includes_param = show_action.meta(:global).input[:includes]
+
+    expect do
+      includes_param.clean([{ bad: 'shape' }])
+    end.to raise_error(HaveAPI::ValidationError, /only strings/)
+  end
+
+  it 'keeps hash adapter resource cleaning compatible with adapter arguments' do
+    expect(HaveAPI::ModelAdapters::Hash::Input.clean({}, { id: 1 }, {})).to eq({ id: 1 })
   end
 
   it 'applies ascending pagination with with_pagination' do

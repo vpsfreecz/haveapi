@@ -11,7 +11,7 @@ module HaveAPI::ModelAdapters
     end
 
     class Input < ::HaveAPI::ModelAdapter::Input
-      def self.clean(model, raw)
+      def self.clean(model, raw, _extra = nil)
         raw
       end
     end

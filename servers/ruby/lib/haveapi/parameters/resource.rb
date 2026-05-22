@@ -105,7 +105,7 @@ module HaveAPI::Parameters
       end
 
       if raw.is_a?(String)
-        stripped = raw.strip
+        stripped = strip_string(raw)
         return nil if stripped.empty? && nullable?
       end
 
@@ -125,6 +125,12 @@ module HaveAPI::Parameters
     end
 
     private
+
+    def strip_string(value)
+      value.strip
+    rescue ArgumentError, Encoding::CompatibilityError
+      raise HaveAPI::ValidationError, 'invalid string encoding'
+    end
 
     def build_resource_path(r)
       path = []

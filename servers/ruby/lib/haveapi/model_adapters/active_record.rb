@@ -177,7 +177,9 @@ module HaveAPI::ModelAdapters
           raise HaveAPI::ValidationError, "not a valid id #{original.inspect}"
         end
 
-        if raw.is_a?(String)
+        if raw.is_a?(Array) || raw.is_a?(Hash) || [true, false].include?(raw)
+          raise HaveAPI::ValidationError, "not a valid id #{original.inspect}"
+        elsif raw.is_a?(String)
           stripped = raw.strip
 
           if stripped.empty?
@@ -187,9 +189,6 @@ module HaveAPI::ModelAdapters
           end
 
           raw = stripped
-
-        elsif [true, false].include?(raw)
-          raise HaveAPI::ValidationError, "not a valid id #{original.inspect}"
         end
 
         value = if integer_pk?(model)
@@ -201,11 +200,17 @@ module HaveAPI::ModelAdapters
                   raw
                 end
 
-        if extra[:fetch]
-          model.instance_exec(value, &extra[:fetch])
-        else
-          model.find(value)
+        ret = if extra[:fetch]
+                model.instance_exec(value, &extra[:fetch])
+              else
+                model.find(value)
+              end
+
+        if ret.nil? && !allow_null
+          raise HaveAPI::ValidationError, 'resource not found'
         end
+
+        ret
       rescue ::ActiveRecord::RecordNotFound
         raise HaveAPI::ValidationError, 'resource not found'
       rescue ArgumentError, TypeError
@@ -258,10 +263,20 @@ module HaveAPI::ModelAdapters
         return unless %i[object object_list].include?(action.input.layout)
 
         clean = proc do |raw|
-          if raw.is_a?(String)
-            raw.strip.split(',')
-          elsif raw.is_a?(Array)
-            raw
+          values = if raw.is_a?(String)
+                     raw.strip.split(',')
+                   elsif raw.is_a?(Array)
+                     raw
+                   else
+                     raise HaveAPI::ValidationError, 'includes must be a string or array'
+                   end
+
+          values.map do |value|
+            unless value.is_a?(String)
+              raise HaveAPI::ValidationError, 'includes must contain only strings'
+            end
+
+            value.strip
           end
         end
 

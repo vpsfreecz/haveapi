@@ -7,6 +7,51 @@ RSpec.describe HaveAPI::GoClient::Generator do
   let(:root) { File.expand_path('../../../..', __dir__) }
   let(:cwd) { File.join(root, 'clients', 'go') }
 
+  def oauth2_action_description(method:, path:, output_params:)
+    {
+      aliases: [],
+      input: nil,
+      output: {
+        layout: 'object',
+        namespace: 'action_state',
+        parameters: output_params
+      },
+      method:,
+      path:,
+      meta: {},
+      blocking: false
+    }
+  end
+
+  def oauth2_revoke_description
+    {
+      authentication: {
+        oauth2: {
+          http_header: 'X-HaveAPI-OAuth2-Token',
+          revoke_url: 'https://auth.example/revoke'
+        }
+      },
+      meta: { namespace: '_meta' },
+      resources: {
+        action_state: {
+          resources: {},
+          actions: {
+            show: oauth2_action_description(
+              method: 'GET',
+              path: '/action_states/{action_state_id}',
+              output_params: { id: { type: 'Integer' } }
+            ),
+            poll: oauth2_action_description(
+              method: 'GET',
+              path: '/action_states/{action_state_id}/poll',
+              output_params: { finished: { type: 'Boolean' } }
+            )
+          }
+        }
+      }
+    }
+  end
+
   it 'generates a client that compiles and can call the API' do
     Dir.mktmpdir('haveapi-go-client-') do |dir|
       cmd = [
@@ -252,7 +297,129 @@ RSpec.describe HaveAPI::GoClient::Generator do
         }
       GO
 
-      go_out, go_err, go_status = Open3.capture3('go', 'test', './...', chdir: dir)
+      go_out, go_err, go_status = Open3.capture3(
+        { 'CGO_ENABLED' => '0' },
+        'go',
+        'test',
+        './...',
+        chdir: dir
+      )
+      expect(go_status).to be_success, "go test failed: #{go_out}\n#{go_err}"
+    end
+  end
+
+  it 'generates an OAuth2 client that sends the revoke token as form data' do
+    Dir.mktmpdir('haveapi-go-client-oauth2-') do |dir|
+      communicator = instance_double(
+        HaveAPI::Client::Communicator,
+        describe_api: oauth2_revoke_description
+      )
+      allow(HaveAPI::Client::Communicator).to receive(:new).and_return(communicator)
+
+      generator = described_class.new(
+        'http://unused.example',
+        dir,
+        module: 'example.com/haveapi-oauth2-revoke',
+        package: 'client'
+      )
+      generator.generate
+      generator.go_fmt
+
+      File.write(File.join(dir, 'client', 'oauth2_revoke_test.go'), <<~GO)
+        package client
+
+        import (
+          "io"
+          "net/http"
+          "net/url"
+          "strings"
+          "testing"
+        )
+
+        type captureTransport struct {
+          req  *http.Request
+          body string
+        }
+
+        func (transport *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+          if req.Body != nil {
+            body, err := io.ReadAll(req.Body)
+            if err != nil {
+              return nil, err
+            }
+
+            if err := req.Body.Close(); err != nil {
+              return nil, err
+            }
+
+            transport.body = string(body)
+          }
+
+          transport.req = req
+
+          return &http.Response{
+            StatusCode: 200,
+            Status:     "200 OK",
+            Body:       io.NopCloser(strings.NewReader("ok")),
+            Header:     make(http.Header),
+            Request:    req,
+          }, nil
+        }
+
+        func TestOAuth2RevokeSendsTokenFormBody(t *testing.T) {
+          transport := &captureTransport{}
+          token := "secret-token"
+
+          c := New("http://unused.example")
+          c.SetHTTPClient(&http.Client{Transport: transport})
+          c.SetExistingOAuth2Auth(token)
+
+          if err := c.RevokeAccessToken(); err != nil {
+            t.Fatalf("revoke failed: %v", err)
+          }
+
+          if transport.req == nil {
+            t.Fatalf("expected revoke request")
+          }
+
+          if got := transport.req.Method; got != "POST" {
+            t.Fatalf("expected POST revoke, got %s", got)
+          }
+
+          if got := transport.req.URL.String(); got != "https://auth.example/revoke" {
+            t.Fatalf("unexpected revoke URL: %s", got)
+          }
+
+          if got := transport.req.Header.Get("X-HaveAPI-OAuth2-Token"); got != token {
+            t.Fatalf("expected OAuth2 header %q, got %q", token, got)
+          }
+
+          if got := transport.req.Header.Get("Content-Type"); got != "application/x-www-form-urlencoded" {
+            t.Fatalf("expected form content type, got %q", got)
+          }
+
+          form, err := url.ParseQuery(transport.body)
+          if err != nil {
+            t.Fatalf("invalid form body %q: %v", transport.body, err)
+          }
+
+          if got := form.Get("token"); got != token {
+            t.Fatalf("expected revoke token %q, got %q in body %q", token, got, transport.body)
+          }
+
+          if c.Authentication != nil {
+            t.Fatalf("expected authentication to be cleared after revoke")
+          }
+        }
+      GO
+
+      go_out, go_err, go_status = Open3.capture3(
+        { 'CGO_ENABLED' => '0' },
+        'go',
+        'test',
+        './...',
+        chdir: dir
+      )
       expect(go_status).to be_success, "go test failed: #{go_out}\n#{go_err}"
     end
   end

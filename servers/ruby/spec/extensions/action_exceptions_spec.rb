@@ -93,6 +93,27 @@ describe HaveAPI::Extensions::ActionExceptions do
     )
   end
 
+  def with_action_exceptions_without_handlers
+    hooks = HaveAPI::Hooks.hooks
+    action_hooks = hooks[HaveAPI::Action][:exec_exception]
+    original_listeners = action_hooks[:listeners].dup
+    original_exceptions =
+      HaveAPI::Extensions::ActionExceptions.instance_variable_get(:@exceptions)
+
+    if HaveAPI::Extensions::ActionExceptions.instance_variable_defined?(:@exceptions)
+      HaveAPI::Extensions::ActionExceptions.remove_instance_variable(:@exceptions)
+    end
+    HaveAPI::Extensions::ActionExceptions.enabled(app.settings.api_server)
+
+    yield
+  ensure
+    action_hooks[:listeners] = original_listeners
+    HaveAPI::Extensions::ActionExceptions.instance_variable_set(
+      :@exceptions,
+      original_exceptions
+    )
+  end
+
   def map_exception(klass, status)
     HaveAPI::Extensions::ActionExceptions.rescue(klass) do |ret, e|
       ret[:status] = false
@@ -147,6 +168,15 @@ describe HaveAPI::Extensions::ActionExceptions do
 
       expect_failed_json(500)
       expect(api_response.message).to be_a(String)
+      expect(api_response.message).not_to be_empty
+    end
+  end
+
+  it 'keeps exceptions in a safe envelope when no handlers are registered' do
+    with_action_exceptions_without_handlers do
+      call_test_action(:raise_runtime)
+
+      expect_failed_json(500)
       expect(api_response.message).not_to be_empty
     end
   end

@@ -5,12 +5,12 @@ module HaveAPI::Extensions
     class << self
       def enabled(server)
         HaveAPI::Action.connect_hook(:exec_exception) do |ret, _context, e|
-          break(ret) unless @exceptions
-
-          @exceptions.each do |handler|
-            if e.is_a?(handler[:klass])
-              ret = handler[:block].call(ret, e)
-              break
+          if @exceptions
+            @exceptions.each do |handler|
+              if e.is_a?(handler[:klass])
+                ret = handler[:block].call(ret, e)
+                break
+              end
             end
           end
 

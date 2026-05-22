@@ -381,20 +381,39 @@ class Client extends Client\Resource
      */
     public function getClientIp()
     {
-        if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            $ips = array_values(array_filter(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])));
+        if (isset($_SERVER['HTTP_X_FORWARDED_FOR']) && is_scalar($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            $ips = array_values(array_filter(array_map(
+                'trim',
+                explode(',', (string) $_SERVER['HTTP_X_FORWARDED_FOR'])
+            )));
 
-            return end($ips);
+            $ip = end($ips);
 
-        } elseif (isset($_SERVER['REMOTE_ADDR'])) {
-            return $_SERVER["REMOTE_ADDR"];
+            if ($this->isClientIp($ip)) {
+                return $ip;
+            }
+        }
 
-        } elseif (isset($_SERVER['HTTP_CLIENT_IP'])) {
-            return $_SERVER["HTTP_CLIENT_IP"];
+        if (isset($_SERVER['REMOTE_ADDR']) && $this->isClientIp($_SERVER['REMOTE_ADDR'])) {
+            return trim((string) $_SERVER['REMOTE_ADDR']);
+        }
 
-        } else {
+        if (isset($_SERVER['HTTP_CLIENT_IP']) && $this->isClientIp($_SERVER['HTTP_CLIENT_IP'])) {
+            return trim((string) $_SERVER['HTTP_CLIENT_IP']);
+        }
+
+        return false;
+    }
+
+    private function isClientIp($ip): bool
+    {
+        if (!is_scalar($ip)) {
             return false;
         }
+
+        $ip = trim((string) $ip);
+
+        return $ip !== '' && filter_var($ip, FILTER_VALIDATE_IP) !== false;
     }
 
     public function verifySsl(): bool

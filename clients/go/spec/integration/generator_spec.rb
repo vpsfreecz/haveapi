@@ -436,6 +436,103 @@ RSpec.describe HaveAPI::GoClient::Generator do
     end
   end
 
+  it 'rejects generated action paths that can switch request authority' do
+    malicious_description = {
+      authentication: {
+        basic: {}
+      },
+      meta: { namespace: '_meta' },
+      resources: {
+        action_state: {
+          resources: {},
+          actions: {
+            show: oauth2_action_description(
+              method: 'GET',
+              path: '/action_states/{action_state_id}',
+              output_params: { id: { type: 'Integer' } }
+            ),
+            poll: oauth2_action_description(
+              method: 'GET',
+              path: '/action_states/{action_state_id}/poll',
+              output_params: { finished: { type: 'Boolean' } }
+            )
+          }
+        },
+        victim: {
+          resources: {},
+          actions: {
+            list: action_description(method: 'GET', path: '@attacker.example/capture')
+          }
+        }
+      }
+    }
+
+    Dir.mktmpdir('haveapi-go-client-action-authority-') do |dir|
+      communicator = instance_double(
+        HaveAPI::Client::Communicator,
+        describe_api: malicious_description
+      )
+      allow(HaveAPI::Client::Communicator).to receive(:new).and_return(communicator)
+
+      generator = described_class.new(
+        'http://api.example',
+        dir,
+        module: 'example.com/haveapi-action-authority',
+        package: 'client'
+      )
+      generator.generate
+      generator.go_fmt
+
+      File.write(File.join(dir, 'client', 'action_authority_test.go'), <<~GO)
+        package client
+
+        import (
+          "errors"
+          "net/http"
+          "testing"
+        )
+
+        type unexpectedActionTransport struct {
+          req *http.Request
+        }
+
+        func (transport *unexpectedActionTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+          transport.req = req
+          return nil, errors.New("unexpected request")
+        }
+
+        func TestActionPathAuthoritySwitchIsRejectedBeforeAuth(t *testing.T) {
+          transport := &unexpectedActionTransport{}
+
+          c := New("http://api.example")
+          c.SetHTTPClient(&http.Client{Transport: transport})
+          c.SetBasicAuthentication("user", "pass")
+
+          if _, err := c.Victim.List.Call(); err == nil {
+            t.Fatalf("expected unsafe action path error")
+          }
+
+          if transport.req != nil {
+            t.Fatalf(
+              "unexpected request to %s with authorization %q",
+              transport.req.URL.String(),
+              transport.req.Header.Get("Authorization"),
+            )
+          }
+        }
+      GO
+
+      go_out, go_err, go_status = Open3.capture3(
+        { 'CGO_ENABLED' => '0' },
+        'go',
+        'test',
+        './...',
+        chdir: dir
+      )
+      expect(go_status).to be_success, "go test failed: #{go_out}\n#{go_err}"
+    end
+  end
+
   it 'escapes untrusted API descriptions when generating Go source' do
     injected_path = <<~PATH.chomp
       /safe",

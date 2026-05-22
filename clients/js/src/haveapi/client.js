@@ -357,15 +357,17 @@ Client.prototype.logout = function(callback) {
  * @param {HaveAPI.Client~ActionCall} opts
  */
 Client.prototype.directInvoke = function(action, opts) {
+	var path = opts.path === undefined ? action.preparedPath : opts.path;
+
 	if (this._private.debug > 5)
-		console.log("Executing", action, "with opts", opts, "at", action.preparedPath);
+		console.log("Executing", action, "with opts", opts, "at", path);
 
 	var that = this;
 	var block = opts.block === undefined ? true : opts.block;
 
 	var httpOpts = {
 		method: action.httpMethod(),
-		url: this._private.url + action.preparedPath,
+		url: this._private.url + path,
 		credentials: this.authProvider.credentials(),
 		headers: this.authProvider.headers(),
 		queryParameters: this.authProvider.queryParameters(),
@@ -423,7 +425,12 @@ Client.prototype.directInvoke = function(action, opts) {
 		httpOpts.params = scopedParams;
 	}
 
-	this._private.http.request(httpOpts);
+	try {
+		this._private.http.request(httpOpts);
+
+	} finally {
+		action.preparedPath = null;
+	}
 };
 
 /**

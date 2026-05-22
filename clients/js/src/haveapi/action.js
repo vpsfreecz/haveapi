@@ -221,30 +221,34 @@ Action.prototype.directInvoke = function() {
 Action.prototype.prepareInvoke = function(new_args) {
 	var args = this.args.concat(Array.prototype.slice.call(new_args));
 	var rx = /(\{[a-zA-Z0-9\-_]+\})/;
-
-	if (!this.preparedPath)
-		this.preparedPath = this.description.path;
+	var preparedPath = this.preparedPath || this.description.path;
+	var providedIdArgs = this.providedIdArgs.slice();
 
 	// First, apply ids returned from the API
-	for (var i = 0; i < this.providedIdArgs.length; i++) {
-		if (this.preparedPath.search(rx) == -1)
+	for (var i = 0; i < providedIdArgs.length; i++) {
+		if (preparedPath.search(rx) == -1)
 			break;
 
-		this.preparedPath = this.preparedPath.replace(rx, this.providedIdArgs[i]);
+		preparedPath = preparedPath.replace(rx, encodeURIComponent(providedIdArgs[i]));
 	}
 
 	// Apply ids passed as arguments
 	while (args.length > 0) {
-		if (this.preparedPath.search(rx) == -1)
+		if (preparedPath.search(rx) == -1)
 			break;
 
-		var arg = args.shift();
-		this.providedIdArgs.push(arg);
+		var arg = args[0];
 
-		this.preparedPath = this.preparedPath.replace(rx, arg);
+		if (typeof(arg) === 'function' || (arg && (arg.params || arg.onReply)))
+			break;
+
+		args.shift();
+		providedIdArgs.push(arg);
+
+		preparedPath = preparedPath.replace(rx, encodeURIComponent(arg));
 	}
 
-	if (args.length == 0 && this.preparedPath.search(rx) != -1) {
+	if (preparedPath.search(rx) != -1) {
 		console.log("UnresolvedArguments", "Unable to execute action '"+ this.name +"': unresolved arguments");
 
 		throw new Client.Exceptions.UnresolvedArguments(this);
@@ -270,6 +274,7 @@ Action.prototype.prepareInvoke = function(new_args) {
 	}
 
 	return Object.assign({}, params, {
+		path: preparedPath,
 		params: new Parameters(this, params.params),
 		onReply: function(c, response) {
 			that.preparedPath = null;

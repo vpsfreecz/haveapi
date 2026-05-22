@@ -373,7 +373,7 @@ class Client extends Client\Resource
                     $v = $v ? 'true' : 'false';
                 }
 
-                $url .= $k . '=' . (is_null($v) ? '' : urlencode($v));
+                $url .= urlencode((string) $k) . '=' . (is_null($v) ? '' : urlencode((string) $v));
             }
 
             $request->uri = $url;

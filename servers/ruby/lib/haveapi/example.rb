@@ -47,12 +47,11 @@ module HaveAPI
     end
 
     def provided?
-      if instance_variables.detect do |v|
-        instance_variable_get(v)
-      end
-        true
-      else
-        false
+      instance_variables.any? do |v|
+        value = instance_variable_get(v)
+        next false if v == :@title && value.to_s.empty?
+
+        !value.nil? && value != false
       end
     end
 
@@ -62,8 +61,8 @@ module HaveAPI
           title: @title,
           comment: @comment,
           path_params: @path_params,
-          request: filter_input_params(context, @request),
-          response: filter_output_params(context, @response),
+          request: @request.nil? ? nil : filter_input_params(context, @request),
+          response: @response.nil? ? nil : filter_output_params(context, @response),
           status: @status.nil? ? true : @status,
           message: @message,
           errors: @errors,
@@ -77,6 +76,8 @@ module HaveAPI
     protected
 
     def filter_input_params(context, input)
+      return nil if input.nil?
+
       case context.action.input.layout
       when :object, :hash
         context.authorization.filter_input(
@@ -88,14 +89,15 @@ module HaveAPI
         input.map do |obj|
           context.authorization.filter_input(
             context.action.input.params,
-            ModelAdapters::Hash.output(context, obj),
-            true
+            ModelAdapters::Hash.output(context, obj)
           )
         end
       end
     end
 
     def filter_output_params(context, output)
+      return nil if output.nil?
+
       case context.action.output.layout
       when :object, :hash
         context.authorization.filter_output(

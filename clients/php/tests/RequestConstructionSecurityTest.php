@@ -29,7 +29,7 @@ final class RequestConstructionSecurityTest extends TestCase
 
     public function testOAuth2RevocationParameterNamesAreEncoded(): void
     {
-        $client = new RequestConstructionSecurityOAuthClient();
+        $client = new RequestConstructionSecurityOAuthClient('https://api.example');
         $description = (object) [
             'revoke_url' => 'https://api.example/_auth/oauth2/revoke',
         ];
@@ -51,6 +51,134 @@ final class RequestConstructionSecurityTest extends TestCase
         $this->assertSame(
             'refresh+token%value',
             $parsed['token=abc&token_type_hint']
+        );
+    }
+
+    public function testActionPathRejectsAuthoritySwitch(): void
+    {
+        $client = new RequestConstructionSecurityCaptureClient('https://api.example');
+        $action = $this->newRequestAction($client, '@127.0.0.1:8080/internal-metadata');
+
+        try {
+            $client->directCall($action, []);
+            $this->fail('Expected ProtocolError');
+        } catch (\HaveAPI\Client\Exception\ProtocolError $e) {
+            $this->assertStringContainsString('action path', $e->getMessage());
+        }
+
+        $this->assertNull($client->lastRequest);
+    }
+
+    public function testActionPathPreservesApiRootRelativeUrl(): void
+    {
+        $client = new RequestConstructionSecurityCaptureClient('https://api.example/api');
+        $action = $this->newRequestAction($client, '/v1/projects');
+
+        $client->directCall($action, []);
+
+        $this->assertSame('https://api.example/api/v1/projects', $client->lastRequest->uri);
+    }
+
+    public function testOAuth2RevocationRejectsCrossOriginBeforeRequest(): void
+    {
+        $client = new RequestConstructionSecurityOAuthClient('https://api.example');
+        $description = (object) [
+            'revoke_url' => 'https://attacker.example/collect-token',
+        ];
+        $auth = new \HaveAPI\Client\Authentication\OAuth2($client, $description, []);
+
+        try {
+            $auth->revokeToken(['token' => 'vuln76-secret-access-token']);
+            $this->fail('Expected ProtocolError');
+        } catch (\HaveAPI\Client\Exception\ProtocolError $e) {
+            $this->assertStringContainsString('OAuth2 revoke_url', $e->getMessage());
+        }
+
+        $this->assertNull($client->lastRequest);
+    }
+
+    public function testOAuth2RevocationAcceptsRelativeSameOriginUrl(): void
+    {
+        $client = new RequestConstructionSecurityOAuthClient('https://api.example/api');
+        $description = (object) [
+            'revoke_url' => '/_auth/oauth2/revoke',
+        ];
+        $auth = new \HaveAPI\Client\Authentication\OAuth2($client, $description, []);
+
+        $auth->revokeToken(['token' => 'same-origin-access-token']);
+
+        $this->assertSame(
+            'https://api.example/api/_auth/oauth2/revoke',
+            $client->lastRequest->uri
+        );
+        $this->assertSame(
+            'token=same-origin-access-token',
+            $client->lastRequest->bodyValue
+        );
+    }
+
+    public function testOAuth2TokenEndpointRejectsCrossOrigin(): void
+    {
+        $client = new RequestConstructionSecurityOAuthClient('https://api.example');
+        $description = $this->newOAuth2Description([
+            'token_url' => 'https://attacker.example/oauth2/token',
+        ]);
+
+        try {
+            new \HaveAPI\Client\Authentication\OAuth2(
+                $client,
+                $description,
+                $this->newOAuth2Options()
+            );
+            $this->fail('Expected ProtocolError');
+        } catch (\HaveAPI\Client\Exception\ProtocolError $e) {
+            $this->assertStringContainsString('OAuth2 token_url', $e->getMessage());
+        }
+
+        $this->assertNull($client->lastRequest);
+    }
+
+    public function testOAuth2AuthorizeEndpointRejectsCrossOrigin(): void
+    {
+        $client = new RequestConstructionSecurityOAuthClient('https://api.example');
+        $description = $this->newOAuth2Description([
+            'authorize_url' => 'https://attacker.example/oauth2/authorize',
+        ]);
+
+        try {
+            new \HaveAPI\Client\Authentication\OAuth2(
+                $client,
+                $description,
+                $this->newOAuth2Options()
+            );
+            $this->fail('Expected ProtocolError');
+        } catch (\HaveAPI\Client\Exception\ProtocolError $e) {
+            $this->assertStringContainsString('OAuth2 authorize_url', $e->getMessage());
+        }
+
+        $this->assertNull($client->lastRequest);
+    }
+
+    public function testOAuth2EndpointsAcceptRelativeSameOriginUrls(): void
+    {
+        $client = new RequestConstructionSecurityOAuthClient('https://api.example/api');
+        $auth = new \HaveAPI\Client\Authentication\OAuth2(
+            $client,
+            $this->newOAuth2Description([
+                'authorize_url' => '/_auth/oauth2/authorize',
+                'token_url' => '/_auth/oauth2/token',
+            ]),
+            $this->newOAuth2Options()
+        );
+        $provider = $this->genericProviderFrom($auth);
+
+        $this->assertSame(
+            'https://api.example/api/_auth/oauth2/authorize',
+            $provider->getBaseAuthorizationUrl()
+        );
+        $this->assertSame(
+            'https://api.example/api/_auth/oauth2/token',
+            $provider->getBaseAccessTokenUrl([])
         );
     }
 
@@ -163,6 +291,70 @@ final class RequestConstructionSecurityTest extends TestCase
         );
     }
 
+    private function newRequestAction(\HaveAPI\Client $client, $path): \HaveAPI\Client\Action
+    {
+        $description = (object) [
+            'aliases' => [],
+            'method' => 'GET',
+            'path' => $path,
+            'input' => (object) [
+                'layout' => 'hash',
+                'namespace' => 'probe',
+                'parameters' => (object) [],
+            ],
+            'output' => (object) [
+                'layout' => 'hash',
+                'namespace' => 'probe',
+                'parameters' => (object) [],
+            ],
+        ];
+        $resource = new \HaveAPI\Client\Resource(
+            $client,
+            'probe',
+            (object) [
+                'actions' => (object) [],
+                'resources' => (object) [],
+            ],
+            []
+        );
+
+        return new \HaveAPI\Client\Action($client, $resource, 'show', $description, []);
+    }
+
+    private function newOAuth2Description(array $overrides = []): \stdClass
+    {
+        return (object) array_merge(
+            [
+                'authorize_url' => 'https://api.example/_auth/oauth2/authorize',
+                'token_url' => 'https://api.example/_auth/oauth2/token',
+                'revoke_url' => 'https://api.example/_auth/oauth2/revoke',
+            ],
+            $overrides
+        );
+    }
+
+    private function newOAuth2Options(): array
+    {
+        return [
+            'client_id' => 'vuln80-client-id',
+            'client_secret' => 'vuln80-client-secret',
+            'redirect_uri' => 'https://client.example/callback',
+            'scope' => [],
+        ];
+    }
+
+    private function genericProviderFrom(
+        \HaveAPI\Client\Authentication\OAuth2 $auth
+    ): \League\OAuth2\Client\Provider\GenericProvider {
+        $property = new ReflectionProperty(
+            \HaveAPI\Client\Authentication\OAuth2::class,
+            'genericProvider'
+        );
+        $property->setAccessible(true);
+
+        return $property->getValue($auth);
+    }
+
     private function newTokenAuth($headerName, $token): \HaveAPI\Client\Authentication\Token
     {
         $description = (object) [
@@ -225,9 +417,21 @@ final class RequestConstructionSecurityTestRequest
     }
 }
 
+final class RequestConstructionSecurityCaptureClient extends \HaveAPI\Client
+{
+    public $lastRequest = null;
+
+    protected function sendRequest($request, $action = null, $params = [])
+    {
+        $this->lastRequest = $request;
+
+        return (object) ['body' => (object) []];
+    }
+}
+
 final class RequestConstructionSecurityOAuthClient extends \HaveAPI\Client
 {
-    public $lastRequest;
+    public $lastRequest = null;
 
     public function getRequest($method, $url)
     {

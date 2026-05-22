@@ -21,10 +21,10 @@ class OAuth2 extends Base
 
     private $accessToken;
 
+    private $revokeUrl;
+
     public function setup()
     {
-        $apiUri = $this->client->getUri();
-
         if (isset($this->opts['client_id'])) {
             $headers = [
                 'User-Agent' => $this->client->getIdentity(),
@@ -46,8 +46,8 @@ class OAuth2 extends Base
                     'clientId' => $this->opts['client_id'],
                     'clientSecret' => $this->opts['client_secret'],
                     'redirectUri' => $this->opts['redirect_uri'],
-                    'urlAuthorize' => $this->description->authorize_url,
-                    'urlAccessToken' => $this->description->token_url,
+                    'urlAuthorize' => $this->oauth2EndpointUrl('authorize_url'),
+                    'urlAccessToken' => $this->oauth2EndpointUrl('token_url'),
                     'urlResourceOwnerDetails' => 'ENOTSUPPORTED',
                     'pkceMethod' => \League\OAuth2\Client\Provider\GenericProvider::PKCE_METHOD_S256,
                     'scopes' => $this->opts['scope'],
@@ -141,7 +141,7 @@ class OAuth2 extends Base
      */
     public function revokeToken($params)
     {
-        $request = $this->client->getRequest('post', $this->description->revoke_url);
+        $request = $this->client->getRequest('post', $this->revokeEndpointUrl());
         $request->sendsForm();
 
         $encodedParams = [];
@@ -152,6 +152,29 @@ class OAuth2 extends Base
 
         $request->body(implode('&', $encodedParams));
         $request->send();
+    }
+
+    private function revokeEndpointUrl()
+    {
+        if (!$this->revokeUrl) {
+            $this->revokeUrl = $this->oauth2EndpointUrl('revoke_url');
+        }
+
+        return $this->revokeUrl;
+    }
+
+    private function oauth2EndpointUrl($name)
+    {
+        if (!isset($this->description->$name)) {
+            throw new \HaveAPI\Client\Exception\ProtocolError(
+                "Invalid OAuth2 $name: missing URL"
+            );
+        }
+
+        return $this->client->resolveDescriptionUrl(
+            $this->description->$name,
+            "OAuth2 $name"
+        );
     }
 
     /**

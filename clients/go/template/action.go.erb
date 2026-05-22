@@ -2,6 +2,7 @@ package <%= package %>
 
 import (
 <% if action.has_path_params? -%>
+	"net/url"
 	"strings"
 <% end -%>
 )
@@ -292,7 +293,7 @@ func (inv *<%= action.go_invocation_type %>) SetPathParamInt(param string, value
 
 // SetPathParamString sets string path parameter
 func (inv *<%= action.go_invocation_type %>) SetPathParamString(param string, value string) *<%= action.go_invocation_type %> {
-	inv.Path = strings.Replace(inv.Path, "{"+param+"}", value, 1)
+	inv.Path = strings.Replace(inv.Path, "{"+param+"}", url.PathEscape(value), 1)
 	return inv
 }
 <% end -%>

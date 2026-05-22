@@ -533,6 +533,146 @@ RSpec.describe HaveAPI::GoClient::Generator do
     end
   end
 
+  it 'escapes generated action path parameters as single path segments' do
+    description = {
+      authentication: {
+        basic: {}
+      },
+      meta: { namespace: '_meta' },
+      resources: {
+        action_state: {
+          resources: {},
+          actions: {
+            show: oauth2_action_description(
+              method: 'GET',
+              path: '/action_states/{action_state_id}',
+              output_params: { id: { type: 'Integer' } }
+            ),
+            poll: oauth2_action_description(
+              method: 'GET',
+              path: '/action_states/{action_state_id}/poll',
+              output_params: { finished: { type: 'Boolean' } }
+            )
+          }
+        },
+        user: {
+          resources: {},
+          actions: {
+            show: action_description(
+              method: 'GET',
+              path: '/users/{user_id}',
+              output: {
+                layout: 'object',
+                namespace: 'user',
+                parameters: { id: { type: 'Integer' } }
+              }
+            )
+          }
+        }
+      }
+    }
+
+    Dir.mktmpdir('haveapi-go-client-path-param-') do |dir|
+      communicator = instance_double(
+        HaveAPI::Client::Communicator,
+        describe_api: description
+      )
+      allow(HaveAPI::Client::Communicator).to receive(:new).and_return(communicator)
+
+      generator = described_class.new(
+        'http://api.example',
+        dir,
+        module: 'example.com/haveapi-path-param',
+        package: 'client'
+      )
+      generator.generate
+      generator.go_fmt
+
+      File.write(File.join(dir, 'client', 'path_param_escape_test.go'), <<~GO)
+        package client
+
+        import (
+          "io"
+          "net/http"
+          "net/url"
+          "strings"
+          "testing"
+        )
+
+        type pathParamEscapeTransport struct {
+          req *http.Request
+        }
+
+        func (transport *pathParamEscapeTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+          transport.req = req
+
+          return &http.Response{
+            StatusCode: 200,
+            Status:     "200 OK",
+            Body:       io.NopCloser(strings.NewReader(`{"status":true,"response":{"user":{"id":42}}}`)),
+            Header:     make(http.Header),
+            Request:    req,
+          }, nil
+        }
+
+        func TestPathParamIsEscapedAsSingleSegment(t *testing.T) {
+          transport := &pathParamEscapeTransport{}
+          pathArg := "42?user[name]=alice&_meta[includes]=group__secret/section#frag%2Fencoded=1"
+
+          c := New("http://api.example")
+          c.SetHTTPClient(&http.Client{Transport: transport})
+
+          resp, err := c.User.Show.Prepare().SetPathParamString("user_id", pathArg).Call()
+          if err != nil {
+            t.Fatalf("request failed: %v", err)
+          }
+
+          if !resp.Status {
+            t.Fatalf("request failed: %s", resp.Message)
+          }
+
+          if transport.req == nil {
+            t.Fatalf("expected request")
+          }
+
+          if got := transport.req.URL.RawQuery; got != "" {
+            t.Fatalf("path parameter injected query string %q", got)
+          }
+
+          if got := transport.req.URL.Fragment; got != "" {
+            t.Fatalf("path parameter injected fragment %q", got)
+          }
+
+          expectedPath := "/users/" + url.PathEscape(pathArg)
+          if got := transport.req.URL.EscapedPath(); got != expectedPath {
+            t.Fatalf("expected escaped path %q, got %q", expectedPath, got)
+          }
+
+          if got := transport.req.URL.Query().Get("user[name]"); got != "" {
+            t.Fatalf("unexpected injected user[name] query value %q", got)
+          }
+
+          if got := transport.req.URL.Query().Get("_meta[includes]"); got != "" {
+            t.Fatalf("unexpected injected _meta[includes] query value %q", got)
+          }
+
+          if !strings.Contains(transport.req.URL.EscapedPath(), "%252Fencoded") {
+            t.Fatalf("expected percent-encoded input to remain data, got %q", transport.req.URL.EscapedPath())
+          }
+        }
+      GO
+
+      go_out, go_err, go_status = Open3.capture3(
+        { 'CGO_ENABLED' => '0' },
+        'go',
+        'test',
+        './...',
+        chdir: dir
+      )
+      expect(go_status).to be_success, "go test failed: #{go_out}\n#{go_err}"
+    end
+  end
+
   it 'rejects OAuth2 revoke URLs outside the client origin before sending the token' do
     Dir.mktmpdir('haveapi-go-client-oauth2-revoke-origin-') do |dir|
       communicator = instance_double(

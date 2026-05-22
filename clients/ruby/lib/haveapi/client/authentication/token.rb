@@ -3,6 +3,8 @@ require 'haveapi/client/authentication/base'
 module HaveAPI::Client::Authentication
   class Token < Base
     register :token
+    HTTP_HEADER_NAME = /\A[A-Za-z0-9!#$%&'*+\-.^_`|~]+\z/
+
     attr_reader :token, :valid_to
 
     def setup
@@ -33,7 +35,7 @@ module HaveAPI::Client::Authentication
       return {} unless @configured
 
       check_validity
-      @via == :header ? { @desc[:http_header] => @token } : {}
+      @via == :header ? { http_header => @token } : {}
     end
 
     def save
@@ -130,6 +132,13 @@ module HaveAPI::Client::Authentication
 
     def auth_action_input(name)
       @desc[:resources][:token][:actions][name][:input][:parameters].except(:token)
+    end
+
+    def http_header
+      header = @desc[:http_header]
+      return header if header.is_a?(String) && header.match?(HTTP_HEADER_NAME)
+
+      raise ArgumentError, "invalid token authentication HTTP header name: #{header.inspect}"
     end
   end
 end

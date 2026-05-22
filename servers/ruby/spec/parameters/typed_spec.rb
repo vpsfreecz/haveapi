@@ -1,4 +1,6 @@
 require 'time'
+require 'open3'
+require 'rbconfig'
 
 describe 'Parameters::Typed' do
   def p_type(type)
@@ -188,6 +190,27 @@ describe 'Parameters::Typed' do
 
     p = p_arg(protected: false)
     expect(p.describe(nil)[:protected]).to be false
+  end
+
+  it 'loads Time#iso8601 for datetime output formatting' do
+    code = <<~RUBY
+      require 'haveapi/types'
+      require 'haveapi/parameters/typed'
+
+      param = HaveAPI::Parameters::Typed.new(:at, type: Datetime)
+      print param.format_output(Time.utc(1970, 1, 1))
+    RUBY
+
+    stdout, stderr, status = Open3.capture3(
+      RbConfig.ruby,
+      '-I',
+      File.expand_path('../../lib', __dir__),
+      '-e',
+      code
+    )
+
+    expect(status).to be_success, stderr
+    expect(stdout).to eq('1970-01-01T00:00:00Z')
   end
 
   it 'is unprotected by default' do

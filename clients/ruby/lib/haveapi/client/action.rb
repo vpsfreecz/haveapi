@@ -31,9 +31,9 @@ module HaveAPI::Client
         params_arg = params.to_api
       end
 
-      ret = @api.call(self, params_arg)
+      @api.call(self, params_arg)
+    ensure
       reset
-      ret
     end
 
     def auth?

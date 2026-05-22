@@ -78,24 +78,26 @@ module HaveAPI::Client
         next unless define_method?(action, name)
 
         define_singleton_method(name) do |*args, **kwargs, &block|
+          call_action = action.dup
+          call_action.reset
           client_opts = @client.opts(:block, :block_interval, :block_timeout)
           all_args = @prepared_args + args
 
-          if action.unresolved_args?
+          if call_action.unresolved_args?
             all_args.delete_if do |arg|
-              break unless action.unresolved_args?
+              break unless call_action.unresolved_args?
 
-              action.provide_args(arg)
+              call_action.provide_args(arg)
               true
             end
 
-            if action.unresolved_args?
+            if call_action.unresolved_args?
               raise ArgumentError, 'one or more object ids missing'
             end
           end
 
           if all_args.length > 1 || (kwargs.any? && all_args.any?)
-            raise ArgumentError, "too many arguments for action #{@name}##{action.name}"
+            raise ArgumentError, "too many arguments for action #{@name}##{call_action.name}"
           end
 
           arg = all_args.shift
@@ -111,7 +113,7 @@ module HaveAPI::Client
             end
 
           if user_params.nil?
-            input_params = default_action_input_params(action)
+            input_params = default_action_input_params(call_action)
 
           else
             if user_params.has_key?(:meta)
@@ -122,25 +124,25 @@ module HaveAPI::Client
               end
             end
 
-            input_params = default_action_input_params(action).update(user_params)
+            input_params = default_action_input_params(call_action).update(user_params)
           end
 
-          ret = Response.new(action, action.execute(input_params))
+          ret = Response.new(call_action, call_action.execute(input_params))
 
           raise ActionFailed, ret unless ret.ok?
 
-          return_value = case action.output && action.output_layout
+          return_value = case call_action.output && call_action.output_layout
                          when :object
-                           ResourceInstance.new(@client, @api, self, action: action, response: ret)
+                           ResourceInstance.new(@client, @api, self, action: call_action, response: ret)
 
                          when :object_list
-                           ResourceInstanceList.new(@client, @api, self, action, ret)
+                           ResourceInstanceList.new(@client, @api, self, call_action, ret)
 
                          else # :hash, :hash_list
                            ret
                          end
 
-          if action.blocking? && client_opts[:block]
+          if call_action.blocking? && client_opts[:block]
             wait_opts = {}
 
             {
@@ -156,6 +158,8 @@ module HaveAPI::Client
           end
 
           return_value
+        ensure
+          call_action.reset if call_action
         end
       end
     end

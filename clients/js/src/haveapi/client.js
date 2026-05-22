@@ -568,7 +568,7 @@ Client.prototype.addParamsToQuery = function(url, namespace, params, paramDesc) 
 
 		} else url += '&';
 
-		url += encodeURI(namespace) + '[' + encodeURI(key) + ']=' + encodeURI(value);
+		url += encodeURIComponent(namespace) + '[' + encodeURIComponent(key) + ']=' + encodeURIComponent(value);
 	}
 
 	return url;

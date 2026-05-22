@@ -81,5 +81,5 @@ Authentication.OAuth2.prototype.logout = function(callback) {
 		}
 	}
 
-	http.send("token=" + this.access_token.access_token);
+	http.send("token=" + encodeURIComponent(this.access_token.access_token));
 };

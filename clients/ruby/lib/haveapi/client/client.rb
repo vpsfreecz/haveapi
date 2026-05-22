@@ -100,7 +100,7 @@ class HaveAPI::Client::Client
 
     setup_api
 
-    if @resources.include?(symbol)
+    if @resource_methods.include?(symbol)
       method(symbol).call(*args)
 
     else
@@ -112,7 +112,7 @@ class HaveAPI::Client::Client
     return super if @setup
 
     setup_api
-    @resources.include?(symbol)
+    @resource_methods.include?(symbol)
   end
 
   private
@@ -120,22 +120,38 @@ class HaveAPI::Client::Client
   # Get the description from the API and setup resource methods.
   def setup_api
     @description = @api.describe_api(@version)
+    old_resource_methods = @resource_methods || {}
     @resources = {}
+    @resource_methods = {}
 
     @description[:resources].each do |name, desc|
       r = HaveAPI::Client::Resource.new(self, @api, name)
       r.setup(desc)
+      method_name = name.to_sym
 
-      define_singleton_method(name) do |*args|
-        tmp = r.dup
-        tmp.prepared_args = args
-        tmp.setup_from_clone(r)
-        tmp
+      if old_resource_methods.include?(method_name) || define_resource_method?(name)
+        define_singleton_method(name) do |*args|
+          tmp = r.dup
+          tmp.prepared_args = args
+          tmp.setup_from_clone(r)
+          tmp
+        end
+
+        @resource_methods[method_name] = true
       end
 
       @resources[name] = r
     end
 
     @setup = true
+  end
+
+  def define_resource_method?(name)
+    method_name = name.to_sym
+
+    !singleton_class.public_method_defined?(method_name) &&
+      !singleton_class.protected_method_defined?(method_name) &&
+      !singleton_class.private_method_defined?(method_name, false) &&
+      !self.class.private_method_defined?(method_name, false)
   end
 end

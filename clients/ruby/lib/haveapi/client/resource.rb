@@ -167,7 +167,12 @@ module HaveAPI::Client
     # Called before defining a method named +name+ that will
     # invoke +action+.
     def define_method?(action, name)
-      return false if %i[new].include?(name.to_sym)
+      method_name = name.to_sym
+
+      return false if singleton_class.public_method_defined?(method_name)
+      return false if singleton_class.protected_method_defined?(method_name)
+      return false if singleton_class.private_method_defined?(method_name, false)
+      return false if self.class.private_method_defined?(method_name, false)
 
       true
     end
@@ -180,12 +185,23 @@ module HaveAPI::Client
     end
 
     def define_resource(resource)
+      return unless define_resource_method?(resource._name)
+
       define_singleton_method(resource._name) do |*args|
         tmp = resource.dup
         tmp.prepared_args = @prepared_args + args
         tmp.setup_from_clone(resource)
         tmp
       end
+    end
+
+    def define_resource_method?(name)
+      method_name = name.to_sym
+
+      !singleton_class.public_method_defined?(method_name) &&
+        !singleton_class.protected_method_defined?(method_name) &&
+        !singleton_class.private_method_defined?(method_name, false) &&
+        !self.class.private_method_defined?(method_name, false)
     end
   end
 end

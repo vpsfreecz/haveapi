@@ -93,6 +93,8 @@ class Token extends Base
         $this->checkValidity();
 
         if ($this->via == self::HTTP_HEADER) {
+            $this->assertValidHeaderName($this->description->http_header);
+            $this->assertValidHeaderValue($this->token);
             $request->addHeader($this->description->http_header, $this->token);
         }
     }
@@ -107,6 +109,20 @@ class Token extends Base
         }
 
         return [$this->description->query_parameter => $this->token];
+    }
+
+    private function assertValidHeaderName($name)
+    {
+        if (!is_string($name) || preg_match('/\A[!#$%&\'*+.^_`|~0-9A-Za-z-]+\z/', $name) !== 1) {
+            throw new \HaveAPI\Client\Exception\ProtocolError('Invalid token authentication header name');
+        }
+    }
+
+    private function assertValidHeaderValue($value)
+    {
+        if (!is_scalar($value) || preg_match('/[\x00\r\n]/', (string) $value) !== 0) {
+            throw new \HaveAPI\Client\Exception\ProtocolError('Invalid token authentication header value');
+        }
     }
 
     /**

@@ -102,6 +102,52 @@ final class RequestConstructionSecurityTest extends TestCase
         $this->assertSame(['/v1/users/42'], $client->directCallPaths);
     }
 
+    public function testTokenAuthRejectsInjectedHeaderName(): void
+    {
+        $auth = $this->newTokenAuth(
+            "X-HaveAPI-Token\r\nX-Injected-Token",
+            'vuln97-secret-token'
+        );
+        $request = \Httpful\Request::get('https://api.example/v1/projects');
+
+        try {
+            $auth->authenticate($request);
+            $this->fail('Expected ProtocolError');
+        } catch (\HaveAPI\Client\Exception\ProtocolError $e) {
+            $this->assertStringContainsString('header name', $e->getMessage());
+        }
+
+        $this->assertSame([], $request->headers);
+    }
+
+    public function testTokenAuthRejectsInjectedHeaderValue(): void
+    {
+        $auth = $this->newTokenAuth(
+            'X-HaveAPI-Token',
+            "vuln97-secret-token\r\nX-Injected-Token: yes"
+        );
+        $request = \Httpful\Request::get('https://api.example/v1/projects');
+
+        try {
+            $auth->authenticate($request);
+            $this->fail('Expected ProtocolError');
+        } catch (\HaveAPI\Client\Exception\ProtocolError $e) {
+            $this->assertStringContainsString('header value', $e->getMessage());
+        }
+
+        $this->assertSame([], $request->headers);
+    }
+
+    public function testTokenAuthAcceptsValidHeaderName(): void
+    {
+        $auth = $this->newTokenAuth('X-HaveAPI-Token', 'valid-secret-token');
+        $request = \Httpful\Request::get('https://api.example/v1/projects');
+
+        $auth->authenticate($request);
+
+        $this->assertSame('valid-secret-token', $request->headers['X-HaveAPI-Token']);
+    }
+
     private function newPathAction(\HaveAPI\Client $client): \HaveAPI\Client\Action
     {
         $resource = new \HaveAPI\Client\Resource($client, 'user', (object) [], []);
@@ -114,6 +160,26 @@ final class RequestConstructionSecurityTest extends TestCase
                 'path' => '/v1/users/{user_id}',
             ],
             []
+        );
+    }
+
+    private function newTokenAuth($headerName, $token): \HaveAPI\Client\Authentication\Token
+    {
+        $description = (object) [
+            'resources' => (object) [
+                'token' => (object) [
+                    'actions' => (object) [],
+                    'resources' => (object) [],
+                ],
+            ],
+            'http_header' => $headerName,
+            'query_parameter' => 'auth_token',
+        ];
+
+        return new \HaveAPI\Client\Authentication\Token(
+            new \HaveAPI\Client(),
+            $description,
+            ['token' => $token]
         );
     }
 }

@@ -65,6 +65,56 @@ Client.ProtocolVersion = '2.0';
 Client.Exceptions = {};
 
 /**
+ * Resolve a URL from an API description and require it to stay on the
+ * configured API origin.
+ * @method HaveAPI.Client#sameOriginUrl
+ * @param {String} url URL or path to resolve
+ * @param {Object} opts
+ * @return {String} absolute URL
+ * @private
+ */
+Client.prototype.sameOriginUrl = function(url, opts) {
+	opts = opts || {};
+
+	if (typeof(url) !== 'string' || url.length == 0) {
+		throw new Client.Exceptions.ProtocolError('Invalid API URL');
+	}
+
+	if (/[\x00-\x1f\x7f]/.test(url) || url.indexOf('\\') != -1) {
+		throw new Client.Exceptions.ProtocolError('Unsafe API URL');
+	}
+
+	var base = new URL(this._private.url);
+	var resolved;
+
+	if (opts.actionPath) {
+		if (url[0] != '/' || url[1] == '/' || url.indexOf('@') != -1) {
+			throw new Client.Exceptions.ProtocolError('Unsafe API action path');
+		}
+
+		resolved = new URL(this._private.url + url);
+
+	} else {
+		if (url[0] == '/' && url[1] == '/') {
+			throw new Client.Exceptions.ProtocolError('Unsafe API URL');
+		}
+
+		if (url[0] == '/') {
+			resolved = new URL(this._private.url + url);
+
+		} else {
+			resolved = new URL(url, this._private.url + '/');
+		}
+	}
+
+	if (resolved.origin != base.origin || resolved.username || resolved.password) {
+		throw new Client.Exceptions.ProtocolError('Unsafe API URL origin');
+	}
+
+	return resolved.href;
+};
+
+/**
  * @callback HaveAPI.Client~doneCallback
  * @param {HaveAPI.Client} client
  * @param {Boolean} status true if the task was successful
@@ -373,10 +423,11 @@ Client.prototype.directInvoke = function(action, opts) {
 
 	var that = this;
 	var block = opts.block === undefined ? true : opts.block;
+	var url = this.sameOriginUrl(path, {actionPath: true});
 
 	var httpOpts = {
 		method: action.httpMethod(),
-		url: this._private.url + path,
+		url: url,
 		credentials: this.authProvider.credentials(),
 		headers: this.authProvider.headers(),
 		queryParameters: this.authProvider.queryParameters(),
@@ -920,8 +971,9 @@ Authentication.OAuth2.prototype.headers = function() {
 Authentication.OAuth2.prototype.logout = function(callback) {
 	var http = new XMLHttpRequest();
 	var that = this;
+	var revokeUrl = this.client.sameOriginUrl(this.description.revoke_url);
 
-	http.open('POST', this.description.revoke_url, true);
+	http.open('POST', revokeUrl, true);
 	http.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
 
 	http.onreadystatechange = function() {

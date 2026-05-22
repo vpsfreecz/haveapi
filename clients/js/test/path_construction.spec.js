@@ -5,8 +5,8 @@ function loadHaveAPI() {
   return require('../dist/haveapi-client.js');
 }
 
-function makeClient(HaveAPI) {
-  const client = new HaveAPI.Client('https://api.example', {});
+function makeClient(HaveAPI, url = 'https://api.example') {
+  const client = new HaveAPI.Client(url, {});
 
   client.apiSettings = { meta: { namespace: '_meta' } };
   client.authProvider = {
@@ -24,7 +24,7 @@ function makeClient(HaveAPI) {
   return client;
 }
 
-function makeAction(HaveAPI, client) {
+function makeAction(HaveAPI, client, path = '/v1/users/{user_id}') {
   return new HaveAPI.Client.Action(
     client,
     {
@@ -38,7 +38,7 @@ function makeAction(HaveAPI, client) {
       aliases: [],
       blocking: false,
       method: 'GET',
-      path: '/v1/users/{user_id}',
+      path,
       input: {
         layout: 'hash',
         namespace: 'user',
@@ -158,5 +158,79 @@ describe('HaveAPI JS client path construction', () => {
     expect(capturedUrls).to.deep.equal([
       'https://api.example/v1/users/42'
     ]);
+  });
+
+  it('preserves configured API base paths when resolving action paths', () => {
+    const HaveAPI = loadHaveAPI();
+    const client = makeClient(HaveAPI, 'https://api.example/api');
+    const capturedUrls = [];
+
+    client._private.http.request = (opts) => {
+      capturedUrls.push(opts.url);
+      opts.callback(200, {
+        status: true,
+        response: { user: {}, _meta: {} },
+        message: null,
+        errors: null
+      });
+    };
+
+    const action = makeAction(HaveAPI, client);
+
+    action.directInvoke(42, { onReply() {} });
+
+    expect(capturedUrls).to.deep.equal([
+      'https://api.example/api/v1/users/42'
+    ]);
+  });
+
+  it('rejects description-controlled action paths that can switch authority', () => {
+    const HaveAPI = loadHaveAPI();
+    const unsafePaths = [
+      '@127.0.0.1:8080/internal-metadata',
+      '//attacker.example/internal-metadata',
+      'https://attacker.example/internal-metadata',
+      '/v1/users\\..\\tokens',
+      '/v1/users/@attacker'
+    ];
+
+    unsafePaths.forEach((unsafePath) => {
+      const client = makeClient(HaveAPI);
+      const reads = {
+        credentials: 0,
+        headers: 0,
+        queryParameters: 0,
+        requests: 0
+      };
+
+      client.authProvider = {
+        credentials() {
+          reads.credentials += 1;
+          return undefined;
+        },
+        headers() {
+          reads.headers += 1;
+          return { 'X-HaveAPI-OAuth2-Token': 'secret-token' };
+        },
+        queryParameters() {
+          reads.queryParameters += 1;
+          return {};
+        }
+      };
+      client._private.http.request = () => {
+        reads.requests += 1;
+      };
+
+      const action = makeAction(HaveAPI, client, unsafePath);
+
+      expect(() => action.directInvoke({ onReply() {} }))
+        .to.throw(HaveAPI.Client.Exceptions.ProtocolError);
+      expect(reads).to.deep.equal({
+        credentials: 0,
+        headers: 0,
+        queryParameters: 0,
+        requests: 0
+      });
+    });
   });
 });

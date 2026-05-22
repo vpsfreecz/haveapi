@@ -19,6 +19,8 @@ module HaveAPI::ModelAdapters
 
     module Action
       module InstanceMethods
+        MAX_INCLUDE_DEPTH = 16
+
         # Helper method that sets correct ActiveRecord includes
         # according to the meta includes sent by the user.
         # `q` is the model or partial AR query. If not set,
@@ -87,40 +89,54 @@ module HaveAPI::ModelAdapters
         def ar_parse_includes(raw)
           return @ar_parsed_includes if @ar_parsed_includes
 
-          @ar_parsed_includes = ar_inner_includes(raw).select do |inc|
-            # Drop associations that are not registered in the AR:
-            #   The API resource may have associations that are not based on
-            #   associations in AR.
-            if inc.is_a?(::Hash)
-              inc.each_key do |k|
-                next(false) unless self.class.model.reflections.has_key?(k.to_s)
-              end
-
-            else
-              next(false) unless self.class.model.reflections.has_key?(inc.to_s)
-            end
-
-            true
+          @ar_parsed_includes = raw.filter_map do |assoc|
+            ar_parse_include_path(assoc, self.class.model)
           end
         end
 
-        # Called by ar_parse_includes for recursion purposes.
+        # Kept for callers that used the old parser directly.
         def ar_inner_includes(includes)
-          args = []
+          includes.filter_map do |assoc|
+            parts = assoc.to_s.split('__').reject(&:empty?).map(&:to_sym)
+            next if parts.empty? || parts.size > MAX_INCLUDE_DEPTH
 
-          includes.each do |assoc|
-            if assoc.index('__')
-              tmp = {}
-              parts = assoc.split('__')
-              tmp[parts.first.to_sym] = ar_inner_includes([parts[1..].join('__')])
+            ar_include_tree(parts)
+          end
+        end
 
-              args << tmp
-            else
-              args << assoc.to_sym
+        def ar_parse_include_path(path, model)
+          parts = path.to_s.split('__')
+          return if parts.empty? || parts.size > MAX_INCLUDE_DEPTH
+
+          current_model = model
+          symbols = []
+          i = 0
+
+          while i < parts.size
+            part = parts[i]
+            return if part.empty?
+
+            begin
+              reflection = current_model.reflections[part.to_s]
+              return unless reflection
+
+              symbols << part.to_sym
+              current_model = reflection.klass
+            rescue NameError
+              return
             end
+            i += 1
           end
 
-          args
+          ar_include_tree(symbols)
+        end
+
+        def ar_include_tree(parts)
+          ret = parts.last
+          (parts.size - 2).downto(0) do |i|
+            ret = { parts[i] => [ret] }
+          end
+          ret
         end
 
         # Default includes contain all associated resources specified

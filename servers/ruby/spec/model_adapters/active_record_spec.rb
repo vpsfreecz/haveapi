@@ -348,7 +348,7 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
   end
 
   it 'parses nested includes and drops unknown associations' do
-    parsed = dummy_action.ar_parse_includes(%w[group group__environment foo bar__baz])
+    parsed = dummy_action.ar_parse_includes(%w[group group__environment group__missing foo bar__baz])
 
     expect(parsed).to include(:group)
     expect(parsed.any? { |v| v.is_a?(Hash) && v.has_key?(:group) }).to be(true)
@@ -356,8 +356,15 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
     nested = parsed.detect { |v| v.is_a?(Hash) && v.has_key?(:group) }
     expect(nested[:group].flatten).to include(:environment)
 
+    expect(nested[:group].flatten).not_to include(:missing)
     expect(parsed).not_to include(:foo)
     expect(parsed).not_to include(:bar)
+  end
+
+  it 'drops overly deep include paths before building ActiveRecord includes' do
+    deep_path = (['missing'] * 5_000).join('__')
+
+    expect(dummy_action.ar_parse_includes([deep_path])).to eq([])
   end
 
   it 'returns unresolved associations without includes' do
@@ -408,6 +415,17 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
     expect(group_data[:_meta][:resolved]).to be(true)
     expect(env_data[:_meta][:resolved]).to be(true)
     expect(env_data[:note]).to eq('ENV_NOTE')
+  end
+
+  it 'drops invalid nested include paths from requests' do
+    group = ARAdapterSpec::Group.create!(label: 'grp', note: 'GRP_NOTE')
+    user = create_user(name: 'user', group: group)
+
+    get "/v1/users/#{user.id}", { _meta: { includes: 'group__missing' } }, input: ''
+
+    expect(last_response.status).to eq(200)
+    expect(api_response).to be_ok
+    expect(api_response[:user][:group][:_meta][:resolved]).to be(false)
   end
 
   it 'does not expose unresolved associated resources denied by their show action' do

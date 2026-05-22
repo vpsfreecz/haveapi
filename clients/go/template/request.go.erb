@@ -27,6 +27,29 @@ func (client *Client) actionURL(path string) (string, error) {
 	return client.sameOriginURL(client.Url + path)
 }
 
+func (client *Client) descriptionURL(rawURL string) (string, error) {
+	base, err := client.parsedBaseURL()
+	if err != nil {
+		return "", err
+	}
+
+	ref, err := url.Parse(rawURL)
+	if err != nil {
+		return "", err
+	}
+
+	if ref.User != nil {
+		return "", fmt.Errorf("unsafe API description URL %q", rawURL)
+	}
+
+	resolved := base.ResolveReference(ref)
+	if !sameOrigin(base, resolved) {
+		return "", fmt.Errorf("API description URL %q is outside client origin", rawURL)
+	}
+
+	return resolved.String(), nil
+}
+
 func (client *Client) sameOriginURL(rawURL string) (string, error) {
 	base, err := client.parsedBaseURL()
 	if err != nil {

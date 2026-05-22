@@ -34,7 +34,12 @@ func (client *Client) RevokeAccessToken() error {
 	form := url.Values{}
 	form.Set("token", auth.AccessToken)
 
-	req, err := http.NewRequest("POST", <%= go_string_literal(auth.revoke_url) %>, strings.NewReader(form.Encode()))
+	revokeURL, err := client.descriptionURL(<%= go_string_literal(auth.revoke_url) %>)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", revokeURL, strings.NewReader(form.Encode()))
 
 	if err != nil {
 		return err

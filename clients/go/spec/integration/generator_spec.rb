@@ -23,12 +23,12 @@ RSpec.describe HaveAPI::GoClient::Generator do
     }
   end
 
-  def oauth2_revoke_description
+  def oauth2_revoke_description(revoke_url: '/revoke')
     {
       authentication: {
         oauth2: {
           http_header: 'X-HaveAPI-OAuth2-Token',
-          revoke_url: 'https://auth.example/revoke'
+          revoke_url:
         }
       },
       meta: { namespace: '_meta' },
@@ -398,7 +398,7 @@ RSpec.describe HaveAPI::GoClient::Generator do
             t.Fatalf("expected POST revoke, got %s", got)
           }
 
-          if got := transport.req.URL.String(); got != "https://auth.example/revoke" {
+          if got := transport.req.URL.String(); got != "http://unused.example/revoke" {
             t.Fatalf("unexpected revoke URL: %s", got)
           }
 
@@ -518,6 +518,79 @@ RSpec.describe HaveAPI::GoClient::Generator do
               transport.req.URL.String(),
               transport.req.Header.Get("Authorization"),
             )
+          }
+        }
+      GO
+
+      go_out, go_err, go_status = Open3.capture3(
+        { 'CGO_ENABLED' => '0' },
+        'go',
+        'test',
+        './...',
+        chdir: dir
+      )
+      expect(go_status).to be_success, "go test failed: #{go_out}\n#{go_err}"
+    end
+  end
+
+  it 'rejects OAuth2 revoke URLs outside the client origin before sending the token' do
+    Dir.mktmpdir('haveapi-go-client-oauth2-revoke-origin-') do |dir|
+      communicator = instance_double(
+        HaveAPI::Client::Communicator,
+        describe_api: oauth2_revoke_description(
+          revoke_url: 'http://attacker.example/collect-token'
+        )
+      )
+      allow(HaveAPI::Client::Communicator).to receive(:new).and_return(communicator)
+
+      generator = described_class.new(
+        'http://api.example',
+        dir,
+        module: 'example.com/haveapi-oauth2-revoke-origin',
+        package: 'client'
+      )
+      generator.generate
+      generator.go_fmt
+
+      File.write(File.join(dir, 'client', 'oauth2_revoke_origin_test.go'), <<~GO)
+        package client
+
+        import (
+          "errors"
+          "net/http"
+          "testing"
+        )
+
+        type unexpectedRevokeTransport struct {
+          req *http.Request
+        }
+
+        func (transport *unexpectedRevokeTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+          transport.req = req
+          return nil, errors.New("unexpected request")
+        }
+
+        func TestOAuth2RevokeCrossOriginURLIsRejectedBeforeAuth(t *testing.T) {
+          transport := &unexpectedRevokeTransport{}
+
+          c := New("http://api.example")
+          c.SetHTTPClient(&http.Client{Transport: transport})
+          c.SetExistingOAuth2Auth("secret-token")
+
+          if err := c.RevokeAccessToken(); err == nil {
+            t.Fatalf("expected unsafe revoke URL error")
+          }
+
+          if transport.req != nil {
+            t.Fatalf(
+              "unexpected request to %s with token header %q",
+              transport.req.URL.String(),
+              transport.req.Header.Get("X-HaveAPI-OAuth2-Token"),
+            )
+          }
+
+          if c.Authentication == nil {
+            t.Fatalf("authentication should remain configured after failed revoke")
           }
         }
       GO

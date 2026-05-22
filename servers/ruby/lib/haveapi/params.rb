@@ -134,12 +134,12 @@ module HaveAPI
 
       if include
         @include ||= []
-        @include.concat(include)
+        @include.concat(normalize_names(include))
       end
 
       if exclude
         @exclude ||= []
-        @exclude.concat(exclude)
+        @exclude.concat(normalize_names(exclude))
       end
 
       instance_eval(&block)
@@ -209,9 +209,16 @@ module HaveAPI
     # First step of validation. Check if input is in correct namespace
     # and has a correct layout.
     def check_layout(params)
-      if (params[namespace].nil? || !valid_layout?(params)) && any_required_params?
+      value = namespace ? params[namespace] : params
+
+      if value.nil?
+        raise ValidationError.new('invalid input layout', {}) if any_required_params?
+
+      elsif !valid_layout?(value)
         raise ValidationError.new('invalid input layout', {})
       end
+
+      return unless namespace
 
       case layout
       when :object, :hash
@@ -305,13 +312,17 @@ module HaveAPI
       kwargs
     end
 
-    def valid_layout?(params)
+    def normalize_names(names)
+      names.map { |v| v.is_a?(String) ? v.to_sym : v }
+    end
+
+    def valid_layout?(value)
       case layout
       when :object, :hash
-        params[namespace].is_a?(Hash)
+        value.is_a?(Hash)
 
       when :object_list, :hash_list
-        params[namespace].is_a?(Array)
+        value.is_a?(Array) && value.all?(Hash)
 
       else
         false

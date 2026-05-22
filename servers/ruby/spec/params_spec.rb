@@ -53,6 +53,18 @@ describe HaveAPI::Params do
     expect(p.params.map(&:name)).to match_array(%i[res_param1 res_param2])
   end
 
+  it 'normalizes string include and exclude names from shared params' do
+    p = described_class.new(:input, ParamsSpec::MyResource::Index)
+    p.add_block proc { use :all, include: ['res_param1'] }
+    p.exec
+    expect(p.params.map(&:name)).to eq([:res_param1])
+
+    p = described_class.new(:input, ParamsSpec::MyResource::Index)
+    p.add_block proc { use :all, exclude: ['res_param2'] }
+    p.exec
+    expect(p.params.map(&:name)).to eq([:res_param1])
+  end
+
   it 'has param requires' do
     p = described_class.new(:input, ParamsSpec::MyResource::Index)
     p.add_block proc { requires :p_required }
@@ -172,6 +184,35 @@ describe HaveAPI::Params do
     expect do
       p.check_layout({
         something_bad: {}
+      })
+    end.to raise_error(HaveAPI::ValidationError)
+  end
+
+  it 'rejects present optional namespaces with invalid shapes' do
+    p = described_class.new(:input, ParamsSpec::MyResource::Index)
+    p.add_block(proc do
+      string :param1
+    end)
+    p.exec
+
+    expect do
+      p.check_layout({
+        my_resource: 'not-a-hash'
+      })
+    end.to raise_error(HaveAPI::ValidationError)
+  end
+
+  it 'rejects non-hash list elements' do
+    p = described_class.new(:input, ParamsSpec::MyResource::Index)
+    p.layout = :hash_list
+    p.add_block(proc do
+      string :param1
+    end)
+    p.exec
+
+    expect do
+      p.check_layout({
+        my_resources: ['not-a-hash']
       })
     end.to raise_error(HaveAPI::ValidationError)
   end

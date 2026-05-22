@@ -35,8 +35,8 @@ module HaveAPI
     def valid?(v)
       return false if v.nil?
       return !v.strip.empty? if !@empty && v.is_a?(::String)
+      return !v.empty? if !@empty && v.respond_to?(:empty?)
 
-      # FIXME: other data types?
       true
     end
   end

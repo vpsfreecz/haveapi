@@ -33,11 +33,15 @@ module HaveAPI
     end
 
     def valid?(v)
+      return false unless v.respond_to?(:to_str)
+
+      matched = @rx.match?(v.to_str)
+
       if @match
-        @rx.match(v) ? true : false
+        matched
 
       else
-        @rx.match(v) ? false : true
+        !matched
       end
     end
   end

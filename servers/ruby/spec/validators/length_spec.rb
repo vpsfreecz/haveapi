@@ -42,4 +42,10 @@ describe HaveAPI::Validators::Length do
     expect(v.valid?('a' * 4)).to be true
     expect(v.valid?('a' * 5)).to be false
   end
+
+  it 'rejects values without length' do
+    validator = described_class.new(:length, { min: 2 })
+
+    expect(validator.valid?(1)).to be false
+  end
 end

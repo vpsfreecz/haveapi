@@ -41,4 +41,18 @@ describe HaveAPI::Validators::Confirmation do
       expect(validator.validate('bar', { other_param: 'foo' })).to be true
     end
   end
+
+  context 'with a string parameter reference' do
+    let(:validator) do
+      described_class.new(:confirm, {
+        param: 'other_param',
+        equal: false
+      })
+    end
+
+    it 'looks up normalized input keys' do
+      expect(validator.validate('foo', { other_param: 'foo' })).to be false
+      expect(validator.validate('bar', { other_param: 'foo' })).to be true
+    end
+  end
 end

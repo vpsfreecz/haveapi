@@ -79,7 +79,7 @@ module HaveAPI::Parameters
     end
 
     def clean(raw)
-      return instance_exec(raw, &@clean) if @clean
+      return validate_cleaned_value(instance_exec(raw, &@clean)) if @clean
 
       if raw.nil?
         return nil if nullable?
@@ -88,7 +88,7 @@ module HaveAPI::Parameters
       end
 
       if raw.is_a?(String)
-        stripped = raw.strip
+        stripped = strip_string(raw)
         return nil if stripped.empty? && nullable?
       end
 
@@ -145,6 +145,20 @@ module HaveAPI::Parameters
 
     private
 
+    def validate_cleaned_value(value)
+      if value.nil? && !nullable?
+        raise HaveAPI::ValidationError, 'cannot be null'
+      end
+
+      value
+    end
+
+    def strip_string(value)
+      value.strip
+    rescue ArgumentError, Encoding::CompatibilityError
+      raise HaveAPI::ValidationError, 'invalid string encoding'
+    end
+
     def coerce_integer(raw)
       case raw
       when Integer
@@ -156,7 +170,7 @@ module HaveAPI::Parameters
 
         raw.to_i
       when String
-        s = raw.strip
+        s = strip_string(raw)
 
         if s.empty? || !s.match?(/\A[+-]?\d+\z/)
           raise HaveAPI::ValidationError, "not a valid integer #{raw.inspect}"
@@ -173,7 +187,7 @@ module HaveAPI::Parameters
         f = raw.to_f
 
       elsif raw.is_a?(String)
-        s = raw.strip
+        s = strip_string(raw)
         raise HaveAPI::ValidationError, "not a valid float #{raw.inspect}" if s.empty?
 
         begin
@@ -200,7 +214,7 @@ module HaveAPI::Parameters
         return true if raw == 1
 
       elsif raw.is_a?(String)
-        s = raw.strip
+        s = strip_string(raw)
         raise HaveAPI::ValidationError, "not a valid boolean #{raw.inspect}" if s.empty?
 
         return true if %w[true t yes y 1].include?(s.downcase)
@@ -211,12 +225,16 @@ module HaveAPI::Parameters
     end
 
     def coerce_datetime(raw)
-      if raw.is_a?(String) && raw.strip.empty?
+      unless raw.is_a?(String)
+        raise HaveAPI::ValidationError, "not in ISO 8601 format '#{raw}'"
+      end
+
+      if strip_string(raw).empty?
         raise HaveAPI::ValidationError, "not in ISO 8601 format '#{raw}'"
       end
 
       DateTime.iso8601(raw).to_time
-    rescue ArgumentError
+    rescue ArgumentError, TypeError
       raise HaveAPI::ValidationError, "not in ISO 8601 format '#{raw}'"
     end
 

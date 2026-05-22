@@ -77,4 +77,11 @@ describe HaveAPI::Validators::Numericality do
     v = described_class.new(:number, { min: 5 })
     expect(v.valid?('abc')).to be false
   end
+
+  it 'rejects non-numeric values before numeric operations' do
+    validator = described_class.new(:number, { odd: true })
+
+    expect(validator.valid?(['5'])).to be false
+    expect(validator.valid?({ value: 5 })).to be false
+  end
 end

@@ -89,9 +89,9 @@ module HaveAPI
     # may use this information as it will.
     def validate(v, params)
       @params = params
-      ret = valid?(v)
+      valid?(v)
+    ensure
       @params = nil
-      ret
     end
 
     protected

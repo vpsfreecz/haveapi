@@ -20,6 +20,7 @@ module HaveAPI
 
     def setup
       @param = simple? ? take : take(:param)
+      @param = @param.to_sym if @param.is_a?(::String)
       @equal = take(:equal, true)
       @message = take(
         :message,

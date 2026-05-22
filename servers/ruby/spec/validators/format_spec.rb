@@ -49,4 +49,11 @@ describe HaveAPI::Validators::Format do
       expect(validator.valid?('b')).to be true
     end
   end
+
+  it 'rejects values that cannot be converted to strings' do
+    validator = described_class.new(:format, /\A[a-z]+\z/)
+
+    expect(validator.valid?(['abc'])).to be false
+    expect(validator.valid?({ value: 'abc' })).to be false
+  end
 end

@@ -69,6 +69,7 @@ module HaveAPI
       ret = []
 
       @validators.each do |validator|
+        validator = validator.clone
         next if validator.validate(value, params)
 
         ret << format(validator.message, value:)

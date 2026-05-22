@@ -8,6 +8,8 @@ describe HaveAPI::Validators::Presence do
       expect(validator.valid?(nil)).to be false
       expect(validator.valid?('')).to be false
       expect(validator.valid?(" \t" * 4)).to be false
+      expect(validator.valid?([])).to be false
+      expect(validator.valid?({})).to be false
     end
   end
 

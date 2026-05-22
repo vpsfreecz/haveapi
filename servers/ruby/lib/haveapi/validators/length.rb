@@ -62,6 +62,8 @@ module HaveAPI
     end
 
     def valid?(v)
+      return false unless v.respond_to?(:length)
+
       len = v.length
 
       return len == @equals if @equals

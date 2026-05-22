@@ -135,6 +135,7 @@ describe 'Parameters::Typed' do
     expect { p.clean('bzz') }.to raise_error(HaveAPI::ValidationError)
     expect { p.clean('') }.to raise_error(HaveAPI::ValidationError)
     expect { p.clean(nil) }.to raise_error(HaveAPI::ValidationError)
+    expect { p.clean([]) }.to raise_error(HaveAPI::ValidationError)
 
     p = p_arg(type: Datetime, required: true)
     expect { p.clean('') }.to raise_error(HaveAPI::ValidationError)
@@ -182,6 +183,24 @@ describe 'Parameters::Typed' do
     p = p_arg(type: Text, nullable: true)
     expect(p.clean('')).to be_nil
     expect(p.clean(nil)).to be_nil
+  end
+
+  it 'rejects nil returned by custom cleaners unless nullable' do
+    p = p_arg(type: String, required: true, clean: proc {})
+    expect { p.clean('value') }.to raise_error(HaveAPI::ValidationError, /cannot be null/)
+
+    p = p_arg(type: String, nullable: true, clean: proc {})
+    expect(p.clean('value')).to be_nil
+  end
+
+  it 'rejects invalid string encoding during coercion' do
+    invalid = "\xff".b.force_encoding(Encoding::UTF_8)
+
+    expect { p_type(String).clean(invalid) }.to raise_error(HaveAPI::ValidationError)
+    expect { p_type(Integer).clean(invalid) }.to raise_error(HaveAPI::ValidationError)
+    expect { p_type(Float).clean(invalid) }.to raise_error(HaveAPI::ValidationError)
+    expect { p_type(Boolean).clean(invalid) }.to raise_error(HaveAPI::ValidationError)
+    expect { p_type(Datetime).clean(invalid) }.to raise_error(HaveAPI::ValidationError)
   end
 
   it 'can be protected' do

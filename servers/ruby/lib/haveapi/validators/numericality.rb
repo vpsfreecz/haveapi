@@ -94,6 +94,8 @@ module HaveAPI
         v = v.to_i
       end
 
+      return false unless v.is_a?(::Numeric)
+
       ret = true
       ret = false if @min && v < @min
       ret = false if @max && v > @max

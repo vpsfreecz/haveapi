@@ -51,13 +51,13 @@ class Action
      */
     public function call()
     {
-        $params = $this->prepareCall(func_get_args());
+        try {
+            $params = $this->prepareCall(func_get_args());
+            return $this->client->call($this, $params);
 
-        $ret = $this->client->call($this, $params);
-
-        $this->prepared_path = null;
-
-        return $ret;
+        } finally {
+            $this->prepared_path = null;
+        }
     }
 
     /**
@@ -67,13 +67,13 @@ class Action
      */
     public function directCall()
     {
-        $params = $this->prepareCall(func_get_args());
+        try {
+            $params = $this->prepareCall(func_get_args());
+            return $this->client->directCall($this, $params);
 
-        $ret = $this->client->directCall($this, $params);
-
-        $this->prepared_path = null;
-
-        return $ret;
+        } finally {
+            $this->prepared_path = null;
+        }
     }
 
     /**

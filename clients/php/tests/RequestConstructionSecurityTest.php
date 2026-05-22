@@ -53,6 +53,69 @@ final class RequestConstructionSecurityTest extends TestCase
             $parsed['token=abc&token_type_hint']
         );
     }
+
+    public function testPreparedPathIsClearedWhenCallThrows(): void
+    {
+        $client = new RequestConstructionSecurityFailingClient();
+        $action = $this->newPathAction($client);
+
+        try {
+            $action->call(42, ['name' => 'alice']);
+            $this->fail('Expected simulated client failure');
+        } catch (RuntimeException $e) {
+            $this->assertSame('simulated call failure', $e->getMessage());
+        }
+
+        $this->assertSame(['/v1/users/42'], $client->callPaths);
+
+        try {
+            $action->call(['name' => 'bob']);
+            $this->fail('Expected unresolved path argument');
+        } catch (\HaveAPI\Client\Exception\UnresolvedArguments $e) {
+            $this->assertStringContainsString('unresolved arguments', $e->getMessage());
+        }
+
+        $this->assertSame(['/v1/users/42'], $client->callPaths);
+    }
+
+    public function testPreparedPathIsClearedWhenDirectCallThrows(): void
+    {
+        $client = new RequestConstructionSecurityFailingClient();
+        $action = $this->newPathAction($client);
+
+        try {
+            $action->directCall(42, ['name' => 'alice']);
+            $this->fail('Expected simulated client failure');
+        } catch (RuntimeException $e) {
+            $this->assertSame('simulated direct call failure', $e->getMessage());
+        }
+
+        $this->assertSame(['/v1/users/42'], $client->directCallPaths);
+
+        try {
+            $action->directCall(['name' => 'bob']);
+            $this->fail('Expected unresolved path argument');
+        } catch (\HaveAPI\Client\Exception\UnresolvedArguments $e) {
+            $this->assertStringContainsString('unresolved arguments', $e->getMessage());
+        }
+
+        $this->assertSame(['/v1/users/42'], $client->directCallPaths);
+    }
+
+    private function newPathAction(\HaveAPI\Client $client): \HaveAPI\Client\Action
+    {
+        $resource = new \HaveAPI\Client\Resource($client, 'user', (object) [], []);
+
+        return new \HaveAPI\Client\Action(
+            $client,
+            $resource,
+            'show',
+            (object) [
+                'path' => '/v1/users/{user_id}',
+            ],
+            []
+        );
+    }
 }
 
 final class RequestConstructionSecurityTestClient extends \HaveAPI\Client
@@ -104,6 +167,24 @@ final class RequestConstructionSecurityOAuthClient extends \HaveAPI\Client
     {
         $this->lastRequest = new RequestConstructionSecurityTestRequest($url);
         return $this->lastRequest;
+    }
+}
+
+final class RequestConstructionSecurityFailingClient extends \HaveAPI\Client
+{
+    public $callPaths = [];
+    public $directCallPaths = [];
+
+    public function call($action, $params = [])
+    {
+        $this->callPaths[] = $action->path();
+        throw new RuntimeException('simulated call failure');
+    }
+
+    public function directCall(\HaveAPI\Client\Action $action, $params = [], &$time = null)
+    {
+        $this->directCallPaths[] = $action->path();
+        throw new RuntimeException('simulated direct call failure');
     }
 }
 

@@ -41,12 +41,9 @@ module HaveAPI
     end
 
     def authorized?(context)
-      if (context.endpoint || context.current_user) \
-          && @authorization && !@authorization.call(context.current_user)
-        false
-      else
-        true
-      end
+      return true unless @authorization
+
+      @authorization.call(context.current_user) ? true : false
     end
 
     def provided?

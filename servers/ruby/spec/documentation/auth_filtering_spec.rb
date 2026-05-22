@@ -9,7 +9,7 @@ module DocAuthFilteringSpec
     protected
 
     def find_user(_request, username, password)
-      return User.new(1, username) if username == 'user' && password == 'pass'
+      return User.new(1, username) if %w[user admin].include?(username) && password == 'pass'
 
       nil
     end
@@ -30,6 +30,13 @@ describe DocAuthFilteringSpec do
 
           output(:hash) { string :msg }
           authorize { allow }
+
+          # rubocop:disable RSpec/NoExpectationExample
+          example 'admin-only public result' do
+            authorize { |user| user&.login == 'admin' }
+            response({ msg: 'ADMIN_ONLY_RESULT' })
+          end
+          # rubocop:enable RSpec/NoExpectationExample
 
           def exec
             { msg: 'public' }
@@ -106,6 +113,29 @@ describe DocAuthFilteringSpec do
       expect(last_response.status).to eq(200)
       expect(api_response).to be_ok
       expect(api_response[:method]).to eq('GET')
+    end
+
+    it 'hides examples denied to anonymous users from version docs' do
+      header 'Authorization', nil
+      call_api(:options, '/v1/')
+
+      expect(last_response.status).to eq(200)
+      expect(api_response).to be_ok
+
+      examples = api_response[:resources][:secure][:actions][:public][:examples]
+      expect(examples).to be_empty
+    end
+
+    it 'shows examples allowed to authenticated users in version docs' do
+      login('admin', 'pass')
+      call_api(:options, '/v1/')
+
+      expect(last_response.status).to eq(200)
+      expect(api_response).to be_ok
+
+      examples = api_response[:resources][:secure][:actions][:public][:examples]
+      expect(examples.size).to eq(1)
+      expect(examples.first[:response][:msg]).to eq('ADMIN_ONLY_RESULT')
     end
   end
 end

@@ -79,6 +79,14 @@ module HaveAPI::ModelAdapters
           paginable = input[parameter]
           limit = input[:limit]
 
+          if limit && limit > HaveAPI::Actions::Paginable::MAX_LIMIT
+            error!(
+              "limit has to be maximally #{HaveAPI::Actions::Paginable::MAX_LIMIT}",
+              {},
+              http_status: 400
+            )
+          end
+
           q = yield(q, paginable) if paginable
           q = q.limit(limit) if limit
           q

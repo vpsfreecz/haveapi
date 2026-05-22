@@ -316,7 +316,7 @@ module HaveAPI
     def validate!
       @params = validate
     rescue ValidationError => e
-      error!(e.message, e.to_hash)
+      error!(e.message, e.to_hash, http_status: 400)
     end
 
     def authorized?(user)

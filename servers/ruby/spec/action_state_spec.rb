@@ -209,6 +209,16 @@ describe HaveAPI::Resources::ActionState do
       expect(state.poll_calls).to eq(0)
     end
 
+    it 'rejects excessive poll timeout values' do
+      ActionStateSpec::Backend.add_state(ActionStateSpec::State.new(id: 1))
+
+      get_action '/v1/action_states/1/poll', action_state: { timeout: 31 }
+
+      expect(last_response.status).to eq(400)
+      expect(api_response).not_to be_ok
+      expect(api_response.errors[:timeout].first).to include('range <0, 30>')
+    end
+
     it 'poll returns immediately when update_in check mismatches' do
       state = ActionStateSpec::State.new(
         id: 1,

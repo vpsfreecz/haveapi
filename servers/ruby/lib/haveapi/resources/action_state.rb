@@ -77,12 +77,15 @@ module HaveAPI::Resources
     class Poll < HaveAPI::Action
       include Mixin
 
+      MAX_TIMEOUT = 30
+
       desc 'Returns when the action is completed or timeout occurs'
       http_method :get
       route '{%{resource}_id}/poll'
 
       input(:hash) do
-        float :timeout, label: 'Timeout', desc: 'in seconds', default: 15, fill: true
+        float :timeout, label: 'Timeout', desc: 'in seconds', default: 15, fill: true,
+                        number: { min: 0, max: MAX_TIMEOUT }
         float :update_in, label: 'Progress',
                           desc: 'number of seconds after which the state is returned if the progress ' \
                                 'has changed',
@@ -99,6 +102,10 @@ module HaveAPI::Resources
       authorize { allow }
 
       def exec
+        if input[:timeout] > MAX_TIMEOUT
+          error!("timeout has to be maximally #{MAX_TIMEOUT}", {}, http_status: 400)
+        end
+
         t = Time.now
 
         loop do

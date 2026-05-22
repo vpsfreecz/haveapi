@@ -515,6 +515,16 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
     expect(ids).to eq([3, 4])
   end
 
+  it 'rejects excessive pagination limits' do
+    get '/v1/users', { user: { limit: HaveAPI::Actions::Paginable::MAX_LIMIT + 1 } }, input: ''
+
+    expect(last_response.status).to eq(400)
+    expect(api_response).not_to be_ok
+    expect(api_response.errors[:limit].first).to include(
+      "range <0, #{HaveAPI::Actions::Paginable::MAX_LIMIT}>"
+    )
+  end
+
   it 'applies descending pagination with with_desc_pagination' do
     5.times do |i|
       create_user(

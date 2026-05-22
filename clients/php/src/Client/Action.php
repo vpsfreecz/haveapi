@@ -100,7 +100,8 @@ class Action
                 break;
             }
 
-            $this->prepared_path = preg_replace("/\{[a-zA-Z0-9\-_]+\}/", $arg, $this->prepared_path, 1, $replaced_cnt);
+            $safeArg = rawurlencode((string) $arg);
+            $this->prepared_path = preg_replace("/\{[a-zA-Z0-9\-_]+\}/", $safeArg, $this->prepared_path, 1, $replaced_cnt);
 
             if ($replaced_cnt) {
                 $this->lastArgs[] = $arg;

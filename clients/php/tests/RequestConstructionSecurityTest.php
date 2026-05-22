@@ -54,6 +54,48 @@ final class RequestConstructionSecurityTest extends TestCase
         );
     }
 
+    public function testActionPathArgumentsAreEncodedAsPathComponents(): void
+    {
+        $client = new RequestConstructionSecurityFailingClient();
+        $action = $this->newPathAction($client);
+        $pathArg = '42?user[name]=alice&_meta[includes]=group__secret';
+
+        try {
+            $action->call($pathArg, ['name' => 'alice']);
+            $this->fail('Expected simulated client failure');
+        } catch (RuntimeException $e) {
+            $this->assertSame('simulated call failure', $e->getMessage());
+        }
+
+        $this->assertSame(
+            ['/v1/users/42%3Fuser%5Bname%5D%3Dalice%26_meta%5Bincludes%5D%3Dgroup__secret'],
+            $client->callPaths
+        );
+        $this->assertNull(parse_url($client->callPaths[0], PHP_URL_QUERY));
+    }
+
+    public function testAppliedActionPathArgumentsAreEncodedAsPathComponents(): void
+    {
+        $client = new RequestConstructionSecurityFailingClient();
+        $action = $this->newPathAction($client);
+        $pathArg = '42?user[name]=alice&_meta[includes]=group__secret';
+
+        $action->applyArgs([$pathArg]);
+
+        try {
+            $action->directCall(['name' => 'alice']);
+            $this->fail('Expected simulated direct call failure');
+        } catch (RuntimeException $e) {
+            $this->assertSame('simulated direct call failure', $e->getMessage());
+        }
+
+        $this->assertSame(
+            ['/v1/users/42%3Fuser%5Bname%5D%3Dalice%26_meta%5Bincludes%5D%3Dgroup__secret'],
+            $client->directCallPaths
+        );
+        $this->assertNull(parse_url($client->directCallPaths[0], PHP_URL_QUERY));
+    }
+
     public function testActionPathRejectsAuthoritySwitch(): void
     {
         $client = new RequestConstructionSecurityCaptureClient('https://api.example');

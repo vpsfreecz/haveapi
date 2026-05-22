@@ -1,3 +1,5 @@
+require 'cgi'
+
 module HaveAPI::Client
   class Action
     attr_reader :client, :api, :name
@@ -237,9 +239,15 @@ module HaveAPI::Client
       @prepared_help ||= @spec[:help].dup
 
       args.each do |arg|
-        @prepared_path.sub!(/\{[a-zA-Z0-9\-_]+\}/, arg.to_s)
-        @prepared_help.sub!(/\{[a-zA-Z0-9\-_]+\}/, arg.to_s)
+        encoded = encode_path_arg(arg)
+
+        @prepared_path.sub!(/\{[a-zA-Z0-9\-_]+\}/, encoded)
+        @prepared_help.sub!(/\{[a-zA-Z0-9\-_]+\}/, encoded)
       end
+    end
+
+    def encode_path_arg(arg)
+      CGI.escape(arg.to_s).gsub('+', '%20')
     end
   end
 end

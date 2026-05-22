@@ -646,7 +646,11 @@ module HaveAPI::CLI
     end
 
     def write_config
-      File.write(config_path, YAML.dump(@config))
+      File.open(config_path, File::WRONLY | File::CREAT | File::TRUNC, 0o600) do |f|
+        f.write(YAML.dump(@config))
+      end
+
+      File.chmod(0o600, config_path)
     end
 
     def read_config

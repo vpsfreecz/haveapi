@@ -89,22 +89,27 @@ class OAuth2 extends Base
      */
     public function requestAccessToken()
     {
-        if (!isset($_GET['state']) || $_GET['state'] != $_SESSION['oauth2state']) {
-            throw new \HaveAPI\Client\Exception\AuthenticationFailed('Invalid OAuth2 state');
-        }
+        try {
+            if (
+                !isset($_GET['state'], $_SESSION['oauth2state'])
+                || !is_string($_GET['state'])
+                || !is_string($_SESSION['oauth2state'])
+                || !hash_equals($_SESSION['oauth2state'], $_GET['state'])
+            ) {
+                throw new \HaveAPI\Client\Exception\AuthenticationFailed('Invalid OAuth2 state');
+            }
 
-        $this->genericProvider->setPkceCode($_SESSION['oauth2pkceCode']);
+            if (!isset($_SESSION['oauth2pkceCode']) || !is_string($_SESSION['oauth2pkceCode'])) {
+                throw new \HaveAPI\Client\Exception\AuthenticationFailed('Invalid OAuth2 PKCE verifier');
+            }
 
-        $this->accessToken = $this->genericProvider->getAccessToken('authorization_code', [
-            'code' => $_GET['code'],
-        ]);
+            $this->genericProvider->setPkceCode($_SESSION['oauth2pkceCode']);
 
-        if (isset($_SESSION['oauth2state'])) {
-            unset($_SESSION['oauth2state']);
-        }
-
-        if (isset($_SESSION['oauth2pkceCode'])) {
-            unset($_SESSION['oauth2pkceCode']);
+            $this->accessToken = $this->genericProvider->getAccessToken('authorization_code', [
+                'code' => $_GET['code'],
+            ]);
+        } finally {
+            $this->clearOAuth2Session();
         }
     }
 
@@ -175,6 +180,17 @@ class OAuth2 extends Base
             $this->description->$name,
             "OAuth2 $name"
         );
+    }
+
+    private function clearOAuth2Session()
+    {
+        if (isset($_SESSION['oauth2state'])) {
+            unset($_SESSION['oauth2state']);
+        }
+
+        if (isset($_SESSION['oauth2pkceCode'])) {
+            unset($_SESSION['oauth2pkceCode']);
+        }
     }
 
     /**

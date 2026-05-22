@@ -45,6 +45,31 @@ describe HaveAPI::Server do
       expect(api_response.message).to match(/Bad JSON syntax/)
     end
 
+    it 'returns 400 for non-object JSON bodies' do
+      header 'Content-Type', 'application/json'
+      header 'Accept', 'application/json'
+
+      ['[]', '"msg"', '123', 'true', 'null'].each do |body|
+        post '/v1/tests/echo', body
+
+        expect(last_response.status).to eq(400)
+        expect(api_response).not_to be_ok
+        expect(api_response.message).to eq('JSON body must be an object')
+      end
+    end
+
+    it 'returns 400 for malformed Accept headers' do
+      invalid_accept = (+"\xFF").force_encoding(Encoding::UTF_8)
+      header 'Accept', invalid_accept
+      header 'Content-Type', 'application/json'
+
+      post '/v1/tests/echo', '{}'
+
+      expect(last_response.status).to eq(400)
+      expect(api_response).not_to be_ok
+      expect(api_response.message).to eq('Bad Accept header')
+    end
+
     it 'returns JSON envelope for unknown route' do
       header 'Accept', 'application/json'
       get '/does-not-exist'

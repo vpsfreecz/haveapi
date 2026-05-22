@@ -105,4 +105,22 @@ describe HaveAPI::Authentication::Basic::Provider do
     expect(api_response).to be_failed
     expect(seen_users.last).to be_nil
   end
+
+  it 'returns an authentication error envelope from _login' do
+    get '/_login'
+
+    expect(last_response.status).to eq(401)
+    expect(last_response.headers['www-authenticate']).to include('Basic realm=')
+    expect(api_response).to be_failed
+    expect(api_response.message).to include('authenticate')
+  end
+
+  it 'returns an authentication error envelope from _logout' do
+    get '/_logout'
+
+    expect(last_response.status).to eq(401)
+    expect(last_response.headers['www-authenticate']).to include('Basic realm=')
+    expect(api_response).to be_failed
+    expect(api_response.message).to include('authenticate')
+  end
 end

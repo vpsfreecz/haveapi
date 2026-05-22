@@ -49,8 +49,12 @@ module HaveAPI
         return if @formatter
 
         @formatter = OutputFormatter.new
-
-        unless @formatter.supports?(request.accept)
+        accept = request.accept
+      rescue ArgumentError, EncodingError
+        @formatter.supports?([])
+        report_error(400, {}, 'Bad Accept header')
+      else
+        unless @formatter.supports?(accept)
           @halted = true
           halt 406, "Not Acceptable\n"
         end
@@ -110,6 +114,10 @@ module HaveAPI
 
       def report_error(code, headers, msg)
         @halted = true
+        unless @formatter
+          @formatter = OutputFormatter.new
+          @formatter.supports?([])
+        end
 
         content_type @formatter.content_type, charset: 'utf-8'
         halt code, headers, @formatter.format(false, nil, msg, version: false)
@@ -496,13 +504,17 @@ module HaveAPI
         end
 
         begin
-          body = request.body.read
+          raw_body = request.body.read
 
-          body = if body.empty?
+          body = if raw_body.empty?
                    nil
                  else
-                   JSON.parse(body, symbolize_names: true)
+                   JSON.parse(raw_body, symbolize_names: true)
                  end
+
+          if !raw_body.empty? && !body.is_a?(Hash)
+            report_error(400, {}, 'JSON body must be an object')
+          end
         rescue StandardError => e
           report_error(400, {}, 'Bad JSON syntax')
         end

@@ -29,6 +29,14 @@ module ARAdapterSpec
     validates :score, numericality: { equal_to: 7 }
     validates :name, presence: true
   end
+
+  class HiddenAccount < ActiveRecord::Base
+    self.table_name = 'hidden_accounts'
+  end
+
+  class Invoice < ActiveRecord::Base
+    belongs_to :hidden_account, class_name: 'ARAdapterSpec::HiddenAccount'
+  end
 end
 
 describe HaveAPI::ModelAdapters::ActiveRecord do
@@ -164,6 +172,59 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
         end
       end
     end
+
+    hidden_account_resource = define_resource(:HiddenAccount) do
+      version 1
+      auth false
+      model ARAdapterSpec::HiddenAccount
+
+      define_action(:Index, superclass: HaveAPI::Actions::Default::Index) do
+        authorize { deny }
+
+        output(:object_list) do
+          integer :id
+          string :label
+        end
+
+        def exec
+          self.class.model.order(id: :asc).to_a
+        end
+      end
+
+      define_action(:Show, superclass: HaveAPI::Actions::Default::Show) do
+        authorize { deny }
+
+        output(:object) do
+          integer :id
+          string :label
+          string :private_reference
+        end
+
+        def exec
+          self.class.model.find(params['hidden_account_id'])
+        end
+      end
+    end
+
+    define_resource(:Invoice) do
+      version 1
+      auth false
+      model ARAdapterSpec::Invoice
+
+      define_action(:Show, superclass: HaveAPI::Actions::Default::Show) do
+        authorize { allow }
+
+        output(:object) do
+          integer :id
+          string :label
+          resource hidden_account_resource
+        end
+
+        def exec
+          self.class.model.find(params['invoice_id'])
+        end
+      end
+    end
   end
 
   default_version 1
@@ -193,6 +254,16 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
         t.string :state
         t.integer :group_id
       end
+
+      create_table :hidden_accounts do |t|
+        t.string :label, null: false
+        t.string :private_reference, null: false
+      end
+
+      create_table :invoices do |t|
+        t.string :label, null: false
+        t.integer :hidden_account_id, null: false
+      end
     end
   end
 
@@ -200,6 +271,8 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
     ARAdapterSpec::User.delete_all
     ARAdapterSpec::Group.delete_all
     ARAdapterSpec::Environment.delete_all
+    ARAdapterSpec::Invoice.delete_all
+    ARAdapterSpec::HiddenAccount.delete_all
   end
 
   let(:dummy_action) do
@@ -335,6 +408,42 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
     expect(group_data[:_meta][:resolved]).to be(true)
     expect(env_data[:_meta][:resolved]).to be(true)
     expect(env_data[:note]).to eq('ENV_NOTE')
+  end
+
+  it 'does not expose unresolved associated resources denied by their show action' do
+    account = ARAdapterSpec::HiddenAccount.create!(
+      label: 'VIP billing account',
+      private_reference: 'SECRET-ACCOUNT-REF'
+    )
+    invoice = ARAdapterSpec::Invoice.create!(label: 'public invoice', hidden_account: account)
+
+    get "/v1/hidden_accounts/#{account.id}", {}, input: ''
+    expect(last_response.status).to eq(403)
+    expect(api_response).to be_failed
+
+    get "/v1/invoices/#{invoice.id}", {}, input: ''
+
+    expect(last_response.status).to eq(200)
+    expect(api_response).to be_ok
+
+    account_data = api_response[:invoice][:hidden_account]
+    expect(account_data).to eq(_meta: { resolved: false, authorized: false })
+  end
+
+  it 'does not resolve associated resources denied by their show action' do
+    account = ARAdapterSpec::HiddenAccount.create!(
+      label: 'VIP billing account',
+      private_reference: 'SECRET-ACCOUNT-REF'
+    )
+    invoice = ARAdapterSpec::Invoice.create!(label: 'public invoice', hidden_account: account)
+
+    get "/v1/invoices/#{invoice.id}", { _meta: { includes: 'hidden_account' } }, input: ''
+
+    expect(last_response.status).to eq(200)
+    expect(api_response).to be_ok
+
+    account_data = api_response[:invoice][:hidden_account]
+    expect(account_data).to eq(_meta: { resolved: false, authorized: false })
   end
 
   it 'cleans resource input ids and maps invalid values to validation errors' do

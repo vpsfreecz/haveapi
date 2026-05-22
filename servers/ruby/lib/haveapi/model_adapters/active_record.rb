@@ -306,49 +306,82 @@ module HaveAPI::ModelAdapters
         res_output = res_show.output
 
         args = res_show.resolve_path_params(val)
+        resolve_assoc = includes_include?(param.name)
+        pass_includes = includes_pass_on_to(param.name) if resolve_assoc
 
-        if includes_include?(param.name)
-          push_cls = @context.action
-          push_ins = @context.action_instance
+        with_association_context(res_show, args) do |show|
+          return unauthorized_resource unless show.authorized?(@context.current_user)
 
-          pass_includes = includes_pass_on_to(param.name)
+          if resolve_assoc
+            show.meta[:includes] = pass_includes
 
-          show = res_show.new(
-            push_ins.request,
-            push_ins.version,
-            {},
-            nil,
-            @context
-          )
-          show.meta[:includes] = pass_includes
+            # This flag is used to tell the action that it is being used
+            # as a nested association, that it wasn't called directly by the user.
+            show.flags[:inner_assoc] = true
 
-          # This flag is used to tell the action that it is being used
-          # as a nested association, that it wasn't called directly by the user.
-          show.flags[:inner_assoc] = true
+            ret = show.safe_output(val)
 
-          show.authorized?(push_ins.current_user) # FIXME: handle false
+            raise "#{res_show} resolve failed" unless ret[0]
 
-          ret = show.safe_output(val)
+            ret[1][res_show.output.namespace].update({
+                _meta: ret[1][:_meta].update(resolved: true)
+            })
 
-          @context.action_instance = push_ins
-          @context.action = push_cls
-
-          raise "#{res_show} resolve failed" unless ret[0]
-
-          ret[1][res_show.output.namespace].update({
-              _meta: ret[1][:_meta].update(resolved: true)
-          })
-
-        else
-          {
-            param.value_id => val.send(res_output[param.value_id].db_name),
-            param.value_label => val.send(res_output[param.value_label].db_name),
-            _meta: {
-              path_params: args.is_a?(Array) ? args : [args],
-              resolved: false
+          else
+            {
+              param.value_id => val.send(res_output[param.value_id].db_name),
+              param.value_label => val.send(res_output[param.value_label].db_name),
+              _meta: {
+                path_params: args.is_a?(Array) ? args : [args],
+                resolved: false
+              }
             }
-          }
+          end
         end
+      end
+
+      def with_association_context(res_show, args)
+        push_cls = @context.action
+        push_ins = @context.action_instance
+        push_path = @context.path
+        @context.path = res_show.build_route('')
+
+        res_show.new(
+          push_ins.request,
+          push_ins.version,
+          path_params(@context.path, args),
+          nil,
+          @context
+        )
+        yield @context.action_instance
+      ensure
+        restore_context(push_cls, push_ins, push_path)
+      end
+
+      def restore_context(action, action_instance, path)
+        @context.action = action
+        @context.action_instance = action_instance
+        @context.path = path
+      end
+
+      def path_params(path, args)
+        values = args.is_a?(Array) ? args.dup : [args]
+        params = {}
+
+        path.scan(/\{([a-zA-Z\-_]+)\}/) do |match|
+          params[match.first] = values.shift.to_s
+        end
+
+        params
+      end
+
+      def unauthorized_resource
+        {
+          _meta: {
+            resolved: false,
+            authorized: false
+          }
+        }
       end
 
       # Should an association with `name` be resolved?

@@ -583,6 +583,8 @@ module HaveAPI
           unless desc
             report_error(403, {}, 'Access denied. Insufficient permissions.')
           end
+        rescue ValidationError => e
+          report_error(400, e.to_hash, e.message)
         rescue StandardError => e
           tmp = settings.api_server.call_hooks_for(:description_exception, args: [ctx, e])
           report_error(

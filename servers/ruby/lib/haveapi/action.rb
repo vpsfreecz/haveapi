@@ -206,7 +206,7 @@ module HaveAPI
       end
 
       def describe(context)
-        authorization = (@authorization && @authorization.clone) || Authorization.new
+        authorization = (@authorization && @authorization.clone) || Authorization.new {}
         add_pre_authorize_blocks(authorization, context)
 
         if (context.endpoint || context.current_user) \
@@ -595,34 +595,51 @@ module HaveAPI
         input.validate(@safe_params)
       end
 
-      # Validate metadata input
+      validate_metadata(input)
+    end
+
+    def validate_metadata(input)
       auth = Authorization.new { allow }
       @metadata = {}
 
-      return if input && %i[object_list hash_list].include?(input.layout)
+      validate_metadata_type(:global, auth)
+      validate_metadata_type(:object, auth, input) if input && !%i[object_list hash_list].include?(input.layout)
+    end
 
-      %i[object global].each do |v|
-        meta = self.class.meta(v)
-        next unless meta
+    def validate_metadata_type(type, auth, input = nil)
+      meta = self.class.meta(type)
+      return unless meta && meta.input
 
-        raw_meta = nil
+      params = metadata_params(type, input)
+      params = {} if params.nil?
+      meta.input.check_layout(params)
 
-        [Metadata.namespace, Metadata.namespace.to_s].each do |ns|
-          params = v == :object ? (@params[input.namespace] && @params[input.namespace][ns]) : @params[ns]
-          next unless params
+      raw_meta = auth.filter_input(
+        meta.input.params,
+        self.class.model_adapter(meta.input.layout).input(params)
+      )
 
-          raw_meta = auth.filter_input(
-            meta.input.params,
-            self.class.model_adapter(meta.input.layout).input(params)
-          )
+      @metadata.update(meta.input.validate(raw_meta))
+    end
 
-          break if raw_meta
-        end
+    def metadata_params(type, input)
+      case type
+      when :global
+        fetch_metadata_from(@params)
+      when :object
+        return unless input && input.namespace
 
-        next unless raw_meta
-
-        @metadata.update(meta.input.validate(raw_meta))
+        obj_params = @params[input.namespace]
+        fetch_metadata_from(obj_params) if obj_params.is_a?(Hash)
       end
+    end
+
+    def fetch_metadata_from(params)
+      [Metadata.namespace, Metadata.namespace.to_s].each do |ns|
+        return params[ns] if params && params.has_key?(ns)
+      end
+
+      nil
     end
 
     # @return <Hash<Symbol, String>> path parameters and their values

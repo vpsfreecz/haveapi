@@ -91,7 +91,7 @@ module HaveAPI::Authentication
     end
 
     def empty?
-      @chain.empty?
+      @chain.empty? || @chain.values.all?(&:empty?)
     end
 
     protected

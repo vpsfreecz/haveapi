@@ -125,6 +125,27 @@ describe AuthorizeSpec do
         end
       end
 
+      define_action(:OwnerList) do
+        route 'owners/{owner_id}/list'
+        http_method :get
+
+        authorize do |_user, path_params|
+          restrict owner_id: path_params['owner_id'].to_i
+          allow
+        end
+
+        output(:object_list) do
+          integer :id
+          integer :owner_id
+          string :name
+        end
+
+        define_method(:exec) do
+          restrictions = with_restricted
+          items.select { |item| item[:owner_id] == restrictions[:owner_id] }
+        end
+      end
+
       define_action(:HashList) do
         route 'hash_list'
         http_method :get
@@ -172,6 +193,18 @@ describe AuthorizeSpec do
   def call_get_action(resource, action, params = {})
     env 'rack.input', StringIO.new('')
     call_api(resource, action, params)
+  end
+
+  def with_pre_authorize(listener)
+    hooks = HaveAPI::Hooks.hooks
+    action_hooks = hooks[HaveAPI::Action][:pre_authorize]
+    original = action_hooks[:listeners].dup
+
+    HaveAPI::Action.connect_hook(:pre_authorize, &listener)
+
+    yield
+  ensure
+    action_hooks[:listeners] = original
   end
 
   it 'denies non-admins from admin-only action' do
@@ -308,6 +341,21 @@ describe AuthorizeSpec do
 
     owners = api_response[:items].map { |item| item[:owner_id] }.uniq
     expect(owners).to eq([1])
+  end
+
+  it 'fails closed when action restrictions conflict with global restrictions' do
+    with_pre_authorize(proc do |ret, _context|
+      ret[:blocks] << proc do |user|
+        restrict owner_id: user.id
+      end
+      ret
+    end) do
+      login('user', 'pass')
+      get '/v1/items/owners/2/list', {}, input: ''
+    end
+
+    expect(last_response.status).to eq(403)
+    expect(api_response).not_to be_ok
   end
 
   it 'hides admin-only actions from non-admin documentation' do

@@ -388,7 +388,7 @@ module HaveAPI::ModelAdapters
         res_show.new(
           push_ins.request,
           push_ins.version,
-          path_params(@context.path, args),
+          res_show.path_params(@context.path, args),
           nil,
           @context
         )
@@ -401,17 +401,6 @@ module HaveAPI::ModelAdapters
         @context.action = action
         @context.action_instance = action_instance
         @context.path = path
-      end
-
-      def path_params(path, args)
-        values = args.is_a?(Array) ? args.dup : [args]
-        params = {}
-
-        path.scan(/\{([a-zA-Z\-_]+)\}/) do |match|
-          params[match.first] = values.shift.to_s
-        end
-
-        params
       end
 
       def unauthorized_resource

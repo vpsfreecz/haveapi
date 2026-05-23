@@ -97,7 +97,7 @@ module HaveAPI::Parameters
       attrs.each { |k, v| instance_variable_set("@#{k}", v) }
     end
 
-    def clean(raw)
+    def clean(raw, context = nil)
       if raw.nil?
         return nil if nullable?
 
@@ -111,9 +111,13 @@ module HaveAPI::Parameters
 
       extra = @extra.merge(optional: optional?, nullable: nullable?)
 
-      ::HaveAPI::ModelAdapter.for(
+      ret = ::HaveAPI::ModelAdapter.for(
         show_action.input.layout, @resource.model
       ).input_clean(@resource.model, raw, extra)
+
+      authorize_record!(ret, context)
+
+      ret
     end
 
     def validate(v, params)
@@ -149,6 +153,28 @@ module HaveAPI::Parameters
       end
 
       path
+    end
+
+    def authorize_record!(record, context)
+      return if record.nil? || context.nil?
+      return unless show_action.authorization
+
+      path = show_action.build_route('')
+      path_params = show_action.path_params(path, show_action.resolve_path_params(record))
+      child_context = HaveAPI::Context.new(
+        context.server,
+        version: context.version,
+        request: context.request,
+        action: show_action,
+        path:,
+        params: path_params,
+        user: context.current_user,
+        endpoint: context.endpoint
+      )
+      action = show_action.new(context.request, context.version, path_params, nil, child_context)
+      return if action.authorized?(context.current_user)
+
+      raise HaveAPI::ValidationError, 'resource not found'
     end
   end
 end

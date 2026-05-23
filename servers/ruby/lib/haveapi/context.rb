@@ -79,7 +79,7 @@ module HaveAPI
 
       my_args = args.clone
 
-      path.scan(/\{([a-zA-Z\-_]+)\}/) do |match|
+      path.scan(/\{([a-zA-Z0-9\-_]+)\}/) do |match|
         path_param = match.first
         ret[path_param] = my_args.shift
       end
@@ -97,7 +97,7 @@ module HaveAPI
       value = arg.to_s
       raise HaveAPI::ValidationError, 'invalid path parameter encoding' unless value.valid_encoding?
 
-      path.sub!(/\{[a-zA-Z\-_]+\}/, value)
+      path.sub!(/\{[a-zA-Z0-9\-_]+\}/, value)
     end
   end
 end

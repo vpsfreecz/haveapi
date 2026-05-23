@@ -98,7 +98,10 @@ module HaveAPI
       end
 
       hash[:resources].each do |resource, children|
-        ret[:resources][resource.resource_name.underscore] = resource.describe(children, context)
+        child = resource.describe(children, context)
+        next if child[:actions].empty? && child[:resources].empty?
+
+        ret[:resources][resource.resource_name.underscore] = child
       end
 
       context.resource_path = orig_resource_path

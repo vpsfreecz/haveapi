@@ -55,6 +55,15 @@ describe DocAuthFilteringSpec do
             { msg: 'private' }
           end
         end
+
+        define_resource(:HiddenChild) do
+          desc 'Hidden nested resource'
+          auth false
+
+          define_action(:Index, superclass: HaveAPI::Actions::Default::Index) do
+            authorize { deny }
+          end
+        end
       end
     end
 
@@ -89,6 +98,15 @@ describe DocAuthFilteringSpec do
 
       expect(actions).to have_key(:public)
       expect(actions).to have_key(:private)
+    end
+
+    it 'prunes nested resources with no authorized actions or children' do
+      login('user', 'pass')
+      call_api(:options, '/v1/')
+
+      expect(last_response.status).to eq(200)
+      expect(api_response).to be_ok
+      expect(api_response[:resources][:secure][:resources]).not_to have_key(:hidden_child)
     end
 
     it 'restricts action documentation for private actions' do

@@ -3,8 +3,8 @@ module HaveAPI
     attr_reader :path, :sinatra_path, :action, :resource_path
 
     def initialize(path, action, resource_path)
-      @path = path
-      @sinatra_path = path.gsub(/:([a-zA-Z\-_]+)/, '{\1}')
+      @sinatra_path = path.gsub(/:([a-zA-Z0-9\-_]+)/, '{\1}')
+      @path = @sinatra_path
       @action = action
       @resource_path = resource_path
     end

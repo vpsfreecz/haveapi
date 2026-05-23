@@ -2,6 +2,17 @@ require 'time'
 
 module ActionStateSpec
   FIXED_TIME = Time.utc(2020, 1, 1, 0, 0, 0)
+  User = Struct.new(:id)
+
+  class BasicProvider < HaveAPI::Authentication::Basic::Provider
+    protected
+
+    def find_user(_request, username, password)
+      return unless username == 'user' && password == 'pass'
+
+      User.new(1)
+    end
+  end
 
   class State
     attr_reader :id, :label, :created_at, :updated_at, :status, :progress, :poll_calls
@@ -306,6 +317,37 @@ describe HaveAPI::Resources::ActionState do
 
       expect(api_response).not_to be_ok
       expect(api_response.message).to eq('not supported')
+    end
+  end
+
+  context 'with action_state backend and authentication' do
+    empty_api
+    use_version 1
+    default_version 1
+    action_state ActionStateSpec::Backend
+    auth_chain ActionStateSpec::BasicProvider
+
+    before do
+      ActionStateSpec::Backend.reset!
+      ActionStateSpec::Backend.add_state(ActionStateSpec::State.new(id: 1))
+      header 'Accept', 'application/json'
+    end
+
+    it 'requires authentication for action state resources' do
+      get_action '/v1/action_states'
+
+      expect(last_response.status).to eq(401)
+      expect(api_response).not_to be_ok
+      expect(ActionStateSpec::Backend.list_calls).to be_empty
+    end
+
+    it 'passes authenticated users to the action state backend' do
+      login('user', 'pass')
+      get_action '/v1/action_states'
+
+      expect(last_response.status).to eq(200)
+      expect(api_response).to be_ok
+      expect(ActionStateSpec::Backend.list_calls.last[:user].id).to eq(1)
     end
   end
 end

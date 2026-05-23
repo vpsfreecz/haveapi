@@ -231,12 +231,15 @@ module HaveAPI
 
     # Third step of validation. Check if all required params are present,
     # convert params to correct data types, set default values if necessary.
-    def validate(params)
+    def validate(params, context: nil, only: nil)
       errors = {}
+      permitted = only && only.map(&:to_sym)
 
       layout_aware(params) do |input|
         # First run - coerce values to correct types
         @params.each do |p|
+          next if permitted && !permitted.include?(p.name)
+
           if p.required? && input[p.name].nil?
             errors[p.name] = ['required parameter missing']
             next
@@ -248,7 +251,11 @@ module HaveAPI
           end
 
           begin
-            cleaned = p.clean(input[p.name])
+            cleaned = if p.method(:clean).arity.abs > 1
+                        p.clean(input[p.name], context)
+                      else
+                        p.clean(input[p.name])
+                      end
           rescue ValidationError => e
             errors[p.name] ||= []
             errors[p.name] << e.message
@@ -260,6 +267,7 @@ module HaveAPI
 
         # Second run - validate parameters
         @params.each do |p|
+          next if permitted && !permitted.include?(p.name)
           next if errors.has_key?(p.name)
           next if input[p.name].nil?
 

@@ -159,6 +159,42 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
         end
       end
 
+      define_action(:PublicShow, superclass: HaveAPI::Actions::Default::Show) do
+        route 'public/{user_id}/show'
+
+        authorize do
+          output whitelist: [:name]
+          allow
+        end
+
+        output(:object) do
+          integer :id
+          string :name
+        end
+
+        def exec
+          self.class.model.find(params['user_id'])
+        end
+      end
+
+      define_action(:PublicIndex, superclass: HaveAPI::Actions::Default::Index) do
+        route 'public/list'
+
+        authorize do
+          output whitelist: [:name]
+          allow
+        end
+
+        output(:object_list) do
+          integer :id
+          string :name
+        end
+
+        def exec
+          self.class.model.order(id: :asc).to_a
+        end
+      end
+
       define_action(:Create, superclass: HaveAPI::Actions::Default::Create) do
         authorize { allow }
 
@@ -226,6 +262,22 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
 
         def exec
           self.class.model.find(params['invoice_id'])
+        end
+      end
+
+      define_action(:Update, superclass: HaveAPI::Actions::Default::Update) do
+        authorize { allow }
+
+        input(:hash) do
+          resource hidden_account_resource
+        end
+
+        output(:hash) do
+          bool :assigned
+        end
+
+        def exec
+          { assigned: input.has_key?(:hidden_account) }
         end
       end
     end
@@ -472,6 +524,47 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
 
     account_data = api_response[:invoice][:hidden_account]
     expect(account_data).to eq(_meta: { resolved: false, authorized: false })
+  end
+
+  it 'does not expose object path params when id output is filtered' do
+    user = create_user(name: 'user')
+
+    get "/v1/users/public/#{user.id}/show", {}, input: ''
+
+    expect(last_response.status).to eq(200)
+    expect(api_response).to be_ok
+    expect(api_response[:user]).to eq(name: 'user')
+    expect(api_response.response[:_meta]).not_to have_key(:path_params)
+  end
+
+  it 'does not expose object-list path params when id output is filtered' do
+    create_user(id: 1, name: 'user1')
+    create_user(id: 2, name: 'user2')
+
+    get '/v1/users/public/list', {}, input: ''
+
+    expect(last_response.status).to eq(200)
+    expect(api_response).to be_ok
+    expect(api_response[:users].map { |user| user[:name] }).to eq(%w[user1 user2])
+    expect(api_response[:users]).to all(satisfy { |user| !user[:_meta].has_key?(:path_params) })
+  end
+
+  it 'rejects resource input records denied by their show action' do
+    account = ARAdapterSpec::HiddenAccount.create!(
+      label: 'VIP billing account',
+      private_reference: 'SECRET-ACCOUNT-REF'
+    )
+    invoice = ARAdapterSpec::Invoice.create!(label: 'public invoice', hidden_account: account)
+
+    put "/v1/invoices/#{invoice.id}", {
+      invoice: {
+        hidden_account: account.id
+      }
+    }.to_json, 'CONTENT_TYPE' => 'application/json'
+
+    expect(last_response.status).to eq(400)
+    expect(api_response).not_to be_ok
+    expect(api_response.errors[:hidden_account]).to include('resource not found')
   end
 
   it 'cleans resource input ids and maps invalid values to validation errors' do

@@ -497,7 +497,7 @@ module HaveAPI
       @sinatra.method(route.http_method).call(route.sinatra_path) do
         setup_formatter
 
-        if route.action.auth
+        if route.action.auth || settings.api_server.action_state_auth_required?(route)
           authenticate!(v)
         else
           authenticated?(v)
@@ -557,7 +557,7 @@ module HaveAPI
 
         pass if params[:method] && params[:method] != route_method
 
-        if route.action.auth
+        if route.action.auth || settings.api_server.action_state_auth_required?(route)
           authenticate!(v)
         else
           authenticated?(v)
@@ -638,6 +638,12 @@ module HaveAPI
 
     def describe_resource(r, hash, context)
       r.describe(hash, context)
+    end
+
+    def action_state_auth_required?(route)
+      return false if @auth_chain.empty?
+
+      route.action.resource == HaveAPI::Resources::ActionState
     end
 
     def version_prefix(v)

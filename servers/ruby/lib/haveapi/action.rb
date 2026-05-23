@@ -4,6 +4,8 @@ require 'haveapi/metadata'
 
 module HaveAPI
   class Action < Common
+    PATH_PARAM_PATTERN = /\{([a-zA-Z0-9\-_]+)\}/
+
     obj_type :action
     has_attr :version
     has_attr :desc
@@ -276,6 +278,21 @@ module HaveAPI
         end
       end
 
+      def path_param_names(path)
+        path.scan(PATH_PARAM_PATTERN).map(&:first)
+      end
+
+      def path_params(path, args)
+        values = args.is_a?(Array) ? args.dup : [args]
+        params = {}
+
+        path_param_names(path).each do |name|
+          params[name] = values.shift.to_s
+        end
+
+        params
+      end
+
       def add_pre_authorize_blocks(authorization, context)
         ret = Action.call_hooks(
           :pre_authorize,
@@ -293,8 +310,10 @@ module HaveAPI
       super()
       @request = request
       @version = version
+      @route_params = params.dup
+      @body = body || {}
       @params = params
-      @params.update(body) if body
+      @params.update(@body)
       @context = context
       @context.action = self.class
       @context.action_instance = self
@@ -329,7 +348,10 @@ module HaveAPI
     end
 
     def input
-      @safe_params[self.class.input.namespace] if self.class.input
+      return unless self.class.input
+
+      ns = self.class.input.namespace
+      ns ? @safe_params[ns] : @safe_params
     end
 
     def meta
@@ -420,7 +442,7 @@ module HaveAPI
               out,
               true
             )
-            @reply_meta[:global].update(out.meta)
+            @reply_meta[:global].update(filtered_object_meta(out.meta, safe_ret))
 
           when :object_list
             safe_ret = []
@@ -433,7 +455,11 @@ module HaveAPI
                 out,
                 true
               )
-              safe_ret.last.update({ Metadata.namespace => out.meta }) unless meta[:no]
+              next if meta[:no]
+
+              safe_ret.last.update({
+                Metadata.namespace => filtered_object_meta(out.meta, safe_ret.last)
+              })
             end
 
           when :hash
@@ -461,7 +487,7 @@ module HaveAPI
           end
 
           ns = { output.namespace => safe_ret }
-          ns[Metadata.namespace] = @reply_meta[:global] unless meta[:no]
+          ns[Metadata.namespace] = filtered_global_meta unless meta[:no]
 
           [true, ns]
 
@@ -567,43 +593,64 @@ module HaveAPI
 
     def validate
       # Validate standard input
-      @safe_params = @params.dup
+      @safe_params = @route_params.dup
       input = self.class.input
 
       if input
+        raw_params = @route_params.merge(@body)
+
         # First check layout
-        input.check_layout(@safe_params)
+        input.check_layout(raw_params)
 
         # Then filter allowed params
         case input.layout
         when :object_list, :hash_list
-          @safe_params[input.namespace].map! do |obj|
+          filtered = raw_params[input.namespace].map do |obj|
             @authorization.filter_input(
               self.class.input.params,
               self.class.model_adapter(self.class.input.layout).input(obj)
             )
           end
+          if input.namespace
+            @safe_params[input.namespace] = filtered
+          else
+            @safe_params = filtered
+          end
 
         else
-          @safe_params[input.namespace] = @authorization.filter_input(
+          filtered = @authorization.filter_input(
             self.class.input.params,
-            self.class.model_adapter(self.class.input.layout).input(@safe_params[input.namespace])
+            self.class.model_adapter(self.class.input.layout).input(
+              input.namespace ? raw_params[input.namespace] : raw_params
+            )
           )
+          if input.namespace
+            @safe_params[input.namespace] = filtered
+          else
+            self.class.input.params.each do |p|
+              @safe_params.delete(p.name)
+              @safe_params.delete(p.name.to_s)
+            end
+            @safe_params.update(filtered)
+          end
         end
 
         # Now check required params, convert types and set defaults
-        input.validate(@safe_params)
+        input.validate(
+          @safe_params,
+          context: @context,
+          only: @authorization.permitted_input_names(self.class.input.params)
+        )
       end
 
       validate_metadata(input)
     end
 
     def validate_metadata(input)
-      auth = Authorization.new { allow }
       @metadata = {}
 
-      validate_metadata_type(:global, auth)
-      validate_metadata_type(:object, auth, input) if input && !%i[object_list hash_list].include?(input.layout)
+      validate_metadata_type(:global, @authorization)
+      validate_metadata_type(:object, @authorization, input) if input && !%i[object_list hash_list].include?(input.layout)
     end
 
     def validate_metadata_type(type, auth, input = nil)
@@ -619,7 +666,13 @@ module HaveAPI
         self.class.model_adapter(meta.input.layout).input(params)
       )
 
-      @metadata.update(meta.input.validate(raw_meta))
+      @metadata.update(
+        meta.input.validate(
+          raw_meta,
+          context: @context,
+          only: auth.permitted_input_names(meta.input.params)
+        )
+      )
     end
 
     def metadata_params(type, input)
@@ -646,12 +699,32 @@ module HaveAPI
     def extract_path_params
       ret = {}
 
-      @context.path.scan(/\{([a-zA-Z\-_]+)\}/) do |match|
-        path_param = match.first
-        ret[path_param] = @params[path_param]
+      self.class.path_param_names(@context.path).each do |path_param|
+        ret[path_param] = if @route_params.has_key?(path_param)
+                            @route_params[path_param]
+                          else
+                            @route_params[path_param.to_sym]
+                          end
       end
 
       ret
+    end
+
+    def filtered_global_meta
+      global_meta = self.class.meta(:global)
+      return @reply_meta[:global] unless global_meta && global_meta.output
+
+      @authorization.filter_output(
+        global_meta.output.params,
+        self.class.model_adapter(global_meta.output.layout).output(@context, @reply_meta[:global]),
+        true
+      )
+    end
+
+    def filtered_object_meta(object_meta, safe_object)
+      return object_meta if safe_object.has_key?(:id) || safe_object.has_key?('id')
+
+      object_meta.except(:path_params, 'path_params')
     end
   end
 end

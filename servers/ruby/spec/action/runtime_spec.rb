@@ -430,6 +430,13 @@ describe HaveAPI::Action do
       action_hooks[:listeners] = original
     end
 
+    it 'builds path params with string and symbol keys' do
+      expect(action_class(:show).path_params('/tests/{test_id}', 123)).to eq({
+        'test_id' => '123',
+        test_id: '123'
+      })
+    end
+
     it '_meta.no suppresses metadata' do
       action_class(:echo).calls.clear
 

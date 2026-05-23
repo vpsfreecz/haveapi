@@ -113,7 +113,7 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
         end
 
         def prepare
-          group = self.class.model.find(params['group_id'])
+          group = self.class.model.find(params[:group_id])
           error!('access denied') if group.note == 'PRIVATE_GROUP_NOTE'
         end
 
@@ -531,6 +531,19 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
     expect(group_data[:note]).to eq('GRP_NOTE')
     expect(group_data[:environment][:_meta][:resolved]).to be(false)
     expect(group_data[:environment]).not_to have_key(:note)
+  end
+
+  it 'passes symbol path params to associated show prepare when included' do
+    group = ARAdapterSpec::Group.create!(label: 'grp', note: 'GROUP_NOTE')
+    user = create_user(name: 'user', group: group)
+
+    get "/v1/users/#{user.id}", { _meta: { includes: 'group' } }, input: ''
+
+    expect(last_response.status).to eq(200)
+    expect(api_response).to be_ok
+    group_data = api_response[:user][:group]
+    expect(group_data[:_meta][:resolved]).to be(true)
+    expect(group_data).to include(id: group.id, label: 'grp', note: 'GROUP_NOTE')
   end
 
   it 'applies associated show output restrictions when included' do

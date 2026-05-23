@@ -6,6 +6,10 @@
  * @param {Object} opts
  */
 function Client(url, opts) {
+	opts = opts || {};
+	var oauth2TrustedOrigins = opts.oauth2TrustedOrigins !== undefined ?
+		opts.oauth2TrustedOrigins : opts.oauth2_trusted_origins;
+
 	while (url.length > 0) {
 		if (url[ url.length - 1 ] == '/')
 			url = url.substr(0, url.length - 1);
@@ -23,6 +27,7 @@ function Client(url, opts) {
 		description: null,
 		attachedResourceNames: Object.create(null),
 		debug: (opts !== undefined && opts.debug !== undefined) ? opts.debug : 0,
+		oauth2TrustedOrigins: Client.normalizeTrustedOrigins(oauth2TrustedOrigins),
 	};
 
 	this._private.hooks = new Client.Hooks(this._private.debug);
@@ -86,6 +91,42 @@ Client.attachDescriptionMember = function(target, name, value, reservedNames) {
 	return true;
 };
 
+Client.normalizeTrustedOrigins = function(origins) {
+	if (origins === undefined || origins === null)
+		return [];
+
+	if (typeof(origins) === 'string')
+		origins = [origins];
+
+	if (!Array.isArray(origins))
+		throw new Client.Exceptions.ProtocolError('Invalid trusted OAuth2 origins');
+
+	return origins.map(function(origin) {
+		var parsed;
+
+		if (typeof(origin) !== 'string' || origin.length == 0) {
+			throw new Client.Exceptions.ProtocolError('Invalid trusted OAuth2 origin');
+		}
+
+		if (/[\x00-\x1f\x7f]/.test(origin) || origin.indexOf('\\') != -1) {
+			throw new Client.Exceptions.ProtocolError('Unsafe trusted OAuth2 origin');
+		}
+
+		try {
+			parsed = new URL(origin);
+		} catch (e) {
+			throw new Client.Exceptions.ProtocolError('Invalid trusted OAuth2 origin');
+		}
+
+		if (!parsed.protocol || !parsed.host || parsed.username || parsed.password ||
+		    (parsed.pathname != '' && parsed.pathname != '/') || parsed.search || parsed.hash) {
+			throw new Client.Exceptions.ProtocolError('Invalid trusted OAuth2 origin');
+		}
+
+		return parsed.origin;
+	});
+};
+
 /**
  * Resolve a URL from an API description and require it to stay on the
  * configured API origin.
@@ -129,11 +170,22 @@ Client.prototype.sameOriginUrl = function(url, opts) {
 		}
 	}
 
-	if (resolved.origin != base.origin || resolved.username || resolved.password) {
+	if (resolved.username || resolved.password) {
+		throw new Client.Exceptions.ProtocolError('Unsafe API URL origin');
+	}
+
+	if (resolved.origin != base.origin &&
+	    (!opts.trustedOrigins || opts.trustedOrigins.indexOf(resolved.origin) == -1)) {
 		throw new Client.Exceptions.ProtocolError('Unsafe API URL origin');
 	}
 
 	return resolved.href;
+};
+
+Client.prototype.oauth2Url = function(url) {
+	return this.sameOriginUrl(url, {
+		trustedOrigins: this._private.oauth2TrustedOrigins
+	});
 };
 
 /**

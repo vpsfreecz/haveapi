@@ -159,6 +159,54 @@ final class RequestConstructionSecurityTest extends TestCase
         );
     }
 
+    public function testOAuth2RevocationAcceptsTrustedCrossOriginUrl(): void
+    {
+        $client = new RequestConstructionSecurityOAuthClient(
+            'https://api.example',
+            null,
+            'haveapi-client-php',
+            ['oauth2_trusted_origins' => ['https://auth.example']]
+        );
+        $description = (object) [
+            'revoke_url' => 'https://auth.example/_auth/oauth2/revoke',
+        ];
+        $auth = new \HaveAPI\Client\Authentication\OAuth2($client, $description, []);
+
+        $auth->revokeToken(['token' => 'trusted-origin-access-token']);
+
+        $this->assertSame(
+            'https://auth.example/_auth/oauth2/revoke',
+            $client->lastRequest->uri
+        );
+        $this->assertSame(
+            'token=trusted-origin-access-token',
+            $client->lastRequest->bodyValue
+        );
+    }
+
+    public function testOAuth2TrustedOriginsRequireExactOrigin(): void
+    {
+        $client = new RequestConstructionSecurityOAuthClient(
+            'https://api.example',
+            null,
+            'haveapi-client-php',
+            ['oauth2_trusted_origins' => ['https://auth.example']]
+        );
+        $description = (object) [
+            'revoke_url' => 'https://auth.example.evil/collect-token',
+        ];
+        $auth = new \HaveAPI\Client\Authentication\OAuth2($client, $description, []);
+
+        try {
+            $auth->revokeToken(['token' => 'trusted-origin-access-token']);
+            $this->fail('Expected ProtocolError');
+        } catch (\HaveAPI\Client\Exception\ProtocolError $e) {
+            $this->assertStringContainsString('OAuth2 revoke_url', $e->getMessage());
+        }
+
+        $this->assertNull($client->lastRequest);
+    }
+
     public function testOAuth2TokenEndpointRejectsCrossOrigin(): void
     {
         $client = new RequestConstructionSecurityOAuthClient('https://api.example');
@@ -199,6 +247,41 @@ final class RequestConstructionSecurityTest extends TestCase
         }
 
         $this->assertNull($client->lastRequest);
+    }
+
+    public function testOAuth2EndpointsAcceptTrustedCrossOriginUrls(): void
+    {
+        $client = new RequestConstructionSecurityOAuthClient(
+            'https://api.example',
+            null,
+            'haveapi-client-php',
+            ['oauth2_trusted_origins' => ['https://auth.example']]
+        );
+        $auth = new \HaveAPI\Client\Authentication\OAuth2(
+            $client,
+            $this->newOAuth2Description([
+                'authorize_url' => 'https://auth.example/_auth/oauth2/authorize',
+                'token_url' => 'https://auth.example/_auth/oauth2/token',
+                'revoke_url' => 'https://auth.example/_auth/oauth2/revoke',
+            ]),
+            $this->newOAuth2Options()
+        );
+        $provider = $this->genericProviderFrom($auth);
+
+        $this->assertSame(
+            'https://auth.example/_auth/oauth2/authorize',
+            $provider->getBaseAuthorizationUrl()
+        );
+        $this->assertSame(
+            'https://auth.example/_auth/oauth2/token',
+            $provider->getBaseAccessTokenUrl([])
+        );
+
+        $auth->revokeToken(['token' => 'trusted-origin-access-token']);
+        $this->assertSame(
+            'https://auth.example/_auth/oauth2/revoke',
+            $client->lastRequest->uri
+        );
     }
 
     public function testOAuth2EndpointsAcceptRelativeSameOriginUrls(): void

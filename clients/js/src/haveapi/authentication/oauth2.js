@@ -71,7 +71,7 @@ Authentication.OAuth2.prototype.headers = function() {
 Authentication.OAuth2.prototype.logout = function(callback) {
 	var http = new XMLHttpRequest();
 	var that = this;
-	var revokeUrl = this.client.sameOriginUrl(this.description.revoke_url);
+	var revokeUrl = this.client.oauth2Url(this.description.revoke_url);
 
 	http.open('POST', revokeUrl, true);
 	http.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');

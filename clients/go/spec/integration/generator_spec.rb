@@ -746,6 +746,115 @@ RSpec.describe HaveAPI::GoClient::Generator do
     end
   end
 
+  it 'allows explicitly trusted OAuth2 revoke origins' do
+    Dir.mktmpdir('haveapi-go-client-oauth2-revoke-trusted-origin-') do |dir|
+      communicator = instance_double(
+        HaveAPI::Client::Communicator,
+        describe_api: oauth2_revoke_description(
+          revoke_url: 'http://auth.example/revoke'
+        )
+      )
+      allow(HaveAPI::Client::Communicator).to receive(:new).and_return(communicator)
+
+      generator = described_class.new(
+        'http://api.example',
+        dir,
+        module: 'example.com/haveapi-oauth2-revoke-trusted-origin',
+        package: 'client'
+      )
+      generator.generate
+      generator.go_fmt
+
+      File.write(File.join(dir, 'client', 'oauth2_revoke_trusted_origin_test.go'), <<~GO)
+        package client
+
+        import (
+          "io"
+          "net/http"
+          "net/url"
+          "strings"
+          "testing"
+        )
+
+        type trustedOriginRevokeTransport struct {
+          req  *http.Request
+          body string
+        }
+
+        func (transport *trustedOriginRevokeTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+          if req.Body != nil {
+            body, err := io.ReadAll(req.Body)
+            if err != nil {
+              return nil, err
+            }
+
+            if err := req.Body.Close(); err != nil {
+              return nil, err
+            }
+
+            transport.body = string(body)
+          }
+
+          transport.req = req
+
+          return &http.Response{
+            StatusCode: 200,
+            Status:     "200 OK",
+            Body:       io.NopCloser(strings.NewReader("ok")),
+            Header:     make(http.Header),
+            Request:    req,
+          }, nil
+        }
+
+        func TestOAuth2RevokeTrustedOrigin(t *testing.T) {
+          transport := &trustedOriginRevokeTransport{}
+          token := "trusted-origin-token"
+
+          c := New("http://api.example")
+          if err := c.AllowOAuth2Origin("http://auth.example"); err != nil {
+            t.Fatalf("allow OAuth2 origin failed: %v", err)
+          }
+          c.SetHTTPClient(&http.Client{Transport: transport})
+          c.SetExistingOAuth2Auth(token)
+
+          if err := c.RevokeAccessToken(); err != nil {
+            t.Fatalf("revoke failed: %v", err)
+          }
+
+          if transport.req == nil {
+            t.Fatalf("expected revoke request")
+          }
+
+          if got := transport.req.URL.String(); got != "http://auth.example/revoke" {
+            t.Fatalf("unexpected revoke URL: %s", got)
+          }
+
+          if got := transport.req.Header.Get("X-HaveAPI-OAuth2-Token"); got != token {
+            t.Fatalf("expected OAuth2 header %q, got %q", token, got)
+          }
+
+          form, err := url.ParseQuery(transport.body)
+          if err != nil {
+            t.Fatalf("invalid form body %q: %v", transport.body, err)
+          }
+
+          if got := form.Get("token"); got != token {
+            t.Fatalf("expected revoke token %q, got %q in body %q", token, got, transport.body)
+          }
+        }
+      GO
+
+      go_out, go_err, go_status = Open3.capture3(
+        { 'CGO_ENABLED' => '0' },
+        'go',
+        'test',
+        './...',
+        chdir: dir
+      )
+      expect(go_status).to be_success, "go test failed: #{go_out}\n#{go_err}"
+    end
+  end
+
   it 'escapes untrusted API descriptions when generating Go source' do
     injected_path = <<~PATH.chomp
       /safe",

@@ -176,7 +176,7 @@ class OAuth2 extends Base
             );
         }
 
-        return $this->client->resolveDescriptionUrl(
+        return $this->client->resolveOAuth2DescriptionUrl(
             $this->description->$name,
             "OAuth2 $name"
         );

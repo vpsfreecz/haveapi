@@ -287,7 +287,9 @@ module HaveAPI
         params = {}
 
         path_param_names(path).each do |name|
-          params[name] = values.shift.to_s
+          value = values.shift.to_s
+          params[name] = value
+          params[name.to_sym] = value
         end
 
         params

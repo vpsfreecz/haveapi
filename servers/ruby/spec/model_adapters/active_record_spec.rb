@@ -30,6 +30,12 @@ module ARAdapterSpec
     validates :name, presence: true
   end
 
+  class FilteredMember < ActiveRecord::Base
+    self.table_name = 'users'
+
+    belongs_to :group, class_name: 'ARAdapterSpec::Group', optional: true
+  end
+
   class HiddenAccount < ActiveRecord::Base
     self.table_name = 'hidden_accounts'
   end
@@ -106,8 +112,73 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
           resource env_resource
         end
 
+        def prepare
+          group = self.class.model.find(params['group_id'])
+          error!('access denied') if group.note == 'PRIVATE_GROUP_NOTE'
+        end
+
         def exec
           self.class.model.find(params['group_id'])
+        end
+      end
+    end
+
+    filtered_group_resource = define_resource(:FilteredGroup) do
+      version 1
+      auth false
+      model ARAdapterSpec::Group
+
+      define_action(:Index, superclass: HaveAPI::Actions::Default::Index) do
+        authorize do
+          output blacklist: [:note]
+          allow
+        end
+
+        output(:object_list) do
+          integer :id
+          string :label
+          string :note
+        end
+
+        def exec
+          self.class.model.order(id: :asc).to_a
+        end
+      end
+
+      define_action(:Show, superclass: HaveAPI::Actions::Default::Show) do
+        authorize do
+          output blacklist: [:note]
+          allow
+        end
+
+        output(:object) do
+          integer :id
+          string :label
+          string :note
+        end
+
+        def exec
+          self.class.model.find(params['filtered_group_id'])
+        end
+      end
+    end
+
+    define_resource(:FilteredMember) do
+      version 1
+      auth false
+      model ARAdapterSpec::FilteredMember
+
+      define_action(:Show, superclass: HaveAPI::Actions::Default::Show) do
+        authorize { allow }
+
+        output(:object) do
+          integer :id
+          string :name
+          resource filtered_group_resource, name: :group
+        end
+
+        def exec
+          with_includes(self.class.model.where(id: params['filtered_member_id'])).take!
         end
       end
     end
@@ -462,6 +533,23 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
     expect(group_data[:environment]).not_to have_key(:note)
   end
 
+  it 'applies associated show output restrictions when included' do
+    group = ARAdapterSpec::Group.create!(label: 'grp', note: 'GROUP_SECRET')
+    user = create_user(name: 'user', group: group)
+
+    get "/v1/filtered_groups/#{group.id}", {}, input: ''
+    expect(api_response).to be_ok
+    expect(api_response[:filtered_group]).not_to have_key(:note)
+
+    get "/v1/filtered_members/#{user.id}", { _meta: { includes: 'group' } }, input: ''
+
+    expect(api_response).to be_ok
+    group_data = api_response[:filtered_member][:group]
+    expect(group_data[:_meta][:resolved]).to be(true)
+    expect(group_data).to include(id: group.id, label: 'grp')
+    expect(group_data).not_to have_key(:note)
+  end
+
   it 'resolves nested associations when included' do
     environment = ARAdapterSpec::Environment.create!(label: 'env', note: 'ENV_NOTE')
     group = ARAdapterSpec::Group.create!(label: 'grp', note: 'GRP_NOTE', environment: environment)
@@ -524,6 +612,41 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
 
     account_data = api_response[:invoice][:hidden_account]
     expect(account_data).to eq(_meta: { resolved: false, authorized: false })
+  end
+
+  it 'does not expose unresolved associated resources denied during show prepare' do
+    group = ARAdapterSpec::Group.create!(
+      label: 'private group',
+      note: 'PRIVATE_GROUP_NOTE'
+    )
+    user = create_user(name: 'user', group: group)
+
+    get "/v1/groups/#{group.id}", {}, input: ''
+    expect(api_response).to be_failed
+
+    get "/v1/users/#{user.id}", {}, input: ''
+
+    expect(last_response.status).to eq(200)
+    expect(api_response).to be_ok
+
+    group_data = api_response[:user][:group]
+    expect(group_data).to eq(_meta: { resolved: false, authorized: false })
+  end
+
+  it 'does not resolve associated resources denied during show prepare' do
+    group = ARAdapterSpec::Group.create!(
+      label: 'private group',
+      note: 'PRIVATE_GROUP_NOTE'
+    )
+    user = create_user(name: 'user', group: group)
+
+    get "/v1/users/#{user.id}", { _meta: { includes: 'group' } }, input: ''
+
+    expect(last_response.status).to eq(200)
+    expect(api_response).to be_ok
+
+    group_data = api_response[:user][:group]
+    expect(group_data).to eq(_meta: { resolved: false, authorized: false })
   end
 
   it 'does not expose object path params when id output is filtered' do

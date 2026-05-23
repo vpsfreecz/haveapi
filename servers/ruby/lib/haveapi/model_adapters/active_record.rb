@@ -349,14 +349,14 @@ module HaveAPI::ModelAdapters
         pass_includes = includes_pass_on_to(param.name) if resolve_assoc
 
         with_association_context(res_show, args) do |show|
+          # Tell the child action it is being checked as a nested association.
+          show.flags[:inner_assoc] = true
+
           return unauthorized_resource unless show.authorized?(@context.current_user)
+          return unauthorized_resource unless show_prepared?(show)
 
           if resolve_assoc
             show.meta[:includes] = pass_includes
-
-            # This flag is used to tell the action that it is being used
-            # as a nested association, that it wasn't called directly by the user.
-            show.flags[:inner_assoc] = true
 
             ret = show.safe_output(val)
 
@@ -401,6 +401,17 @@ module HaveAPI::ModelAdapters
         @context.action = action
         @context.action_instance = action_instance
         @context.path = path
+      end
+
+      def show_prepared?(show)
+        completed = Object.new
+        ret = catch(:return) do
+          show.validate!
+          show.prepare
+          completed
+        end
+
+        ret.equal?(completed)
       end
 
       def unauthorized_resource

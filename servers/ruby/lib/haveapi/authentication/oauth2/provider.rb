@@ -96,19 +96,19 @@ module HaveAPI::Authentication
         that = self
 
         sinatra.get @authorize_path do
-          that.authorization_endpoint(self).call(request.env)
+          that.call_authorization_endpoint(self)
         end
 
         sinatra.post @authorize_path do
-          that.authorization_endpoint(self).call(request.env)
+          that.call_authorization_endpoint(self)
         end
 
         sinatra.post @token_path do
-          that.token_endpoint(self).call(request.env)
+          that.call_token_endpoint(self)
         end
 
         sinatra.post @revoke_path do
-          that.revoke_endpoint(self).call(request.env)
+          that.call_revoke_endpoint(self)
         end
       end
 
@@ -131,6 +131,8 @@ module HaveAPI::Authentication
           end
 
         token && config.find_user_by_access_token(request, token)
+      rescue HaveAPI::AuthenticationError
+        nil
       end
 
       def token_from_authorization_header(request)
@@ -139,6 +141,8 @@ module HaveAPI::Authentication
         return unless auth_header.provided? && !auth_header.parts.first.nil? && auth_header.scheme.to_s == 'bearer'
 
         auth_header.params
+      rescue ArgumentError, EncodingError
+        nil
       end
 
       def token_from_haveapi_header(request)
@@ -249,10 +253,15 @@ module HaveAPI::Authentication
                 req.invalid_grant!
               end
 
-              if authorization.code_challenge && authorization.code_challenge_method
+              if authorization.code_challenge
+                req.invalid_grant! unless authorization.code_challenge.is_a?(String)
+
+                code_challenge_method = authorization.code_challenge_method || 'plain'
+                req.invalid_grant! unless code_challenge_method.is_a?(String)
+
                 req.verify_code_verifier!(
                   authorization.code_challenge,
-                  authorization.code_challenge_method.to_sym
+                  code_challenge_method.to_sym
                 )
               end
 
@@ -289,10 +298,16 @@ module HaveAPI::Authentication
 
       def revoke_endpoint(handler)
         RevokeEndpoint.new do |req, _res|
+          req.invalid_client! if req.client_id.nil? || req.client_id.empty?
+          req.invalid_client! if req.client_secret.nil? || req.client_secret.empty?
+
+          client = config.find_client_by_id(req.client_id)
+          req.invalid_client! if client.nil? || !client.check_secret(req.client_secret)
+
           ret = config.handle_post_revoke(
             handler.request,
             req.token,
-            token_type_hint: req.token_type_hint
+            **revoke_kwargs(req, client)
           )
 
           case ret
@@ -306,17 +321,83 @@ module HaveAPI::Authentication
         end
       end
 
+      def call_authorization_endpoint(handler)
+        return invalid_request unless scalar_params?(
+          handler.params,
+          %w[client_id response_type redirect_uri state scope response_mode
+             code_challenge code_challenge_method]
+        )
+
+        finish_oauth_errors do
+          authorization_endpoint(handler).call(handler.request.env)
+        end
+      end
+
+      def call_token_endpoint(handler)
+        return invalid_request unless scalar_params?(
+          handler.params,
+          %w[grant_type client_id client_secret code redirect_uri refresh_token
+             code_verifier client_assertion client_assertion_type]
+        )
+
+        finish_oauth_errors do
+          token_endpoint(handler).call(handler.request.env)
+        end
+      end
+
+      def call_revoke_endpoint(handler)
+        return invalid_request unless scalar_params?(
+          handler.params,
+          %w[token token_type_hint client_id client_secret]
+        )
+
+        finish_oauth_errors do
+          revoke_endpoint(handler).call(handler.request.env)
+        end
+      end
+
       private
+
+      def scalar_params?(params, names)
+        names.all? do |name|
+          value = params[name]
+          value.nil? || value.is_a?(String)
+        end
+      end
+
+      def finish_oauth_errors
+        yield
+      rescue Rack::OAuth2::Server::Abstract::Error => e
+        begin
+          e.finish
+        rescue Rack::OAuth2::Server::Abstract::Error
+          Rack::OAuth2::Server::Abstract::BadRequest.new(e.error, e.description).finish
+        end
+      rescue ArgumentError, EncodingError
+        invalid_request
+      end
+
+      def invalid_request
+        Rack::OAuth2::Server::Abstract::BadRequest.new(:invalid_request).finish
+      end
+
+      def revoke_kwargs(req, client)
+        kwargs = { token_type_hint: req.token_type_hint }
+        params = config.method(:handle_post_revoke).parameters
+
+        if params.any? { |type, name| type == :keyrest || (type == :key && name == :client) }
+          kwargs[:client] = client
+        end
+
+        kwargs
+      end
 
       def header_to_env(header)
         "HTTP_#{header.upcase.gsub('-', '_')}"
       end
 
       def token_present?(value)
-        return false if value.nil?
-        return false if value.respond_to?(:empty?) && value.empty?
-
-        true
+        value.is_a?(String) && !value.empty?
       end
     end
   end

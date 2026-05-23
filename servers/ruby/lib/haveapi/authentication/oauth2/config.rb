@@ -88,7 +88,8 @@ module HaveAPI::Authentication
       # @param token [String]
       # @param token_type_hint [nil, 'access_token', 'refresh_token']
       # @return [:revoked, :unsupported]
-      def handle_post_revoke(sinatra_request, token, token_type_hint: nil); end
+      # @param client [Client, nil] authenticated revoking client
+      def handle_post_revoke(sinatra_request, token, token_type_hint: nil, client: nil); end
 
       # Find client by ID
       # @param client_id [String]
@@ -156,14 +157,35 @@ module HaveAPI::Authentication
           state: req.state
         }
 
-        if req.code_challenge.present? && req.code_challenge_method.present?
+        if req.code_challenge.present?
+          scalar_oauth2_param!(req.code_challenge, 'code_challenge')
+          code_challenge_method = if req.code_challenge_method.present?
+                                    scalar_oauth2_param!(
+                                      req.code_challenge_method,
+                                      'code_challenge_method'
+                                    )
+                                  else
+                                    'plain'
+                                  end
+
           ret.update(
             code_challenge: req.code_challenge,
-            code_challenge_method: req.code_challenge_method
+            code_challenge_method:
           )
         end
 
         ret
+      end
+
+      private
+
+      def scalar_oauth2_param!(value, name)
+        return value if value.is_a?(String)
+
+        raise Rack::OAuth2::Server::Abstract::BadRequest.new(
+          :invalid_request,
+          "\"#{name}\" must be a string."
+        )
       end
     end
   end

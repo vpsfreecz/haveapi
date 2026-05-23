@@ -153,6 +153,8 @@ module HaveAPI::Authentication
         t = token(request)
 
         t && config.find_user_by_token(request, t)
+      rescue HaveAPI::AuthenticationError
+        nil
       end
 
       # Extract token from HTTP request
@@ -194,10 +196,7 @@ module HaveAPI::Authentication
       end
 
       def token_present?(value)
-        return false if value.nil?
-        return false if value.respond_to?(:empty?) && value.empty?
-
-        true
+        value.is_a?(String) && !value.empty?
       end
 
       def token_resource
@@ -278,11 +277,30 @@ module HaveAPI::Authentication
 
             def exec
               provider = self.class.resource.token_instance
-              result = provider.config.class.revoke.handle.call(ActionRequest.new(
-                                                                  request:,
-                                                                  user: current_user,
-                                                                  token: provider.token(request)
-                                                                ), ActionResult.new)
+              begin
+                token = provider.token(request)
+                user = provider.authenticate(request)
+              rescue HaveAPI::Authentication::TokenConflict => e
+                error!(e.message, {}, http_status: 400)
+              end
+
+              unless user
+                error!(
+                  'Action requires user to authenticate with a token',
+                  {},
+                  http_status: 401
+                )
+              end
+
+              begin
+                result = provider.config.class.revoke.handle.call(ActionRequest.new(
+                                                                    request:,
+                                                                    user:,
+                                                                    token:
+                                                                  ), ActionResult.new)
+              rescue HaveAPI::AuthenticationError => e
+                error!(e.message)
+              end
 
               if result.ok?
                 ok!
@@ -306,11 +324,30 @@ module HaveAPI::Authentication
 
             def exec
               provider = self.class.resource.token_instance
-              result = provider.config.class.renew.handle.call(ActionRequest.new(
-                                                                 request:,
-                                                                 user: current_user,
-                                                                 token: provider.token(request)
-                                                               ), ActionResult.new)
+              begin
+                token = provider.token(request)
+                user = provider.authenticate(request)
+              rescue HaveAPI::Authentication::TokenConflict => e
+                error!(e.message, {}, http_status: 400)
+              end
+
+              unless user
+                error!(
+                  'Action requires user to authenticate with a token',
+                  {},
+                  http_status: 401
+                )
+              end
+
+              begin
+                result = provider.config.class.renew.handle.call(ActionRequest.new(
+                                                                   request:,
+                                                                   user:,
+                                                                   token:
+                                                                 ), ActionResult.new)
+              rescue HaveAPI::AuthenticationError => e
+                error!(e.message)
+              end
 
               if result.ok?
                 { valid_to: result.valid_to }

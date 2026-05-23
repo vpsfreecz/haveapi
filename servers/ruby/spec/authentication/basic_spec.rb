@@ -106,6 +106,17 @@ describe HaveAPI::Authentication::Basic::Provider do
     expect(seen_users.last).to be_nil
   end
 
+  it 'treats malformed Authorization headers as failed authentication' do
+    invalid = (+"Basic \xFF").force_encoding(Encoding::UTF_8)
+    header 'Authorization', invalid
+
+    call_api(:post, '/v1/secures/ping', {})
+
+    expect(last_response.status).to eq(401)
+    expect(api_response).to be_failed
+    expect(seen_users.last).to be_nil
+  end
+
   it 'returns an authentication error envelope from _login' do
     get '/_login'
 

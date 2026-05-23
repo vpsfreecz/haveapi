@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+# rubocop:disable RSpec/MultipleDescribes
+# rubocop:disable RSpec/RepeatedExampleGroupDescription
+
 require 'spec_helper'
 require 'securerandom'
 
@@ -8,8 +11,13 @@ module AuthSpecToken
 
   class Config < HaveAPI::Authentication::Token::Config
     class << self
+      attr_accessor :raise_on_find, :raise_on_renew, :raise_on_revoke
+
       def reset!
         @tokens = {}
+        @raise_on_find = false
+        @raise_on_renew = false
+        @raise_on_revoke = false
       end
 
       def tokens
@@ -39,6 +47,8 @@ module AuthSpecToken
 
     renew do
       handle do |_req, res|
+        raise HaveAPI::AuthenticationError, 'renew rejected' if Config.raise_on_renew
+
         res.valid_to = Time.now + 3600
         res.ok
       end
@@ -46,12 +56,17 @@ module AuthSpecToken
 
     revoke do
       handle do |req, res|
+        raise HaveAPI::AuthenticationError, 'revoke rejected' if Config.raise_on_revoke
+
         Config.tokens.delete(req.token)
         res.ok
       end
     end
 
     def find_user_by_token(_request, token)
+      raise TypeError, "token must be a String, got #{token.class}" unless token.is_a?(String)
+      raise HaveAPI::AuthenticationError, 'backend rejected token' if self.class.raise_on_find
+
       self.class.tokens[token]
     end
   end
@@ -181,6 +196,26 @@ describe HaveAPI::Authentication::Token do
     expect(api_response.message).to match(/too many|multiple/i)
   end
 
+  it 'ignores structured token query values before backend lookup' do
+    expect do
+      call_api(:post, '/v1/secures/ping?_auth_token[]=abc', {})
+    end.not_to raise_error
+
+    expect(last_response.status).to eq(401)
+    expect(api_response).to be_failed
+  end
+
+  it 'treats AuthenticationError from token lookup as failed authentication' do
+    token = request_token!
+    AuthSpecToken::Config.raise_on_find = true
+
+    header AuthSpecToken::Config.http_header, token
+    call_api(:post, '/v1/secures/ping', {})
+
+    expect(last_response.status).to eq(401)
+    expect(api_response).to be_failed
+  end
+
   it 'returns 400 for revoke when multiple tokens are provided' do
     token = request_token!
     param = AuthSpecToken::Config.query_parameter.to_s
@@ -220,6 +255,27 @@ describe HaveAPI::Authentication::Token do
     expect(last_response.status).to eq(401)
   end
 
+  it 'returns controlled errors when renew and revoke handlers reject authentication' do
+    token = request_token!
+
+    AuthSpecToken::Config.raise_on_renew = true
+    header AuthSpecToken::Config.http_header, token
+    call_api(:post, '/_auth/token/tokens/renew', {})
+
+    expect(last_response.status).to eq(200)
+    expect(api_response).to be_failed
+    expect(api_response.message).to eq('renew rejected')
+
+    AuthSpecToken::Config.raise_on_renew = false
+    AuthSpecToken::Config.raise_on_revoke = true
+    header AuthSpecToken::Config.http_header, token
+    call_api(:post, '/_auth/token/tokens/revoke', {})
+
+    expect(last_response.status).to eq(200)
+    expect(api_response).to be_failed
+    expect(api_response.message).to eq('revoke rejected')
+  end
+
   it 'requires auth for OPTIONS on revoke path, but not on request path' do
     call_api(:options, '/_auth/token/tokens?method=POST')
     expect(last_response.status).to eq(200)
@@ -248,3 +304,125 @@ describe HaveAPI::Authentication::Token do
     expect(auth[:token][:resources]).to have_key(:token)
   end
 end
+
+module AuthSpecTokenCrossProvider
+  User = Struct.new(:id, :login)
+
+  class << self
+    def reset!
+      tokens.replace(
+        'victim-token' => User.new(1, 'victim'),
+        'attacker-token' => User.new(2, 'attacker')
+      )
+      revoked.clear
+    end
+
+    def tokens
+      @tokens ||= {}
+    end
+
+    def revoked
+      @revoked ||= []
+    end
+  end
+
+  class BasicProvider < HaveAPI::Authentication::Basic::Provider
+    protected
+
+    def find_user(_request, username, password)
+      return User.new(2, 'attacker') if username == 'attacker' && password == 'pass'
+
+      nil
+    end
+  end
+
+  class TokenConfig < HaveAPI::Authentication::Token::Config
+    request do
+      handle do |_req, res|
+        res.error = 'not used'
+        res
+      end
+    end
+
+    renew do
+      handle do |_req, res|
+        res.ok
+      end
+    end
+
+    revoke do
+      handle do |req, res|
+        AuthSpecTokenCrossProvider.revoked << {
+          current_user: req.user.login,
+          token: req.token
+        }
+        AuthSpecTokenCrossProvider.tokens.delete(req.token)
+        res.ok
+      end
+    end
+
+    def find_user_by_token(_request, token)
+      AuthSpecTokenCrossProvider.tokens[token]
+    end
+  end
+
+  TokenProvider = HaveAPI::Authentication::Token.with_config(TokenConfig)
+end
+
+describe HaveAPI::Authentication::Token do
+  api do
+    define_resource(:Secure) do
+      version 1
+
+      define_action(:Whoami) do
+        route 'whoami'
+        http_method :post
+        auth true
+
+        input(:hash) {}
+        output(:hash) { string :login }
+        authorize { allow }
+
+        def exec
+          { login: current_user.login }
+        end
+      end
+    end
+  end
+
+  default_version 1
+  auth_chain [
+    AuthSpecTokenCrossProvider::BasicProvider,
+    AuthSpecTokenCrossProvider::TokenProvider
+  ]
+
+  before do
+    AuthSpecTokenCrossProvider.reset!
+  end
+
+  it 'uses the token provider user for renew and revoke actions' do
+    login('attacker', 'pass')
+    call_api(:post, '/_auth/token/tokens/revoke?_auth_token=victim-token', {})
+
+    expect(last_response.status).to eq(200)
+    expect(api_response).to be_ok
+    expect(AuthSpecTokenCrossProvider.revoked).to contain_exactly(
+      {
+        current_user: 'victim',
+        token: 'victim-token'
+      }
+    )
+  end
+
+  it 'rejects token actions authenticated only by another provider' do
+    login('attacker', 'pass')
+    call_api(:post, '/_auth/token/tokens/revoke', {})
+
+    expect(last_response.status).to eq(401)
+    expect(api_response).to be_failed
+    expect(AuthSpecTokenCrossProvider.revoked).to be_empty
+  end
+end
+
+# rubocop:enable RSpec/RepeatedExampleGroupDescription
+# rubocop:enable RSpec/MultipleDescribes

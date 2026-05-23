@@ -32,6 +32,8 @@ module HaveAPI::Authentication
         end
 
         user
+      rescue ArgumentError, EncodingError
+        nil
       end
 
       def describe

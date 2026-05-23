@@ -51,6 +51,11 @@ class Client extends Client\Resource
         $this->identity = $identity;
         $this->options = [
             'verify' => $options['verify'] ?? true,
+            'oauth2_trusted_origins' => $this->normalizeTrustedOrigins(
+                $options['oauth2_trusted_origins']
+                    ?? $options['oauth2TrustedOrigins']
+                    ?? []
+            ),
         ];
 
         self::registerAuthProvider('none', 'HaveAPI\Client\Authentication\NoAuth');
@@ -217,7 +222,7 @@ class Client extends Client\Resource
     /**
      * Resolve and validate a URL learned from the API description.
      */
-    public function resolveDescriptionUrl($url, $label)
+    public function resolveDescriptionUrl($url, $label, array $trustedOrigins = [])
     {
         $url = $this->validateDescriptionUrlString($url, $label);
         $parts = $this->parseDescriptionUrl($url, $label);
@@ -237,7 +242,7 @@ class Client extends Client\Resource
                 );
             }
 
-            $this->assertSameOrigin($url, $label);
+            $this->assertAllowedOrigin($url, $label, $trustedOrigins);
 
             return $url;
         }
@@ -258,9 +263,21 @@ class Client extends Client\Resource
             $resolved = $this->uri . '/' . $url;
         }
 
-        $this->assertSameOrigin($resolved, $label);
+        $this->assertAllowedOrigin($resolved, $label, $trustedOrigins);
 
         return $resolved;
+    }
+
+    /**
+     * Resolve and validate an OAuth2 endpoint URL learned from the API description.
+     */
+    public function resolveOAuth2DescriptionUrl($url, $label)
+    {
+        return $this->resolveDescriptionUrl(
+            $url,
+            $label,
+            $this->options['oauth2_trusted_origins']
+        );
     }
 
     /**
@@ -632,14 +649,24 @@ class Client extends Client\Resource
 
     private function assertSameOrigin($url, $label)
     {
+        $this->assertAllowedOrigin($url, $label, []);
+    }
+
+    private function assertAllowedOrigin($url, $label, array $trustedOrigins)
+    {
         $base = $this->parseOrigin($this->uri, 'configured API URI');
         $candidate = $this->parseOrigin($url, $label);
 
-        if ($candidate['scheme'] !== $base['scheme']
-            || $candidate['host'] !== $base['host']
-            || $candidate['port'] !== $base['port']) {
+        if (
+            !$this->sameOrigin($candidate, $base)
+            && !in_array($this->originKey($candidate), $trustedOrigins, true)
+        ) {
+            $expected = $trustedOrigins === []
+                ? 'the configured API origin'
+                : 'the configured API origin or a trusted OAuth2 origin';
+
             throw new Client\Exception\ProtocolError(
-                "Invalid $label: URL must use the configured API origin"
+                "Invalid $label: URL must use $expected"
             );
         }
     }
@@ -676,6 +703,51 @@ class Client extends Client\Resource
         }
 
         return null;
+    }
+
+    private function normalizeTrustedOrigins($origins)
+    {
+        if ($origins === null) {
+            return [];
+        }
+
+        if (is_string($origins)) {
+            $origins = [$origins];
+        }
+
+        if (!is_array($origins)) {
+            throw new Client\Exception\ProtocolError('Invalid trusted OAuth2 origins');
+        }
+
+        return array_map(function ($origin) {
+            $origin = $this->validateDescriptionUrlString($origin, 'trusted OAuth2 origin');
+            $parts = $this->parseDescriptionUrl($origin, 'trusted OAuth2 origin');
+
+            if (
+                !isset($parts['scheme'], $parts['host'])
+                || array_key_exists('user', $parts)
+                || array_key_exists('pass', $parts)
+                || (isset($parts['path']) && $parts['path'] !== '' && $parts['path'] !== '/')
+                || isset($parts['query'])
+                || isset($parts['fragment'])
+            ) {
+                throw new Client\Exception\ProtocolError('Invalid trusted OAuth2 origin');
+            }
+
+            return $this->originKey($this->parseOrigin($origin, 'trusted OAuth2 origin'));
+        }, $origins);
+    }
+
+    private function sameOrigin(array $a, array $b)
+    {
+        return $a['scheme'] === $b['scheme']
+            && $a['host'] === $b['host']
+            && $a['port'] === $b['port'];
+    }
+
+    private function originKey(array $origin)
+    {
+        return $origin['scheme'] . '://' . $origin['host'] . ':' . $origin['port'];
     }
 
     private function coerceTypedValue(string $type, $raw)

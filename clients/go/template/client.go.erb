@@ -13,7 +13,8 @@ type Client struct {
 	// Options for authentication method
 	Authentication Authenticator
 
-	httpClient *http.Client
+	httpClient            *http.Client
+	oauth2TrustedOrigins map[string]struct{}
 
 <% api.resources.each do |r| -%>
 	// Resource <%= go_comment_text(r.full_dot_name) %>

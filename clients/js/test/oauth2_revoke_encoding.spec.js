@@ -20,8 +20,8 @@ function loadHaveAPIWithXMLHttpRequest(XMLHttpRequest) {
 }
 
 describe('HaveAPI JS client OAuth2 revoke encoding', () => {
-  function makeOAuth2(HaveAPI, revokeUrl, token = 'access-token') {
-    const client = new HaveAPI.Client('https://api.example', {});
+  function makeOAuth2(HaveAPI, revokeUrl, token = 'access-token', clientOpts = {}) {
+    const client = new HaveAPI.Client('https://api.example', clientOpts);
 
     return new HaveAPI.Client.Authentication.OAuth2(
       client,
@@ -144,5 +144,64 @@ describe('HaveAPI JS client OAuth2 revoke encoding', () => {
     expect(openedUrl).to.equal(null);
     expect(sentBody).to.equal(null);
     expect(callbackCalled).to.equal(false);
+  });
+
+  it('allows explicitly trusted OAuth2 revoke origins', () => {
+    let capturedUrl = null;
+    let capturedBody = null;
+
+    function FakeXMLHttpRequest() {
+      this.headers = {};
+      this.readyState = 0;
+      this.status = 200;
+    }
+
+    FakeXMLHttpRequest.prototype.open = function open(method, url) {
+      this.method = method;
+      capturedUrl = url;
+    };
+
+    FakeXMLHttpRequest.prototype.setRequestHeader = function setRequestHeader() {};
+
+    FakeXMLHttpRequest.prototype.send = function send(body) {
+      capturedBody = body;
+      this.readyState = 4;
+      this.onreadystatechange();
+    };
+
+    const HaveAPI = loadHaveAPIWithXMLHttpRequest(FakeXMLHttpRequest);
+    const auth = makeOAuth2(
+      HaveAPI,
+      'https://auth.example/_auth/oauth2/revoke',
+      'trusted-origin-token',
+      { oauth2TrustedOrigins: ['https://auth.example'] }
+    );
+
+    auth.setup();
+    auth.logout(() => {});
+
+    expect(capturedUrl).to.equal('https://auth.example/_auth/oauth2/revoke');
+    expect(capturedBody).to.equal('token=trusted-origin-token');
+  });
+
+  it('requires exact OAuth2 trusted origin matches', () => {
+    function FakeXMLHttpRequest() {}
+
+    FakeXMLHttpRequest.prototype.open = function open() {};
+    FakeXMLHttpRequest.prototype.setRequestHeader = function setRequestHeader() {};
+    FakeXMLHttpRequest.prototype.send = function send() {};
+
+    const HaveAPI = loadHaveAPIWithXMLHttpRequest(FakeXMLHttpRequest);
+    const auth = makeOAuth2(
+      HaveAPI,
+      'https://auth.example.evil/_auth/oauth2/revoke',
+      'trusted-origin-token',
+      { oauth2TrustedOrigins: ['https://auth.example'] }
+    );
+
+    auth.setup();
+
+    expect(() => auth.logout(() => {}))
+      .to.throw(HaveAPI.Client.Exceptions.ProtocolError);
   });
 });

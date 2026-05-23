@@ -1,0 +1,60 @@
+name: update nixpkgs
+
+on:
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: update-nixpkgs-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Update nixpkgs
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Install jq
+        shell: bash
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install --yes jq
+          fi
+
+      - name: Configure git author
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Update nixpkgs
+        id: update
+        shell: bash
+        run: |
+          before=$(git rev-parse HEAD)
+          ./utils/update-nixpkgs.sh
+          after=$(git rev-parse HEAD)
+
+          if [ "$before" != "$after" ]; then
+            echo "committed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push update
+        if: steps.update.outputs.committed == 'true'
+        shell: bash
+        run: |
+          git push origin HEAD:${{ github.ref_name }}

@@ -228,7 +228,8 @@ module HaveAPI::Authentication
                                 END
               integer :interval, label: 'Interval',
                                  desc: 'How long will requested token be valid, in seconds.',
-                                 default: 60 * 5, fill: true
+                                 default: 60 * 5, fill: true,
+                                 number: { min: 1, max: 86_400 }
             end
 
             output(:hash) do

@@ -125,6 +125,23 @@ describe HaveAPI::Authentication::Token do
     expect(api_response[:token][:token]).to be_a(String)
   end
 
+  it 'rejects token request intervals outside policy bounds' do
+    [-1, 0, 86_401].each do |interval|
+      call_api(:post, '/_auth/token/tokens', {
+        token: {
+          user: 'user',
+          password: 'pass',
+          lifetime: 'fixed',
+          interval:
+        }
+      })
+
+      expect(last_response.status).to eq(400)
+      expect(api_response).to be_failed
+      expect(api_response.errors[:interval]).not_to be_empty
+    end
+  end
+
   it 'returns 401 for protected action without token' do
     call_api(:post, '/v1/secures/ping', {})
 

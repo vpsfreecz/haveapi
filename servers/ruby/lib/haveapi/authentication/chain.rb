@@ -12,13 +12,13 @@ module HaveAPI::Authentication
       versions.each do |v|
         @instances[v] ||= []
 
-        @chain[v] && @chain[v].each { |p| register_provider(v, p) }
+        @chain[v] && @chain[v].each { |p| register_provider(v, p, global: false) }
       end
 
       return unless @chain[:all]
 
       @chain[:all].each do |p|
-        @instances.each_key { |v| register_provider(v, p) }
+        @instances.each_key { |v| register_provider(v, p, global: true) }
       end
 
       # @chain.each do |p|
@@ -61,7 +61,10 @@ module HaveAPI::Authentication
         ret[provider.name][:resources] = {}
 
         @server.routes[context.version][:authentication][provider.name][:resources].each do |r, children|
-          ret[provider.name][:resources][r.resource_name.underscore.to_sym] = r.describe(children, context)
+          desc = r.describe(children, context)
+          next if desc[:actions].empty? && desc[:resources].empty?
+
+          ret[provider.name][:resources][r.resource_name.underscore.to_sym] = desc
         end
       end
 
@@ -96,11 +99,11 @@ module HaveAPI::Authentication
 
     protected
 
-    def register_provider(v, p)
+    def register_provider(v, p, global:)
       instance = p.new(@server, v)
       @instances[v] << instance
 
-      @server.add_auth_routes(v, instance, prefix: instance.name.to_s)
+      @server.add_auth_routes(v, instance, prefix: instance.name.to_s, global:)
 
       resource_module = instance.resource_module
       return if resource_module.nil?
@@ -109,7 +112,8 @@ module HaveAPI::Authentication
         v,
         instance.name,
         resource_module,
-        prefix: instance.name.to_s
+        prefix: instance.name.to_s,
+        global:
       )
     end
   end

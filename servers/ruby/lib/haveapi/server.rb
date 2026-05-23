@@ -83,6 +83,19 @@ module HaveAPI
         @current_user
       end
 
+      def authenticated_versions
+        settings.api_server.versions.each_with_object({}) do |v, ret|
+          ret[v] = settings.api_server.send(:do_authenticate, v, request)
+        rescue HaveAPI::Authentication::TokenConflict => e
+          unless @formatter
+            @formatter = OutputFormatter.new
+            @formatter.supports?([])
+          end
+
+          report_error(400, {}, e.message)
+        end
+      end
+
       def access_control
         return unless request.env['HTTP_ORIGIN'] && request.env['HTTP_ACCESS_CONTROL_REQUEST_METHOD']
 
@@ -282,12 +295,13 @@ module HaveAPI
 
       # Mount root
       @sinatra.get @root do
-        authenticated?(settings.api_server.default_version)
+        auth_users_by_version = authenticated_versions
 
         @api = settings.api_server.describe(Context.new(
                                               settings.api_server,
-                                              user: current_user,
-                                              params:
+                                              user: auth_users_by_version[settings.api_server.default_version],
+                                              params:,
+                                              auth_users_by_version:
                                             ))
 
         content_type 'text/html'
@@ -297,7 +311,6 @@ module HaveAPI
       @sinatra.options @root do
         setup_formatter
         access_control
-        authenticated?(settings.api_server.default_version)
         ret = nil
 
         ret = case params[:describe]
@@ -308,20 +321,26 @@ module HaveAPI
                 }
 
               when 'default'
+                auth_users_by_version = authenticated_versions
+
                 settings.api_server.describe_version(Context.new(
                                                        settings.api_server,
                                                        version: settings.api_server.default_version,
-                                                       user: current_user,
+                                                       user: auth_users_by_version[settings.api_server.default_version],
                                                        doc: true,
-                                                       params:
+                                                       params:,
+                                                       auth_users_by_version:
                                                      ))
 
               else
+                auth_users_by_version = authenticated_versions
+
                 settings.api_server.describe(Context.new(
                                                settings.api_server,
-                                               user: current_user,
+                                               user: auth_users_by_version[settings.api_server.default_version],
                                                doc: true,
-                                               params:
+                                               params:,
+                                               auth_users_by_version:
                                              ))
               end
 
@@ -599,19 +618,28 @@ module HaveAPI
     end
 
     def describe(context)
-      context.version = @default_version
+      original_user = context.current_user
+      auth_users_by_version = context.auth_users_by_version
+      authenticated_description = auth_users_by_version&.values&.any?
 
-      ret = {
-        default_version: @default_version,
-        versions: { default: describe_version(context) }
-      }
+      ret = { default_version: @default_version, versions: {} }
+
+      context.version = @default_version
+      context.current_user = auth_users_by_version ? auth_users_by_version[@default_version] : original_user
+      ret[:versions][:default] = describe_version(context) unless authenticated_description && context.current_user.nil?
 
       @versions.each do |v|
+        user = auth_users_by_version ? auth_users_by_version[v] : original_user
+        next if authenticated_description && user.nil?
+
         context.version = v
+        context.current_user = user
         ret[:versions][v] = describe_version(context)
       end
 
       ret
+    ensure
+      context.current_user = original_user
     end
 
     def describe_version(context)
@@ -653,15 +681,45 @@ module HaveAPI
     # @param v [String] API version
     # @param provider [Authentication::Base]
     # @param prefix [String]
-    def add_auth_routes(v, provider, prefix: '')
-      provider.register_routes(@sinatra, "#{@root}_auth/#{prefix}")
+    def add_auth_routes(v, provider, prefix: '', global: false)
+      provider.register_routes(@sinatra, auth_prefix(v, prefix, global:))
     end
 
-    def add_auth_module(v, name, mod, prefix: '')
+    def add_auth_module(v, name, mod, prefix: '', global: false)
       @routes[v] ||= { authentication: { name => { resources: {} } } }
 
       HaveAPI.get_version_resources(mod, v).each do |r|
-        mount_resource("#{@root}_auth/#{prefix}/", v, r, @routes[v][:authentication][name][:resources])
+        mount_resource("#{auth_prefix(v, prefix, global:)}/", v, r, @routes[v][:authentication][name][:resources])
+      end
+    end
+
+    def auth_prefix(v, prefix, global:)
+      root = global ? "#{@root}_auth" : "#{version_prefix(v)}_auth"
+      "#{root}/#{prefix}"
+    end
+
+    def json_content_type?(request)
+      media_type = if request.respond_to?(:media_type)
+                     request.media_type
+                   else
+                     request.content_type.to_s.split(';').first
+                   end
+
+      media_type == 'application/json' || media_type.to_s.end_with?('+json')
+    end
+
+    def path_params(route, params)
+      route.action.path_param_names(route.path).each_with_object({}) do |name, ret|
+        value = if params.has_key?(name.to_sym)
+                  params[name.to_sym]
+                elsif params.has_key?(name)
+                  params[name]
+                end
+
+        next if value.nil?
+
+        ret[name] = value
+        ret[name.to_sym] = value
       end
     end
 

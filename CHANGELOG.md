@@ -1,3 +1,21 @@
+# Sat May 23 2026 - version 0.28.1
+## Ruby server
+- Normalize generated route params to expose both string and symbol keys,
+  matching request route params and fixing ActiveRecord associated resource
+  output when `Show#prepare` reads symbol params.
+
+## JavaScript client
+- Allow configured trusted OAuth2 origins for revoke URLs while keeping ordinary
+  API URLs on the configured API origin.
+
+## PHP client
+- Allow configured trusted OAuth2 origins for OAuth2 authorize/token/revoke URLs
+  while keeping ordinary API URLs on the configured API origin.
+
+## Go client generator
+- Add `AllowOAuth2Origin` for generated clients to permit trusted OAuth2 revoke
+  origins.
+
 # Sat May 23 2026 - version 0.28.0
 ## Ruby server
 - Harden authentication and authorization handling across token, OAuth2,

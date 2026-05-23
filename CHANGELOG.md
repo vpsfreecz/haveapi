@@ -1,3 +1,65 @@
+# Unreleased
+## Ruby server
+- Harden authentication and authorization handling across token, OAuth2,
+  action-state, resource input, metadata, documentation and ActiveRecord
+  association paths.
+- Escape generated documentation HTML in host/current-user/client examples and
+  filter documented examples through their authorization blocks.
+- Treat malformed authentication headers, structured OAuth2/token parameters and
+  authentication backend errors as authentication or validation failures instead
+  of uncaught server errors.
+- Backward incompatible: version-specific authentication routes are now mounted
+  under `/vN/_auth/...`; unversioned `/_auth/...` routes are kept only for
+  global authentication providers.
+- Backward incompatible: token renew/revoke actions require token-provider
+  authentication and reject cross-provider authentication.
+- Backward incompatible: OAuth2 revoke now requires client authentication, PKCE
+  challenges are preserved when the challenge method is omitted and omitted PKCE
+  method is interpreted as `plain`.
+- Backward incompatible: non-GET JSON actions read input only from JSON request
+  bodies; query strings, form bodies and text bodies no longer feed mutating
+  action input.
+- Backward incompatible: denied ActiveRecord associations and denied metadata no
+  longer expose identifying path parameters; resource input parameters can reject
+  records the caller cannot `Show`.
+- Backward incompatible: invalid nested includes are dropped, malformed route
+  arguments return `400`, pagination `limit` is capped at `1000`, action-state
+  polling timeout is capped at `30` seconds and token request interval must be
+  between `1` and `86400` seconds.
+
+## Ruby client
+- Encode action path arguments, reject unsafe token-auth header names, avoid
+  defining methods from unsafe description names and save CLI credentials with
+  restrictive file permissions.
+- Backward incompatible: path arguments are encoded as path components, so
+  callers must pass raw values instead of pre-encoded URL fragments. Unsafe
+  resource/action names are available through hash lookups instead of generated
+  Ruby methods.
+
+## JavaScript client
+- Encode query and action path parameters, encode OAuth2 revoke token values,
+  keep credentialed URLs on the API origin and prevent description names from
+  clobbering client object internals.
+- Backward incompatible: path/query values are encoded by the client; callers
+  should pass raw values, not pre-encoded URL fragments. Unsafe description
+  names are not exposed as direct object properties.
+
+## PHP client
+- Encode query names, action path arguments and OAuth2 revoke form fields,
+  validate credentialed URLs against the API origin, validate token-auth header
+  names and validate forwarded client IP header values.
+- Harden OAuth2 callbacks with state and PKCE checks.
+- Backward incompatible: OAuth2 callbacks must match the stored state/PKCE
+  exchange and credentialed URLs must be same-origin with the API. Path and query
+  values are encoded by the client and token header names are validated.
+
+## Go client generator
+- Escape generated API description code, encode action path and OAuth2 revoke
+  parameters and keep generated credentialed URLs on the API origin.
+- Backward incompatible: generated clients encode path arguments as path
+  components, so callers must pass raw values instead of pre-encoded URL
+  fragments.
+
 # Tue Feb 17 2026 - version 0.27.0
 ## Ruby server
 - Enforce strict typed input coercion and ActiveRecord ID validation (invalid values now return validation errors)

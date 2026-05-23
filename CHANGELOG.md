@@ -1,4 +1,4 @@
-# Unreleased
+# Sat May 23 2026 - version 0.28.0
 ## Ruby server
 - Harden authentication and authorization handling across token, OAuth2,
   action-state, resource input, metadata, documentation and ActiveRecord

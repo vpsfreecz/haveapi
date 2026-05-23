@@ -1,5 +1,19 @@
 # frozen_string_literal: true
 
+module ServerIntegrationSpec
+  module State
+    class << self
+      def reset!
+        writes.clear
+      end
+
+      def writes
+        @writes ||= []
+      end
+    end
+  end
+end
+
 describe HaveAPI::Server do
   describe 'integration' do
     api do
@@ -24,9 +38,37 @@ describe HaveAPI::Server do
           end
         end
       end
+
+      define_resource(:Transfer) do
+        version 1
+        auth false
+
+        define_action(:Create) do
+          route ''
+          http_method :post
+          authorize { allow }
+
+          input(:hash) do
+            integer :amount, required: true
+          end
+
+          output(:hash) do
+            bool :created
+          end
+
+          def exec
+            ServerIntegrationSpec::State.writes << input[:amount]
+            { created: true }
+          end
+        end
+      end
     end
 
     default_version 1
+
+    before do
+      ServerIntegrationSpec::State.reset!
+    end
 
     it 'returns 406 for unsupported Accept' do
       header 'Accept', 'text/plain'
@@ -56,6 +98,29 @@ describe HaveAPI::Server do
         expect(api_response).not_to be_ok
         expect(api_response.message).to eq('JSON body must be an object')
       end
+    end
+
+    it 'does not accept query-string input for non-GET actions' do
+      header 'Accept', 'application/json'
+      post '/v1/transfers?transfer[amount]=250', nil, {
+        'CONTENT_TYPE' => 'application/x-www-form-urlencoded'
+      }
+
+      expect(last_response.status).to eq(400)
+      expect(api_response).not_to be_ok
+      expect(ServerIntegrationSpec::State.writes).to be_empty
+    end
+
+    it 'rejects non-JSON content types for JSON action bodies' do
+      header 'Accept', 'application/json'
+      post '/v1/transfers', '{"transfer":{"amount":250}}', {
+        'CONTENT_TYPE' => 'text/plain'
+      }
+
+      expect(last_response.status).to eq(415)
+      expect(api_response).not_to be_ok
+      expect(api_response.message).to eq('Unsupported Content-Type')
+      expect(ServerIntegrationSpec::State.writes).to be_empty
     end
 
     it 'returns 400 for malformed Accept headers' do

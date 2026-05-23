@@ -522,33 +522,39 @@ module HaveAPI
           authenticated?(v)
         end
 
+        raw_body = request.body.read
+        body_method = !%i[get head options].include?(route.http_method.to_sym)
+
+        if body_method && !raw_body.empty? && !settings.api_server.send(:json_content_type?, request)
+          report_error(415, {}, 'Unsupported Content-Type')
+        end
+
         begin
-          raw_body = request.body.read
-
-          body = if raw_body.empty?
-                   nil
-                 else
-                   JSON.parse(raw_body, symbolize_names: true)
-                 end
-
-          if !raw_body.empty? && !body.is_a?(Hash)
-            report_error(400, {}, 'JSON body must be an object')
-          end
-        rescue StandardError => e
+          body = raw_body.empty? ? nil : JSON.parse(raw_body, symbolize_names: true)
+        rescue JSON::ParserError
           report_error(400, {}, 'Bad JSON syntax')
         end
 
-        action = route.action.new(request, v, params, body, Context.new(
-                                                              settings.api_server,
-                                                              version: v,
-                                                              request: self,
-                                                              action: route.action,
-                                                              path: route.path,
-                                                              params:,
-                                                              user: current_user,
-                                                              endpoint: true,
-                                                              resource_path: route.resource_path
-                                                            ))
+        if !raw_body.empty? && !body.is_a?(Hash)
+          report_error(400, {}, 'JSON body must be an object')
+        end
+
+        action_params = body_method ? settings.api_server.send(:path_params, route, params) : params
+        context_params = body ? action_params.merge(body) : action_params
+
+        context = Context.new(
+          settings.api_server,
+          version: v,
+          request: self,
+          action: route.action,
+          path: route.path,
+          params: context_params,
+          user: current_user,
+          endpoint: true,
+          resource_path: route.resource_path
+        )
+
+        action = route.action.new(request, v, action_params, body, context)
 
         unless action.authorized?(current_user)
           report_error(403, {}, 'Access denied. Insufficient permissions.')

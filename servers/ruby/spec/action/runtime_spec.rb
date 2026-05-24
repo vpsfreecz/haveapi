@@ -258,6 +258,33 @@ describe HaveAPI::Action do
           end
         end
 
+        define_action(:UnnamespacedPathInput) do
+          route 'unnamespaced_input/{test_id}'
+          http_method :put
+          authorize { allow }
+
+          input(:hash, namespace: false) do
+            string :public
+            string :test_id
+          end
+
+          output do
+            bool :input_saw_test_id
+            string :input_test_id, nullable: true
+            string :params_test_id
+            string :path_test_id
+          end
+
+          def exec
+            {
+              input_saw_test_id: input.has_key?(:test_id),
+              input_test_id: input[:test_id],
+              params_test_id: params[:test_id] || params['test_id'],
+              path_test_id: path_params['test_id']
+            }
+          end
+        end
+
         define_action(:TopLevelBody) do
           route 'top_level_body'
           http_method :post
@@ -565,6 +592,30 @@ describe HaveAPI::Action do
       expect(api_response).to be_ok
       expect(api_response[:test][:params_saw_secret]).to be(false)
       expect(api_response[:test][:input_saw_secret]).to be(false)
+    end
+
+    it 'keeps path parameters out of unnamespaced body input' do
+      call_api(:put, '/v1/tests/unnamespaced_input/route-id', { public: 'ok' })
+
+      expect(last_response.status).to eq(200)
+      expect(api_response).to be_ok
+      expect(api_response[:test][:input_saw_test_id]).to be(false)
+      expect(api_response[:test][:params_test_id]).to eq('route-id')
+      expect(api_response[:test][:path_test_id]).to eq('route-id')
+    end
+
+    it 'exposes client values through input without changing path identity' do
+      call_api(:put, '/v1/tests/unnamespaced_input/route-id', {
+        public: 'ok',
+        test_id: 'body-id'
+      })
+
+      expect(last_response.status).to eq(200)
+      expect(api_response).to be_ok
+      expect(api_response[:test][:input_saw_test_id]).to be(true)
+      expect(api_response[:test][:input_test_id]).to eq('body-id')
+      expect(api_response[:test][:params_test_id]).to eq('body-id')
+      expect(api_response[:test][:path_test_id]).to eq('route-id')
     end
 
     it 'does not expose top-level JSON keys outside the input namespace as safe params' do

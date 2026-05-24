@@ -167,8 +167,8 @@ module HaveAPI
     end
 
     # Action returns custom data.
-    def custom(name, **kwargs, &block)
-      add_param(name, apply(kwargs, type: Custom, clean: block))
+    def custom(name, symbolize_keys: false, **kwargs, &block)
+      add_param(name, apply(kwargs, type: Custom, clean: block, symbolize_keys:))
     end
 
     def describe(context)

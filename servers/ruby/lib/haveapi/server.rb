@@ -530,7 +530,7 @@ module HaveAPI
         end
 
         begin
-          body = raw_body.empty? ? nil : JSON.parse(raw_body, symbolize_names: true)
+          body = raw_body.empty? ? nil : JSON.parse(raw_body)
         rescue JSON::ParserError
           report_error(400, {}, 'Bad JSON syntax')
         end

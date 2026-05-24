@@ -3,7 +3,10 @@ require 'time'
 
 module HaveAPI::Parameters
   class Typed
-    ATTRIBUTES = %i[label desc type db_name default fill clean protected load_validators nullable].freeze
+    ATTRIBUTES = %i[
+      label desc type db_name default fill clean protected load_validators
+      nullable symbolize_keys
+    ].freeze
 
     attr_reader :name, :label, :desc, :type, :default
 
@@ -79,7 +82,8 @@ module HaveAPI::Parameters
     end
 
     def clean(raw)
-      return validate_cleaned_value(instance_exec(raw, &@clean)) if @clean
+      clean_raw = custom? ? normalize_custom_keys(raw) : raw
+      return validate_cleaned_value(instance_exec(clean_raw, &@clean)) if @clean
 
       if raw.nil?
         return nil if nullable?
@@ -109,6 +113,9 @@ module HaveAPI::Parameters
 
       elsif @type == String || @type == Text
         coerce_string(raw)
+
+      elsif custom?
+        clean_raw
 
       else
         raw
@@ -151,6 +158,31 @@ module HaveAPI::Parameters
       end
 
       value
+    end
+
+    def custom?
+      @type == Custom
+    end
+
+    def normalize_custom_keys(value)
+      case value
+      when ::Hash
+        value.each_with_object({}) do |(key, inner), ret|
+          ret[normalize_custom_key(key)] = normalize_custom_keys(inner)
+        end
+      when ::Array
+        value.map { |inner| normalize_custom_keys(inner) }
+      else
+        value
+      end
+    end
+
+    def normalize_custom_key(key)
+      if @symbolize_keys
+        key.respond_to?(:to_sym) ? key.to_sym : key.to_s.to_sym
+      else
+        key.to_s
+      end
     end
 
     def strip_string(value)

@@ -312,6 +312,64 @@ describe HaveAPI::Action do
           end
         end
 
+        define_action(:CustomPayload) do
+          route 'custom_payload'
+          http_method :post
+          authorize { allow }
+
+          input do
+            custom :payload
+          end
+
+          output do
+            bool :top_string_key
+            bool :top_symbol_key
+            bool :nested_string_key
+            bool :nested_symbol_key
+          end
+
+          def exec
+            payload = input[:payload]
+            nested = payload['response']
+
+            {
+              top_string_key: payload.has_key?('rawId'),
+              top_symbol_key: payload.has_key?(:rawId),
+              nested_string_key: nested.has_key?('clientDataJSON'),
+              nested_symbol_key: nested.has_key?(:clientDataJSON)
+            }
+          end
+        end
+
+        define_action(:CustomPayloadSymbols) do
+          route 'custom_payload_symbols'
+          http_method :post
+          authorize { allow }
+
+          input do
+            custom :payload, symbolize_keys: true
+          end
+
+          output do
+            bool :top_string_key
+            bool :top_symbol_key
+            bool :nested_string_key
+            bool :nested_symbol_key
+          end
+
+          def exec
+            payload = input[:payload]
+            nested = payload[:response]
+
+            {
+              top_string_key: payload.has_key?('rawId'),
+              top_symbol_key: payload.has_key?(:rawId),
+              nested_string_key: nested.has_key?('clientDataJSON'),
+              nested_symbol_key: nested.has_key?(:clientDataJSON)
+            }
+          end
+        end
+
         define_action(:Closed) do
           route 'closed'
           http_method :post
@@ -631,6 +689,46 @@ describe HaveAPI::Action do
       expect(api_response).to be_ok
       expect(api_response[:test][:params_saw_secret]).to be(false)
       expect(api_response[:test][:input_saw_secret]).to be(false)
+    end
+
+    it 'keeps custom payload field names string-keyed by default' do
+      call_api([:Test], :custom_payload, {
+        test: {
+          payload: {
+            rawId: 'credential-id',
+            response: {
+              clientDataJSON: 'client-data'
+            }
+          }
+        }
+      })
+
+      expect(last_response.status).to eq(200)
+      expect(api_response).to be_ok
+      expect(api_response[:test][:top_string_key]).to be(true)
+      expect(api_response[:test][:top_symbol_key]).to be(false)
+      expect(api_response[:test][:nested_string_key]).to be(true)
+      expect(api_response[:test][:nested_symbol_key]).to be(false)
+    end
+
+    it 'symbolizes custom payload field names when requested' do
+      call_api([:Test], :custom_payload_symbols, {
+        test: {
+          payload: {
+            rawId: 'credential-id',
+            response: {
+              clientDataJSON: 'client-data'
+            }
+          }
+        }
+      })
+
+      expect(last_response.status).to eq(200)
+      expect(api_response).to be_ok
+      expect(api_response[:test][:top_string_key]).to be(false)
+      expect(api_response[:test][:top_symbol_key]).to be(true)
+      expect(api_response[:test][:nested_string_key]).to be(false)
+      expect(api_response[:test][:nested_symbol_key]).to be(true)
     end
 
     it 'denies OPTIONS for actions without an authorization block without raising' do

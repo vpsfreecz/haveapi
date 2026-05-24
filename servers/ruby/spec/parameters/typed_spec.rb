@@ -193,6 +193,60 @@ describe 'Parameters::Typed' do
     expect(p.clean('value')).to be_nil
   end
 
+  it 'deep stringifies custom parameter keys by default' do
+    p = p_arg(type: Custom)
+    raw = {
+      rawId: 'credential-id',
+      response: {
+        clientDataJSON: 'client-data'
+      },
+      transports: [
+        { type: :usb }
+      ]
+    }
+
+    expect(p.clean(raw)).to eq({
+      'rawId' => 'credential-id',
+      'response' => {
+        'clientDataJSON' => 'client-data'
+      },
+      'transports' => [
+        { 'type' => :usb }
+      ]
+    })
+    expect(raw).to have_key(:rawId)
+  end
+
+  it 'deep symbolizes custom parameter keys when requested' do
+    p = p_arg(type: Custom, symbolize_keys: true)
+
+    expect(p.clean({
+      'rawId' => 'credential-id',
+      'response' => {
+        'clientDataJSON' => 'client-data'
+      },
+      'transports' => [
+        { 'type' => 'usb' }
+      ]
+    })).to eq({
+      rawId: 'credential-id',
+      response: {
+        clientDataJSON: 'client-data'
+      },
+      transports: [
+        { type: 'usb' }
+      ]
+    })
+  end
+
+  it 'passes normalized custom keys to custom cleaners' do
+    p = p_arg(type: Custom, clean: proc { |v| v.fetch('rawId') })
+    expect(p.clean({ rawId: 'credential-id' })).to eq('credential-id')
+
+    p = p_arg(type: Custom, symbolize_keys: true, clean: proc { |v| v.fetch(:rawId) })
+    expect(p.clean({ 'rawId' => 'credential-id' })).to eq('credential-id')
+  end
+
   it 'rejects invalid string encoding during coercion' do
     invalid = "\xff".b.force_encoding(Encoding::UTF_8)
 

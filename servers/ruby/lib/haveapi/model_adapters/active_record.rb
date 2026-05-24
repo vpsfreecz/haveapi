@@ -383,24 +383,29 @@ module HaveAPI::ModelAdapters
         push_cls = @context.action
         push_ins = @context.action_instance
         push_path = @context.path
-        @context.path = res_show.build_route('')
+        push_path_params = @context.path_params
+        path = @context.action_path_for(res_show)
+        path_params = @context.path_params_for(res_show, args)
+        @context.path = path
+        @context.path_params = path_params
 
         res_show.new(
           push_ins.request,
           push_ins.version,
-          res_show.path_params(@context.path, args),
+          path_params,
           nil,
           @context
         )
         yield @context.action_instance
       ensure
-        restore_context(push_cls, push_ins, push_path)
+        restore_context(push_cls, push_ins, push_path, push_path_params)
       end
 
-      def restore_context(action, action_instance, path)
+      def restore_context(action, action_instance, path, path_params)
         @context.action = action
         @context.action_instance = action_instance
         @context.path = path
+        @context.path_params = path_params
       end
 
       def show_prepared?(show)

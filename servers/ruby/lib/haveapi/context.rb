@@ -66,6 +66,19 @@ module HaveAPI
       ret
     end
 
+    def action_path_for(action, args = nil)
+      ret = @server.path_for_action(@version, action) || path_for(action)
+
+      ret = ret.dup
+      args.each { |arg| resolve_arg!(ret, arg) } if args
+
+      ret
+    end
+
+    def path_params_for(action, args)
+      action.path_params(action_path_for(action), args)
+    end
+
     def call_path_params(action, obj)
       ret = params && action.resolve_path_params(obj)
 

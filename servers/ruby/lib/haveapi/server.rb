@@ -688,6 +688,13 @@ module HaveAPI
       r.describe(hash, context)
     end
 
+    def path_for_action(version, action)
+      routes = @routes && @routes[version]
+      return unless routes
+
+      find_action_path(routes[:resources], action)
+    end
+
     def action_state_auth_required?(route)
       return false unless route.action.resource == HaveAPI::Resources::ActionState
       return false if @auth_chain.empty?
@@ -767,6 +774,18 @@ module HaveAPI
 
     def do_authenticate(v, request)
       @auth_chain.authenticate(v, request)
+    end
+
+    def find_action_path(resources, action)
+      resources.each_value do |node|
+        path = node[:actions][action]
+        return path if path
+
+        path = find_action_path(node[:resources], action)
+        return path if path
+      end
+
+      nil
     end
   end
 end

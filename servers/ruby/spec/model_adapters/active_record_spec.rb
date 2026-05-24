@@ -47,10 +47,24 @@ module ARAdapterSpec
   class StringAccount < ActiveRecord::Base
     self.primary_key = 'uuid'
   end
+
+  class Dataset < ActiveRecord::Base
+    has_many :snapshots, class_name: 'ARAdapterSpec::Snapshot'
+  end
+
+  class Snapshot < ActiveRecord::Base
+    belongs_to :dataset, class_name: 'ARAdapterSpec::Dataset'
+  end
+
+  class SnapshotLink < ActiveRecord::Base
+    belongs_to :snapshot, class_name: 'ARAdapterSpec::Snapshot'
+  end
 end
 
 describe HaveAPI::ModelAdapters::ActiveRecord do
   api do
+    snapshot_resource = nil
+
     env_resource = define_resource(:Environment) do
       version 1
       auth false
@@ -352,6 +366,71 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
         end
       end
     end
+
+    define_resource(:Dataset) do
+      version 1
+      auth false
+      route 'datasets/{dataset_id}'
+      model ARAdapterSpec::Dataset
+
+      snapshot_resource = define_resource(:Snapshot) do
+        auth false
+        model ARAdapterSpec::Snapshot
+
+        define_action(:Index, superclass: HaveAPI::Actions::Default::Index) do
+          authorize { allow }
+
+          output(:object_list) do
+            integer :id
+            string :label
+          end
+
+          def exec
+            self.class.model.where(dataset_id: path_params['dataset_id']).order(id: :asc).to_a
+          end
+        end
+
+        define_action(:Show, superclass: HaveAPI::Actions::Default::Show) do
+          resolve ->(snapshot) { [snapshot.dataset_id, snapshot.id] }
+          authorize { allow }
+
+          output(:object) do
+            integer :id
+            string :label
+          end
+
+          def prepare
+            snapshot = self.class.model.find(path_params['snapshot_id'])
+            error!('wrong dataset') if snapshot.dataset_id != path_params['dataset_id'].to_i
+          end
+
+          def exec
+            self.class.model.find(path_params['snapshot_id'])
+          end
+        end
+      end
+    end
+
+    define_resource(:SnapshotLink) do
+      version 1
+      auth false
+      model ARAdapterSpec::SnapshotLink
+
+      define_action(:Show, superclass: HaveAPI::Actions::Default::Show) do
+        authorize { allow }
+
+        output(:object) do
+          integer :id
+          string :label
+          resource snapshot_resource
+        end
+
+        def exec
+          id = path_params['snapshot_link_id']
+          with_includes(self.class.model.where(id:)).take!
+        end
+      end
+    end
   end
 
   default_version 1
@@ -396,6 +475,20 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
         t.string :uuid, primary_key: true
         t.string :label, null: false
       end
+
+      create_table :datasets do |t|
+        t.string :label, null: false
+      end
+
+      create_table :snapshots do |t|
+        t.integer :dataset_id, null: false
+        t.string :label, null: false
+      end
+
+      create_table :snapshot_links do |t|
+        t.integer :snapshot_id, null: false
+        t.string :label, null: false
+      end
     end
   end
 
@@ -406,6 +499,9 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
     ARAdapterSpec::Invoice.delete_all
     ARAdapterSpec::HiddenAccount.delete_all
     ARAdapterSpec::StringAccount.delete_all
+    ARAdapterSpec::SnapshotLink.delete_all
+    ARAdapterSpec::Snapshot.delete_all
+    ARAdapterSpec::Dataset.delete_all
   end
 
   let(:dummy_action) do
@@ -433,6 +529,14 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
     }
 
     ARAdapterSpec::User.create!(defaults.merge(attrs))
+  end
+
+  def create_snapshot_link
+    dataset = ARAdapterSpec::Dataset.create!(label: 'dataset')
+    snapshot = ARAdapterSpec::Snapshot.create!(dataset:, label: 'snapshot')
+    link = ARAdapterSpec::SnapshotLink.create!(snapshot:, label: 'link')
+
+    [dataset, snapshot, link]
   end
 
   def action_class(resource, action)
@@ -578,6 +682,19 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
     expect(group_data[:_meta][:resolved]).to be(true)
     expect(env_data[:_meta][:resolved]).to be(true)
     expect(env_data[:note]).to eq('ENV_NOTE')
+  end
+
+  it 'uses full nested paths for associated show prepare' do
+    _dataset, snapshot, link = create_snapshot_link
+
+    get "/v1/snapshot_links/#{link.id}", { _meta: { includes: 'snapshot' } }, input: ''
+
+    expect(last_response.status).to eq(200)
+    expect(api_response).to be_ok
+
+    snapshot_data = api_response[:snapshot_link][:snapshot]
+    expect(snapshot_data[:_meta][:resolved]).to be(true)
+    expect(snapshot_data).to include(id: snapshot.id, label: 'snapshot')
   end
 
   it 'drops invalid nested include paths from requests' do

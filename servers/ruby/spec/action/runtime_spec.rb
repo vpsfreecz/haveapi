@@ -620,7 +620,7 @@ describe HaveAPI::Action do
     it 'rejects optional-only input namespaces with invalid shapes' do
       call_api([:Test], :optional_shape, { test: 'not-a-hash' })
 
-      expect(last_response.status).to eq(400)
+      expect(last_response.status).to eq(200)
       expect(api_response).not_to be_ok
       expect(api_response.message).to eq('invalid input layout')
     end
@@ -628,7 +628,7 @@ describe HaveAPI::Action do
     it 'rejects list inputs with invalid element shapes' do
       call_api([:Test], :batch, { tests: ['not-a-hash'], _meta: { confirmed: true } })
 
-      expect(last_response.status).to eq(400)
+      expect(last_response.status).to eq(200)
       expect(api_response).not_to be_ok
       expect(api_response.message).to eq('invalid input layout')
     end
@@ -636,13 +636,13 @@ describe HaveAPI::Action do
     it 'validates global metadata on list input actions' do
       call_api([:Test], :batch, { tests: [{ label: 'one' }] })
 
-      expect(last_response.status).to eq(400)
+      expect(last_response.status).to eq(200)
       expect(api_response).not_to be_ok
       expect(api_response.errors[:confirmed]).to include('required parameter missing')
 
       call_api([:Test], :batch, { tests: [{ label: 'one' }], _meta: { confirmed: 'maybe' } })
 
-      expect(last_response.status).to eq(400)
+      expect(last_response.status).to eq(200)
       expect(api_response).not_to be_ok
       expect(api_response.errors[:confirmed].first).to include('not a valid boolean')
     end
@@ -650,7 +650,7 @@ describe HaveAPI::Action do
     it 'rejects malformed metadata namespaces' do
       call_api([:Test], :echo, { test: { msg: 'hi' }, _meta: 'not-a-hash' })
 
-      expect(last_response.status).to eq(400)
+      expect(last_response.status).to eq(200)
       expect(api_response).not_to be_ok
       expect(api_response.message).to eq('invalid input layout')
     end

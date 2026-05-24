@@ -6,7 +6,7 @@ require 'haveapi/hooks'
 
 module HaveAPI
   class Server
-    attr_accessor :default_version, :action_state
+    attr_accessor :default_version, :action_state, :validation_error_http_status
     attr_reader :root, :routes, :module_name, :auth_chain, :versions, :extensions,
                 :action_state_auth
 
@@ -222,6 +222,7 @@ module HaveAPI
       @auth_chain = HaveAPI::Authentication::Chain.new(self)
       @extensions = []
       @action_state_auth = :backend
+      @validation_error_http_status = nil
     end
 
     def action_state_auth=(mode)

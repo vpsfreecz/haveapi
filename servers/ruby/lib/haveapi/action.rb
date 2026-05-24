@@ -726,7 +726,7 @@ module HaveAPI
       global_meta = self.class.meta(:global)
       return @reply_meta[:global] unless global_meta && global_meta.output
 
-      @authorization.filter_output(
+      @authorization.filter_meta_output(
         global_meta.output.params,
         self.class.model_adapter(global_meta.output.layout).output(@context, @reply_meta[:global]),
         true

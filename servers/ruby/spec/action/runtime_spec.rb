@@ -231,6 +231,59 @@ describe HaveAPI::Action do
           end
         end
 
+        define_action(:MetadataSpecificOutput) do
+          route 'metadata_specific_output'
+          http_method :post
+
+          authorize do
+            output whitelist: [:ok]
+            meta_output blacklist: [:secret_status]
+            allow
+          end
+
+          meta(:global) do
+            output do
+              string :public_status
+              string :secret_status
+            end
+          end
+
+          output do
+            bool :ok
+            string :hidden_body
+          end
+
+          def exec
+            set_meta(public_status: 'queued', secret_status: 'internal-token')
+            { ok: true, hidden_body: 'body-secret' }
+          end
+        end
+
+        define_action(:WhitelistedIndex, superclass: HaveAPI::Actions::Default::Index) do
+          route 'whitelisted'
+
+          authorize do
+            output whitelist: [:name]
+            allow
+          end
+
+          output(:hash_list) do
+            string :name
+            string :secret
+          end
+
+          def count
+            2
+          end
+
+          def exec
+            [
+              { name: 'one', secret: 'hidden' },
+              { name: 'two', secret: 'hidden' }
+            ]
+          end
+        end
+
         define_action(:UnnamespacedInput) do
           route 'unnamespaced_input'
           http_method :post
@@ -666,6 +719,25 @@ describe HaveAPI::Action do
       expect(api_response).to be_ok
       expect(api_response.response[:_meta]).to include(public_status: 'queued')
       expect(api_response.response[:_meta]).not_to have_key(:secret_status)
+    end
+
+    it 'applies metadata-specific output filters to global metadata' do
+      call_api([:Test], :metadata_specific_output, {})
+
+      expect(last_response.status).to eq(200)
+      expect(api_response).to be_ok
+      expect(api_response[:test]).to include(ok: true)
+      expect(api_response[:test]).not_to have_key(:hidden_body)
+      expect(api_response.response[:_meta]).to include(public_status: 'queued')
+      expect(api_response.response[:_meta]).not_to have_key(:secret_status)
+    end
+
+    it 'keeps global metadata when body output uses a whitelist' do
+      get '/v1/tests/whitelisted', { _meta: { count: true } }, input: ''
+
+      expect(last_response.status).to eq(200)
+      expect(api_response).to be_ok
+      expect(api_response.response[:_meta]).to include(total_count: 2)
     end
 
     it 'filters unnamespaced input without exposing legacy params' do

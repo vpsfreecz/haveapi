@@ -171,7 +171,7 @@ module HaveAPI
       add_param(name, apply(kwargs, type: Custom, clean: block, symbolize_keys:))
     end
 
-    def describe(context)
+    def describe(context, metadata: false)
       context.layout = layout
 
       ret = { parameters: {} }
@@ -183,17 +183,7 @@ module HaveAPI
         ret[:parameters][p.name] = p.describe(context)
       end
 
-      ret[:parameters] = if @direction == :input
-                           context.authorization.filter_input(
-                             @params,
-                             ModelAdapters::Hash.output(context, ret[:parameters])
-                           )
-                         else
-                           context.authorization.filter_output(
-                             @params,
-                             ModelAdapters::Hash.output(context, ret[:parameters])
-                           )
-                         end
+      ret[:parameters] = filtered_description_parameters(context, ret, metadata)
 
       ret
     end
@@ -292,6 +282,18 @@ module HaveAPI
     end
 
     private
+
+    def filtered_description_parameters(context, ret, metadata)
+      params = ModelAdapters::Hash.output(context, ret[:parameters])
+
+      if @direction == :input
+        context.authorization.filter_input(@params, params)
+      elsif metadata
+        context.authorization.filter_meta_output(@params, params)
+      else
+        context.authorization.filter_output(@params, params)
+      end
+    end
 
     def add_param(name, kwargs)
       p = Parameters::Typed.new(name, kwargs)

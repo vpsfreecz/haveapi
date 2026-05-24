@@ -159,8 +159,8 @@ module HaveAPI::Parameters
       return if record.nil? || context.nil?
       return unless show_action.authorization
 
-      path = show_action.build_route('')
-      path_params = show_action.path_params(path, show_action.resolve_path_params(record))
+      path = context.action_path_for(show_action)
+      path_params = context.path_params_for(show_action, show_action.resolve_path_params(record))
       child_context = HaveAPI::Context.new(
         context.server,
         version: context.version,

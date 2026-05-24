@@ -392,7 +392,15 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
 
         define_action(:Show, superclass: HaveAPI::Actions::Default::Show) do
           resolve ->(snapshot) { [snapshot.dataset_id, snapshot.id] }
-          authorize { allow }
+          authorize do |_u, params|
+            snapshot = ARAdapterSpec::Snapshot.find_by(id: params['snapshot_id'])
+
+            if snapshot && snapshot.dataset_id == params['dataset_id'].to_i
+              allow
+            else
+              deny
+            end
+          end
 
           output(:object) do
             integer :id
@@ -428,6 +436,22 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
         def exec
           id = path_params['snapshot_link_id']
           with_includes(self.class.model.where(id:)).take!
+        end
+      end
+
+      define_action(:Update, superclass: HaveAPI::Actions::Default::Update) do
+        authorize { allow }
+
+        input(:hash) do
+          resource snapshot_resource
+        end
+
+        output(:hash) do
+          bool :assigned
+        end
+
+        def exec
+          { assigned: input[:snapshot].is_a?(ARAdapterSpec::Snapshot) }
         end
       end
     end
@@ -695,6 +719,20 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
     snapshot_data = api_response[:snapshot_link][:snapshot]
     expect(snapshot_data[:_meta][:resolved]).to be(true)
     expect(snapshot_data).to include(id: snapshot.id, label: 'snapshot')
+  end
+
+  it 'uses full nested paths when authorizing resource input records' do
+    _dataset, snapshot, link = create_snapshot_link
+
+    put "/v1/snapshot_links/#{link.id}", {
+      snapshot_link: {
+        snapshot: snapshot.id
+      }
+    }.to_json, 'CONTENT_TYPE' => 'application/json'
+
+    expect(last_response.status).to eq(200)
+    expect(api_response).to be_ok
+    expect(api_response[:snapshot_link]).to eq(assigned: true)
   end
 
   it 'drops invalid nested include paths from requests' do

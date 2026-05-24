@@ -1,3 +1,20 @@
+# Sun May 24 2026 - version 0.28.2
+## Ruby server
+- Separate URL path identity from validated action input and remove the legacy
+  combined action params view.
+- Normalize custom payload keys to strings by default, with the
+  `symbolize_keys` option available for actions that need legacy symbol-key
+  access.
+- Restore anonymous example documentation while keeping user-specific example
+  authorization filtering for authenticated documentation.
+- Add configurable ActionState authentication modes.
+- Filter framework metadata separately from action body output authorization.
+- Resolve associated nested resource paths through the mounted route tree and
+  authorize nested resource inputs with the correct parent path parameters.
+- Restore validation error HTTP status compatibility by returning validation
+  envelopes with HTTP 200 by default, with an opt-in server setting for HTTP
+  400.
+
 # Sat May 23 2026 - version 0.28.1
 ## Ruby server
 - Normalize generated route params to expose both string and symbol keys,

@@ -48,7 +48,7 @@ module HaveAPI
       def describe(context)
         {
           input: @input && @input.describe(context),
-          output: @output && @output.describe(context)
+          output: @output && @output.describe(context, metadata: true)
         }
       end
     end

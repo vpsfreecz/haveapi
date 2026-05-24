@@ -61,6 +61,13 @@ module HaveAPI
       }
     end
 
+    def meta_output(whitelist: nil, blacklist: nil)
+      @meta_output = {
+        whitelist:,
+        blacklist:
+      }
+    end
+
     def allow
       throw(:rule, true)
     end
@@ -89,6 +96,10 @@ module HaveAPI
 
     def filter_output(output, params, format = false)
       filter_inner(output, @output, params, format)
+    end
+
+    def filter_meta_output(output, params, format = false)
+      filter_inner(output, meta_output_filter, params, format)
     end
 
     def permitted_input_names(params)
@@ -126,6 +137,16 @@ module HaveAPI
       else
         params
       end
+    end
+
+    def meta_output_filter
+      return @meta_output if @meta_output
+      return unless @output && @output[:blacklist]
+
+      {
+        whitelist: nil,
+        blacklist: @output[:blacklist]
+      }
     end
 
     def normalize_names(names)

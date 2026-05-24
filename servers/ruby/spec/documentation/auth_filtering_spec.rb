@@ -142,7 +142,7 @@ describe DocAuthFilteringSpec do
 
           # rubocop:disable RSpec/NoExpectationExample
           example 'admin-only public result' do
-            authorize { |user| user&.login == 'admin' }
+            authorize { |user| user.login == 'admin' }
             response({ msg: 'ADMIN_ONLY_RESULT' })
           end
           # rubocop:enable RSpec/NoExpectationExample
@@ -242,8 +242,20 @@ describe DocAuthFilteringSpec do
       expect(api_response[:method]).to eq('GET')
     end
 
-    it 'hides examples denied to anonymous users from version docs' do
+    it 'includes examples for anonymous version docs without evaluating example auth' do
       header 'Authorization', nil
+      call_api(:options, '/v1/')
+
+      expect(last_response.status).to eq(200)
+      expect(api_response).to be_ok
+
+      examples = api_response[:resources][:secure][:actions][:public][:examples]
+      expect(examples.size).to eq(1)
+      expect(examples.first[:response][:msg]).to eq('ADMIN_ONLY_RESULT')
+    end
+
+    it 'hides examples denied to authenticated users from version docs' do
+      login('user', 'pass')
       call_api(:options, '/v1/')
 
       expect(last_response.status).to eq(200)

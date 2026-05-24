@@ -42,6 +42,7 @@ module HaveAPI
 
     def authorized?(context)
       return true unless @authorization
+      return true unless context.current_user
 
       @authorization.call(context.current_user) ? true : false
     end

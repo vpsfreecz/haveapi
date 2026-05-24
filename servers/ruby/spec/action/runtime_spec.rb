@@ -130,7 +130,7 @@ describe HaveAPI::Action do
           end
 
           def exec
-            { value: params['account_id'] }
+            { value: path_params['account_id'] }
           end
         end
 
@@ -153,7 +153,7 @@ describe HaveAPI::Action do
           end
 
           def exec
-            { route_profile_id: params['profile_id'] }
+            { route_profile_id: path_params['profile_id'] }
           end
         end
 
@@ -246,13 +246,13 @@ describe HaveAPI::Action do
           end
 
           output do
-            bool :params_saw_secret
+            bool :has_params_method
             bool :input_saw_secret
           end
 
           def exec
             {
-              params_saw_secret: params.has_key?(:secret),
+              has_params_method: respond_to?(:params),
               input_saw_secret: input.has_key?(:secret)
             }
           end
@@ -271,7 +271,6 @@ describe HaveAPI::Action do
           output do
             bool :input_saw_test_id
             string :input_test_id, nullable: true
-            string :params_test_id
             string :path_test_id
           end
 
@@ -279,7 +278,33 @@ describe HaveAPI::Action do
             {
               input_saw_test_id: input.has_key?(:test_id),
               input_test_id: input[:test_id],
-              params_test_id: params[:test_id] || params['test_id'],
+              path_test_id: path_params['test_id']
+            }
+          end
+        end
+
+        define_action(:QueryPathInput) do
+          route 'query_input/{test_id}'
+          http_method :get
+          authorize { allow }
+
+          input(:hash, namespace: false) do
+            string :filter
+            string :test_id
+          end
+
+          output do
+            bool :has_params_method
+            bool :input_saw_test_id
+            string :filter
+            string :path_test_id
+          end
+
+          def exec
+            {
+              has_params_method: respond_to?(:params),
+              input_saw_test_id: input.has_key?(:test_id),
+              filter: input[:filter],
               path_test_id: path_params['test_id']
             }
           end
@@ -300,13 +325,13 @@ describe HaveAPI::Action do
           end
 
           output do
-            bool :params_saw_secret
+            bool :has_params_method
             bool :input_saw_secret
           end
 
           def exec
             {
-              params_saw_secret: params.has_key?(:secret),
+              has_params_method: respond_to?(:params),
               input_saw_secret: input.has_key?(:secret)
             }
           end
@@ -394,7 +419,7 @@ describe HaveAPI::Action do
           end
 
           def exec
-            { id: params['test_id'] }
+            { id: path_params['test_id'] }
           end
         end
 
@@ -643,12 +668,12 @@ describe HaveAPI::Action do
       expect(api_response.response[:_meta]).not_to have_key(:secret_status)
     end
 
-    it 'filters unnamespaced input in the safe params view' do
+    it 'filters unnamespaced input without exposing legacy params' do
       call_api([:Test], :unnamespaced_input, { public: 'ok', secret: 'hidden' })
 
       expect(last_response.status).to eq(200)
       expect(api_response).to be_ok
-      expect(api_response[:test][:params_saw_secret]).to be(false)
+      expect(api_response[:test][:has_params_method]).to be(false)
       expect(api_response[:test][:input_saw_secret]).to be(false)
     end
 
@@ -658,7 +683,6 @@ describe HaveAPI::Action do
       expect(last_response.status).to eq(200)
       expect(api_response).to be_ok
       expect(api_response[:test][:input_saw_test_id]).to be(false)
-      expect(api_response[:test][:params_test_id]).to eq('route-id')
       expect(api_response[:test][:path_test_id]).to eq('route-id')
     end
 
@@ -672,11 +696,21 @@ describe HaveAPI::Action do
       expect(api_response).to be_ok
       expect(api_response[:test][:input_saw_test_id]).to be(true)
       expect(api_response[:test][:input_test_id]).to eq('body-id')
-      expect(api_response[:test][:params_test_id]).to eq('body-id')
       expect(api_response[:test][:path_test_id]).to eq('route-id')
     end
 
-    it 'does not expose top-level JSON keys outside the input namespace as safe params' do
+    it 'keeps route ids out of GET query input' do
+      get '/v1/tests/query_input/route-id', { filter: 'visible' }, input: ''
+
+      expect(last_response.status).to eq(200)
+      expect(api_response).to be_ok
+      expect(api_response[:test][:has_params_method]).to be(false)
+      expect(api_response[:test][:input_saw_test_id]).to be(false)
+      expect(api_response[:test][:filter]).to eq('visible')
+      expect(api_response[:test][:path_test_id]).to eq('route-id')
+    end
+
+    it 'does not expose top-level JSON keys outside the input namespace' do
       call_api([:Test], :top_level_body, {
         secret: 'top-level hidden',
         test: {
@@ -687,7 +721,7 @@ describe HaveAPI::Action do
 
       expect(last_response.status).to eq(200)
       expect(api_response).to be_ok
-      expect(api_response[:test][:params_saw_secret]).to be(false)
+      expect(api_response[:test][:has_params_method]).to be(false)
       expect(api_response[:test][:input_saw_secret]).to be(false)
     end
 

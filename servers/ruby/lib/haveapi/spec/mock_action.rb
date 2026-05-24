@@ -9,15 +9,16 @@ module HaveAPI::Spec
     end
 
     def call(input, user: nil, &)
-      action = @action.new(nil, @v, input, nil, HaveAPI::Context.new(
-                                                  @server,
-                                                  version: @v,
-                                                  action: @action,
-                                                  path: @path,
-                                                  params: input,
-                                                  user:,
-                                                  endpoint: true
-                                                ))
+      context = HaveAPI::Context.new(
+        @server,
+        version: @v,
+        action: @action,
+        path: @path,
+        input:,
+        user:,
+        endpoint: true
+      )
+      action = @action.new(nil, @v, {}, input, context)
 
       unless action.authorized?(user)
         raise 'Access denied. Insufficient permissions.'

@@ -76,9 +76,9 @@ module API::Resources
       authorize { allow }
 
       def exec
-        ::User.find(params[:user_id])
+        ::User.find(path_params['user_id'])
       rescue ActiveRecord::RecordNotFound => e
-        error!("user with id '#{params[:user_id]}' not found")
+        error!("user with id '#{path_params['user_id']}' not found")
       end
     end
 
@@ -117,12 +117,12 @@ module API::Resources
       authorize { |user| allow if user.is_admin }
 
       def exec
-        ::User.find(params[:user_id]).destroy!
+        ::User.find(path_params['user_id']).destroy!
 
         # This action returns no parameters, just indicate success
         ok!
       rescue ActiveRecord::RecordNotFound
-        error!("user with id '#{params[:user_id]}' not found")
+        error!("user with id '#{path_params['user_id']}' not found")
       end
     end
   end

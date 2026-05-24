@@ -64,9 +64,9 @@ module API::Resources
       authorize { allow }
 
       def exec
-        ::Dummy.find(params[:dummy_id])
+        ::Dummy.find(path_params['dummy_id'])
       rescue ActiveRecord::RecordNotFound => e
-        error!("dummy with id '#{params[:dummy_id]}' not found")
+        error!("dummy with id '#{path_params['dummy_id']}' not found")
       end
     end
 
@@ -101,12 +101,12 @@ module API::Resources
       authorize { allow }
 
       def exec
-        ::Dummy.find(params[:dummy_id]).destroy!
+        ::Dummy.find(path_params['dummy_id']).destroy!
 
         # This action returns no parameters, just indicate success
         ok!
       rescue ActiveRecord::RecordNotFound
-        error!("dummy with id '#{params[:dummy_id]}' not found")
+        error!("dummy with id '#{path_params['dummy_id']}' not found")
       end
     end
   end

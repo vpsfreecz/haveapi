@@ -539,9 +539,8 @@ module HaveAPI
           report_error(400, {}, 'JSON body must be an object')
         end
 
-        body_input = body_method ? (body || {}) : nil
-        action_params = body_method ? settings.api_server.send(:path_params, route, params) : params
-        context_params = body_input ? action_params.merge(body_input) : action_params
+        action_params = settings.api_server.send(:path_params, route, params)
+        action_input = body_method ? (body || {}) : request.GET
 
         context = Context.new(
           settings.api_server,
@@ -549,13 +548,14 @@ module HaveAPI
           request: self,
           action: route.action,
           path: route.path,
-          params: context_params,
+          path_params: action_params,
+          input: action_input,
           user: current_user,
           endpoint: true,
           resource_path: route.resource_path
         )
 
-        action = route.action.new(request, v, action_params, body_input, context)
+        action = route.action.new(request, v, action_params, action_input, context)
 
         unless action.authorized?(current_user)
           report_error(403, {}, 'Access denied. Insufficient permissions.')

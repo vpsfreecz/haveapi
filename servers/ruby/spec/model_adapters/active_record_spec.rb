@@ -79,7 +79,7 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
         end
 
         def exec
-          self.class.model.find(params['environment_id'])
+          self.class.model.find(path_params['environment_id'])
         end
       end
     end
@@ -113,12 +113,12 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
         end
 
         def prepare
-          group = self.class.model.find(params[:group_id])
+          group = self.class.model.find(path_params['group_id'])
           error!('access denied') if group.note == 'PRIVATE_GROUP_NOTE'
         end
 
         def exec
-          self.class.model.find(params['group_id'])
+          self.class.model.find(path_params['group_id'])
         end
       end
     end
@@ -158,7 +158,7 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
         end
 
         def exec
-          self.class.model.find(params['filtered_group_id'])
+          self.class.model.find(path_params['filtered_group_id'])
         end
       end
     end
@@ -178,7 +178,7 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
         end
 
         def exec
-          with_includes(self.class.model.where(id: params['filtered_member_id'])).take!
+          with_includes(self.class.model.where(id: path_params['filtered_member_id'])).take!
         end
       end
     end
@@ -225,7 +225,7 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
         end
 
         def exec
-          id = params['user_id'].to_i
+          id = path_params['user_id'].to_i
           with_includes(self.class.model.where(id: id)).take!
         end
       end
@@ -244,7 +244,7 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
         end
 
         def exec
-          self.class.model.find(params['user_id'])
+          self.class.model.find(path_params['user_id'])
         end
       end
 
@@ -312,7 +312,7 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
         end
 
         def exec
-          self.class.model.find(params['hidden_account_id'])
+          self.class.model.find(path_params['hidden_account_id'])
         end
       end
     end
@@ -332,7 +332,7 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
         end
 
         def exec
-          self.class.model.find(params['invoice_id'])
+          self.class.model.find(path_params['invoice_id'])
         end
       end
 
@@ -533,7 +533,7 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
     expect(group_data[:environment]).not_to have_key(:note)
   end
 
-  it 'passes symbol path params to associated show prepare when included' do
+  it 'passes path params to associated show prepare when included' do
     group = ARAdapterSpec::Group.create!(label: 'grp', note: 'GROUP_NOTE')
     user = create_user(name: 'user', group: group)
 

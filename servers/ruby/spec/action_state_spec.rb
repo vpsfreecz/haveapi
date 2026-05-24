@@ -333,12 +333,12 @@ describe HaveAPI::Resources::ActionState do
       header 'Accept', 'application/json'
     end
 
-    it 'requires authentication for action state resources' do
+    it 'uses backend-defined anonymous behavior by default' do
       get_action '/v1/action_states'
 
-      expect(last_response.status).to eq(401)
-      expect(api_response).not_to be_ok
-      expect(ActionStateSpec::Backend.list_calls).to be_empty
+      expect(last_response.status).to eq(200)
+      expect(api_response).to be_ok
+      expect(ActionStateSpec::Backend.list_calls.last[:user]).to be_nil
     end
 
     it 'passes authenticated users to the action state backend' do
@@ -348,6 +348,29 @@ describe HaveAPI::Resources::ActionState do
       expect(last_response.status).to eq(200)
       expect(api_response).to be_ok
       expect(ActionStateSpec::Backend.list_calls.last[:user].id).to eq(1)
+    end
+  end
+
+  context 'with action_state auth required' do
+    empty_api
+    use_version 1
+    default_version 1
+    action_state ActionStateSpec::Backend
+    action_state_auth :required
+    auth_chain ActionStateSpec::BasicProvider
+
+    before do
+      ActionStateSpec::Backend.reset!
+      ActionStateSpec::Backend.add_state(ActionStateSpec::State.new(id: 1))
+      header 'Accept', 'application/json'
+    end
+
+    it 'requires authentication before reaching the action state backend' do
+      get_action '/v1/action_states'
+
+      expect(last_response.status).to eq(401)
+      expect(api_response).not_to be_ok
+      expect(ActionStateSpec::Backend.list_calls).to be_empty
     end
   end
 end

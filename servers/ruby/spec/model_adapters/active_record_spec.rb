@@ -853,7 +853,7 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
       }
     }.to_json, 'CONTENT_TYPE' => 'application/json'
 
-    expect(last_response.status).to eq(400)
+    expect(last_response.status).to eq(200)
     expect(api_response).not_to be_ok
     expect(api_response.errors[:hidden_account]).to include('resource not found')
   end
@@ -954,7 +954,7 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
   it 'rejects excessive pagination limits' do
     get '/v1/users', { user: { limit: HaveAPI::Actions::Paginable::MAX_LIMIT + 1 } }, input: ''
 
-    expect(last_response.status).to eq(400)
+    expect(last_response.status).to eq(200)
     expect(api_response).not_to be_ok
     expect(api_response.errors[:limit].first).to include(
       "range <0, #{HaveAPI::Actions::Paginable::MAX_LIMIT}>"

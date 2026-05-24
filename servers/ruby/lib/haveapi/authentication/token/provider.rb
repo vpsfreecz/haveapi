@@ -242,6 +242,12 @@ module HaveAPI::Authentication
               allow
             end
 
+            def validate!
+              validate
+            rescue HaveAPI::ValidationError => e
+              error!(e.message, e.to_hash, http_status: 400)
+            end
+
             def exec
               config = self.class.resource.token_instance.config
 
@@ -376,6 +382,12 @@ module HaveAPI::Authentication
 
               authorize do
                 allow
+              end
+
+              def validate!
+                validate
+              rescue HaveAPI::ValidationError => e
+                error!(e.message, e.to_hash, http_status: 400)
               end
 
               define_method(:exec) do

@@ -106,7 +106,7 @@ describe HaveAPI::Server do
         'CONTENT_TYPE' => 'application/x-www-form-urlencoded'
       }
 
-      expect(last_response.status).to eq(400)
+      expect(last_response.status).to eq(200)
       expect(api_response).not_to be_ok
       expect(ServerIntegrationSpec::State.writes).to be_empty
     end

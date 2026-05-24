@@ -335,7 +335,11 @@ module HaveAPI
     def validate!
       validate
     rescue ValidationError => e
-      error!(e.message, e.to_hash, http_status: 400)
+      opts = {}
+      status = @context.server.validation_error_http_status
+      opts[:http_status] = status if status
+
+      error!(e.message, e.to_hash, opts)
     end
 
     def authorized?(user)

@@ -17,6 +17,8 @@ module HaveAPI::Spec
       @api.action_state = as if as
       asa = get_opt(:action_state_auth)
       @api.action_state_auth = asa if asa
+      ves = get_opt(:validation_error_http_status)
+      @api.validation_error_http_status = ves if ves
       @api.mount(get_opt(:mount) || '/')
       @api.app
     end

@@ -225,7 +225,7 @@ describe HaveAPI::Resources::ActionState do
 
       get_action '/v1/action_states/1/poll', action_state: { timeout: 31 }
 
-      expect(last_response.status).to eq(400)
+      expect(last_response.status).to eq(200)
       expect(api_response).not_to be_ok
       expect(api_response.errors[:timeout].first).to include('range <0, 30>')
     end

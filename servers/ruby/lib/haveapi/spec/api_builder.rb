@@ -59,6 +59,11 @@ module HaveAPI::Spec
       opt(:action_state_auth, mode)
     end
 
+    # Set HTTP status for action validation errors. Nil preserves legacy 200.
+    def validation_error_http_status(status)
+      opt(:validation_error_http_status, status)
+    end
+
     # Set a custom mount path.
     def mount_to(path)
       opt(:mount, path)

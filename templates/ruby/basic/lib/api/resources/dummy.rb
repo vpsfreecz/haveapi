@@ -50,7 +50,7 @@ module API::Resources
       authorize { allow }
 
       def exec
-        id = params[:dummy_id] && params[:dummy_id].to_i
+        id = path_params['dummy_id'] && path_params['dummy_id'].to_i
 
         if DUMMIES[id].nil?
           error!("Dummy with id '#{id}' not found")

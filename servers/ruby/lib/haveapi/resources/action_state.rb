@@ -111,7 +111,7 @@ module HaveAPI::Resources
         loop do
           state = @context.server.action_state.new(
             current_user,
-            id: params[:action_state_id]
+            id: path_params['action_state_id']
           )
 
           error!('action state not found') unless state.valid?
@@ -148,7 +148,7 @@ module HaveAPI::Resources
       def exec
         state = @context.server.action_state.new(
           current_user,
-          id: params[:action_state_id]
+          id: path_params['action_state_id']
         )
 
         return state_to_hash(state) if state.valid?
@@ -169,7 +169,7 @@ module HaveAPI::Resources
       def exec
         state = @context.server.action_state.new(
           current_user,
-          id: params[:action_state_id]
+          id: path_params['action_state_id']
         )
 
         error!('action state not found') unless state.valid?

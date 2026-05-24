@@ -259,10 +259,9 @@ module HaveAPI
       end
 
       def from_context(c)
-        ret = new(nil, c.version, c.params, nil, c)
+        ret = new(nil, c.version, c.path_params || c.path_params_from_args, c.input || c.params || {}, c)
         ret.instance_exec do
-          @safe_params = @params.dup
-          @safe_input = input_from_params(@safe_params)
+          @safe_input = self.class.input && input_from_params(raw_input_params(self.class.input))
           @authorization = c.authorization
           @current_user = c.current_user
         end
@@ -309,14 +308,12 @@ module HaveAPI
       end
     end
 
-    def initialize(request, version, params, body, context)
+    def initialize(request, version, params, input_params, context)
       super()
       @request = request
       @version = version
       @route_params = params.dup
-      @body_input = !body.nil?
-      @body = body || {}
-      @params = @body_input ? @route_params.merge(@body) : @route_params.dup
+      @raw_input = input_params || {}
       @context = context
       @context.action = self.class
       @context.action_instance = self
@@ -336,7 +333,7 @@ module HaveAPI
     end
 
     def validate!
-      @params = validate
+      validate
     rescue ValidationError => e
       error!(e.message, e.to_hash, http_status: 400)
     end
@@ -344,10 +341,6 @@ module HaveAPI
     def authorized?(user)
       @current_user = user
       @authorization.authorized?(user, path_params)
-    end
-
-    def params
-      @safe_params
     end
 
     def path_params
@@ -599,7 +592,6 @@ module HaveAPI
 
     def validate
       # Validate standard input
-      @safe_params = @route_params.dup
       @safe_input = nil
       input = self.class.input
 
@@ -634,8 +626,6 @@ module HaveAPI
           context: @context,
           only: @authorization.permitted_input_names(self.class.input.params)
         )
-
-        merge_safe_input(input)
       end
 
       validate_metadata(input)
@@ -673,41 +663,23 @@ module HaveAPI
     def metadata_params(type, input)
       case type
       when :global
-        fetch_metadata_from(@params)
+        fetch_metadata_from(@raw_input)
       when :object
         return unless input && input.namespace
 
-        obj_params = fetch_param(@params, input.namespace)
+        obj_params = fetch_param(@raw_input, input.namespace)
         fetch_metadata_from(obj_params) if obj_params.is_a?(Hash)
       end
     end
 
     def raw_input_params(input)
-      source = @body_input ? @body : @route_params
-      return source.dup unless input.namespace
+      return @raw_input.dup unless input.namespace
 
-      { input.namespace => fetch_param(source, input.namespace) }
+      { input.namespace => fetch_param(@raw_input, input.namespace) }
     end
 
     def validated_input_params(input)
       input.namespace ? { input.namespace => @safe_input } : @safe_input
-    end
-
-    def merge_safe_input(input)
-      if input.namespace
-        @safe_params[input.namespace] = @safe_input
-        return
-      end
-
-      unless @safe_input.is_a?(Hash)
-        @safe_params = @safe_input
-        return
-      end
-
-      @safe_input.each do |name, value|
-        @safe_params.delete(name.to_s)
-        @safe_params[name] = value
-      end
     end
 
     def input_from_params(params)

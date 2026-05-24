@@ -292,7 +292,7 @@ module HaveAPI
           authorize { allow }
 
           def exec
-            project = HaveAPI::ClientTestAPI::Store.find_project(params[:project_id])
+            project = HaveAPI::ClientTestAPI::Store.find_project(path_params['project_id'])
             error!('project not found', {}, http_status: 404) unless project
             project
           end
@@ -333,11 +333,11 @@ module HaveAPI
             authorize { allow }
 
             def exec
-              HaveAPI::ClientTestAPI::Store.list_tasks(params[:project_id])
+              HaveAPI::ClientTestAPI::Store.list_tasks(path_params['project_id'])
             end
 
             def count
-              HaveAPI::ClientTestAPI::Store.list_tasks(params[:project_id]).size
+              HaveAPI::ClientTestAPI::Store.list_tasks(path_params['project_id']).size
             end
           end
 
@@ -349,7 +349,7 @@ module HaveAPI
             authorize { allow }
 
             def exec
-              task = HaveAPI::ClientTestAPI::Store.find_task(params[:project_id], params[:task_id])
+              task = HaveAPI::ClientTestAPI::Store.find_task(path_params['project_id'], path_params['task_id'])
               error!('task not found', {}, http_status: 404) unless task
               task
             end
@@ -368,7 +368,7 @@ module HaveAPI
 
             def exec
               HaveAPI::ClientTestAPI::Store.create_task(
-                params[:project_id],
+                path_params['project_id'],
                 input[:label],
                 input[:done]
               )
@@ -387,8 +387,8 @@ module HaveAPI
 
             def exec
               task = HaveAPI::ClientTestAPI::Store.update_task(
-                params[:project_id],
-                params[:task_id],
+                path_params['project_id'],
+                path_params['task_id'],
                 input[:done]
               )
               error!('task not found', {}, http_status: 404) unless task
@@ -406,7 +406,7 @@ module HaveAPI
             authorize { allow }
 
             def exec
-              task = HaveAPI::ClientTestAPI::Store.find_task(params[:project_id], params[:task_id])
+              task = HaveAPI::ClientTestAPI::Store.find_task(path_params['project_id'], path_params['task_id'])
               error!('task not found', {}, http_status: 404) unless task
 
               @state_id = HaveAPI::ClientTestAPI::ActionStateBackend.create_state(

@@ -227,8 +227,12 @@ module HaveAPI::Extensions
                   <td><%=h context.args %></td>
                 </tr>
                 <tr>
-                  <th>Parameters</th>
-                  <td><%=h context.params %></td>
+                  <th>Path parameters</th>
+                  <td><%=h context.path_params %></td>
+                </tr>
+                <tr>
+                  <th>Input</th>
+                  <td><%=h context.input %></td>
                 </tr>
                 <tr>
                   <th>User</th>

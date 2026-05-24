@@ -167,11 +167,12 @@ module HaveAPI::Parameters
         request: context.request,
         action: show_action,
         path:,
-        params: path_params,
+        path_params:,
+        input: {},
         user: context.current_user,
         endpoint: context.endpoint
       )
-      action = show_action.new(context.request, context.version, path_params, nil, child_context)
+      action = show_action.new(context.request, context.version, path_params, {}, child_context)
       return if action.authorized?(context.current_user)
 
       raise HaveAPI::ValidationError, 'resource not found'

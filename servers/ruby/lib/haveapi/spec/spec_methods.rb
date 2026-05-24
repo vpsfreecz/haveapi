@@ -15,6 +15,8 @@ module HaveAPI::Spec
       @api.default_version = default if default
       as = get_opt(:action_state)
       @api.action_state = as if as
+      asa = get_opt(:action_state_auth)
+      @api.action_state_auth = asa if asa
       @api.mount(get_opt(:mount) || '/')
       @api.app
     end

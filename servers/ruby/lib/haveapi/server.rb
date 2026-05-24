@@ -7,7 +7,8 @@ require 'haveapi/hooks'
 module HaveAPI
   class Server
     attr_accessor :default_version, :action_state
-    attr_reader :root, :routes, :module_name, :auth_chain, :versions, :extensions
+    attr_reader :root, :routes, :module_name, :auth_chain, :versions, :extensions,
+                :action_state_auth
 
     include Hookable
 
@@ -220,6 +221,18 @@ module HaveAPI
       @allowed_headers = ['Content-Type']
       @auth_chain = HaveAPI::Authentication::Chain.new(self)
       @extensions = []
+      @action_state_auth = :backend
+    end
+
+    def action_state_auth=(mode)
+      @action_state_auth = case mode
+                           when :backend, false, nil
+                             :backend
+                           when :required, true
+                             :required
+                           else
+                             raise ArgumentError, "unsupported action_state_auth #{mode.inspect}"
+                           end
     end
 
     # Include specific version `v` of API.
@@ -676,9 +689,10 @@ module HaveAPI
     end
 
     def action_state_auth_required?(route)
+      return false unless route.action.resource == HaveAPI::Resources::ActionState
       return false if @auth_chain.empty?
 
-      route.action.resource == HaveAPI::Resources::ActionState
+      @action_state_auth == :required
     end
 
     def version_prefix(v)

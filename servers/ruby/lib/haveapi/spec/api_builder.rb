@@ -54,6 +54,11 @@ module HaveAPI::Spec
       opt(:action_state, backend)
     end
 
+    # Set action state authentication mode.
+    def action_state_auth(mode)
+      opt(:action_state_auth, mode)
+    end
+
     # Set a custom mount path.
     def mount_to(path)
       opt(:mount, path)

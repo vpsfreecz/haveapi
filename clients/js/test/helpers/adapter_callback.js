@@ -40,6 +40,14 @@ class CallbackAdapter {
     return this._invoke(this.client.project.list, [], null);
   }
 
+  publicProjects() {
+    return this._invoke(this.client.project.public_list, [], null);
+  }
+
+  publicProject(projectId) {
+    return this._invoke(this.client.project.public_show, [projectId], null);
+  }
+
   createProject(name) {
     return this._invoke(this.client.project.create, [], { name });
   }

@@ -462,6 +462,11 @@ response.
         } or null,
     }
 
+Per-object metadata may include `path_params`, an array of URL parameters that
+clients can use to prepare actions on the returned object. This field is
+optional. Servers may omit it when the response does not expose the identifiers
+that would be needed to reconstruct those URL parameters.
+
 ## Blocking mode
 Blocking mode is for actions whose execution takes a long time. Clients can monitor
 progress of such actions and even cancel their execution.

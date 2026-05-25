@@ -58,6 +58,23 @@ RSpec.describe HaveAPI::Client::Client do
     expect(task.label).to eq('Do it')
   end
 
+  it 'handles project responses without path params' do
+    client = described_class.new(base_url)
+    client.authenticate(:basic, user: 'user', password: 'pass')
+
+    project = client.project.list.first
+
+    public_project = client.project.public_show(project.id)
+    expect(public_project.name).to eq('Alpha')
+
+    public_projects = client.project.public_list
+    expect(public_projects.size).to be >= 2
+    expect(public_projects.first.name).to eq('Alpha')
+
+    expect { public_projects.first.find }
+      .to raise_error(ArgumentError, /object ids missing/)
+  end
+
   it 'raises validation error on missing required params' do
     client = described_class.new(base_url)
     client.authenticate(:basic, user: 'user', password: 'pass')

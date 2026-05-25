@@ -268,6 +268,10 @@ module HaveAPI
           datetime :created_at
         end
 
+        params(:public) do
+          string :name
+        end
+
         define_action(:Index, superclass: HaveAPI::Actions::Default::Index) do
           extend DocFilter
 
@@ -289,6 +293,38 @@ module HaveAPI
 
           resolve { |obj| obj[:id] }
           output(:object) { use :all }
+          authorize { allow }
+
+          def exec
+            project = HaveAPI::ClientTestAPI::Store.find_project(path_params['project_id'])
+            error!('project not found', {}, http_status: 404) unless project
+            project
+          end
+        end
+
+        define_action(:PublicList, superclass: HaveAPI::Actions::Default::Index) do
+          extend DocFilter
+
+          route 'public/list'
+          resolve { |obj| obj[:id] }
+          output(:object_list) { use :public }
+          authorize { allow }
+
+          def exec
+            HaveAPI::ClientTestAPI::Store.list_projects
+          end
+
+          def count
+            HaveAPI::ClientTestAPI::Store.count_projects
+          end
+        end
+
+        define_action(:PublicShow, superclass: HaveAPI::Actions::Default::Show) do
+          extend DocFilter
+
+          route 'public/{project_id}/show'
+          resolve { |obj| obj[:id] }
+          output(:object) { use :public }
           authorize { allow }
 
           def exec

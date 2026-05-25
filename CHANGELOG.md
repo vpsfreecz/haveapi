@@ -1,3 +1,25 @@
+# Mon May 25 2026 - version 0.28.3
+## Documentation
+- Clarify that per-object metadata `path_params` is optional when the
+  identifiers needed to reconstruct URL paths are not exposed.
+
+## Ruby client
+- Handle object and object-list responses without metadata `path_params` by
+  falling back to the existing missing-argument behavior.
+
+## JavaScript client
+- Handle object and object-list responses without metadata `path_params` by
+  falling back to the existing unresolved-argument behavior.
+
+## PHP client
+- Handle object and object-list responses without metadata `path_params`
+  without emitting warnings, falling back to the existing unresolved-argument
+  behavior.
+
+## Go client generator
+- Fix the client test API fixture so public project regression actions do not
+  inherit aliases that collide in generated Go clients.
+
 # Sun May 24 2026 - version 0.28.2
 ## Ruby server
 - Separate URL path identity from validated action input and remove the legacy

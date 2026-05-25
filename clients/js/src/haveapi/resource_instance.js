@@ -33,8 +33,10 @@ function ResourceInstance (client, parent, action, response, shell, item) {
 			var that = this;
 
 			action.directInvoke(function(c, response) {
-				that.attachResources(that._private.action.resource._private.description, response.meta().path_params);
-				that.attachActions(that._private.action.resource._private.description, response.meta().path_params);
+				var idArgs = ResourceInstance.pathParams(response.meta());
+
+				that.attachResources(that._private.action.resource._private.description, idArgs);
+				that.attachActions(that._private.action.resource._private.description, idArgs);
 				that.attachAttributes(response.response());
 
 				that._private.resolved = true;
@@ -61,7 +63,7 @@ function ResourceInstance (client, parent, action, response, shell, item) {
 		this._private.persistent = true;
 
 		var metaNs = client.apiSettings.meta.namespace;
-		var idArgs = item ? response[metaNs].path_params : response.meta().path_params;
+		var idArgs = ResourceInstance.pathParams(item ? response[metaNs] : response.meta());
 
 		this.attachResources(this._private.action.resource._private.description, idArgs);
 		this.attachActions(this._private.action.resource._private.description, idArgs);
@@ -73,6 +75,10 @@ function ResourceInstance (client, parent, action, response, shell, item) {
 };
 
 ResourceInstance.prototype = new BaseResource();
+
+ResourceInstance.pathParams = function(meta) {
+	return meta && meta.path_params ? meta.path_params : [];
+};
 
 /**
  * @callback HaveAPI.Client.ResourceInstance~resolveCallback
@@ -173,10 +179,11 @@ ResourceInstance.prototype.resolveAssociation = function(attr, resourcePath, pat
 
 	var obj = this._private.attributes[ attr ];
 	var metaNs = this._private.client.apiSettings.meta.namespace;
+	var meta = obj[metaNs] || {};
 	var action = tmp.show;
-	action.provideIdArgs(obj[metaNs].path_params);
+	action.provideIdArgs(ResourceInstance.pathParams(meta));
 
-	if (obj[metaNs].resolved)
+	if (meta.resolved)
 		return new Client.ResourceInstance(
 			this._private.client,
 			action.resource._private.parent,

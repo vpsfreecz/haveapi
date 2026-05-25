@@ -23,16 +23,15 @@ module HaveAPI::Client
       if response
         if response.is_a?(Hash)
           @params = response
-          @prepared_args = response[:_meta][:path_params]
-          @meta ||= response[:_meta]
+          @meta ||= response[:_meta] || {}
 
         else
           @response = response
           @params = response.response
-          @prepared_args = response.meta[:path_params]
-          @meta ||= response.meta
+          @meta ||= response.meta || {}
         end
 
+        @prepared_args = path_params_from(@meta)
         setup_from_clone(resource)
         define_attributes
       end
@@ -79,14 +78,16 @@ module HaveAPI::Client
     def resolve
       return self if @resolved
 
-      @action.provide_args(*@meta[:path_params])
+      @action.provide_args(*path_params_from(@meta))
+      raise ArgumentError, 'one or more object ids missing' if @action.unresolved_args?
+
       @response = Response.new(@action, @action.execute({}))
       @params = @response.response
 
       setup_from_clone(@resource)
       define_attributes
 
-      @prepared_args = @response.meta[:path_params]
+      @prepared_args = path_params_from(@response.meta)
       @resolved = true
       self
     end
@@ -167,6 +168,10 @@ module HaveAPI::Client
       define_singleton_method(name, &block) unless respond_to?(name)
     end
 
+    def path_params_from(meta)
+      meta&.fetch(:path_params, []) || []
+    end
+
     # Define nil references to resource attributes.
     # Used only for not-persistent objects.
     def define_implicit_attributes
@@ -207,14 +212,16 @@ module HaveAPI::Client
       end
 
       # FIXME: read _meta namespace from description
+      meta = res_val[:_meta] || {}
+
       ResourceInstance.new(
         @client,
         @api,
         tmp,
         action: tmp.actions[:show],
-        resolved: res_val[:_meta][:resolved],
-        response: res_val[:_meta][:resolved] ? res_val : nil,
-        meta: res_val[:_meta]
+        resolved: meta[:resolved],
+        response: meta[:resolved] ? res_val : nil,
+        meta: meta
       )
     end
 

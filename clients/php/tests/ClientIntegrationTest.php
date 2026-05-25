@@ -75,6 +75,37 @@ final class ClientIntegrationTest extends TestCase
         $this->assertEquals('beta', $taskB->label);
     }
 
+    public function testProjectResponsesMayOmitPathParams(): void
+    {
+        $api = new \HaveAPI\Client(self::$baseUrl);
+        $api->authenticate('basic', ['user' => 'user', 'password' => 'pass']);
+
+        $projectId = $api->project->list()[0]->id;
+
+        set_error_handler(function ($severity, $message, $file, $line) {
+            if ($severity & (E_WARNING | E_NOTICE | E_USER_WARNING | E_USER_NOTICE)) {
+                throw new \ErrorException($message, 0, $severity, $file, $line);
+            }
+
+            return false;
+        });
+
+        try {
+            $project = $api->project->public_show($projectId);
+            $this->assertEquals('Alpha', $project->name);
+
+            $projects = $api->project->public_list();
+            $this->assertGreaterThanOrEqual(2, count($projects));
+            $this->assertEquals('Alpha', $projects[0]->name);
+
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->expectException(\HaveAPI\Client\Exception\UnresolvedArguments::class);
+        $projects[0]->find();
+    }
+
     public function testServerSideValidationError(): void
     {
         $api = new \HaveAPI\Client(self::$baseUrl);

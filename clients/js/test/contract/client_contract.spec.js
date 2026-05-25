@@ -61,6 +61,30 @@ describe('HaveAPI JS client contract', function () {
     expect(tasks.length).to.be.at.least(1);
   });
 
+  it('handles project responses without path params', async () => {
+    await adapter.authenticateBasic('user', 'pass');
+
+    const projects = await adapter.listProjects();
+    const project = projects.first();
+
+    const publicProject = await adapter.publicProject(project.id);
+    expect(publicProject.name).to.equal('Alpha');
+
+    const publicProjects = await adapter.publicProjects();
+    expect(publicProjects.length).to.be.at.least(2);
+    expect(publicProjects.first().name).to.equal('Alpha');
+
+    let thrown = null;
+
+    try {
+      publicProjects.first().find({ onReply: () => {} });
+    } catch (err) {
+      thrown = err;
+    }
+
+    expect(thrown).to.have.property('name', 'UnresolvedArguments');
+  });
+
   it('runs blocking actions and reports progress', async () => {
     await adapter.authenticateBasic('user', 'pass');
 

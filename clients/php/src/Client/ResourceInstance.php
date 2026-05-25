@@ -42,7 +42,8 @@ class ResourceInstance extends Resource
             } else {
                 $ns = $client->getSettings('meta')->{'namespace'};
 
-                $this->args = $response->{$ns}->path_params;
+                $meta = $response->{$ns} ?? null;
+                $this->args = $meta->path_params ?? [];
                 // 				unset($response->{$ns});
 
                 $this->attrs = (array) $response;
@@ -115,8 +116,9 @@ class ResourceInstance extends Resource
 
                 // Return resolved ResourceInstance or resolve one
                 $ns = $this->client->getSettings('meta')->{'namespace'};
+                $meta = $this->attrs[$name]->{$ns} ?? null;
 
-                if ($this->attrs[$name]->{$ns}->resolved) {
+                if ($meta && ($meta->resolved ?? false)) {
                     $this->associations[$name] = new ResourceInstance(
                         $this->client,
                         $this->client[ implode('.', $param->resource) ]->show,
@@ -125,7 +127,7 @@ class ResourceInstance extends Resource
 
                 } else {
                     $action = $this->client[ implode('.', $param->resource) ]->show;
-                    $action->applyArgs($this->attrs[$name]->{$ns}->path_params);
+                    $action->applyArgs($meta->path_params ?? []);
 
                     $this->associations[$name] = $action->call();
                 }

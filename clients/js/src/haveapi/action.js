@@ -10,7 +10,7 @@ function Action (client, resource, name, description, args) {
 	this.resource = resource;
 	this.name = name;
 	this.description = description;
-	this.args = args;
+	this.args = args || [];
 	this.providedIdArgs = [];
 	this.preparedPath = null;
 
@@ -71,7 +71,7 @@ Action.prototype.layout = function(direction) {
  * @method HaveAPI.Client.Action#provideIdArgs
  */
 Action.prototype.provideIdArgs = function(args) {
-	this.providedIdArgs = args;
+	this.providedIdArgs = args || [];
 };
 
 /**

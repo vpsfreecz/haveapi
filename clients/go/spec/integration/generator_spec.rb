@@ -105,6 +105,43 @@ RSpec.describe HaveAPI::GoClient::Generator do
           }
         }
 
+        func TestProjectPublicResponsesWithoutPathParams(t *testing.T) {
+          c := New("#{base_url}")
+          c.SetBasicAuthentication("user", "pass")
+
+          showReq := c.Project.PublicShow.Prepare()
+          showReq.SetPathParamInt("project_id", 1)
+          showResp, err := showReq.Call()
+          if err != nil {
+            t.Fatalf("public show failed: %v", err)
+          }
+
+          if !showResp.Status {
+            t.Fatalf("public show failed: %s", showResp.Message)
+          }
+
+          if showResp.Output.Name != "Alpha" {
+            t.Fatalf("expected public show name Alpha, got %q", showResp.Output.Name)
+          }
+
+          listResp, err := c.Project.PublicList.Prepare().Call()
+          if err != nil {
+            t.Fatalf("public list failed: %v", err)
+          }
+
+          if !listResp.Status {
+            t.Fatalf("public list failed: %s", listResp.Message)
+          }
+
+          if len(listResp.Output) < 2 {
+            t.Fatalf("expected at least 2 public projects, got %d", len(listResp.Output))
+          }
+
+          if listResp.Output[0].Name != "Alpha" {
+            t.Fatalf("expected first public project Alpha, got %q", listResp.Output[0].Name)
+          }
+        }
+
         func TestClientTimeout(t *testing.T) {
           c := New("#{base_url}")
           c.SetBasicAuthentication("user", "pass")

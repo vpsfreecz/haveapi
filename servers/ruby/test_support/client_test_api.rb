@@ -306,6 +306,7 @@ module HaveAPI
           extend DocFilter
 
           route 'public/list'
+          aliases []
           resolve { |obj| obj[:id] }
           output(:object_list) { use :public }
           authorize { allow }
@@ -323,6 +324,7 @@ module HaveAPI
           extend DocFilter
 
           route 'public/{project_id}/show'
+          aliases []
           resolve { |obj| obj[:id] }
           output(:object) { use :public }
           authorize { allow }

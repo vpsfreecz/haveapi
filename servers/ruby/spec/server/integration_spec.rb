@@ -37,6 +37,19 @@ describe HaveAPI::Server do
             { msg: params.dig(:test, :msg) }
           end
         end
+
+        define_action(:AuthorizeError) do
+          route 'authorize_error'
+          http_method :get
+
+          authorize do
+            raise 'authorize boom'
+          end
+
+          def exec
+            ok!
+          end
+        end
       end
 
       define_resource(:Transfer) do
@@ -141,6 +154,27 @@ describe HaveAPI::Server do
 
       expect(last_response.status).to eq(404)
       expect(api_response).not_to be_ok
+    end
+
+    it 'routes request-level exceptions through hook' do
+      calls = []
+
+      app.settings.api_server.connect_hook(:request_exception) do |ret, context, exception|
+        calls << [context, exception]
+        ret
+      end
+
+      header 'Accept', 'application/json'
+      get '/v1/tests/authorize_error'
+
+      expect(last_response.status).to eq(500)
+      expect(api_response).not_to be_ok
+      expect(api_response.message).to eq('Server error occurred')
+
+      expect(calls.size).to eq(1)
+      context, exception = calls.first
+      expect(context.action.to_s).to include('AuthorizeError')
+      expect(exception.message).to eq('authorize boom')
     end
 
     it 'handles CORS preflight OPTIONS' do

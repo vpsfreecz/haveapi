@@ -11,6 +11,21 @@ module HaveAPI::Extensions
   # is added. Some helper methods are taken either from Sinatra or Rack.
   class ExceptionMailer < Base
     Frame = Struct.new(:filename, :lineno, :function, :context_line)
+    FILTERED_VALUE = '[FILTERED]'.freeze
+    SENSITIVE_KEY_PATTERN = /
+      authorization|cookie|password|passwd|passphrase|secret|token|
+      api[_-]?key|credential|jwt|session|csrf|query_string|form_vars|
+      request_uri|original_fullpath|fullpath
+    /ix
+    SENSITIVE_STRING_PATTERN = /
+      (
+        (?:authorization|cookie|password|passwd|passphrase|secret|token|
+           api[_-]?key|credential|jwt|session|csrf)
+        [^=:\s&;<>]{0,64}
+        \s*(?:=|:|=>)\s*["']?
+      )
+      [^&;\s<"'}]+
+    /ix
 
     # @param opts [Hash] options
     # @option opts to [String] recipient address
@@ -71,7 +86,13 @@ module HaveAPI::Extensions
       end.compact
       frames = [Frame.new('(unknown)', 0, nil, nil)] if frames.empty?
 
-      env = request_env(request_context, req)
+      args = redact(context&.args)
+      path_params = redact(context&.path_params)
+      input = redact(context&.input)
+      get = request_params(req, :GET)
+      post = request_params(req, :POST)
+      cookies = request_cookies(req)
+      env = redact(request_env(request_context, req))
 
       user =
         if context&.current_user.respond_to?(:id)
@@ -129,16 +150,18 @@ module HaveAPI::Extensions
 
     def request_path(context, req)
       if req.respond_to?(:script_name) && req.respond_to?(:path_info)
-        return (req.script_name + req.path_info).squeeze('/')
+        return filter_query_string((req.script_name + req.path_info).squeeze('/'))
       end
 
-      if context.respond_to?(:resolved_path)
-        context.resolved_path
-      elsif context.respond_to?(:path)
-        context.path
-      else
-        '(unknown)'
-      end
+      filter_query_string(
+        if context.respond_to?(:resolved_path)
+          context.resolved_path
+        elsif context.respond_to?(:path)
+          context.path
+        else
+          '(unknown)'
+        end
+      )
     end
 
     def request_env(request_context, req)
@@ -149,6 +172,65 @@ module HaveAPI::Extensions
       else
         {}
       end
+    end
+
+    def request_params(req, method)
+      return {} unless req.respond_to?(method)
+
+      redact(req.public_send(method) || {})
+    rescue StandardError
+      {}
+    end
+
+    def request_cookies(req)
+      return {} unless req.respond_to?(:cookies)
+
+      cookies = req.cookies || {}
+
+      cookies.each_with_object({}) do |(key, _value), ret|
+        ret[key] = FILTERED_VALUE
+      end
+    rescue StandardError
+      {}
+    end
+
+    def filter_query_string(path)
+      return path unless path.respond_to?(:sub)
+
+      path.sub(/\?.*/, "?#{FILTERED_VALUE}")
+    end
+
+    def redact(value, key = nil, seen = nil)
+      return FILTERED_VALUE if sensitive_key?(key)
+
+      seen ||= {}.compare_by_identity
+
+      case value
+      when Hash
+        return value if seen.has_key?(value)
+
+        seen[value] = true
+        value.each_with_object({}) do |(inner_key, inner_value), ret|
+          ret[inner_key] = redact(inner_value, inner_key, seen)
+        end
+      when Array
+        return value if seen.has_key?(value)
+
+        seen[value] = true
+        value.map { |inner_value| redact(inner_value, nil, seen) }
+      when String
+        redact_string(value)
+      else
+        value
+      end
+    end
+
+    def sensitive_key?(key)
+      key && key.to_s.match?(SENSITIVE_KEY_PATTERN)
+    end
+
+    def redact_string(value)
+      value.gsub(SENSITIVE_STRING_PATTERN, "\\1#{FILTERED_VALUE}")
     end
 
     TEMPLATE = ERB.new(<<~END
@@ -261,15 +343,15 @@ module HaveAPI::Extensions
                 </tr>
                 <tr>
                   <th>Arguments</th>
-                  <td><%=h context.args %></td>
+                  <td><%=h args %></td>
                 </tr>
                 <tr>
                   <th>Path parameters</th>
-                  <td><%=h context.path_params %></td>
+                  <td><%=h path_params %></td>
                 </tr>
                 <tr>
                   <th>Input</th>
-                  <td><%=h context.input %></td>
+                  <td><%=h input %></td>
                 </tr>
                 <tr>
                   <th>User</th>
@@ -306,13 +388,13 @@ module HaveAPI::Extensions
             </div> <!-- /BACKTRACE -->
             <div id="get">
               <h3 id="get-info">GET</h3>
-              <% if req.GET and not req.GET.empty? %>
+              <% if !get.empty? %>
                 <table class="req">
                   <tr>
                     <th>Variable</th>
                     <th>Value</th>
                   </tr>
-                  <% req.GET.sort_by { |k, v| k.to_s }.each { |key, val| %>
+                  <% get.sort_by { |k, v| k.to_s }.each { |key, val| %>
                   <tr>
                     <td><%=h key %></td>
                     <td class="code"><div><%=h val.inspect %></div></td>
@@ -326,13 +408,13 @@ module HaveAPI::Extensions
             </div> <!-- /GET -->
             <div id="post">
               <h3 id="post-info">POST</h3>
-              <% if req.POST and not req.POST.empty? %>
+              <% if !post.empty? %>
                 <table class="req">
                   <tr>
                     <th>Variable</th>
                     <th>Value</th>
                   </tr>
-                  <% req.POST.sort_by { |k, v| k.to_s }.each { |key, val| %>
+                  <% post.sort_by { |k, v| k.to_s }.each { |key, val| %>
                   <tr>
                     <td><%=h key %></td>
                     <td class="code"><div><%=h val.inspect %></div></td>
@@ -346,13 +428,13 @@ module HaveAPI::Extensions
             </div> <!-- /POST -->
             <div id="cookies">
               <h3 id="cookie-info">COOKIES</h3>
-              <% unless req.cookies.empty? %>
+              <% unless cookies.empty? %>
                 <table class="req">
                   <tr>
                     <th>Variable</th>
                     <th>Value</th>
                   </tr>
-                  <% req.cookies.each { |key, val| %>
+                  <% cookies.each { |key, val| %>
                     <tr>
                       <td><%=h key %></td>
                       <td class="code"><div><%=h val.inspect %></div></td>

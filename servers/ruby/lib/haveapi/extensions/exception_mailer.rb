@@ -24,21 +24,33 @@ module HaveAPI::Extensions
 
     def enabled(server)
       HaveAPI::Action.connect_hook(:exec_exception) do |ret, context, e|
-        log(context, e)
+        safe_log(context, e)
         ret
       end
 
       server.connect_hook(:description_exception) do |ret, context, e|
-        log(context, e)
+        safe_log(context, e)
+        ret
+      end
+
+      server.connect_hook(:request_exception) do |ret, context, e|
+        safe_log(context, e)
         ret
       end
     end
 
-    def log(context, exception)
-      req = context.request.request
-      path = (req.script_name + req.path_info).squeeze('/')
+    def safe_log(context, exception)
+      log(context, exception)
+    rescue StandardError => e
+      warn "HaveAPI::Extensions::ExceptionMailer failed: #{e.class}: #{e.message}"
+    end
 
-      frames = exception.backtrace.map do |line|
+    def log(context, exception)
+      request_context = context&.request
+      req = request_context.respond_to?(:request) ? request_context.request : request_context
+      path = request_path(context, req)
+
+      frames = Array(exception.backtrace).map do |line|
         frame = Frame.new
 
         next unless line =~ /(.*?):(\d+)(:in `(.*)')?/
@@ -57,14 +69,15 @@ module HaveAPI::Extensions
 
         frame
       end.compact
+      frames = [Frame.new('(unknown)', 0, nil, nil)] if frames.empty?
 
-      env = context.request.env
+      env = request_env(request_context, req)
 
       user =
-        if context.current_user.respond_to?(:id)
+        if context&.current_user.respond_to?(:id)
           context.current_user.id
         else
-          context.current_user
+          context&.current_user
         end
 
       mail(context, exception, TEMPLATE.result(binding))
@@ -111,6 +124,30 @@ module HaveAPI::Extensions
         Rack::Utils.escape_html(obj)
       else
         Rack::Utils.escape_html(obj.inspect)
+      end
+    end
+
+    def request_path(context, req)
+      if req.respond_to?(:script_name) && req.respond_to?(:path_info)
+        return (req.script_name + req.path_info).squeeze('/')
+      end
+
+      if context.respond_to?(:resolved_path)
+        context.resolved_path
+      elsif context.respond_to?(:path)
+        context.path
+      else
+        '(unknown)'
+      end
+    end
+
+    def request_env(request_context, req)
+      if request_context.respond_to?(:env)
+        request_context.env
+      elsif req.respond_to?(:env)
+        req.env
+      else
+        {}
       end
     end
 

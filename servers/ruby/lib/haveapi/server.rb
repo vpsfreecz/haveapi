@@ -45,6 +45,17 @@ module HaveAPI
                message: 'error message sent to the client'
              }
 
+    has_hook :request_exception,
+             desc: 'Called when an exception occurs outside action execution',
+             args: {
+               context: 'HaveAPI::Context',
+               exception: 'exception instance'
+             },
+             ret: {
+               http_status: 'HTTP status code to send to client',
+               message: 'error message sent to the client'
+             }
+
     module ServerHelpers
       def setup_formatter
         return if @formatter
@@ -135,6 +146,32 @@ module HaveAPI
 
         content_type @formatter.content_type, charset: 'utf-8'
         halt code, headers, @formatter.format(false, nil, msg, version: false)
+      end
+
+      def report_exception(exception, context = nil)
+        context ||= Context.new(
+          settings.api_server,
+          request: self,
+          params:,
+          endpoint: true
+        )
+
+        tmp =
+          begin
+            settings.api_server.call_hooks_for(
+              :request_exception,
+              args: [context, exception]
+            )
+          rescue StandardError => e
+            warn "HaveAPI request exception hook failed: #{e.class}: #{e.message}"
+            {}
+          end
+
+        report_error(
+          tmp[:http_status] || 500,
+          {},
+          tmp[:message] || 'Server error occurred'
+        )
       end
 
       def root
@@ -293,6 +330,10 @@ module HaveAPI
         not_found do
           setup_formatter
           report_error(404, {}, 'Action not found') unless @halted
+        end
+
+        error do
+          report_exception(env['sinatra.error'])
         end
 
         after do
@@ -528,113 +569,125 @@ module HaveAPI
 
     def mount_action(v, route)
       @sinatra.method(route.http_method).call(route.sinatra_path) do
-        setup_formatter
-
-        if route.action.auth || settings.api_server.action_state_auth_required?(route)
-          authenticate!(v)
-        else
-          authenticated?(v)
-        end
-
-        raw_body = request.body.read
-        body_method = !%i[get head options].include?(route.http_method.to_sym)
-
-        if body_method && !raw_body.empty? && !settings.api_server.send(:json_content_type?, request)
-          report_error(415, {}, 'Unsupported Content-Type')
-        end
+        context = nil
 
         begin
-          body = raw_body.empty? ? nil : JSON.parse(raw_body)
-        rescue JSON::ParserError
-          report_error(400, {}, 'Bad JSON syntax')
-        end
+          setup_formatter
 
-        if !raw_body.empty? && !body.is_a?(Hash)
-          report_error(400, {}, 'JSON body must be an object')
-        end
+          if route.action.auth || settings.api_server.action_state_auth_required?(route)
+            authenticate!(v)
+          else
+            authenticated?(v)
+          end
 
-        action_params = settings.api_server.send(:path_params, route, params)
-        action_input = body_method ? (body || {}) : request.GET
+          raw_body = request.body ? request.body.read : ''
+          body_method = !%i[get head options].include?(route.http_method.to_sym)
 
-        context = Context.new(
-          settings.api_server,
-          version: v,
-          request: self,
-          action: route.action,
-          path: route.path,
-          path_params: action_params,
-          input: action_input,
-          user: current_user,
-          endpoint: true,
-          resource_path: route.resource_path
-        )
+          if body_method && !raw_body.empty? && !settings.api_server.send(:json_content_type?, request)
+            report_error(415, {}, 'Unsupported Content-Type')
+          end
 
-        action = route.action.new(request, v, action_params, action_input, context)
+          begin
+            body = raw_body.empty? ? nil : JSON.parse(raw_body)
+          rescue JSON::ParserError
+            report_error(400, {}, 'Bad JSON syntax')
+          end
 
-        unless action.authorized?(current_user)
-          report_error(403, {}, 'Access denied. Insufficient permissions.')
-        end
+          if !raw_body.empty? && !body.is_a?(Hash)
+            report_error(400, {}, 'JSON body must be an object')
+          end
 
-        status, reply, errors, http_status = action.safe_exec
-        @halted = true
+          action_params = settings.api_server.send(:path_params, route, params)
+          action_input = body_method ? (body || {}) : request.GET
 
-        [
-          http_status || 200,
-          @formatter.format(
-            status,
-            status ? reply : nil,
-            status ? nil : reply,
-            errors,
-            version: false
+          context = Context.new(
+            settings.api_server,
+            version: v,
+            request: self,
+            action: route.action,
+            path: route.path,
+            path_params: action_params,
+            input: action_input,
+            user: current_user,
+            endpoint: true,
+            resource_path: route.resource_path
           )
-        ]
+
+          action = route.action.new(request, v, action_params, action_input, context)
+
+          unless action.authorized?(current_user)
+            report_error(403, {}, 'Access denied. Insufficient permissions.')
+          end
+
+          status, reply, errors, http_status = action.safe_exec
+          @halted = true
+
+          [
+            http_status || 200,
+            @formatter.format(
+              status,
+              status ? reply : nil,
+              status ? nil : reply,
+              errors,
+              version: false
+            )
+          ]
+        rescue Exception => e # rubocop:disable Lint/RescueException
+          report_exception(e, context)
+        end
       end
 
       @sinatra.options route.sinatra_path do |*args|
-        setup_formatter
-        access_control
-        route_method = route.http_method.to_s.upcase
-
-        pass if params[:method] && params[:method] != route_method
-
-        if route.action.auth || settings.api_server.action_state_auth_required?(route)
-          authenticate!(v)
-        else
-          authenticated?(v)
-        end
-
-        ctx = Context.new(
-          settings.api_server,
-          version: v,
-          request: self,
-          action: route.action,
-          path: route.path,
-          args:,
-          params:,
-          user: current_user,
-          endpoint: true,
-          resource_path: route.resource_path,
-          doc: true
-        )
+        ctx = nil
 
         begin
-          desc = route.action.describe(ctx)
+          setup_formatter
+          access_control
+          route_method = route.http_method.to_s.upcase
 
-          unless desc
-            report_error(403, {}, 'Access denied. Insufficient permissions.')
+          pass if params[:method] && params[:method] != route_method
+
+          if route.action.auth || settings.api_server.action_state_auth_required?(route)
+            authenticate!(v)
+          else
+            authenticated?(v)
           end
-        rescue ValidationError => e
-          report_error(400, e.to_hash, e.message)
-        rescue StandardError => e
-          tmp = settings.api_server.call_hooks_for(:description_exception, args: [ctx, e])
-          report_error(
-            tmp[:http_status] || 500,
-            {},
-            tmp[:message] || 'Server error occured'
-          )
-        end
 
-        @formatter.format(true, desc)
+          ctx = Context.new(
+            settings.api_server,
+            version: v,
+            request: self,
+            action: route.action,
+            path: route.path,
+            args:,
+            params:,
+            user: current_user,
+            endpoint: true,
+            resource_path: route.resource_path,
+            doc: true
+          )
+
+          begin
+            desc = route.action.describe(ctx)
+
+            unless desc
+              report_error(403, {}, 'Access denied. Insufficient permissions.')
+            end
+          rescue ValidationError => e
+            report_error(400, e.to_hash, e.message)
+          rescue StandardError => e
+            tmp = settings.api_server.call_hooks_for(:description_exception, args: [ctx, e])
+            report_error(
+              tmp[:http_status] || 500,
+              {},
+              tmp[:message] || 'Server error occured'
+            )
+          end
+
+          @formatter.format(true, desc)
+        rescue Exception => e # rubocop:disable Lint/RescueException
+          report_exception(e, ctx)
+        end
       end
     end
 

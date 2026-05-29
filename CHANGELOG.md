@@ -1,3 +1,10 @@
+# Fri May 29 2026 - version 0.28.4
+## Ruby server
+- Report unexpected request-level exceptions raised before action execution,
+  including authentication, authorization, body parsing and route setup errors.
+- Redact sensitive request headers, cookies, query parameters and input values
+  from exception emails.
+
 # Mon May 25 2026 - version 0.28.3
 ## Documentation
 - Clarify that per-object metadata `path_params` is optional when the

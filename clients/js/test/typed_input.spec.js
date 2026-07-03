@@ -113,13 +113,20 @@ describe('HaveAPI JS client typed input', function () {
     expect(reply.envelope.errors.i.join(' ')).to.match(/not a valid integer/);
   });
 
-  it('sends language headers', async () => {
+  it('sends language headers and localizes local validation errors', async () => {
     client = new HaveAPI.Client(baseUrl, {
       language: 'cs-CZ',
       language_header: 'X-Language'
     });
 
     expect(client.requestHeaders({})['X-Language']).to.equal('cs-CZ');
+
+    await setup(client);
+    const reply = await invoke(client.test.echo, echoParams({ i: 'abc' }));
+
+    expect(reply.isOk()).to.equal(false);
+    expect(reply.message()).to.equal('neplatné vstupní parametry');
+    expect(reply.envelope.errors.i).to.include('neplatné celé číslo');
   });
 
   it('rejects non-integral numbers as integers', async () => {

@@ -28,7 +28,7 @@ final class OAuth2AuthenticationSecurityTest extends TestCase
 
     public function testRejectsEmptyCallbackStateWithoutSessionState(): void
     {
-        $auth = $this->newOAuth2AuthWithProvider($provider);
+        $auth = $this->newOAuth2AuthWithProvider($provider, ['language' => 'cs']);
         $_SESSION = [];
         $_GET = [
             'state' => '',
@@ -39,7 +39,7 @@ final class OAuth2AuthenticationSecurityTest extends TestCase
             $auth->requestAccessToken();
             $this->fail('Expected AuthenticationFailed');
         } catch (\HaveAPI\Client\Exception\AuthenticationFailed $e) {
-            $this->assertStringContainsString('state', $e->getMessage());
+            $this->assertSame('Neplatný OAuth2 state', $e->getMessage());
         }
 
         $this->assertNull($provider->grant);
@@ -48,7 +48,7 @@ final class OAuth2AuthenticationSecurityTest extends TestCase
 
     public function testRequiresStoredPkceVerifier(): void
     {
-        $auth = $this->newOAuth2AuthWithProvider($provider);
+        $auth = $this->newOAuth2AuthWithProvider($provider, ['language' => 'cs']);
         $_SESSION = [
             'oauth2state' => 'expected-state',
         ];
@@ -61,7 +61,7 @@ final class OAuth2AuthenticationSecurityTest extends TestCase
             $auth->requestAccessToken();
             $this->fail('Expected AuthenticationFailed');
         } catch (\HaveAPI\Client\Exception\AuthenticationFailed $e) {
-            $this->assertStringContainsString('PKCE', $e->getMessage());
+            $this->assertSame('Neplatný OAuth2 PKCE verifier', $e->getMessage());
         }
 
         $this->assertNull($provider->grant);
@@ -90,10 +90,17 @@ final class OAuth2AuthenticationSecurityTest extends TestCase
         $this->assertArrayNotHasKey('oauth2pkceCode', $_SESSION);
     }
 
-    private function newOAuth2AuthWithProvider(&$provider): \HaveAPI\Client\Authentication\OAuth2
-    {
+    private function newOAuth2AuthWithProvider(
+        &$provider,
+        array $clientOptions = []
+    ): \HaveAPI\Client\Authentication\OAuth2 {
         $auth = new \HaveAPI\Client\Authentication\OAuth2(
-            new \HaveAPI\Client('https://api.example'),
+            new \HaveAPI\Client(
+                'https://api.example',
+                null,
+                'haveapi-client-php-test',
+                $clientOptions
+            ),
             (object) [],
             []
         );

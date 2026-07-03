@@ -222,7 +222,7 @@ RSpec.describe HaveAPI::GoClient::Generator do
           }
         }
 
-        func TestLanguageHeader(t *testing.T) {
+        func TestLanguageHeaderAndLocalizedValidation(t *testing.T) {
           c := newValidationClient()
           if err := c.SetLanguage("cs-CZ"); err != nil {
             t.Fatalf("set language failed: %v", err)
@@ -238,6 +238,33 @@ RSpec.describe HaveAPI::GoClient::Generator do
           c.addLanguageHeader(httpReq)
           if got := httpReq.Header.Get("X-Language"); got != "cs-CZ" {
             t.Fatalf("expected language header cs-CZ, got %q", got)
+          }
+
+          req := c.Test.Echo.Prepare()
+          in := req.NewInput()
+          in.SetI(1)
+          in.SetF(math.NaN())
+          in.SetB(true)
+          in.SetDt("2020-01-01T00:00:00Z")
+          in.SetS("x")
+          in.SetT("y")
+
+          _, err = req.Call()
+          if err == nil {
+            t.Fatalf("expected validation error, got nil")
+          }
+
+          verr, ok := err.(*ValidationError)
+          if !ok {
+            t.Fatalf("expected ValidationError, got %T: %v", err, err)
+          }
+
+          if got := strings.Join(verr.Errors["f"], " "); !strings.Contains(got, "neplatné desetinné číslo") {
+            t.Fatalf("expected Czech float error, got %q", got)
+          }
+
+          if !strings.Contains(err.Error(), "validace selhala") {
+            t.Fatalf("expected Czech validation summary, got %q", err.Error())
           }
         }
 

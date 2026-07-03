@@ -1,5 +1,9 @@
 <?php
 
+// This file is generated from i18n/haveapi.yml.
+// Do not edit it manually; manual changes will be overwritten.
+// Update i18n/haveapi.yml and run bundle exec rake i18n:update.
+
 namespace HaveAPI\Client;
 
 final class I18nMessages
@@ -45,6 +49,48 @@ final class I18nMessages
                 'required_parameter_missing' => 'required parameter missing',
                 'validation_failed' => 'validation failed',
                 'validation_failed_with_errors' => 'validation failed: %{errors}',
+            ],
+        ],
+        'cs' => [
+            'authentication' => [
+                'callback_failed' => '%{callback} selhal: %{error}',
+                'callback_invalid_return' => 'callback musí vrátit pole nebo \'stop\'',
+                'callback_required' => 'Implementujte callback %{callback}',
+                'invalid_credentials' => 'neplatné přihlašovací údaje',
+                'invalid_oauth2_pkce_verifier' => 'Neplatný OAuth2 PKCE verifier',
+                'invalid_oauth2_state' => 'Neplatný OAuth2 state',
+                'mfa_required' => 'implementujte vícefaktorové ověření',
+                'multistep_callback_required' => 'přidejte callback pro zpracování vícefázového ověření',
+                'oauth2_access_token_required' => 'Volba access_token musí být zadána',
+                'oauth2_not_configured' => 'OAuth2 ověření není nastaveno',
+                'oauth2_revoke_failed' => 'Přístupový token nelze zrušit, HTTP %{status}',
+                'token_request_failed' => 'Token nelze vyžádat: %{message}',
+                'token_revoke_failed' => 'Token nelze zrušit: %{message}',
+                'token_step_failed' => 'Krok ověření \'%{action}\' selhal: %{message}',
+                'unsupported_auth_action' => 'Nepodporovaná ověřovací akce \'%{action}\'',
+            ],
+            'errors' => [
+                'access_forbidden' => 'Přístup odepřen. Chybné uživatelské jméno nebo heslo? Nejste oprávněni?',
+                'action_failed' => '%{action} selhala: %{message}',
+                'fatal_api_error' => 'Fatální chyba API: %{error}',
+                'input_parameters_not_valid' => 'vstupní parametry nejsou platné',
+                'input_parameters_not_valid_for_action' => 'Vstupní parametry pro akci \'%{action}\' nejsou platné',
+                'invalid_input_parameters' => 'neplatné vstupní parametry',
+                'uncancelable_action' => 'Stav akce #%{id} nelze zrušit',
+                'unresolved_arguments' => 'Akci \'%{action}\' nelze spustit: chybí argumenty',
+            ],
+            'validation' => [
+                'cannot_be_null' => 'nesmí být null',
+                'invalid_boolean' => 'neplatná pravdivostní hodnota',
+                'invalid_datetime' => 'není ve formátu ISO 8601',
+                'invalid_float' => 'neplatné desetinné číslo',
+                'invalid_input_layout' => 'neplatná struktura vstupu',
+                'invalid_integer' => 'neplatné celé číslo',
+                'invalid_resource_id' => 'neplatné ID prostředku',
+                'invalid_string' => 'neplatný řetězec',
+                'required_parameter_missing' => 'povinný parametr chybí',
+                'validation_failed' => 'validace selhala',
+                'validation_failed_with_errors' => 'validace selhala: %{errors}',
             ],
         ],
     ];

@@ -30,6 +30,14 @@
 - Tests follow RSpec `_spec.rb` naming. Module/class names should nest under `HaveAPI` and mirror directory structure.
 - JS client code is plain ES5 bundled via gulp UMD; keep changes in `clients/js/src` and let the build regenerate `dist`.
 
+## Localization
+- Edit HaveAPI framework and client translations only in `i18n/haveapi.yml`.
+- Run `bundle exec rake i18n:update` after translation changes. This regenerates
+  server Ruby locale files and package-local client catalogs for Ruby, PHP, JS,
+  and Go clients.
+- Do not edit generated locale/catalog artifacts directly. They contain a
+  generated-file header and will be overwritten by `i18n:update`.
+
 ## Testing Guidelines
 - Prioritize coverage for protocol descriptions, authentication flows, validators, and parameter edge cases in `servers/ruby/spec`.
 - Add regression specs alongside fixes; place shared helpers in `servers/ruby/spec/spec_helper.rb` or existing support dirs.

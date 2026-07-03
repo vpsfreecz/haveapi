@@ -23,4 +23,14 @@ RSpec.describe HaveAPI::Client::Client do
 
     expect(client.communicator.language_headers).to eq('X-Language' => 'cs-CZ')
   end
+
+  it 'localizes local validation errors' do
+    client = described_class.new(TEST_SERVER.base_url, language: 'cs')
+
+    expect { client.test.echo(valid_params.merge(i: 'abc')) }
+      .to raise_error(HaveAPI::Client::ValidationError) do |err|
+        expect(err.message).to include('vstupní parametry nejsou platné')
+        expect(err.errors[:i]).to include('neplatné celé číslo')
+      end
+  end
 end

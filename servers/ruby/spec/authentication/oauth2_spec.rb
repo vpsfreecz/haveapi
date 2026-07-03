@@ -218,6 +218,16 @@ describe HaveAPI::Authentication::OAuth2 do
       expect(api_response.message).to match(/too many|multiple/i)
     end
 
+    it 'localizes multiple token conflicts' do
+      header 'Accept-Language', 'cs'
+      header 'Authorization', 'Bearer abc'
+      call_api(:post, '/v1/secures/ping?access_token=abc', {})
+
+      expect(last_response.status).to eq(400)
+      expect(api_response).to be_failed
+      expect(api_response.message).to eq('Bylo poskytnuto více OAuth2 tokenů')
+    end
+
     it 'ignores structured access_token query values before backend lookup' do
       expect do
         call_api(:post, '/v1/secures/ping?access_token[]=abc', {})

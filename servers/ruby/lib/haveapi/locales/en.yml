@@ -1,3 +1,6 @@
+# This file is generated from i18n/haveapi.yml.
+# Do not edit it manually; manual changes will be overwritten.
+# Update i18n/haveapi.yml and run bundle exec rake i18n:update.
 ---
 en:
   haveapi:

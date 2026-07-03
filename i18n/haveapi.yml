@@ -1,4 +1,3 @@
----
 en:
   haveapi:
     action_state:
@@ -49,18 +48,18 @@ en:
         different: must be different from %{parameter}
         same: must be the same as %{parameter}
       exclusion:
-        excluded: "%{value} cannot be used"
+        excluded: '%{value} cannot be used'
       format:
-        invalid: "%{value} is not in a valid format"
+        invalid: '%{value} is not in a valid format'
       inclusion:
-        included: "%{value} cannot be used"
+        included: '%{value} cannot be used'
       length:
         equals: length has to be %{equals}
         max: length has to be maximally %{max}
         min: length has to be minimally %{min}
         range: length has to be in range <%{min}, %{max}>
       numericality:
-        composite: "%{requirements}"
+        composite: '%{requirements}'
         even: even
         max: has to be maximally %{max}
         min: has to be minimally %{min}
@@ -74,9 +73,9 @@ en:
         present: must be present
   haveapi_client:
     authentication:
-      callback_invalid_return: callback has to return an array or 'stop'
+      callback_invalid_return: "callback has to return an array or 'stop'"
       callback_failed: "%{callback} failed: %{error}"
-      callback_required: Implement callback %{callback}
+      callback_required: "Implement callback %{callback}"
       invalid_credentials: invalid credentials
       invalid_oauth2_pkce_verifier: Invalid OAuth2 PKCE verifier
       invalid_oauth2_state: Invalid OAuth2 state
@@ -84,21 +83,20 @@ en:
       multistep_callback_required: add callback to handle multi-step authentication
       oauth2_access_token_required: Option access_token must be provided
       oauth2_not_configured: OAuth2 authentication is not configured
-      oauth2_revoke_failed: Unable to revoke access token, HTTP %{status}
-      token_request_failed: 'Unable to request token: %{message}'
-      token_revoke_failed: 'Unable to revoke token: %{message}'
-      token_step_failed: 'Failed at authentication step ''%{action}'': %{message}'
-      unsupported_auth_action: Unsupported authentication action '%{action}'
+      oauth2_revoke_failed: "Unable to revoke access token, HTTP %{status}"
+      token_request_failed: "Unable to request token: %{message}"
+      token_revoke_failed: "Unable to revoke token: %{message}"
+      token_step_failed: "Failed at authentication step '%{action}': %{message}"
+      unsupported_auth_action: "Unsupported authentication action '%{action}'"
     errors:
       access_forbidden: Access forbidden. Bad user name or password? Not authorized?
       action_failed: "%{action} failed: %{message}"
-      fatal_api_error: 'Fatal API error: %{error}'
+      fatal_api_error: "Fatal API error: %{error}"
       input_parameters_not_valid: input parameters not valid
-      input_parameters_not_valid_for_action: Input parameters not valid for action
-        '%{action}'
+      input_parameters_not_valid_for_action: "Input parameters not valid for action '%{action}'"
       invalid_input_parameters: invalid input parameters
-      uncancelable_action: 'Action state #%{id} cannot be cancelled'
-      unresolved_arguments: 'Unable to execute action ''%{action}'': unresolved arguments'
+      uncancelable_action: "Action state #%{id} cannot be cancelled"
+      unresolved_arguments: "Unable to execute action '%{action}': unresolved arguments"
     validation:
       cannot_be_null: cannot be null
       invalid_boolean: not a valid boolean
@@ -110,4 +108,115 @@ en:
       invalid_string: not a valid string
       required_parameter_missing: required parameter missing
       validation_failed: validation failed
-      validation_failed_with_errors: 'validation failed: %{errors}'
+      validation_failed_with_errors: "validation failed: %{errors}"
+cs:
+  haveapi:
+    action_state:
+      cancellation_failed: zrušení selhalo
+      not_found: stav akce nebyl nalezen
+      timeout_max: timeout může být nejvýše %{max}
+    authentication:
+      failed: přihlášení selhalo
+      invalid_credentials: neplatné přihlašovací údaje
+      multiple_oauth2_tokens: Bylo poskytnuto více OAuth2 tokenů
+      multiple_tokens: Bylo poskytnuto více ověřovacích tokenů
+      renew_failed: obnovení selhalo
+      required: Akce vyžaduje přihlášení uživatele
+      revoke_failed: zrušení selhalo
+      token_required: Akce vyžaduje přihlášení uživatele tokenem
+    authorization:
+      insufficient_permissions: Přístup odepřen. Nedostatečná oprávnění.
+    errors:
+      action_not_found: Akce nebyla nalezena
+      bad_accept_header: Chybná hlavička Accept
+      bad_json_syntax: Chybná syntaxe JSON
+      json_body_object: Tělo JSON musí být objekt
+      server_error: Došlo k chybě serveru
+      unsupported_content_type: Nepodporovaný Content-Type
+    pagination:
+      limit_max: limit může být nejvýše %{max}
+    types:
+      invalid_boolean: neplatná pravdivostní hodnota %{value}
+      invalid_datetime: není ve formátu ISO 8601 '%{value}'
+      invalid_float: neplatné desetinné číslo %{value}
+      invalid_integer: neplatné celé číslo %{value}
+      invalid_string: neplatný řetězec %{value}
+    validation:
+      cannot_be_null: nesmí být null
+      includes_only_strings: includes musí obsahovat jen řetězce
+      includes_string_or_array: includes musí být řetězec nebo pole
+      input_parameters_not_valid: vstupní parametry nejsou platné
+      invalid_id: neplatné ID %{value}
+      invalid_input_layout: neplatná struktura vstupu
+      invalid_path_parameter_encoding: neplatné kódování parametru cesty
+      invalid_string_encoding: neplatné kódování řetězce
+      required_parameter_missing: povinný parametr chybí
+      resource_not_found: prostředek nebyl nalezen
+    validators:
+      acceptance:
+        accepted: musí být %{value}
+      confirmation:
+        different: musí být odlišné od %{parameter}
+        same: musí být stejné jako %{parameter}
+      exclusion:
+        excluded: '%{value} nelze použít'
+      format:
+        invalid: '%{value} nemá platný formát'
+      inclusion:
+        included: '%{value} nelze použít'
+      length:
+        equals: délka musí být %{equals}
+        max: délka může být nejvýše %{max}
+        min: délka musí být alespoň %{min}
+        range: délka musí být v rozsahu <%{min}, %{max}>
+      numericality:
+        composite: '%{requirements}'
+        even: sudé číslo
+        max: musí být nejvýše %{max}
+        min: musí být alespoň %{min}
+        mod: zbytek po dělení %{mod} musí být nula
+        number: musí být číslo
+        odd: liché číslo
+        range: musí být v rozsahu <%{min}, %{max}>
+        step: v krocích po %{step}
+      presence:
+        non_empty: musí být vyplněno a neprázdné
+        present: musí být vyplněno
+  haveapi_client:
+    authentication:
+      callback_invalid_return: "callback musí vrátit pole nebo 'stop'"
+      callback_failed: "%{callback} selhal: %{error}"
+      callback_required: "Implementujte callback %{callback}"
+      invalid_credentials: neplatné přihlašovací údaje
+      invalid_oauth2_pkce_verifier: Neplatný OAuth2 PKCE verifier
+      invalid_oauth2_state: Neplatný OAuth2 state
+      mfa_required: implementujte vícefaktorové ověření
+      multistep_callback_required: přidejte callback pro zpracování vícefázového ověření
+      oauth2_access_token_required: Volba access_token musí být zadána
+      oauth2_not_configured: OAuth2 ověření není nastaveno
+      oauth2_revoke_failed: "Přístupový token nelze zrušit, HTTP %{status}"
+      token_request_failed: "Token nelze vyžádat: %{message}"
+      token_revoke_failed: "Token nelze zrušit: %{message}"
+      token_step_failed: "Krok ověření '%{action}' selhal: %{message}"
+      unsupported_auth_action: "Nepodporovaná ověřovací akce '%{action}'"
+    errors:
+      access_forbidden: Přístup odepřen. Chybné uživatelské jméno nebo heslo? Nejste oprávněni?
+      action_failed: "%{action} selhala: %{message}"
+      fatal_api_error: "Fatální chyba API: %{error}"
+      input_parameters_not_valid: vstupní parametry nejsou platné
+      input_parameters_not_valid_for_action: "Vstupní parametry pro akci '%{action}' nejsou platné"
+      invalid_input_parameters: neplatné vstupní parametry
+      uncancelable_action: "Stav akce #%{id} nelze zrušit"
+      unresolved_arguments: "Akci '%{action}' nelze spustit: chybí argumenty"
+    validation:
+      cannot_be_null: nesmí být null
+      invalid_boolean: neplatná pravdivostní hodnota
+      invalid_datetime: není ve formátu ISO 8601
+      invalid_float: neplatné desetinné číslo
+      invalid_integer: neplatné celé číslo
+      invalid_input_layout: neplatná struktura vstupu
+      invalid_resource_id: neplatné ID prostředku
+      invalid_string: neplatný řetězec
+      required_parameter_missing: povinný parametr chybí
+      validation_failed: validace selhala
+      validation_failed_with_errors: "validace selhala: %{errors}"

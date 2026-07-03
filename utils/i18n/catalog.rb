@@ -199,9 +199,11 @@ module HaveAPI
         case entry[:format]
         when :yaml
           locale = entry.fetch(:locale)
-          YAML.dump(locale => { entry.fetch(:scope) => scoped_catalog(locale, entry[:scope]) })
+          generated_comment(:yaml) +
+            YAML.dump(locale => { entry.fetch(:scope) => scoped_catalog(locale, entry[:scope]) })
         when :yaml_all
-          YAML.dump(locales.to_h { |locale| [locale, scoped_catalog(locale, entry[:scope])] })
+          generated_comment(:yaml) +
+            YAML.dump(locales.to_h { |locale| [locale, scoped_catalog(locale, entry[:scope])] })
         when :php
           render_php(entry.fetch(:scope))
         when :js
@@ -217,6 +219,7 @@ module HaveAPI
         <<~PHP
           <?php
 
+          #{generated_comment(:php)}
           namespace HaveAPI\\Client;
 
           final class I18nMessages
@@ -231,8 +234,27 @@ module HaveAPI
         json = JSON.pretty_generate(data).gsub(/^/, "\t").sub(/\A\t/, '')
 
         <<~JS
+          #{generated_comment(:js)}
           var I18nMessages = #{json};
         JS
+      end
+
+      def generated_comment(format)
+        prefix = case format
+                 when :yaml
+                   '#'
+                 when :php, :js
+                   '//'
+                 else
+                   raise "unsupported generated comment format #{format.inspect}"
+                 end
+
+        [
+          "#{prefix} This file is generated from #{SOURCE_PATH}.",
+          "#{prefix} Do not edit it manually; manual changes will be overwritten.",
+          "#{prefix} Update #{SOURCE_PATH} and run bundle exec rake i18n:update.",
+          ''
+        ].join("\n")
       end
 
       def php_value(value, depth)

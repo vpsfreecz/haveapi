@@ -1,0 +1,77 @@
+# This file is generated from i18n/haveapi.yml.
+# Do not edit it manually; manual changes will be overwritten.
+# Update i18n/haveapi.yml and run bundle exec rake i18n:update.
+---
+cs:
+  haveapi:
+    action_state:
+      cancellation_failed: zrušení selhalo
+      not_found: stav akce nebyl nalezen
+      timeout_max: timeout může být nejvýše %{max}
+    authentication:
+      failed: přihlášení selhalo
+      invalid_credentials: neplatné přihlašovací údaje
+      multiple_oauth2_tokens: Bylo poskytnuto více OAuth2 tokenů
+      multiple_tokens: Bylo poskytnuto více ověřovacích tokenů
+      renew_failed: obnovení selhalo
+      required: Akce vyžaduje přihlášení uživatele
+      revoke_failed: zrušení selhalo
+      token_required: Akce vyžaduje přihlášení uživatele tokenem
+    authorization:
+      insufficient_permissions: Přístup odepřen. Nedostatečná oprávnění.
+    errors:
+      action_not_found: Akce nebyla nalezena
+      bad_accept_header: Chybná hlavička Accept
+      bad_json_syntax: Chybná syntaxe JSON
+      json_body_object: Tělo JSON musí být objekt
+      server_error: Došlo k chybě serveru
+      unsupported_content_type: Nepodporovaný Content-Type
+    pagination:
+      limit_max: limit může být nejvýše %{max}
+    types:
+      invalid_boolean: neplatná pravdivostní hodnota %{value}
+      invalid_datetime: není ve formátu ISO 8601 '%{value}'
+      invalid_float: neplatné desetinné číslo %{value}
+      invalid_integer: neplatné celé číslo %{value}
+      invalid_string: neplatný řetězec %{value}
+    validation:
+      cannot_be_null: nesmí být null
+      includes_only_strings: includes musí obsahovat jen řetězce
+      includes_string_or_array: includes musí být řetězec nebo pole
+      input_parameters_not_valid: vstupní parametry nejsou platné
+      invalid_id: neplatné ID %{value}
+      invalid_input_layout: neplatná struktura vstupu
+      invalid_path_parameter_encoding: neplatné kódování parametru cesty
+      invalid_string_encoding: neplatné kódování řetězce
+      required_parameter_missing: povinný parametr chybí
+      resource_not_found: prostředek nebyl nalezen
+    validators:
+      acceptance:
+        accepted: musí být %{value}
+      confirmation:
+        different: musí být odlišné od %{parameter}
+        same: musí být stejné jako %{parameter}
+      exclusion:
+        excluded: "%{value} nelze použít"
+      format:
+        invalid: "%{value} nemá platný formát"
+      inclusion:
+        included: "%{value} nelze použít"
+      length:
+        equals: délka musí být %{equals}
+        max: délka může být nejvýše %{max}
+        min: délka musí být alespoň %{min}
+        range: délka musí být v rozsahu <%{min}, %{max}>
+      numericality:
+        composite: "%{requirements}"
+        even: sudé číslo
+        max: musí být nejvýše %{max}
+        min: musí být alespoň %{min}
+        mod: zbytek po dělení %{mod} musí být nula
+        number: musí být číslo
+        odd: liché číslo
+        range: musí být v rozsahu <%{min}, %{max}>
+        step: v krocích po %{step}
+      presence:
+        non_empty: musí být vyplněno a neprázdné
+        present: musí být vyplněno

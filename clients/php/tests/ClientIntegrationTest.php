@@ -214,6 +214,33 @@ final class ClientIntegrationTest extends TestCase
         $this->assertSame('cs-CZ', $request->headers['X-Language']);
     }
 
+    public function testTypedInputErrorsAreLocalized(): void
+    {
+        $api = new \HaveAPI\Client(
+            self::$baseUrl,
+            null,
+            'haveapi-client-php-test',
+            ['language' => 'cs']
+        );
+        $base = [
+            'i' => 1,
+            'f' => 1.0,
+            'b' => true,
+            'dt' => '2020-01-01T00:00:00Z',
+            's' => 'ok',
+            't' => 'ok',
+        ];
+
+        try {
+            $api->test->echo(array_merge($base, ['i' => 'abc']));
+            $this->fail('Expected ValidationError');
+        } catch (\HaveAPI\Client\Exception\ValidationError $e) {
+            $errors = $e->getErrors();
+            $this->assertStringContainsString('nejsou platné', $e->getMessage());
+            $this->assertContains('neplatné celé číslo', $errors['i']);
+        }
+    }
+
     public function testTypedInputInvalidValuesAreRejectedLocally(): void
     {
         $api = new \HaveAPI\Client(self::$baseUrl);

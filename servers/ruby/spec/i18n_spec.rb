@@ -349,6 +349,17 @@ describe HaveAPI::I18n do
       ::I18n.available_locales = previous_available
     end
 
+    it 'localizes framework action parameter metadata in OPTIONS responses' do
+      header 'Accept', 'application/json'
+      header 'Accept-Language', 'cs'
+      call_api(:options, '/?describe=default')
+
+      create = api_response[:resources][:thing][:actions][:create]
+      no_meta = create[:meta][:global][:input][:parameters][:no]
+
+      expect(no_meta[:label]).to eq('Zakázat metadata')
+    end
+
     it 'localizes application-supplied lazy validator messages' do
       header 'Accept', 'application/json'
       header 'Accept-Language', 'cs'

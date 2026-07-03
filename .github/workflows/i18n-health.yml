@@ -1,0 +1,50 @@
+name: i18n health
+
+on:
+  push:
+    paths:
+      - ".github/workflows/i18n-health.yml"
+      - ".overcommit.yml"
+      - ".git-hooks/**"
+      - "Gemfile"
+      - "Gemfile.lock"
+      - "Rakefile"
+      - "i18n/**"
+      - "utils/i18n/**"
+      - "servers/ruby/**"
+      - "clients/**"
+  pull_request:
+    paths:
+      - ".github/workflows/i18n-health.yml"
+      - ".overcommit.yml"
+      - ".git-hooks/**"
+      - "Gemfile"
+      - "Gemfile.lock"
+      - "Rakefile"
+      - "i18n/**"
+      - "utils/i18n/**"
+      - "servers/ruby/**"
+      - "clients/**"
+
+permissions:
+  contents: read
+
+jobs:
+  i18n-health:
+    name: i18n health
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Set up Ruby + Bundler cache
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Check translations
+        run: |
+          bundle exec rake i18n:health

@@ -4,10 +4,14 @@ module HaveAPI::Actions
 
     def self.included(action)
       action.input do
-        integer :from_id, label: 'From ID', desc: 'List objects with greater/lesser ID',
-                          number: { min: 0 }
-        integer :limit, label: 'Limit', desc: 'Number of objects to retrieve',
-                        number: { min: 0, max: MAX_LIMIT }
+        integer :from_id,
+                label: HaveAPI.message('haveapi.parameters.paginable.from_id.label'),
+                desc: HaveAPI.message('haveapi.parameters.paginable.from_id.description'),
+                number: { min: 0 }
+        integer :limit,
+                label: HaveAPI.message('haveapi.parameters.paginable.limit.label'),
+                desc: HaveAPI.message('haveapi.parameters.paginable.limit.description'),
+                number: { min: 0, max: MAX_LIMIT }
       end
     end
   end

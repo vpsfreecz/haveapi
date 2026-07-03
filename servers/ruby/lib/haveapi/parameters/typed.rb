@@ -1,11 +1,14 @@
 require 'date'
 require 'time'
+require_relative 'metadata_i18n'
 
 module HaveAPI::Parameters
   class Typed
+    include MetadataI18n
+
     ATTRIBUTES = %i[
       label desc type db_name default fill clean protected load_validators
-      nullable symbolize_keys
+      nullable symbolize_keys label_key desc_key
     ].freeze
 
     attr_reader :name, :label, :desc, :type, :default
@@ -52,12 +55,12 @@ module HaveAPI::Parameters
       @load_validators.nil? || @load_validators
     end
 
-    def describe(context)
+    def describe(context, i18n_path: nil)
       {
         required: required?,
         nullable: nullable?,
-        label: HaveAPI.localize(@label),
-        description: HaveAPI.localize(@desc),
+        label: localized_label(context, i18n_path),
+        description: localized_description(context, i18n_path),
         type: @type ? @type.to_s : String.to_s,
         validators: @validators ? @validators.describe : {},
         default: @default,

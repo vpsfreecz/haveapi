@@ -79,6 +79,12 @@ module HaveAPI
         /@message\s*=\s*take\(\s*:message\s*,\s*['"]/
       ].freeze
 
+      PARAMETER_METHODS = %w[
+        bool custom datetime float id integer password resource string text
+      ].freeze
+      PARAMETER_CALL_PATTERN = /\A\s*(?:#{PARAMETER_METHODS.join('|')})\b/
+      RAW_PARAMETER_METADATA_PATTERN = /\b(?:label|desc):\s*['"]/
+
       def initialize(root:)
         @root = root
       end
@@ -192,7 +198,44 @@ module HaveAPI
               "#{rel}:#{index + 1}: raw user-facing framework message"
             end
           end
+        end + raw_parameter_metadata_errors
+      end
+
+      def raw_parameter_metadata_errors
+        server_source_files.flat_map do |file|
+          rel = relative_path(file)
+          inside_parameter = false
+          remaining_lines = 0
+
+          File.readlines(file, chomp: true).each_with_index.filter_map do |line, index|
+            stripped = line.strip
+            next if stripped.empty? || stripped.start_with?('#')
+
+            if PARAMETER_CALL_PATTERN.match?(stripped)
+              inside_parameter = true
+              remaining_lines = 12
+            end
+
+            if inside_parameter && RAW_PARAMETER_METADATA_PATTERN.match?(line)
+              "#{rel}:#{index + 1}: raw action parameter label/description"
+            end
+          ensure
+            if inside_parameter
+              remaining_lines -= 1
+              inside_parameter = false if remaining_lines <= 0 || parameter_call_end?(stripped)
+            end
+          end
         end
+      end
+
+      def parameter_call_end?(line)
+        return false if line.nil?
+
+        stripped = line.strip
+        return false if stripped.empty?
+        return false if stripped.end_with?(',', '\\')
+
+        true
       end
 
       def render(entry)

@@ -1,4 +1,28 @@
 module ParamsSpec
+  class Authorization
+    def filter_input(_definitions, params)
+      params
+    end
+  end
+
+  class DescriptionContext
+    attr_accessor :server, :resource_path, :action, :layout, :authorization,
+                  :endpoint, :action_prepare
+
+    def initialize(server:, resource_path:, action:)
+      @server = server
+      @resource_path = resource_path
+      @action = action
+      @authorization = Authorization.new
+      @endpoint = false
+      @action_prepare = false
+    end
+
+    def path_for(*)
+      '/v1/my_resources'
+    end
+  end
+
   class MyResource < HaveAPI::Resource
     params(:all) do
       string :res_param1
@@ -135,6 +159,165 @@ describe HaveAPI::Params do
     p.add_block proc { resource ParamsSpec::MyResource }
     p.exec
     expect(p.params.first).to be_an_instance_of(HaveAPI::Parameters::Resource)
+  end
+
+  it 'localizes resource parameter metadata' do
+    previous_locale = ::I18n.locale
+    previous_available = ::I18n.available_locales
+    ::I18n.available_locales = (previous_available + %i[en cs]).uniq
+    ::I18n.backend.store_translations(
+      :cs,
+      params_spec: {
+        resource: {
+          label: 'Vlastnik',
+          description: 'Vyber vlastnika'
+        }
+      }
+    )
+
+    p = described_class.new(:input, ParamsSpec::MyResource::Index)
+    p.add_block(proc do
+      resource ParamsSpec::MyResource,
+               label: HaveAPI.message('params_spec.resource.label'),
+               desc: HaveAPI.message('params_spec.resource.description')
+    end)
+    p.exec
+
+    context = double(
+      path_for: '/v1/my_resources',
+      endpoint: false,
+      action_prepare: false
+    )
+
+    ::I18n.locale = :cs
+    expect(p.params.first.describe(context)).to include(
+      label: 'Vlastnik',
+      description: 'Vyber vlastnika'
+    )
+  ensure
+    ::I18n.locale = previous_locale
+    ::I18n.available_locales = previous_available
+  end
+
+  it 'localizes resource parameter metadata from a parameter scope' do
+    previous_locale = ::I18n.locale
+    previous_available = ::I18n.available_locales
+    ::I18n.available_locales = (previous_available + %i[en cs]).uniq
+    ::I18n.backend.store_translations(
+      :cs,
+      params_spec: {
+        resources: {
+          my_resource: {
+            actions: {
+              index: {
+                input: {
+                  my_resource: {
+                    label: 'Zdroj',
+                    description: 'Vyber zdroj'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    )
+
+    server = double(parameter_i18n_scope: 'params_spec')
+    context = ParamsSpec::DescriptionContext.new(
+      server:,
+      resource_path: %w[my_resource],
+      action: ParamsSpec::MyResource::Index
+    )
+
+    p = described_class.new(:input, ParamsSpec::MyResource::Index)
+    p.add_block(proc do
+      resource ParamsSpec::MyResource, desc: 'Choose a resource'
+    end)
+    p.exec
+
+    ::I18n.locale = :cs
+    param = p.describe(context)[:parameters][:my_resource]
+    expect(param).to include(
+      label: 'Zdroj',
+      description: 'Vyber zdroj'
+    )
+  ensure
+    ::I18n.locale = previous_locale
+    ::I18n.available_locales = previous_available
+  end
+
+  it 'returns app-owned parameter metadata i18n catalog candidates' do
+    server = double(parameter_i18n_scope: 'params_spec')
+    context = ParamsSpec::DescriptionContext.new(
+      server:,
+      resource_path: %w[my_resource],
+      action: ParamsSpec::MyResource::Index
+    )
+
+    p = described_class.new(:input, ParamsSpec::MyResource::Index)
+    p.add_block(proc do
+      string :hostname, label: 'Hostname', desc: 'VPS hostname'
+      string :framework,
+             label: HaveAPI.message('haveapi.parameters.metadata.no.label')
+    end)
+    p.exec
+
+    items = p.parameter_metadata_i18n_items(context)
+    label = items.detect { |item| item[:param] == 'hostname' && item[:kind] == 'label' }
+
+    expect(label[:value]).to eq('Hostname')
+    expect(label[:keys]).to eq(%w[
+                                 params_spec.resources.my_resource.actions.index.input.hostname.label
+                                 params_spec.resources.my_resource.input.hostname.label
+                                 params_spec.resources.my_resource.attributes.hostname.label
+                                 params_spec.attributes.hostname.label
+                               ])
+    expect(items.none? { |item| item[:param] == 'framework' }).to be true
+  end
+
+  it 'does not parse meta resource path segments as metadata paths' do
+    server = double(parameter_i18n_scope: 'params_spec')
+    context = ParamsSpec::DescriptionContext.new(
+      server:,
+      resource_path: %w[meta],
+      action: ParamsSpec::MyResource::Index
+    )
+
+    p = described_class.new(:input, ParamsSpec::MyResource::Index)
+    p.add_block proc { string :hostname, label: 'Hostname' }
+    p.exec
+
+    item = p.parameter_metadata_i18n_items(context).first
+
+    expect(item[:keys]).to eq(%w[
+                                params_spec.resources.meta.actions.index.input.hostname.label
+                                params_spec.resources.meta.input.hostname.label
+                                params_spec.resources.meta.attributes.hostname.label
+                                params_spec.attributes.hostname.label
+                              ])
+  end
+
+  it 'returns meta parameter metadata i18n catalog candidates' do
+    server = double(parameter_i18n_scope: 'params_spec')
+    context = ParamsSpec::DescriptionContext.new(
+      server:,
+      resource_path: %w[my_resource],
+      action: ParamsSpec::MyResource::Index
+    )
+    i18n_path = described_class.metadata_i18n_path(context, :global, :output)
+
+    p = described_class.new(:output, ParamsSpec::MyResource::Index)
+    p.add_block proc { integer :count, label: 'Count' }
+    p.exec
+
+    item = p.parameter_metadata_i18n_items(context, i18n_path:, meta_type: :global).first
+
+    expect(item[:keys]).to eq(%w[
+                                params_spec.resources.my_resource.actions.index.meta.global.output.count.label
+                                params_spec.resources.my_resource.meta.global.output.count.label
+                                params_spec.meta.global.output.count.label
+                              ])
   end
 
   it 'patches params' do

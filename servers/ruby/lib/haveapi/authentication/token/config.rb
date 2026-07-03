@@ -75,9 +75,16 @@ module HaveAPI::Authentication
           # Default request
           subclass.request do
             input do
-              string :user, label: 'User', required: true
-              password :password, label: 'Password', required: true
-              string :scope, label: 'Scope', default: 'all', fill: true
+              string :user,
+                     label: HaveAPI.message('haveapi.parameters.authentication.token.user.label'),
+                     required: true
+              password :password,
+                       label: HaveAPI.message('haveapi.parameters.authentication.token.password.label'),
+                       required: true
+              string :scope,
+                     label: HaveAPI.message('haveapi.parameters.authentication.token.scope.label'),
+                     default: 'all',
+                     fill: true
             end
 
             handle do

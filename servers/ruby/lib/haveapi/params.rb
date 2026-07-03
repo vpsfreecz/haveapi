@@ -28,6 +28,45 @@ module HaveAPI
     attr_reader :params
     attr_accessor :action
 
+    class << self
+      def action_i18n_path(context, direction)
+        prefix = action_i18n_prefix(context)
+        return unless prefix
+
+        "#{prefix}.#{i18n_segment(direction)}"
+      end
+
+      def metadata_i18n_path(context, type, direction)
+        prefix = action_i18n_prefix(context)
+        return unless prefix
+
+        [
+          prefix,
+          'meta',
+          i18n_segment(type),
+          i18n_segment(direction)
+        ].join('.')
+      end
+
+      def i18n_segment(value)
+        value.to_s.underscore.downcase.gsub(/[^a-z0-9_]+/, '_').gsub(/\A_+|_+\z/, '')
+      end
+
+      private
+
+      def action_i18n_prefix(context)
+        return unless context.respond_to?(:resource_path) && context.resource_path
+        return unless context.respond_to?(:action) && context.action
+
+        [
+          'resources',
+          *context.resource_path.map { |segment| i18n_segment(segment) },
+          'actions',
+          i18n_segment(context.action.action_name)
+        ].join('.')
+      end
+    end
+
     def initialize(direction, action)
       @direction = direction
       @params = []
@@ -182,7 +221,7 @@ module HaveAPI
       add_param(name, apply(kwargs, type: Custom, clean: block, symbolize_keys:))
     end
 
-    def describe(context, metadata: false)
+    def describe(context, metadata: false, i18n_path: nil)
       context.layout = layout
 
       ret = { parameters: {} }
@@ -190,13 +229,32 @@ module HaveAPI
       ret[:namespace] = namespace
       ret[:format] = @structure if @structure
 
+      i18n_path ||= self.class.action_i18n_path(context, @direction)
+
       @params.each do |p|
-        ret[:parameters][p.name] = p.describe(context)
+        ret[:parameters][p.name] = p.describe(context, i18n_path:)
       end
 
       ret[:parameters] = filtered_description_parameters(context, ret, metadata)
 
       ret
+    end
+
+    def parameter_metadata_i18n_items(context, i18n_path: nil, meta_type: nil)
+      i18n_path ||= self.class.action_i18n_path(context, @direction)
+
+      @params.flat_map do |param|
+        next [] unless param.respond_to?(:metadata_i18n_catalog_items)
+
+        param.metadata_i18n_catalog_items(context, i18n_path).map do |item|
+          item.merge(
+            resource_path: Array(context.resource_path).map { |v| self.class.i18n_segment(v) },
+            action: self.class.i18n_segment(context.action.action_name),
+            direction: self.class.i18n_segment(@direction),
+            meta_type: meta_type && self.class.i18n_segment(meta_type)
+          )
+        end
+      end
     end
 
     def validate_build

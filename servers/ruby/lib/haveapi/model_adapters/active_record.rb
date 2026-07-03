@@ -269,9 +269,12 @@ module HaveAPI::ModelAdapters
       def self.used_by(action)
         action.meta(:object) do
           output do
-            custom :path_params, label: 'URL parameters',
-                                 desc: 'An array of parameters needed to resolve URL to this object'
-            bool :resolved, label: 'Resolved', desc: 'True if the association is resolved'
+            custom :path_params,
+                   label: HaveAPI.message('haveapi.parameters.active_record.path_params.label'),
+                   desc: HaveAPI.message('haveapi.parameters.active_record.path_params.description')
+            bool :resolved,
+                 label: HaveAPI.message('haveapi.parameters.active_record.resolved.label'),
+                 desc: HaveAPI.message('haveapi.parameters.active_record.resolved.description')
           end
         end
 
@@ -297,18 +300,12 @@ module HaveAPI::ModelAdapters
           end
         end
 
-        desc = <<~END
-          A list of names of associated resources separated by a comma.
-          Nested associations are declared with '__' between resource names.
-          For example, 'user,node' will resolve the two associations.
-          To resolve further associations of node, use e.g. 'user,node__location',
-          to go even deeper, use e.g. 'user,node__location__environment'.
-        END
-
         action.meta(:global) do
           input do
-            custom :includes, label: 'Included associations',
-                              desc:, &clean
+            custom :includes,
+                   label: HaveAPI.message('haveapi.parameters.active_record.includes.label'),
+                   desc: HaveAPI.message('haveapi.parameters.active_record.includes.description'),
+                   &clean
           end
         end
 

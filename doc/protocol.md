@@ -57,8 +57,9 @@ Responses for `OPTIONS` requests also send a protocol version in the envelope:
 Servers may localize user-facing response strings using the HTTP
 `Accept-Language` header. Localization changes only string values, such as
 `message`, parameter entries in `errors`, and validator messages in
-self-description. The envelope shape does not change and clients must continue
-to treat these values as strings.
+self-description. Self-description parameter `label` and `description` values
+may also be localized. The envelope shape does not change and clients must
+continue to treat these values as strings.
 
 # Description format
 In this document, the self-description is encoded in JSON. However, it can

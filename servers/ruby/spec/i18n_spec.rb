@@ -31,6 +31,23 @@ describe HaveAPI::I18n do
                    desc: HaveAPI.message('i18n_spec.resources.thing.params.name.desc'),
                    required: true,
                    length: { min: 3, max: 5 }
+            string :auto_label,
+                   label: 'Automatic label fallback',
+                   desc: 'Automatic description fallback'
+            string :explicit_key,
+                   label: 'Explicit label fallback',
+                   desc: 'Explicit description fallback',
+                   label_key: 'i18n_spec.shared.explicit_key.label',
+                   desc_key: 'i18n_spec.shared.explicit_key.description'
+            string :shared_label,
+                   label: 'Shared label fallback',
+                   desc: 'Shared description fallback'
+            string :resource_attr_label,
+                   label: 'Resource attribute fallback',
+                   desc: 'Resource attribute description fallback'
+            string :global_attr_label,
+                   label: 'Global attribute fallback',
+                   desc: 'Global attribute description fallback'
             string :code, length: {
               min: 3,
               message: HaveAPI.message('haveapi.validators.length.min', min: 3)
@@ -39,7 +56,26 @@ describe HaveAPI::I18n do
           end
 
           output do
-            bool :ok
+            bool :ok,
+                 label: 'OK fallback',
+                 desc: 'Result description fallback'
+          end
+
+          meta(:global) do
+            input do
+              bool :confirm,
+                   label: 'Confirm fallback',
+                   desc: 'Confirm description fallback'
+            end
+
+            output do
+              bool :audited,
+                   label: 'Audited fallback',
+                   desc: 'Audited description fallback'
+              bool :global_audited,
+                   label: 'Global audited fallback',
+                   desc: 'Global audited description fallback'
+            end
           end
 
           authorize { allow }
@@ -62,6 +98,7 @@ describe HaveAPI::I18n do
       end
     end
 
+    parameter_i18n_scope 'i18n_spec'
     default_version 1
 
     it 'keeps default English responses unchanged' do
@@ -159,6 +196,155 @@ describe HaveAPI::I18n do
       expect(action[:description]).to eq('Vytvořit věc')
       expect(param[:label]).to eq('Název')
       expect(param[:description]).to eq('Název věci')
+    ensure
+      ::I18n.available_locales = previous_available
+    end
+
+    it 'localizes action parameter metadata from the server parameter scope' do
+      previous_available = ::I18n.available_locales
+      ::I18n.available_locales = (previous_available + %i[en cs]).uniq
+      ::I18n.backend.store_translations(
+        :cs,
+        i18n_spec: {
+          resources: {
+            thing: {
+              actions: {
+                create: {
+                  input: {
+                    auto_label: {
+                      label: 'Automatický popisek',
+                      description: 'Automatický popis'
+                    },
+                    global_attr_label: {
+                      label: 'Přesný globální popisek',
+                      description: 'Přesný globální popis'
+                    }
+                  },
+                  output: {
+                    ok: {
+                      label: 'V pořádku',
+                      description: 'Popis výsledku'
+                    }
+                  },
+                  meta: {
+                    global: {
+                      input: {
+                        confirm: {
+                          label: 'Potvrdit',
+                          description: 'Popis potvrzení'
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              input: {
+                shared_label: {
+                  label: 'Sdílený popisek',
+                  description: 'Sdílený popis'
+                }
+              },
+              attributes: {
+                resource_attr_label: {
+                  label: 'Atribut zdroje',
+                  description: 'Popis atributu zdroje'
+                }
+              },
+              meta: {
+                global: {
+                  output: {
+                    audited: {
+                      label: 'Auditováno',
+                      description: 'Popis auditu'
+                    }
+                  }
+                }
+              }
+            }
+          },
+          attributes: {
+            auto_label: {
+              label: 'Sdílený automatický popisek',
+              description: 'Sdílený automatický popis'
+            },
+            global_attr_label: {
+              label: 'Globální atribut',
+              description: 'Popis globálního atributu'
+            },
+            shared_label: {
+              label: 'Sdílený popisek atributu',
+              description: 'Sdílený popis atributu'
+            }
+          },
+          meta: {
+            global: {
+              output: {
+                global_audited: {
+                  label: 'Globálně auditováno',
+                  description: 'Globální popis auditu'
+                }
+              }
+            }
+          },
+          shared: {
+            explicit_key: {
+              label: 'Explicitní popisek',
+              description: 'Explicitní popis'
+            }
+          }
+        }
+      )
+
+      header 'Accept', 'application/json'
+      header 'Accept-Language', 'cs'
+      call_api(:options, '/?describe=default')
+
+      create = api_response[:resources][:thing][:actions][:create]
+      input_params = create[:input][:parameters]
+      output_params = create[:output][:parameters]
+      meta_input_params = create[:meta][:global][:input][:parameters]
+      meta_output_params = create[:meta][:global][:output][:parameters]
+
+      expect(input_params[:auto_label]).to include(
+        label: 'Automatický popisek',
+        description: 'Automatický popis'
+      )
+      expect(input_params[:explicit_key]).to include(
+        label: 'Explicitní popisek',
+        description: 'Explicitní popis'
+      )
+      expect(input_params[:shared_label]).to include(
+        label: 'Sdílený popisek',
+        description: 'Sdílený popis'
+      )
+      expect(input_params[:resource_attr_label]).to include(
+        label: 'Atribut zdroje',
+        description: 'Popis atributu zdroje'
+      )
+      expect(input_params[:global_attr_label]).to include(
+        label: 'Přesný globální popisek',
+        description: 'Přesný globální popis'
+      )
+      expect(input_params[:count]).to include(
+        label: 'Count',
+        description: nil
+      )
+      expect(output_params[:ok]).to include(
+        label: 'V pořádku',
+        description: 'Popis výsledku'
+      )
+      expect(meta_input_params[:confirm]).to include(
+        label: 'Potvrdit',
+        description: 'Popis potvrzení'
+      )
+      expect(meta_output_params[:audited]).to include(
+        label: 'Auditováno',
+        description: 'Popis auditu'
+      )
+      expect(meta_output_params[:global_audited]).to include(
+        label: 'Globálně auditováno',
+        description: 'Globální popis auditu'
+      )
     ensure
       ::I18n.available_locales = previous_available
     end

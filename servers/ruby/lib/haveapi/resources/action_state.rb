@@ -8,19 +8,25 @@ module HaveAPI::Resources
 
     params(:all) do
       id :id
-      string :label, label: 'Label'
-      bool :finished, label: 'Finished'
-      bool :status, label: 'Status',
-                    desc: 'Determines whether the action is proceeding or failing'
-      integer :current, label: 'Current progress'
-      integer :total, label: 'Total',
-                      desc: 'The action is finished when current equals to total'
-      string :unit, label: 'Unit', desc: 'Unit of current and total'
-      bool :can_cancel, label: 'Can cancel',
-                        desc: 'When true, execution of this action can be cancelled'
-      datetime :created_at, label: 'Created at'
-      datetime :updated_at, label: 'Updated at',
-                            desc: 'When was the progress last updated'
+      string :label, label: HaveAPI.message('haveapi.parameters.action_state.label.label')
+      bool :finished, label: HaveAPI.message('haveapi.parameters.action_state.finished.label')
+      bool :status,
+           label: HaveAPI.message('haveapi.parameters.action_state.status.label'),
+           desc: HaveAPI.message('haveapi.parameters.action_state.status.description')
+      integer :current, label: HaveAPI.message('haveapi.parameters.action_state.current.label')
+      integer :total,
+              label: HaveAPI.message('haveapi.parameters.action_state.total.label'),
+              desc: HaveAPI.message('haveapi.parameters.action_state.total.description')
+      string :unit,
+             label: HaveAPI.message('haveapi.parameters.action_state.unit.label'),
+             desc: HaveAPI.message('haveapi.parameters.action_state.unit.description')
+      bool :can_cancel,
+           label: HaveAPI.message('haveapi.parameters.action_state.can_cancel.label'),
+           desc: HaveAPI.message('haveapi.parameters.action_state.can_cancel.description')
+      datetime :created_at, label: HaveAPI.message('haveapi.parameters.action_state.created_at.label')
+      datetime :updated_at,
+               label: HaveAPI.message('haveapi.parameters.action_state.updated_at.label'),
+               desc: HaveAPI.message('haveapi.parameters.action_state.updated_at.description')
     end
 
     module Mixin
@@ -84,15 +90,25 @@ module HaveAPI::Resources
       route '{%{resource}_id}/poll'
 
       input(:hash) do
-        float :timeout, label: 'Timeout', desc: 'in seconds', default: 15, fill: true,
-                        number: { min: 0, max: MAX_TIMEOUT }
-        float :update_in, label: 'Progress',
-                          desc: 'number of seconds after which the state is returned if the progress ' \
-                                'has changed',
-                          nullable: true
-        bool :status, desc: 'status to check with if update_in is set', nullable: true
-        integer :current, desc: 'progress to check with if update_in is set', nullable: true
-        integer :total, desc: 'progress to check with if update_in is set', nullable: true
+        float :timeout,
+              label: HaveAPI.message('haveapi.parameters.action_state.poll.timeout.label'),
+              desc: HaveAPI.message('haveapi.parameters.action_state.poll.timeout.description'),
+              default: 15,
+              fill: true,
+              number: { min: 0, max: MAX_TIMEOUT }
+        float :update_in,
+              label: HaveAPI.message('haveapi.parameters.action_state.poll.update_in.label'),
+              desc: HaveAPI.message('haveapi.parameters.action_state.poll.update_in.description'),
+              nullable: true
+        bool :status,
+             desc: HaveAPI.message('haveapi.parameters.action_state.poll.status.description'),
+             nullable: true
+        integer :current,
+                desc: HaveAPI.message('haveapi.parameters.action_state.poll.current.description'),
+                nullable: true
+        integer :total,
+                desc: HaveAPI.message('haveapi.parameters.action_state.poll.total.description'),
+                nullable: true
       end
 
       output(:hash) do

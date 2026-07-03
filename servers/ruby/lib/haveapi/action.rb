@@ -109,9 +109,8 @@ module HaveAPI
           meta(:global) do
             output do
               integer :action_state_id,
-                      label: 'Action state ID',
-                      desc: 'ID of ActionState object for state querying. When null, the action ' \
-                            'is not blocking for the current invocation.'
+                      label: HaveAPI.message('haveapi.parameters.action_state_id.label'),
+                      desc: HaveAPI.message('haveapi.parameters.action_state_id.description')
             end
           end
         end
@@ -236,13 +235,23 @@ module HaveAPI
           blocking: @blocking ? true : false,
           input: @input ? @input.describe(context) : { parameters: {} },
           output: @output ? @output.describe(context) : { parameters: {} },
-          meta: @meta ? @meta.merge(@meta) { |_, v| v && v.describe(context) } : nil,
+          meta: @meta ? @meta.to_h { |type, v| [type, v && v.describe(context, type:)] } : nil,
           examples: @examples ? @examples.describe(context) : [],
           scope: context.action_scope,
           path: context.resolved_path,
           method: route_method,
           help: "#{context.path}?method=#{route_method}"
         }
+      end
+
+      def parameter_metadata_i18n_items(context)
+        [
+          *@input&.parameter_metadata_i18n_items(context),
+          *@output&.parameter_metadata_i18n_items(context),
+          *(@meta&.flat_map do |type, metadata|
+            metadata&.parameter_metadata_i18n_items(context, type:)
+          end)
+        ].compact
       end
 
       # Inherit attributes from resource action is defined in.
@@ -507,7 +516,7 @@ module HaveAPI
     output {}
     meta(:global) do
       input do
-        bool :no, label: 'Disable metadata'
+        bool :no, label: HaveAPI.message('haveapi.parameters.metadata.no.label')
       end
     end
 

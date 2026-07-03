@@ -1,16 +1,23 @@
+require_relative 'metadata_i18n'
+
 module HaveAPI::Parameters
   class Resource
+    include MetadataI18n
+
     attr_reader :name, :resource, :label, :desc, :type, :value_id, :value_label,
                 :choices, :value_params
 
     def initialize(resource, name: nil, label: nil, desc: nil,
                    choices: nil, value_id: :id, value_label: :label, required: nil,
-                   db_name: nil, fetch: nil, nullable: nil)
+                   db_name: nil, fetch: nil, nullable: nil, label_key: nil,
+                   desc_key: nil)
       @resource = resource
       @resource_path = build_resource_path(resource)
       @name = name || resource.resource_name.underscore.to_sym
       @label = label || (name && name.to_s.capitalize) || resource.resource_name
       @desc = desc
+      @label_key = label_key
+      @desc_key = desc_key
       @choices = choices || @resource::Index
       @value_id = value_id
       @value_label = value_label
@@ -46,7 +53,7 @@ module HaveAPI::Parameters
       @resource::Index
     end
 
-    def describe(context)
+    def describe(context, i18n_path: nil)
       val_path = context.path_for(
         @resource::Show,
         context.endpoint && context.action_prepare && context.layout == :object && context.call_path_params(context.action, context.action_prepare)
@@ -62,8 +69,8 @@ module HaveAPI::Parameters
       {
         required: required?,
         nullable: nullable?,
-        label: @label,
-        description: @desc,
+        label: localized_label(context, i18n_path),
+        description: localized_description(context, i18n_path),
         type: 'Resource',
         resource: @resource_path,
         value_id: @value_id,

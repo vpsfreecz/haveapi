@@ -37,6 +37,11 @@
   and Go clients.
 - Do not edit generated locale/catalog artifacts directly. They contain a
   generated-file header and will be overwritten by `i18n:update`.
+- Applications can localize action parameter labels/descriptions by setting the
+  server `parameter_i18n_scope` to the application root. HaveAPI looks up exact
+  resource/action keys, then shared resource input/output keys, resource
+  attributes, and shared `attributes.<name>` keys. Use `label_key`/`desc_key`
+  only for explicit overrides.
 
 ## Testing Guidelines
 - Prioritize coverage for protocol descriptions, authentication flows, validators, and parameter edge cases in `servers/ruby/spec`.

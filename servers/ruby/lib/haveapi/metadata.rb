@@ -45,11 +45,33 @@ module HaveAPI
         end
       end
 
-      def describe(context)
+      def describe(context, type:)
         {
-          input: @input && @input.describe(context),
-          output: @output && @output.describe(context, metadata: true)
+          input: @input && @input.describe(
+            context,
+            i18n_path: Params.metadata_i18n_path(context, type, :input)
+          ),
+          output: @output && @output.describe(
+            context,
+            metadata: true,
+            i18n_path: Params.metadata_i18n_path(context, type, :output)
+          )
         }
+      end
+
+      def parameter_metadata_i18n_items(context, type:)
+        [
+          *@input&.parameter_metadata_i18n_items(
+            context,
+            i18n_path: Params.metadata_i18n_path(context, type, :input),
+            meta_type: type
+          ),
+          *@output&.parameter_metadata_i18n_items(
+            context,
+            i18n_path: Params.metadata_i18n_path(context, type, :output),
+            meta_type: type
+          )
+        ].compact
       end
     end
   end

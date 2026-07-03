@@ -11,11 +11,14 @@ module HaveAPI
 
         meta(:global) do
           input do
-            bool :count, label: 'Return the count of all items', default: false
+            bool :count,
+                 label: HaveAPI.message('haveapi.parameters.default.count.label'),
+                 default: false
           end
 
           output do
-            integer :total_count, label: 'Total count of all items'
+            integer :total_count,
+                    label: HaveAPI.message('haveapi.parameters.default.total_count.label')
           end
         end
 

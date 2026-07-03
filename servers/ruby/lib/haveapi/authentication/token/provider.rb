@@ -217,18 +217,17 @@ module HaveAPI::Authentication
                 instance_exec(&block)
               end
 
-              string :lifetime, label: 'Lifetime', required: true,
-                                choices: %i[fixed renewable_manual renewable_auto permanent],
-                                desc: <<~END
-                                  fixed - the token has a fixed validity period, it cannot be renewed
-                                  renewable_manual - the token can be renewed, but it must be done manually via renew action
-                                  renewable_auto - the token is renewed automatically to now+interval every time it is used
-                                  permanent - the token will be valid forever, unless deleted
-                                END
-              integer :interval, label: 'Interval',
-                                 desc: 'How long will requested token be valid, in seconds.',
-                                 default: 60 * 5, fill: true,
-                                 number: { min: 1, max: 86_400 }
+              string :lifetime,
+                     label: HaveAPI.message('haveapi.parameters.authentication.token.lifetime.label'),
+                     required: true,
+                     choices: %i[fixed renewable_manual renewable_auto permanent],
+                     desc: HaveAPI.message('haveapi.parameters.authentication.token.lifetime.description')
+              integer :interval,
+                      label: HaveAPI.message('haveapi.parameters.authentication.token.interval.label'),
+                      desc: HaveAPI.message('haveapi.parameters.authentication.token.interval.description'),
+                      default: 60 * 5,
+                      fill: true,
+                      number: { min: 1, max: 86_400 }
             end
 
             output(:hash) do

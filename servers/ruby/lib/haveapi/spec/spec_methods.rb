@@ -27,6 +27,8 @@ module HaveAPI::Spec
       @api.locale_header = lh if lh
       locale = get_opt(:locale)
       @api.locale(&locale) if locale
+      parameter_i18n_scope = get_opt(:parameter_i18n_scope)
+      @api.parameter_i18n_scope = parameter_i18n_scope if parameter_i18n_scope
       @api.mount(get_opt(:mount) || '/')
       @api.app
     end

@@ -7,7 +7,7 @@ require 'haveapi/hooks'
 module HaveAPI
   class Server
     attr_accessor :default_version, :action_state, :validation_error_http_status,
-                  :default_locale
+                  :default_locale, :parameter_i18n_scope
     attr_reader :root, :routes, :module_name, :auth_chain, :versions, :extensions,
                 :action_state_auth, :locale_header, :available_locales
 
@@ -646,6 +646,27 @@ module HaveAPI
       end
     end
 
+    def collect_parameter_metadata_i18n_items(resources, context)
+      resources.flat_map do |resource, children|
+        original_resource_path = context.resource_path
+        context.resource_path = context.resource_path + [resource.resource_name.underscore]
+
+        action_items = children[:actions].flat_map do |action, path|
+          context.action = action
+          context.path = path
+
+          action.parameter_metadata_i18n_items(context)
+        end
+
+        child_items = collect_parameter_metadata_i18n_items(children[:resources], context)
+
+        action_items + child_items
+      ensure
+        context.resource_path = original_resource_path
+      end
+    end
+    private :collect_parameter_metadata_i18n_items
+
     def mount_resource(prefix, v, resource, hash)
       hash[resource] = { resources: {}, actions: {} }
 
@@ -852,6 +873,13 @@ module HaveAPI
 
     def describe_resource(r, hash, context)
       r.describe(hash, context)
+    end
+
+    def parameter_metadata_i18n_items(version: @default_version)
+      routes = @routes.fetch(version)
+      context = Context.new(self, version:, doc: true)
+
+      collect_parameter_metadata_i18n_items(routes[:resources], context)
     end
 
     def path_for_action(version, action)

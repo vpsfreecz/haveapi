@@ -271,6 +271,98 @@ Use `api_t(key, **values)` when an immediate string translation is needed in an
 action. Use `HaveAPI.message(key, **values)` in class-level DSL blocks such as
 `input`.
 
+Action parameter labels and descriptions can be translated from the
+self-description context. Set `parameter_i18n_scope` to an application locale
+namespace and keep the existing English labels/descriptions as fallbacks:
+
+```ruby
+api.parameter_i18n_scope = 'my_api'
+
+input do
+  string :hostname,
+         label: 'Hostname',
+         desc: 'VPS hostname'
+end
+```
+
+HaveAPI first looks up the exact action parameter key:
+
+```yaml
+cs:
+  my_api:
+    resources:
+      vps:
+        actions:
+          create:
+            input:
+              hostname:
+                label: "Hostname"
+                description: "Nazev VPS"
+```
+
+The generated path is
+`resources.<resource_path>.actions.<action>.<input|output>.<name>`.
+Metadata parameters include the metadata type and direction, for example
+`resources.vps.actions.create.meta.global.output.action_state_id.label`.
+
+If the exact key is missing, HaveAPI falls back to resource input/output keys,
+resource attributes and then shared attributes:
+
+```yaml
+cs:
+  my_api:
+    resources:
+      vps:
+        input:
+          hostname:
+            label: "Hostname"
+            description: "Nazev VPS"
+        output:
+          hostname:
+            label: "Hostname"
+        attributes:
+          hostname:
+            label: "Hostname"
+    attributes:
+      hostname:
+        label: "Hostname"
+```
+
+Metadata parameters fall back through resource and global metadata keys:
+
+```yaml
+cs:
+  my_api:
+    resources:
+      vps:
+        meta:
+          global:
+            output:
+              count:
+                label: "Return item count"
+    meta:
+      global:
+        output:
+          count:
+            label: "Return item count"
+```
+
+Framework-owned HaveAPI metadata, such as pagination and built-in meta
+parameters, is translated by HaveAPI itself and is not looked up in the
+application parameter scope. Use `label_key` and `desc_key` when a parameter
+needs an explicit key that is not derived from its action location:
+
+```ruby
+string :hostname,
+       label: 'Hostname',
+       desc: 'VPS hostname',
+       label_key: 'my_api.attributes.hostname.label',
+       desc_key: 'my_api.attributes.hostname.description'
+```
+
+HaveAPI also exposes `api.parameter_metadata_i18n_items` for maintenance tools
+that generate application locale catalogs from declared parameters.
+
 ### Run with rackup
 Use the same code as above, only the last line would be
 

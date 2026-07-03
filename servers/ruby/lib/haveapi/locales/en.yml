@@ -28,6 +28,97 @@ en:
       unsupported_content_type: Unsupported Content-Type
     pagination:
       limit_max: limit has to be maximally %{max}
+    parameters:
+      action_state:
+        can_cancel:
+          description: When true, execution of this action can be cancelled
+          label: Can cancel
+        created_at:
+          label: Created at
+        current:
+          label: Current progress
+        finished:
+          label: Finished
+        label:
+          label: Label
+        poll:
+          current:
+            description: progress to check with if update_in is set
+          status:
+            description: status to check with if update_in is set
+          timeout:
+            description: in seconds
+            label: Timeout
+          total:
+            description: progress to check with if update_in is set
+          update_in:
+            description: number of seconds after which the state is returned if the
+              progress has changed
+            label: Progress
+        status:
+          description: Determines whether the action is proceeding or failing
+          label: Status
+        total:
+          description: The action is finished when current equals to total
+          label: Total
+        unit:
+          description: Unit of current and total
+          label: Unit
+        updated_at:
+          description: When was the progress last updated
+          label: Updated at
+      action_state_id:
+        description: ID of ActionState object for state querying. When null, the action
+          is not blocking for the current invocation.
+        label: Action state ID
+      active_record:
+        includes:
+          description: |-
+            A list of names of associated resources separated by a comma.
+            Nested associations are declared with '__' between resource names.
+            For example, 'user,node' will resolve the two associations.
+            To resolve further associations of node, use e.g. 'user,node__location',
+            to go even deeper, use e.g. 'user,node__location__environment'.
+          label: Included associations
+        path_params:
+          description: An array of parameters needed to resolve URL to this object
+          label: URL parameters
+        resolved:
+          description: True if the association is resolved
+          label: Resolved
+      authentication:
+        token:
+          interval:
+            description: How long will requested token be valid, in seconds.
+            label: Interval
+          lifetime:
+            description: |-
+              fixed - the token has a fixed validity period, it cannot be renewed
+              renewable_manual - the token can be renewed, but it must be done manually via renew action
+              renewable_auto - the token is renewed automatically to now+interval every time it is used
+              permanent - the token will be valid forever, unless deleted
+            label: Lifetime
+          password:
+            label: Password
+          scope:
+            label: Scope
+          user:
+            label: User
+      default:
+        count:
+          label: Return the count of all items
+        total_count:
+          label: Total count of all items
+      metadata:
+        'no':
+          label: Disable metadata
+      paginable:
+        from_id:
+          description: List objects with greater/lesser ID
+          label: From ID
+        limit:
+          description: Number of objects to retrieve
+          label: Limit
     types:
       invalid_boolean: not a valid boolean %{value}
       invalid_datetime: not in ISO 8601 format '%{value}'

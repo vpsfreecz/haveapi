@@ -84,6 +84,11 @@ module HaveAPI::Spec
       opt(:locale, block)
     end
 
+    # Set the translation scope for action parameter labels/descriptions.
+    def parameter_i18n_scope(scope)
+      opt(:parameter_i18n_scope, scope)
+    end
+
     # Set a custom mount path.
     def mount_to(path)
       opt(:mount, path)

@@ -32,6 +32,21 @@ Create a client instance:
 
 	$api = new \HaveAPI\Client("http://your.api.tld");
 
+Request translated API messages and translate local client-side validation
+errors by passing `language` in the options array:
+
+	$api = new \HaveAPI\Client(
+		"http://your.api.tld",
+		null,
+		"haveapi-client-php",
+		["language" => "cs"]
+	);
+
+The value is sent in `Accept-Language` by default. Use `language_header` in
+the options array when the API is configured with a custom language header.
+Set the language before `setup()` or `authenticate()` so translated validator
+descriptions are loaded from the server.
+
 Authenticate with HTTP basic:
 
 	$api->authenticate('basic', ['user' => 'yourname', 'password' => 'password']);

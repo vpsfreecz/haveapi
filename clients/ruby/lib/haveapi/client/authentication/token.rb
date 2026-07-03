@@ -82,7 +82,7 @@ module HaveAPI::Client::Authentication
       return if cont == :done
 
       if @block.nil?
-        raise AuthenticationFailed, 'implement multi-factor authentication'
+        raise AuthenticationFailed, @communicator.client_message('authentication.mfa_required')
       end
 
       loop do
@@ -106,7 +106,7 @@ module HaveAPI::Client::Authentication
       resp = HaveAPI::Client::Response.new(a, a.execute(input))
 
       if resp.failed?
-        raise AuthenticationFailed, resp.message || 'invalid credentials'
+        raise AuthenticationFailed, resp.message || @communicator.client_message('authentication.invalid_credentials')
       end
 
       if resp[:complete]

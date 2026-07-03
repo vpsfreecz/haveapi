@@ -3,6 +3,7 @@ module HaveAPI::Client
     attr_reader :errors
 
     def initialize(params, desc, value)
+      @params = params
       @errors = []
       @desc = desc
       @value = coerce(value)
@@ -22,24 +23,28 @@ module HaveAPI::Client
       if v.nil?
         return nil if @desc[:nullable]
 
-        @errors << 'cannot be null'
+        @errors << message('validation.cannot_be_null')
         return nil
       end
 
       if v.is_a?(::String) && v.strip.empty?
         return nil if @desc[:nullable]
 
-        @errors << 'not a valid resource id'
+        @errors << message('validation.invalid_resource_id')
         return nil
       end
 
       if !v.is_a?(::Integer) && /\A\d+\z/ !~ v
-        @errors << 'not a valid resource id'
+        @errors << message('validation.invalid_resource_id')
         nil
 
       else
         v.to_i
       end
+    end
+
+    def message(key, **values)
+      @params.send(:message, key, **values)
     end
   end
 end

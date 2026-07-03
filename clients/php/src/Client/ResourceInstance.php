@@ -202,7 +202,10 @@ class ResourceInstance extends Resource
                 $this->attrs = array_merge($this->attrs, (array) $ret->getResponse());
 
             } else {
-                throw new Exception\ActionFailed($ret, "Action '" . $action->name() . "' failed: " . $ret->message());
+                throw new Exception\ActionFailed($ret, $action->getClient()->translate('errors.action_failed', [
+                    'action' => "Action '" . $action->name() . "'",
+                    'message' => $ret->getMessage(),
+                ]));
             }
 
             $this->persistent = true;

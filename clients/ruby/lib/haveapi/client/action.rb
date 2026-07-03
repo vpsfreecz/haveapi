@@ -18,6 +18,16 @@ module HaveAPI::Client
       "#<#{self.class.name} @name=#{@name}>"
     end
 
+    def client_message(key, **values)
+      if @client.respond_to?(:client_message)
+        @client.client_message(key, **values)
+      elsif @api.respond_to?(:client_message)
+        @api.client_message(key, **values)
+      else
+        I18n.t(nil, key, values)
+      end
+    end
+
     def execute(data)
       params_arg = {}
 

@@ -15,16 +15,36 @@ module HaveAPI::Client
       end
     end
 
-    attr_reader :url, :auth, :verify_ssl
+    attr_reader :url, :auth, :verify_ssl, :language, :language_header
     attr_accessor :identity
 
-    def initialize(url, v = nil, verify_ssl: true)
+    def initialize(url, v = nil, verify_ssl: true, language: nil, language_header: nil)
       @url = url
       @auth = Authentication::NoAuth.new(self, {}, {})
       @rest = RestClient::Resource.new(@url, verify_ssl: verify_ssl)
       @version = v
       @verify_ssl = verify_ssl
       @identity = 'haveapi-client-ruby'
+      @language = language
+      @language_header = language_header || I18n::DEFAULT_LANGUAGE_HEADER
+    end
+
+    def language=(value)
+      I18n.assert_header_value!(value.to_s) unless value.nil? || value.to_s.empty?
+      @language = value
+    end
+
+    def language_header=(value)
+      I18n.assert_header_name!(value)
+      @language_header = value
+    end
+
+    def language_headers
+      I18n.request_headers(@language, @language_header)
+    end
+
+    def client_message(key, **values)
+      I18n.t(@language, key, values)
     end
 
     def inspect
@@ -134,7 +154,7 @@ module HaveAPI::Client
         ns.update(@auth.request_payload)
 
         args << ns.to_json
-        args << { content_type: :json, accept: :json, user_agent: @identity }.update(@auth.request_headers)
+        args << base_headers(content_type: :json).update(@auth.request_headers)
 
       elsif %w[GET DELETE].include?(action.http_method)
         get_params = {}
@@ -150,18 +170,20 @@ module HaveAPI::Client
           end
         end
 
-        args << { params: get_params.update(@auth.request_query_params), accept: :json, user_agent: @identity }.update(@auth.request_headers)
+        args << base_headers(
+          params: get_params.update(@auth.request_query_params)
+        ).update(@auth.request_headers)
       end
 
       begin
         response = parse(@rest[action.prepared_path].method(action.http_method.downcase.to_sym).call(*args))
       rescue RestClient::Forbidden
-        return error('Access forbidden. Bad user name or password? Not authorized?')
+        return error(client_message('errors.access_forbidden'))
       rescue RestClient::ResourceNotFound,
              RestClient::BadRequest => e
         response = parse(e.http_body)
       rescue StandardError => e
-        return error("Fatal API error: #{e.inspect}")
+        return error(client_message('errors.fatal_api_error', error: e.inspect))
       end
 
       if response[:status]
@@ -193,9 +215,8 @@ module HaveAPI::Client
 
     def description_for(path, query_params = {})
       ret = parse(@rest[path].get_options({
-          params: @auth.request_payload.update(@auth.request_query_params).update(query_params),
-          user_agent: @identity
-      }.update(@auth.request_headers)))
+          params: @auth.request_payload.update(@auth.request_query_params).update(query_params)
+      }.update(base_headers).update(@auth.request_headers)))
 
       @proto_version = ret[:version]
       p_v = HaveAPI::Client::PROTOCOL_VERSION
@@ -221,6 +242,10 @@ module HaveAPI::Client
 
     def parse(str)
       JSON.parse(str, symbolize_names: true)
+    end
+
+    def base_headers(headers = {})
+      { accept: :json, user_agent: @identity }.update(language_headers).update(headers)
     end
   end
 end

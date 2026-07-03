@@ -110,3 +110,19 @@ user.role = 'user'
 user.save
 p user.id
 ```
+
+## Localization
+
+Pass `language` to request translated API messages and to translate local
+client-side validation errors:
+
+```ruby
+api = HaveAPI::Client::Client.new('https://your.api.tld', language: 'cs')
+```
+
+The value is sent in `Accept-Language` by default. Use `language_header` when
+the API is configured with a custom language header. Set the language before
+the client fetches the API description so translated validator descriptions
+are loaded from the server.
+
+The CLI accepts the same request language with `--language cs`.

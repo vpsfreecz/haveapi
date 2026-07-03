@@ -15,6 +15,7 @@ module HaveAPI::Client
 
     def initialize(response)
       @data = response.response
+      @client = response.action.client
 
       @progress = Progress.new(@data[:current], @data[:total], @data[:unit])
     end
@@ -40,7 +41,7 @@ module HaveAPI::Client
     # is used only if the cancel operation is blocking.
     def cancel(&block)
       unless can_cancel?
-        raise "action ##{@data[:id]} (#{label}) cannot be cancelled"
+        raise @client.client_message('errors.uncancelable_action', id: @data[:id])
       end
 
       @cancel = true

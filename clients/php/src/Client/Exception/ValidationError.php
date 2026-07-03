@@ -23,7 +23,10 @@ class ValidationError extends Base
             if ($actionName instanceof Action) {
                 $resource = $actionName->getResource();
                 $actionLabel = $resource ? $resource->getName() . '#' . $actionName->name() : $actionName->name();
-                $message = "Input parameters not valid for action '" . $actionLabel . "'";
+                $message = $actionName->getClient()->translate(
+                    'errors.input_parameters_not_valid_for_action',
+                    ['action' => $actionLabel]
+                );
             } elseif (is_string($actionName) && $actionName !== '') {
                 $message = "Input parameters not valid for action '" . $actionName . "'";
             } else {

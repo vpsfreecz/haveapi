@@ -36,6 +36,7 @@ describe('HaveAPI JS client OAuth2 revoke encoding', () => {
   it('encodes OAuth2 revoke form tokens', () => {
     let capturedBody = null;
     let capturedContentType = null;
+    let capturedLanguage = null;
 
     function FakeXMLHttpRequest() {
       this.headers = {};
@@ -54,6 +55,9 @@ describe('HaveAPI JS client OAuth2 revoke encoding', () => {
       if (name.toLowerCase() === 'content-type') {
         capturedContentType = value;
       }
+      if (name === 'X-Language') {
+        capturedLanguage = value;
+      }
     };
 
     FakeXMLHttpRequest.prototype.send = function send(body) {
@@ -64,12 +68,18 @@ describe('HaveAPI JS client OAuth2 revoke encoding', () => {
 
     const HaveAPI = loadHaveAPIWithXMLHttpRequest(FakeXMLHttpRequest);
     const token = 'abc+def&token_type_hint=refresh_token=%25 space';
-    const auth = makeOAuth2(HaveAPI, 'https://api.example/_auth/oauth2/revoke', token);
+    const auth = makeOAuth2(
+      HaveAPI,
+      'https://api.example/_auth/oauth2/revoke',
+      token,
+      { language: 'cs-CZ', language_header: 'X-Language' }
+    );
 
     auth.setup();
     auth.logout(() => {});
 
     expect(capturedContentType).to.equal('application/x-www-form-urlencoded');
+    expect(capturedLanguage).to.equal('cs-CZ');
     expect(capturedBody).to.equal(`token=${encodeURIComponent(token)}`);
 
     const parsed = new URLSearchParams(capturedBody);

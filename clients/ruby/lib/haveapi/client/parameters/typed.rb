@@ -35,7 +35,7 @@ module HaveAPI::Client
       if raw.nil?
         return nil if @desc[:nullable]
 
-        @errors << 'cannot be null'
+        @errors << message('validation.cannot_be_null')
         return nil
       end
 
@@ -92,7 +92,7 @@ module HaveAPI::Client
         value = raw.to_f
         return value if value.finite?
 
-        @errors << 'not a valid float'
+        @errors << message('validation.invalid_float')
         nil
 
       elsif raw.is_a?(::String)
@@ -159,28 +159,32 @@ module HaveAPI::Client
     end
 
     def invalid_integer
-      @errors << 'not a valid integer'
+      @errors << message('validation.invalid_integer')
       nil
     end
 
     def invalid_float
-      @errors << 'not a valid float'
+      @errors << message('validation.invalid_float')
       nil
     end
 
     def invalid_boolean
-      @errors << 'not a valid boolean'
+      @errors << message('validation.invalid_boolean')
       nil
     end
 
     def invalid_datetime
-      @errors << 'not in ISO 8601 format'
+      @errors << message('validation.invalid_datetime')
       nil
     end
 
     def invalid_string
-      @errors << 'not a valid string'
+      @errors << message('validation.invalid_string')
       nil
+    end
+
+    def message(key, **values)
+      @params.send(:message, key, **values)
     end
   end
 end

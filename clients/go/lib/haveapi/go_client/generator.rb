@@ -1,4 +1,5 @@
 require 'fileutils'
+require 'yaml'
 require 'haveapi/client'
 require 'haveapi/go_client/utils'
 
@@ -50,12 +51,13 @@ module HaveAPI::GoClient
         FileUtils.mkpath(dst)
       end
 
-      %w[client authentication request response types].each do |v|
+      %w[client authentication request response types i18n].each do |v|
         ErbTemplate.render_to_if_changed(
           "#{v}.go",
           {
             package:,
-            api:
+            api:,
+            i18n_messages:
           },
           File.join(dst, "#{v}.go")
         )
@@ -74,5 +76,12 @@ module HaveAPI::GoClient
     protected
 
     attr_reader :api
+
+    def i18n_messages
+      @i18n_messages ||= YAML.safe_load_file(
+        File.expand_path('i18n_messages.yml', __dir__),
+        aliases: true
+      )
+    end
   end
 end

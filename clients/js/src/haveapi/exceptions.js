@@ -15,7 +15,9 @@ Client.Exceptions.ProtocolError = function (msg) {
  */
 Client.Exceptions.UnresolvedArguments = function (action) {
 	this.name = 'UnresolvedArguments';
-	this.message = "Unable to execute action '"+ action.name +"': unresolved arguments";
+	this.message = action.client.translate('errors.unresolved_arguments', {
+		action: action.name
+	});
 }
 
 /**
@@ -23,7 +25,7 @@ Client.Exceptions.UnresolvedArguments = function (action) {
  * @class UncancelableAction
  * @memberof HaveAPI.Client.Exceptions
  */
-Client.Exceptions.UncancelableAction = function (stateId) {
+Client.Exceptions.UncancelableAction = function (stateId, client) {
 	this.name = 'UncancelableAction';
-	this.message = "Action state #"+ stateId +" cannot be cancelled";
+	this.message = client.translate('errors.uncancelable_action', {id: stateId});
 }

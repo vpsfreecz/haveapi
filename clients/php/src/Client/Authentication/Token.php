@@ -170,8 +170,8 @@ class Token extends Base
         }
 
         if (!isset($this->opts['callback']) || !is_callable($this->opts['callback'])) {
-            throw new BadFunctionCallException(
-                'add callback to handle multi-step authentication'
+            throw new \BadFunctionCallException(
+                $this->client->translate('authentication.multistep_callback_required')
             );
         }
 
@@ -185,7 +185,9 @@ class Token extends Base
             if ($cb === 'stop') {
                 return;
             } elseif (!is_array($cb)) {
-                throw new RuntimeException("callback has to return an array or 'stop'");
+                throw new \RuntimeException(
+                    $this->client->translate('authentication.callback_invalid_return')
+                );
             }
 
             $input = array_merge($cb, ['token' => $token]);

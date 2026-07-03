@@ -170,6 +170,8 @@ RSpec.describe HaveAPI::GoClient::Generator do
 
         import (
           "math"
+          "net/http"
+          "strings"
           "testing"
         )
 
@@ -177,6 +179,21 @@ RSpec.describe HaveAPI::GoClient::Generator do
           c := New("#{base_url}")
           c.SetBasicAuthentication("user", "pass")
           return c
+        }
+
+        func TestValidationErrorCompatibility(t *testing.T) {
+          verr := NewValidationError()
+          verr.Add("field", "broken")
+          if verr.Empty() {
+            t.Fatalf("expected validation error to be non-empty")
+          }
+
+          legacyLiteral := ValidationError{map[string][]string{
+            "field": []string{"broken"},
+          }}
+          if legacyLiteral.Empty() {
+            t.Fatalf("expected legacy literal validation error to be non-empty")
+          }
         }
 
         func TestEchoRejectsNaNFloat(t *testing.T) {
@@ -202,6 +219,25 @@ RSpec.describe HaveAPI::GoClient::Generator do
 
           if verr.Errors["f"] == nil {
             t.Fatalf("expected float error, got %#v", verr.Errors)
+          }
+        }
+
+        func TestLanguageHeader(t *testing.T) {
+          c := newValidationClient()
+          if err := c.SetLanguage("cs-CZ"); err != nil {
+            t.Fatalf("set language failed: %v", err)
+          }
+          if err := c.SetLanguageHeader("X-Language"); err != nil {
+            t.Fatalf("set language header failed: %v", err)
+          }
+
+          httpReq, err := http.NewRequest("GET", "#{base_url}/v1/test", nil)
+          if err != nil {
+            t.Fatalf("new request failed: %v", err)
+          }
+          c.addLanguageHeader(httpReq)
+          if got := httpReq.Header.Get("X-Language"); got != "cs-CZ" {
+            t.Fatalf("expected language header cs-CZ, got %q", got)
           }
         }
 
@@ -422,6 +458,12 @@ RSpec.describe HaveAPI::GoClient::Generator do
           c := New("http://unused.example")
           c.SetHTTPClient(&http.Client{Transport: transport})
           c.SetExistingOAuth2Auth(token)
+          if err := c.SetLanguage("cs-CZ"); err != nil {
+            t.Fatalf("set language failed: %v", err)
+          }
+          if err := c.SetLanguageHeader("X-Language"); err != nil {
+            t.Fatalf("set language header failed: %v", err)
+          }
 
           if err := c.RevokeAccessToken(); err != nil {
             t.Fatalf("revoke failed: %v", err)
@@ -441,6 +483,10 @@ RSpec.describe HaveAPI::GoClient::Generator do
 
           if got := transport.req.Header.Get("X-HaveAPI-OAuth2-Token"); got != token {
             t.Fatalf("expected OAuth2 header %q, got %q", token, got)
+          }
+
+          if got := transport.req.Header.Get("X-Language"); got != "cs-CZ" {
+            t.Fatalf("expected language header cs-CZ, got %q", got)
           }
 
           if got := transport.req.Header.Get("Content-Type"); got != "application/x-www-form-urlencoded" {

@@ -33,7 +33,7 @@ module HaveAPI::Client
           p[:validators][:presence] || p[:validators][:present] || p[:validators][:required]
 
         if presence_validator && @params[name].nil?
-          error(name, 'required parameter missing')
+          error(name, message('validation.required_parameter_missing'))
           next
         elsif @params[name].nil?
           next
@@ -60,6 +60,10 @@ module HaveAPI::Client
     end
 
     protected
+
+    def message(key, **values)
+      @action.client_message(key, **values)
+    end
 
     def error(param, msg)
       @errors[param] ||= []

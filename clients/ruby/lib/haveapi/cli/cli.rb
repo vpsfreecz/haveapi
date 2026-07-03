@@ -114,7 +114,7 @@ module HaveAPI::CLI
       begin
         ret = action.execute(@input_params)
       rescue HaveAPI::Client::ValidationError => e
-        format_errors(action, 'input parameters not valid', e.errors)
+        format_errors(action, @api.client_message('errors.input_parameters_not_valid'), e.errors)
         exit(false)
       end
 
@@ -164,6 +164,7 @@ module HaveAPI::CLI
           block: true,
           verbose: false
       }
+      @opts = options
 
       @global_opt = OptionParser.new do |opts|
         opts.banner = "Usage: #{$0} [options] <resource> <action> [objects ids] [-- [parameters]]"
@@ -204,6 +205,11 @@ module HaveAPI::CLI
 
         opts.on('--version VERSION', 'Use specified API version') do |v|
           options[:version] = v
+        end
+
+        opts.on('--language LANGUAGE', 'Language to request from API') do |v|
+          options[:language] = v
+          @api.language = v if @api
         end
 
         opts.on('-c', '--columns', 'Print output in columns') do
@@ -683,7 +689,8 @@ module HaveAPI::CLI
       @api = HaveAPI::Client::Communicator.new(
         url || api_url,
         version || (@opts && @opts[:version]),
-        verify_ssl: verify_ssl
+        verify_ssl: verify_ssl,
+        language: @opts && @opts[:language]
       )
       @api.identity = $0.split('/').last
     end

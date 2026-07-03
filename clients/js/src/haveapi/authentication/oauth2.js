@@ -47,7 +47,7 @@ Authentication.OAuth2.prototype.setup = function(callback) {
 		if (callback !== undefined)
 			callback(this.client, true);
 	} else {
-		throw "Option access_token must be provided";
+		throw this.client.translate('authentication.oauth2_access_token_required');
 	}
 };
 
@@ -75,6 +75,12 @@ Authentication.OAuth2.prototype.logout = function(callback) {
 
 	http.open('POST', revokeUrl, true);
 	http.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+
+	var headers = this.client.requestHeaders({});
+	for (var name in headers) {
+		if (headers.hasOwnProperty(name))
+			http.setRequestHeader(name, headers[name]);
+	}
 
 	http.onreadystatechange = function() {
 		if (http.readyState == 4) {

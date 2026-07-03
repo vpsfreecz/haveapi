@@ -13,6 +13,8 @@ $_haveapi_client_classes = [
     'Client/Exception/ObjectNotFound',
     'Client/Exception/ProtocolError',
     'Client/Exception/UnresolvedArguments',
+    'Client/I18nMessages',
+    'Client/I18n',
     'Client/Action',
     'Client/Resource',
     'Client/ResourceInstance',

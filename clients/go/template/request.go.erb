@@ -182,6 +182,8 @@ func (client *Client) DoQueryStringRequest(path string, queryParams map[string]s
 		return err
 	}
 
+	client.addLanguageHeader(req)
+
 	if client.Authentication != nil {
 		client.Authentication.Authenticate(req)
 	}
@@ -232,6 +234,7 @@ func (client *Client) DoBodyRequest(method string, path string, params interface
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	client.addLanguageHeader(req)
 
 	if client.Authentication != nil {
 		client.Authentication.Authenticate(req)

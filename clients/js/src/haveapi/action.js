@@ -177,7 +177,7 @@ Action.prototype.invoke = function() {
 		prep.onReply(this.client, new LocalResponse(
 			this,
 			false,
-			'invalid input parameters',
+			this.client.translate('errors.invalid_input_parameters'),
 			prep.params.errors
 		));
 		return;
@@ -201,7 +201,7 @@ Action.prototype.directInvoke = function() {
 		prep.onReply(this.client, new LocalResponse(
 			this,
 			false,
-			'invalid input parameters',
+			this.client.translate('errors.invalid_input_parameters'),
 			prep.params.errors
 		));
 		return;
@@ -249,7 +249,10 @@ Action.prototype.prepareInvoke = function(new_args) {
 	}
 
 	if (preparedPath.search(rx) != -1) {
-		console.log("UnresolvedArguments", "Unable to execute action '"+ this.name +"': unresolved arguments");
+		console.log("UnresolvedArguments", this.client.translate(
+			'errors.unresolved_arguments',
+			{action: this.name}
+		));
 
 		throw new Client.Exceptions.UnresolvedArguments(this);
 	}
@@ -409,7 +412,7 @@ Action.waitForCompletion = function (opts) {
 
 		if (state.shouldCancel()) {
 			if (!state.canCancel)
-				throw new Client.Exceptions.UncancelableAction(opts.id);
+				throw new Client.Exceptions.UncancelableAction(opts.id, opts.client);
 
 			return opts.client.action_state.cancel(
 				opts.id,

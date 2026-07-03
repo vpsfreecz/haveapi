@@ -201,6 +201,19 @@ final class ClientIntegrationTest extends TestCase
         }
     }
 
+    public function testLanguageHeaderIsAttachedToRequests(): void
+    {
+        $api = new \HaveAPI\Client(
+            self::$baseUrl,
+            null,
+            'haveapi-client-php-test',
+            ['language' => 'cs-CZ', 'language_header' => 'X-Language']
+        );
+        $request = $api->getRequest('get', self::$baseUrl . '/v1/test');
+
+        $this->assertSame('cs-CZ', $request->headers['X-Language']);
+    }
+
     public function testTypedInputInvalidValuesAreRejectedLocally(): void
     {
         $api = new \HaveAPI\Client(self::$baseUrl);

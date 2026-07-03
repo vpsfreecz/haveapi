@@ -28,6 +28,18 @@ Create a client instance:
 var api = new HaveAPI.Client("http://your.api.tld");
 ```
 
+Request translated API messages and translate local client-side validation
+errors by passing `language`:
+
+```js
+var api = new HaveAPI.Client("http://your.api.tld", { language: "cs" });
+```
+
+The value is sent in `Accept-Language` by default. Use `language_header` when
+the API is configured with a custom language header. Set the language before
+`setup()` or `authenticate()` so translated validator descriptions are loaded
+from the server.
+
 Before the client can be used, it must be set up:
 
 ```js

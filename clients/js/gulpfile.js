@@ -4,6 +4,8 @@ var gulp = require('gulp'),
 	jsdoc = require('gulp-jsdoc3');
 
 var src = [
+	'src/haveapi/i18n_messages.js',
+	'src/haveapi/i18n.js',
 	'src/haveapi/client.js',
 	'src/haveapi/hooks.js',
 	'src/haveapi/http.js',

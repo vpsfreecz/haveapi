@@ -28,7 +28,7 @@ func (client *Client) SetExistingOAuth2Auth(accessToken string) {
 func (client *Client) RevokeAccessToken() error {
 	auth, ok := client.Authentication.(*OAuth2Auth)
 	if !ok {
-		return fmt.Errorf("OAuth2 authentication is not configured")
+		return fmt.Errorf("%s", t(client, "authentication.oauth2_not_configured", nil))
 	}
 
 	form := url.Values{}
@@ -46,6 +46,7 @@ func (client *Client) RevokeAccessToken() error {
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	client.addLanguageHeader(req)
 	auth.Authenticate(req)
 
 	resp, err := client.do(req)
@@ -57,7 +58,9 @@ func (client *Client) RevokeAccessToken() error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("Unable to revoke access token, HTTP %v", resp.StatusCode)
+		return fmt.Errorf("%s", t(client, "authentication.oauth2_revoke_failed", map[string]string{
+			"status": fmt.Sprint(resp.StatusCode),
+		}))
 	}
 
 	client.Authentication = nil

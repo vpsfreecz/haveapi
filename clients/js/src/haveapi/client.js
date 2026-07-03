@@ -28,7 +28,11 @@ function Client(url, opts) {
 		attachedResourceNames: Object.create(null),
 		debug: (opts !== undefined && opts.debug !== undefined) ? opts.debug : 0,
 		oauth2TrustedOrigins: Client.normalizeTrustedOrigins(oauth2TrustedOrigins),
+		language: opts.language !== undefined ? opts.language : null,
+		languageHeader: opts.languageHeader !== undefined ?
+			opts.languageHeader : (opts.language_header || I18n.DEFAULT_LANGUAGE_HEADER),
 	};
+	I18n.requestHeaders(this._private.language, this._private.languageHeader);
 
 	this._private.hooks = new Client.Hooks(this._private.debug);
 	this._private.http = new Client.Http(this._private.debug);
@@ -186,6 +190,53 @@ Client.prototype.oauth2Url = function(url) {
 	return this.sameOriginUrl(url, {
 		trustedOrigins: this._private.oauth2TrustedOrigins
 	});
+};
+
+/**
+ * Set the language sent to the API server.
+ * @method HaveAPI.Client#setLanguage
+ * @param {String} language value for Accept-Language
+ */
+Client.prototype.setLanguage = function(language) {
+	I18n.requestHeaders(language, this._private.languageHeader);
+	this._private.language = language;
+};
+
+/**
+ * Set the language HTTP header name.
+ * @method HaveAPI.Client#setLanguageHeader
+ * @param {String} header HTTP header name
+ */
+Client.prototype.setLanguageHeader = function(header) {
+	I18n.assertHeaderName(header);
+	this._private.languageHeader = header;
+};
+
+Client.prototype.translate = function(key, values) {
+	return I18n.translate(this._private.language, key, values);
+};
+
+Client.prototype.languageHeaders = function() {
+	return I18n.requestHeaders(this._private.language, this._private.languageHeader);
+};
+
+Client.prototype.requestHeaders = function(headers) {
+	var ret = {};
+	var languageHeaders = this.languageHeaders();
+
+	headers = headers || {};
+
+	for (var name in headers) {
+		if (headers.hasOwnProperty(name))
+			ret[name] = headers[name];
+	}
+
+	for (var langName in languageHeaders) {
+		if (languageHeaders.hasOwnProperty(langName))
+			ret[langName] = languageHeaders[langName];
+	}
+
+	return ret;
 };
 
 /**
@@ -347,7 +398,7 @@ Client.prototype.fetchDescription = function(callback, path) {
 		method: 'OPTIONS',
 		url: url,
 		credentials: this.authProvider.credentials(),
-		headers: this.authProvider.headers(),
+		headers: this.requestHeaders(this.authProvider.headers()),
 		queryParameters: this.authProvider.queryParameters(),
 		callback: function (status, response) {
 			callback(status == 200, function () {
@@ -511,7 +562,7 @@ Client.prototype.directInvoke = function(action, opts) {
 		method: action.httpMethod(),
 		url: url,
 		credentials: this.authProvider.credentials(),
-		headers: this.authProvider.headers(),
+		headers: this.requestHeaders(this.authProvider.headers()),
 		queryParameters: this.authProvider.queryParameters(),
 		callback: function(status, response) {
 			var res = new Client.Response(action, response);

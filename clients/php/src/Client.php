@@ -22,6 +22,8 @@ class Client extends Client\Resource
     private static $authProviders = [];
     private $spentTime = 0.0;
     private $protocol_version;
+    private $language = null;
+    private $languageHeader = Client\I18n::DEFAULT_LANGUAGE_HEADER;
 
     /**
      * Register authentication provider with $name and implementation in $class.
@@ -57,6 +59,8 @@ class Client extends Client\Resource
                     ?? []
             ),
         ];
+        $this->setLanguage($options['language'] ?? null);
+        $this->setLanguageHeader($options['language_header'] ?? $options['languageHeader'] ?? Client\I18n::DEFAULT_LANGUAGE_HEADER);
 
         self::registerAuthProvider('none', 'HaveAPI\Client\Authentication\NoAuth');
         self::registerAuthProvider('basic', 'HaveAPI\Client\Authentication\Basic');
@@ -288,6 +292,41 @@ class Client extends Client\Resource
         return $this->identity;
     }
 
+    public function getLanguage()
+    {
+        return $this->language;
+    }
+
+    public function setLanguage($language): void
+    {
+        if ($language !== null && (string) $language !== '') {
+            Client\I18n::assertHeaderValue($language);
+        }
+
+        $this->language = $language;
+    }
+
+    public function getLanguageHeader(): string
+    {
+        return $this->languageHeader;
+    }
+
+    public function setLanguageHeader(string $header): void
+    {
+        Client\I18n::assertHeaderName($header);
+        $this->languageHeader = $header;
+    }
+
+    public function getLanguageHeaders(): array
+    {
+        return Client\I18n::requestHeaders($this->language, $this->languageHeader);
+    }
+
+    public function translate(string $key, array $values = []): string
+    {
+        return Client\I18n::translate($this->language, $key, $values);
+    }
+
     /**
      * Invoke action $action with $params and interpret the response.
      * @param Action $action
@@ -302,7 +341,10 @@ class Client extends Client\Resource
         $response = new Client\Response($action, $this->directCall($action, $params, $time), $time);
 
         if (!$response->isOk()) {
-            throw new Client\Exception\ActionFailed($response, "Action '" . $action->name() . "' failed: " . $response->getMessage());
+            throw new Client\Exception\ActionFailed($response, $this->translate('errors.action_failed', [
+                'action' => "Action '" . $action->name() . "'",
+                'message' => $response->getMessage(),
+            ]));
         }
 
         switch ($action->layout('output')) {
@@ -342,7 +384,9 @@ class Client extends Client\Resource
         $inputLayout = $action->layout('input');
 
         if (($inputLayout === 'hash' || $inputLayout === 'object') && !is_array($params)) {
-            throw new Client\Exception\ValidationError($action, ['base' => ['invalid input layout']]);
+            throw new Client\Exception\ValidationError($action, [
+                'base' => [$this->translate('validation.invalid_input_layout')],
+            ]);
         }
 
         if (is_array($params)) {
@@ -383,6 +427,11 @@ class Client extends Client\Resource
         $request->sendsJson();
         $request->expectsJson();
         $request->addHeader('User-Agent', $this->identity);
+
+        foreach ($this->getLanguageHeaders() as $name => $value) {
+            $request->addHeader($name, $value);
+        }
+
         $ip = $this->getClientIp();
 
         if ($ip) {
@@ -579,7 +628,7 @@ class Client extends Client\Resource
         foreach ($descParamsArr as $name => $pdesc) {
             if (($pdesc->required ?? false) === true) {
                 if (!array_key_exists($name, $params) || $params[$name] === null) {
-                    $errors[$name][] = 'required parameter missing';
+                    $errors[$name][] = $this->translate('validation.required_parameter_missing');
                 }
             }
         }
@@ -594,7 +643,7 @@ class Client extends Client\Resource
 
             if ($value === null) {
                 if (!$nullable && (($pdesc->required ?? false) !== true)) {
-                    $errors[$name][] = 'cannot be null';
+                    $errors[$name][] = $this->translate('validation.cannot_be_null');
                 }
 
                 continue;
@@ -763,7 +812,7 @@ class Client extends Client\Resource
                         return (int) $raw;
                     }
 
-                    throw new \InvalidArgumentException('not a valid integer');
+                    throw $this->invalidValue('invalid_integer');
                 }
 
                 if (is_string($raw)) {
@@ -773,10 +822,10 @@ class Client extends Client\Resource
                         return intval($s, 10);
                     }
 
-                    throw new \InvalidArgumentException('not a valid integer');
+                    throw $this->invalidValue('invalid_integer');
                 }
 
-                throw new \InvalidArgumentException('not a valid integer');
+                throw $this->invalidValue('invalid_integer');
 
             case 'Float':
                 if (is_int($raw) || is_float($raw)) {
@@ -786,7 +835,7 @@ class Client extends Client\Resource
                         return $value;
                     }
 
-                    throw new \InvalidArgumentException('not a valid float');
+                    throw $this->invalidValue('invalid_float');
                 }
 
                 if (is_string($raw)) {
@@ -800,10 +849,10 @@ class Client extends Client\Resource
                         }
                     }
 
-                    throw new \InvalidArgumentException('not a valid float');
+                    throw $this->invalidValue('invalid_float');
                 }
 
-                throw new \InvalidArgumentException('not a valid float');
+                throw $this->invalidValue('invalid_float');
 
             case 'Boolean':
                 if (is_bool($raw)) {
@@ -819,7 +868,7 @@ class Client extends Client\Resource
                         return true;
                     }
 
-                    throw new \InvalidArgumentException('not a valid boolean');
+                    throw $this->invalidValue('invalid_boolean');
                 }
 
                 if (is_string($raw)) {
@@ -837,10 +886,10 @@ class Client extends Client\Resource
                         }
                     }
 
-                    throw new \InvalidArgumentException('not a valid boolean');
+                    throw $this->invalidValue('invalid_boolean');
                 }
 
-                throw new \InvalidArgumentException('not a valid boolean');
+                throw $this->invalidValue('invalid_boolean');
 
             case 'Datetime':
                 if ($raw instanceof \DateTimeInterface) {
@@ -854,15 +903,15 @@ class Client extends Client\Resource
                         return $s;
                     }
 
-                    throw new \InvalidArgumentException('not in ISO 8601 format');
+                    throw $this->invalidValue('invalid_datetime');
                 }
 
-                throw new \InvalidArgumentException('not in ISO 8601 format');
+                throw $this->invalidValue('invalid_datetime');
 
             case 'String':
             case 'Text':
                 if (is_array($raw) || is_object($raw)) {
-                    throw new \InvalidArgumentException('not a valid string');
+                    throw $this->invalidValue('invalid_string');
                 }
 
                 if (is_bool($raw)) {
@@ -873,7 +922,7 @@ class Client extends Client\Resource
                     return (string) $raw;
                 }
 
-                throw new \InvalidArgumentException('not a valid string');
+                throw $this->invalidValue('invalid_string');
 
             case 'Resource':
                 $resourceId = $raw;
@@ -887,7 +936,7 @@ class Client extends Client\Resource
                         return $resourceId;
                     }
 
-                    throw new \InvalidArgumentException('not a valid resource id');
+                    throw $this->invalidValue('invalid_resource_id');
                 }
 
                 if (is_string($resourceId)) {
@@ -901,14 +950,19 @@ class Client extends Client\Resource
                         }
                     }
 
-                    throw new \InvalidArgumentException('not a valid resource id');
+                    throw $this->invalidValue('invalid_resource_id');
                 }
 
-                throw new \InvalidArgumentException('not a valid resource id');
+                throw $this->invalidValue('invalid_resource_id');
 
             default:
                 return $raw;
         }
+    }
+
+    private function invalidValue(string $key): \InvalidArgumentException
+    {
+        return new \InvalidArgumentException($this->translate('validation.' . $key));
     }
 
     private function isIso8601Datetime(string $s): bool

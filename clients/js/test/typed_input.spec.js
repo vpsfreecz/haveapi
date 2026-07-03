@@ -113,6 +113,15 @@ describe('HaveAPI JS client typed input', function () {
     expect(reply.envelope.errors.i.join(' ')).to.match(/not a valid integer/);
   });
 
+  it('sends language headers', async () => {
+    client = new HaveAPI.Client(baseUrl, {
+      language: 'cs-CZ',
+      language_header: 'X-Language'
+    });
+
+    expect(client.requestHeaders({})['X-Language']).to.equal('cs-CZ');
+  });
+
   it('rejects non-integral numbers as integers', async () => {
     await setup(client);
     const reply = await invoke(client.test.echo, echoParams({ i: 12.3 }));

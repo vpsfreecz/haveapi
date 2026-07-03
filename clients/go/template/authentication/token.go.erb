@@ -65,7 +65,9 @@ func (client *Client) SetNewTokenAuth(options *TokenAuthOptions) error {
 	if err != nil {
 		return err
 	} else if !resp.Status {
-		return fmt.Errorf("Unable to request token: %v", resp.Message)
+		return fmt.Errorf("%s", t(client, "authentication.token_request_failed", map[string]string{
+			"message": resp.Message,
+		}))
 	}
 
 	if resp.Output.Complete {
@@ -101,11 +103,16 @@ func (auth *TokenAuth) nextAuthenticationStep(options *TokenAuthOptions, action 
 		input.SetToken(token)
 
 		if options.<%= "#{a.go_name}Callback" %> == nil {
-			return fmt.Errorf(<%= go_string_literal("Implement callback #{a.go_name}Callback") %>)
+			return fmt.Errorf("%s", t(auth.Resource.Client, "authentication.callback_required", map[string]string{
+				"callback": <%= go_string_literal("#{a.go_name}Callback") %>,
+			}))
 		}
 
 		if err := options.<%= "#{a.go_name}Callback" %>(input); err != nil {
-			return fmt.Errorf(<%= go_string_literal("#{a.go_name}Callback failed: %v") %>, err)
+			return fmt.Errorf("%s", t(auth.Resource.Client, "authentication.callback_failed", map[string]string{
+				"callback": <%= go_string_literal("#{a.go_name}Callback") %>,
+				"error": err.Error(),
+			}))
 		}
 
 		resp, err := request.Call()
@@ -113,7 +120,10 @@ func (auth *TokenAuth) nextAuthenticationStep(options *TokenAuthOptions, action 
 		if err != nil {
 			return err
 		} else if !resp.Status {
-			return fmt.Errorf("Failed at authentication step '%s': %v", action, resp.Message)
+			return fmt.Errorf("%s", t(auth.Resource.Client, "authentication.token_step_failed", map[string]string{
+				"action": action,
+				"message": resp.Message,
+			}))
 		}
 
 		if resp.Output.Complete {
@@ -130,7 +140,9 @@ func (auth *TokenAuth) nextAuthenticationStep(options *TokenAuthOptions, action 
 	}
 <% end -%>
 
-	return fmt.Errorf("Unsupported authentication action '%s'", action)
+	return fmt.Errorf("%s", t(auth.Resource.Client, "authentication.unsupported_auth_action", map[string]string{
+		"action": action,
+	}))
 }
 
 // SetExistingTokenAuth will use a previously acquired token
@@ -156,7 +168,9 @@ func (client *Client) RevokeAuthToken() error {
 	if err != nil {
 		return err
 	} else if !resp.Status {
-		return fmt.Errorf("Unable to revoke token: %v", resp.Message)
+		return fmt.Errorf("%s", t(client, "authentication.token_revoke_failed", map[string]string{
+			"message": resp.Message,
+		}))
 	}
 
 	client.Authentication = nil

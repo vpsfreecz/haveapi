@@ -2,10 +2,13 @@ package <%= package %>
 
 import (
 	"math"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+	"unsafe"
 )
 
 type ProgressCallbackReturn int
@@ -28,10 +31,22 @@ type ValidationError struct {
 	Errors map[string][]string
 }
 
-func NewValidationError() *ValidationError {
-	return &ValidationError{
+// Keep the exported ValidationError layout compatible with older generated clients.
+var validationErrorLanguages sync.Map
+
+func NewValidationError(client ...*Client) *ValidationError {
+	ret := &ValidationError{
 		Errors: make(map[string][]string),
 	}
+
+	if len(client) > 0 && client[0] != nil && client[0].Language != "" {
+		validationErrorLanguages.Store(validationErrorKey(ret), client[0].Language)
+		runtime.SetFinalizer(ret, func(e *ValidationError) {
+			validationErrorLanguages.Delete(validationErrorKey(e))
+		})
+	}
+
+	return ret
 }
 
 func (e *ValidationError) Add(param string, msg string) {
@@ -52,7 +67,11 @@ func (e *ValidationError) Empty() bool {
 
 func (e *ValidationError) Error() string {
 	if e == nil || len(e.Errors) == 0 {
-		return "validation failed"
+		if e == nil {
+			return t(nil, "validation.validation_failed", nil)
+		}
+
+		return tLanguage(e.language(), "validation.validation_failed", nil)
 	}
 
 	keys := make([]string, 0, len(e.Errors))
@@ -72,7 +91,27 @@ func (e *ValidationError) Error() string {
 		}
 	}
 
-	return "validation failed: " + strings.Join(parts, "; ")
+	return tLanguage(e.language(), "validation.validation_failed_with_errors", map[string]string{
+		"errors": strings.Join(parts, "; "),
+	})
+}
+
+func (e *ValidationError) language() string {
+	if e == nil {
+		return ""
+	}
+
+	v, ok := validationErrorLanguages.Load(validationErrorKey(e))
+	if !ok {
+		return ""
+	}
+
+	language, _ := v.(string)
+	return language
+}
+
+func validationErrorKey(e *ValidationError) uintptr {
+	return uintptr(unsafe.Pointer(e))
 }
 
 func isFiniteFloat64(v float64) bool {

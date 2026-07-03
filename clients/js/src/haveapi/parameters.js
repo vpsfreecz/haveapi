@@ -22,6 +22,10 @@ Parameters.prototype._addTypeError = function (name, msg) {
 	this.typeErrors[name].push(msg);
 };
 
+Parameters.prototype._message = function (key, values) {
+	return this.action.client.translate(key, values);
+};
+
 function isLeapYear (y) {
 	return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
 }
@@ -114,7 +118,7 @@ Parameters.prototype.coerceParams = function (params) {
 			if (desc.nullable === true)
 				ret[p] = null;
 			else
-				this._addTypeError(p, 'cannot be null');
+				this._addTypeError(p, this._message('validation.cannot_be_null'));
 			continue;
 		}
 
@@ -134,7 +138,7 @@ Parameters.prototype.coerceParams = function (params) {
 					if (isFinite(resourceId) && Math.floor(resourceId) === resourceId)
 						ret[p] = resourceId;
 					else
-						this._addTypeError(p, 'not a valid resource id');
+						this._addTypeError(p, this._message('validation.invalid_resource_id'));
 
 				} else if (typeof resourceId === 'string') {
 					var resourceStr = resourceId.trim();
@@ -142,10 +146,10 @@ Parameters.prototype.coerceParams = function (params) {
 					if (resourceStr !== '' && resourceStr.match(/^[+-]?\d+$/))
 						ret[p] = parseInt(resourceStr, 10);
 					else
-						this._addTypeError(p, 'not a valid resource id');
+						this._addTypeError(p, this._message('validation.invalid_resource_id'));
 
 				} else {
-					this._addTypeError(p, 'not a valid resource id');
+					this._addTypeError(p, this._message('validation.invalid_resource_id'));
 				}
 
 				break;
@@ -165,7 +169,7 @@ Parameters.prototype.coerceParams = function (params) {
 				}
 
 				if (intValue === undefined)
-					this._addTypeError(p, 'not a valid integer');
+					this._addTypeError(p, this._message('validation.invalid_integer'));
 				else
 					ret[p] = intValue;
 
@@ -190,7 +194,7 @@ Parameters.prototype.coerceParams = function (params) {
 				}
 
 				if (floatValue === undefined)
-					this._addTypeError(p, 'not a valid float');
+					this._addTypeError(p, this._message('validation.invalid_float'));
 				else
 					ret[p] = floatValue;
 
@@ -222,7 +226,7 @@ Parameters.prototype.coerceParams = function (params) {
 				}
 
 				if (boolValue === undefined)
-					this._addTypeError(p, 'not a valid boolean');
+					this._addTypeError(p, this._message('validation.invalid_boolean'));
 				else
 					ret[p] = boolValue;
 
@@ -243,7 +247,7 @@ Parameters.prototype.coerceParams = function (params) {
 				}
 
 				if (dtValue === undefined)
-					this._addTypeError(p, 'not in ISO 8601 format');
+					this._addTypeError(p, this._message('validation.invalid_datetime'));
 				else
 					ret[p] = dtValue;
 
@@ -254,7 +258,7 @@ Parameters.prototype.coerceParams = function (params) {
 				if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean')
 					ret[p] = String(v);
 				else
-					this._addTypeError(p, 'not a valid string');
+					this._addTypeError(p, this._message('validation.invalid_string'));
 
 				break;
 
@@ -299,7 +303,7 @@ Parameters.prototype.validate = function () {
 
 		if (!this.params.hasOwnProperty(name) || this.params[name] === undefined || this.params[name] === null) {
 			if (p.validators.present)
-				this.errors[name] = ['required parameter missing'];
+				this.errors[name] = [this._message('validation.required_parameter_missing')];
 
 			continue;
 		}

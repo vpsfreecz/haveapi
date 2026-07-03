@@ -113,7 +113,12 @@ class Action
         }
 
         if (preg_match("/\{[a-zA-Z0-9\-_]+\}/", $this->prepared_path)) {
-            throw new Exception\UnresolvedArguments("Cannot call action '{$this->resource->getName()}#{$this->m_name}': unresolved arguments.");
+            throw new Exception\UnresolvedArguments(
+                $this->client->translate(
+                    'errors.unresolved_arguments',
+                    ['action' => $this->resource->getName() . '#' . $this->m_name]
+                )
+            );
         }
 
         return $params;

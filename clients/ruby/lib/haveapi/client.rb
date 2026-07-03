@@ -1,6 +1,8 @@
 require 'require_all'
 require 'date'
 
+require_relative 'client/i18n'
+
 module HaveAPI
   module Client
     # Shortcut to HaveAPI::Client::Client.new

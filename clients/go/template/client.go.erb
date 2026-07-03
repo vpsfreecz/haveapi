@@ -13,6 +13,12 @@ type Client struct {
 	// Options for authentication method
 	Authentication Authenticator
 
+	// Language sent to the API server, e.g. "cs" or "cs-CZ".
+	Language string
+
+	// HTTP header used to send Language. Defaults to Accept-Language.
+	LanguageHeader string
+
 	httpClient            *http.Client
 	oauth2TrustedOrigins map[string]struct{}
 

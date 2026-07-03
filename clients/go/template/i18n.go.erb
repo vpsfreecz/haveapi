@@ -1,0 +1,198 @@
+package <%= package %>
+
+import (
+	"net/http"
+	"sort"
+	"strconv"
+	"strings"
+)
+
+const defaultLanguageHeader = "Accept-Language"
+
+var clientI18nMessages = map[string]map[string]map[string]string{
+<% i18n_messages.keys.sort.each do |locale| -%>
+	<%= go_string_literal(locale) %>: {
+<% i18n_messages[locale].keys.sort.each do |group| -%>
+		<%= go_string_literal(group) %>: {
+<% i18n_messages[locale][group].keys.sort.each do |key| -%>
+			<%= go_string_literal(key) %>: <%= go_string_literal(i18n_messages[locale][group][key]) %>,
+<% end -%>
+		},
+<% end -%>
+	},
+<% end -%>
+}
+
+// SetLanguage configures the value sent in the language request header.
+func (client *Client) SetLanguage(language string) error {
+	if strings.ContainsAny(language, "\x00\r\n") {
+		err := NewValidationError(client)
+		err.Errors["language"] = []string{
+			t(client, "validation.invalid_string", nil),
+		}
+		return err
+	}
+
+	client.Language = language
+	return nil
+}
+
+// SetLanguageHeader configures the HTTP header used by SetLanguage.
+func (client *Client) SetLanguageHeader(header string) error {
+	if !validHeaderName(header) {
+		err := NewValidationError(client)
+		err.Errors["language_header"] = []string{
+			t(client, "validation.invalid_string", nil),
+		}
+		return err
+	}
+
+	client.LanguageHeader = header
+	return nil
+}
+
+func (client *Client) addLanguageHeader(req *http.Request) {
+	if client == nil || req == nil || client.Language == "" {
+		return
+	}
+
+	req.Header.Set(client.languageHeaderName(), client.Language)
+}
+
+func (client *Client) languageHeaderName() string {
+	if client == nil || client.LanguageHeader == "" {
+		return defaultLanguageHeader
+	}
+
+	return client.LanguageHeader
+}
+
+func t(client *Client, key string, values map[string]string) string {
+	language := ""
+	if client != nil {
+		language = client.Language
+	}
+
+	return tLanguage(language, key, values)
+}
+
+func tLanguage(language string, key string, values map[string]string) string {
+	message := lookupMessage(localeFor(language), key)
+	if message == "" {
+		message = lookupMessage("en", key)
+	}
+	if message == "" {
+		message = key
+	}
+
+	for name, value := range values {
+		message = strings.ReplaceAll(message, "%{"+name+"}", value)
+	}
+
+	return message
+}
+
+func lookupMessage(locale string, key string) string {
+	parts := strings.Split(strings.TrimPrefix(key, "haveapi_client."), ".")
+	if len(parts) != 2 {
+		return ""
+	}
+
+	groups, ok := clientI18nMessages[locale]
+	if !ok {
+		return ""
+	}
+
+	messages, ok := groups[parts[0]]
+	if !ok {
+		return ""
+	}
+
+	return messages[parts[1]]
+}
+
+func localeFor(language string) string {
+	if language == "" {
+		return "en"
+	}
+
+	for _, tag := range parseAcceptLanguage(language) {
+		locale := normalizeLocale(tag)
+		if _, ok := clientI18nMessages[locale]; ok {
+			return locale
+		}
+	}
+
+	return "en"
+}
+
+func parseAcceptLanguage(header string) []string {
+	type tag struct {
+		name string
+		q    float64
+	}
+
+	tags := []tag{}
+	for _, part := range strings.Split(header, ",") {
+		tokens := strings.Split(part, ";")
+		name := strings.TrimSpace(tokens[0])
+		q := 1.0
+
+		for _, token := range tokens[1:] {
+			pair := strings.SplitN(token, "=", 2)
+			if len(pair) == 2 && strings.TrimSpace(pair[0]) == "q" {
+				if parsed, err := strconv.ParseFloat(strings.TrimSpace(pair[1]), 64); err == nil {
+					q = parsed
+				}
+			}
+		}
+
+		if name != "" && q > 0 {
+			tags = append(tags, tag{name: name, q: q})
+		}
+	}
+
+	sort.SliceStable(tags, func(i, j int) bool {
+		return tags[i].q > tags[j].q
+	})
+
+	ret := make([]string, 0, len(tags))
+	for _, tag := range tags {
+		ret = append(ret, tag.name)
+	}
+
+	return ret
+}
+
+func normalizeLocale(tag string) string {
+	normalized := strings.ToLower(strings.TrimSpace(strings.ReplaceAll(tag, "_", "-")))
+	if i := strings.Index(normalized, "."); i >= 0 {
+		normalized = normalized[:i]
+	}
+	if i := strings.Index(normalized, "-"); i >= 0 {
+		normalized = normalized[:i]
+	}
+
+	return normalized
+}
+
+func validHeaderName(header string) bool {
+	if header == "" {
+		return false
+	}
+
+	for _, r := range header {
+		if (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			continue
+		}
+
+		switch r {
+		case '!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '^', '_', '`', '|', '~':
+			continue
+		default:
+			return false
+		}
+	}
+
+	return true
+}

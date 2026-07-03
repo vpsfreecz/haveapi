@@ -15,6 +15,8 @@ class HaveAPI::Client::Client
   # @option opts [Integer] block_interval
   # @option opts [Integer] block_timeout
   # @option opts [Boolean] verify_ssl
+  # @option opts [String] language value sent in Accept-Language
+  # @option opts [String] language_header HTTP header used for language
   def initialize(url, opts = {})
     @setup = false
     @opts = opts
@@ -29,10 +31,17 @@ class HaveAPI::Client::Client
       @api = HaveAPI::Client::Communicator.new(
         url,
         @version,
-        **{ verify_ssl: opts[:verify_ssl] }.compact
+        **{
+          verify_ssl: opts[:verify_ssl],
+          language: opts[:language],
+          language_header: opts[:language_header]
+        }.compact
       )
       @api.identity = @opts[:identity]
     end
+
+    @api.language = @opts[:language] if @opts.has_key?(:language)
+    @api.language_header = @opts[:language_header] if @opts.has_key?(:language_header)
   end
 
   def inspect
@@ -81,6 +90,33 @@ class HaveAPI::Client::Client
   # @param opts [Hash] options
   def set_opts(opts)
     @opts.update(opts)
+    self.language = opts[:language] if opts.has_key?(:language)
+    self.language_header = opts[:language_header] if opts.has_key?(:language_header)
+  end
+
+  def language
+    @api.language
+  end
+
+  def language=(value)
+    @api.language = value
+  end
+
+  def language_header
+    @api.language_header
+  end
+
+  def language_header=(value)
+    @api.language_header = value
+  end
+
+  def client_message(key, **values)
+    if @api.respond_to?(:client_message)
+      @api.client_message(key, **values)
+    else
+      lang = @api.language if @api.respond_to?(:language)
+      HaveAPI::Client::I18n.t(lang || @opts[:language], key, values)
+    end
   end
 
   # @return [Hash] client options

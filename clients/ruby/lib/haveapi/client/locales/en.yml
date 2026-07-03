@@ -1,0 +1,41 @@
+---
+en:
+  haveapi_client:
+    authentication:
+      callback_failed: "%{callback} failed: %{error}"
+      callback_invalid_return: callback has to return an array or 'stop'
+      callback_required: Implement callback %{callback}
+      invalid_credentials: invalid credentials
+      invalid_oauth2_pkce_verifier: Invalid OAuth2 PKCE verifier
+      invalid_oauth2_state: Invalid OAuth2 state
+      mfa_required: implement multi-factor authentication
+      multistep_callback_required: add callback to handle multi-step authentication
+      oauth2_access_token_required: Option access_token must be provided
+      oauth2_not_configured: OAuth2 authentication is not configured
+      oauth2_revoke_failed: Unable to revoke access token, HTTP %{status}
+      token_request_failed: 'Unable to request token: %{message}'
+      token_revoke_failed: 'Unable to revoke token: %{message}'
+      token_step_failed: 'Failed at authentication step ''%{action}'': %{message}'
+      unsupported_auth_action: Unsupported authentication action '%{action}'
+    errors:
+      access_forbidden: Access forbidden. Bad user name or password? Not authorized?
+      action_failed: "%{action} failed: %{message}"
+      fatal_api_error: 'Fatal API error: %{error}'
+      input_parameters_not_valid: input parameters not valid
+      input_parameters_not_valid_for_action: Input parameters not valid for action
+        '%{action}'
+      invalid_input_parameters: invalid input parameters
+      uncancelable_action: 'Action state #%{id} cannot be cancelled'
+      unresolved_arguments: 'Unable to execute action ''%{action}'': unresolved arguments'
+    validation:
+      cannot_be_null: cannot be null
+      invalid_boolean: not a valid boolean
+      invalid_datetime: not in ISO 8601 format
+      invalid_float: not a valid float
+      invalid_input_layout: invalid input layout
+      invalid_integer: not a valid integer
+      invalid_resource_id: not a valid resource id
+      invalid_string: not a valid string
+      required_parameter_missing: required parameter missing
+      validation_failed: validation failed
+      validation_failed_with_errors: 'validation failed: %{errors}'

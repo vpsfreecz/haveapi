@@ -46,6 +46,7 @@ import (
 
 func main() {
 	api := client.New("https://api.vpsfree.cz")
+	api.SetLanguage("cs")
 	api.SetBasicAuthentication("admin", "secret")
 
 	action := api.Cluster.PublicStats.Prepare()
@@ -62,3 +63,17 @@ func main() {
 	fmt.Printf("%+v\n", resp.Output)
 }
 ```
+
+## Localization
+
+Generated clients include bundled HaveAPI client translations. Set the
+language before making requests:
+
+```go
+api := client.New("https://api.vpsfree.cz")
+api.SetLanguage("cs")
+```
+
+The value is sent in `Accept-Language` by default. Use
+`SetLanguageHeader("X-Language")` when the API is configured with a custom
+language header.

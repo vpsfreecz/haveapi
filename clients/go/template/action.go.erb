@@ -367,7 +367,7 @@ func (inv *<%= action.go_invocation_type %>) IsMetaParameterNil(param string) bo
 <% end -%>
 
 func (inv *<%= action.go_invocation_type %>) validate() error {
-	verr := NewValidationError()
+	verr := NewValidationError(inv.Action.Client)
 <% if action.has_input? -%>
 	if inv.Input != nil {
 <% action.input.parameters.each do |p| -%>
@@ -376,18 +376,18 @@ func (inv *<%= action.go_invocation_type %>) validate() error {
 			if !inv.IsParameterNil(<%= go_string_literal(p.go_name) %>) {
 <% if p.type == 'Float' -%>
 			if !isFiniteFloat64(inv.Input.<%= p.go_name %>) {
-				verr.Add(<%= go_string_literal(p.name) %>, "not a valid float")
+				verr.Add(<%= go_string_literal(p.name) %>, t(inv.Action.Client, "validation.invalid_float", nil))
 			}
 <% elsif p.type == 'Datetime' -%>
 			normalized, ok := normalizeAndCheckDatetimeString(inv.Input.<%= p.go_name %>)
 			if !ok {
-				verr.Add(<%= go_string_literal(p.name) %>, "not a valid datetime")
+				verr.Add(<%= go_string_literal(p.name) %>, t(inv.Action.Client, "validation.invalid_datetime", nil))
 			} else {
 				inv.Input.<%= p.go_name %> = normalized
 			}
 <% elsif p.type == 'Resource' -%>
 			if inv.Input.<%= p.go_name %> < 0 {
-				verr.Add(<%= go_string_literal(p.name) %>, "not a valid resource id")
+				verr.Add(<%= go_string_literal(p.name) %>, t(inv.Action.Client, "validation.invalid_resource_id", nil))
 			}
 <% end -%>
 			}
@@ -404,18 +404,18 @@ func (inv *<%= action.go_invocation_type %>) validate() error {
 			if !inv.IsMetaParameterNil(<%= go_string_literal(p.go_name) %>) {
 <% if p.type == 'Float' -%>
 			if !isFiniteFloat64(inv.MetaInput.<%= p.go_name %>) {
-				verr.Add(<%= go_string_literal(p.name) %>, "not a valid float")
+				verr.Add(<%= go_string_literal(p.name) %>, t(inv.Action.Client, "validation.invalid_float", nil))
 			}
 <% elsif p.type == 'Datetime' -%>
 			normalized, ok := normalizeAndCheckDatetimeString(inv.MetaInput.<%= p.go_name %>)
 			if !ok {
-				verr.Add(<%= go_string_literal(p.name) %>, "not a valid datetime")
+				verr.Add(<%= go_string_literal(p.name) %>, t(inv.Action.Client, "validation.invalid_datetime", nil))
 			} else {
 				inv.MetaInput.<%= p.go_name %> = normalized
 			}
 <% elsif p.type == 'Resource' -%>
 			if inv.MetaInput.<%= p.go_name %> < 0 {
-				verr.Add(<%= go_string_literal(p.name) %>, "not a valid resource id")
+				verr.Add(<%= go_string_literal(p.name) %>, t(inv.Action.Client, "validation.invalid_resource_id", nil))
 			}
 <% end -%>
 			}

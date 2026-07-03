@@ -1,4 +1,7 @@
 PreCommit:
+  HaveapiI18n:
+    enabled: true
+    required: true
   RuboCop:
     enabled: true
   PhpCsFixer:

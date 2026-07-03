@@ -6,7 +6,12 @@ module HaveAPI::Client
 
     def initialize(response)
       if response.respond_to?(:action)
-        super("#{response.action.name} failed: #{response.message}")
+        msg = response.action.client_message(
+          'errors.action_failed',
+          action: response.action.name,
+          message: response.message
+        )
+        super(msg)
       else
         super(response.to_s)
       end
@@ -19,7 +24,8 @@ module HaveAPI::Client
     attr_reader :errors
 
     def initialize(action, errors)
-      super("#{action.name} failed: input parameters not valid")
+      message = action.client_message('errors.input_parameters_not_valid')
+      super(action.client_message('errors.action_failed', action: action.name, message: message))
 
       @action = action
       @errors = errors

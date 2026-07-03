@@ -28,7 +28,7 @@ class OAuth2 extends Base
         if (isset($this->opts['client_id'])) {
             $headers = [
                 'User-Agent' => $this->client->getIdentity(),
-            ];
+            ] + $this->client->getLanguageHeaders();
 
             $ip = $this->client->getClientIp();
 
@@ -96,11 +96,15 @@ class OAuth2 extends Base
                 || !is_string($_SESSION['oauth2state'])
                 || !hash_equals($_SESSION['oauth2state'], $_GET['state'])
             ) {
-                throw new \HaveAPI\Client\Exception\AuthenticationFailed('Invalid OAuth2 state');
+                throw new \HaveAPI\Client\Exception\AuthenticationFailed(
+                    $this->client->translate('authentication.invalid_oauth2_state')
+                );
             }
 
             if (!isset($_SESSION['oauth2pkceCode']) || !is_string($_SESSION['oauth2pkceCode'])) {
-                throw new \HaveAPI\Client\Exception\AuthenticationFailed('Invalid OAuth2 PKCE verifier');
+                throw new \HaveAPI\Client\Exception\AuthenticationFailed(
+                    $this->client->translate('authentication.invalid_oauth2_pkce_verifier')
+                );
             }
 
             $this->genericProvider->setPkceCode($_SESSION['oauth2pkceCode']);

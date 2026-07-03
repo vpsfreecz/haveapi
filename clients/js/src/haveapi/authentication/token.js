@@ -118,7 +118,7 @@ Authentication.Token.prototype.authenticationStep = function(action, input, call
 					callback(that.client, true);
 			} else {
 				if (that.opts.callback === undefined)
-					throw "implement multi-factor authentication";
+					throw that.client.translate('authentication.mfa_required');
 
 				var cont = function (input) {
 					that.authenticationStep(

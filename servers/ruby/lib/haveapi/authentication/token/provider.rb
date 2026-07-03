@@ -177,7 +177,7 @@ module HaveAPI::Authentication
           tokens.first
         else
           raise HaveAPI::Authentication::TokenConflict,
-                'Multiple authentication tokens provided'
+                HaveAPI.t('haveapi.authentication.multiple_tokens')
         end
       end
 
@@ -245,7 +245,7 @@ module HaveAPI::Authentication
             def validate!
               validate
             rescue HaveAPI::ValidationError => e
-              error!(e.message, e.to_hash, http_status: 400)
+              error!(e.message_value, e.to_hash, http_status: 400)
             end
 
             def exec
@@ -261,7 +261,9 @@ module HaveAPI::Authentication
               end
 
               unless result.ok?
-                error!(result.error || 'invalid authentication credentials')
+                error!(
+                  result.error || HaveAPI.message('haveapi.authentication.invalid_credentials')
+                )
               end
 
               {
@@ -292,7 +294,7 @@ module HaveAPI::Authentication
 
               unless user
                 error!(
-                  'Action requires user to authenticate with a token',
+                  HaveAPI.message('haveapi.authentication.token_required'),
                   {},
                   http_status: 401
                 )
@@ -311,7 +313,7 @@ module HaveAPI::Authentication
               if result.ok?
                 ok!
               else
-                error!(result.error || 'revoke failed')
+                error!(result.error || HaveAPI.message('haveapi.authentication.revoke_failed'))
               end
             end
           end
@@ -339,7 +341,7 @@ module HaveAPI::Authentication
 
               unless user
                 error!(
-                  'Action requires user to authenticate with a token',
+                  HaveAPI.message('haveapi.authentication.token_required'),
                   {},
                   http_status: 401
                 )
@@ -358,7 +360,7 @@ module HaveAPI::Authentication
               if result.ok?
                 { valid_to: result.valid_to }
               else
-                error!(result.error || 'renew failed')
+                error!(result.error || HaveAPI.message('haveapi.authentication.renew_failed'))
               end
             end
           end
@@ -387,7 +389,7 @@ module HaveAPI::Authentication
               def validate!
                 validate
               rescue HaveAPI::ValidationError => e
-                error!(e.message, e.to_hash, http_status: 400)
+                error!(e.message_value, e.to_hash, http_status: 400)
               end
 
               define_method(:exec) do
@@ -402,7 +404,7 @@ module HaveAPI::Authentication
                 end
 
                 unless result.ok?
-                  error!(result.error || 'authentication failed')
+                  error!(result.error || HaveAPI.message('haveapi.authentication.failed'))
                 end
 
                 {

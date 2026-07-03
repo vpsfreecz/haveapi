@@ -3,6 +3,7 @@ require 'rspec/core'
 require 'rspec/core/rake_task'
 require 'active_support/core_ext/string/inflections'
 require 'haveapi'
+require 'haveapi/tasks/i18n'
 require 'haveapi/tasks/yard'
 
 RSpec::Core::RakeTask.new(:spec) do |spec|

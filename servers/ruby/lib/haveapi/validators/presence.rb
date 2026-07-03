@@ -21,14 +21,16 @@ module HaveAPI
       @empty = take(:empty, false)
       @message = take(
         :message,
-        @empty ? 'must be present' : 'must be present and non-empty'
+        HaveAPI.message(
+          @empty ? 'haveapi.validators.presence.present' : 'haveapi.validators.presence.non_empty'
+        )
       )
     end
 
     def describe
       {
         empty: @empty,
-        message: @message
+        message: HaveAPI.localize(@message)
       }
     end
 

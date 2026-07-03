@@ -81,7 +81,10 @@ module HaveAPI::ModelAdapters
 
           if limit && limit > HaveAPI::Actions::Paginable::MAX_LIMIT
             error!(
-              "limit has to be maximally #{HaveAPI::Actions::Paginable::MAX_LIMIT}",
+              HaveAPI.message(
+                'haveapi.pagination.limit_max',
+                max: HaveAPI::Actions::Paginable::MAX_LIMIT
+              ),
               {},
               http_status: 400
             )
@@ -174,18 +177,18 @@ module HaveAPI::ModelAdapters
         if raw.nil?
           return nil if allow_null
 
-          raise HaveAPI::ValidationError, "not a valid id #{original.inspect}"
+          raise invalid_id(original)
         end
 
         if raw.is_a?(Array) || raw.is_a?(Hash) || [true, false].include?(raw)
-          raise HaveAPI::ValidationError, "not a valid id #{original.inspect}"
+          raise invalid_id(original)
         elsif raw.is_a?(String)
           stripped = raw.strip
 
           if stripped.empty?
             return nil if allow_null
 
-            raise HaveAPI::ValidationError, "not a valid id #{original.inspect}"
+            raise invalid_id(original)
           end
 
           raw = stripped
@@ -193,7 +196,7 @@ module HaveAPI::ModelAdapters
 
         value = if integer_pk?(model)
                   id = coerce_integer_id(raw, original)
-                  raise HaveAPI::ValidationError, "not a valid id #{original.inspect}" if id < 0
+                  raise invalid_id(original) if id < 0
 
                   id
                 else
@@ -207,14 +210,14 @@ module HaveAPI::ModelAdapters
               end
 
         if ret.nil? && !allow_null
-          raise HaveAPI::ValidationError, 'resource not found'
+          raise resource_not_found
         end
 
         ret
       rescue ::ActiveRecord::RecordNotFound
-        raise HaveAPI::ValidationError, 'resource not found'
+        raise resource_not_found
       rescue ArgumentError, TypeError
-        raise HaveAPI::ValidationError, "not a valid id #{original.inspect}"
+        raise invalid_id(original)
       end
 
       def self.integer_pk?(model)
@@ -232,7 +235,7 @@ module HaveAPI::ModelAdapters
           raw
         when Float
           unless raw.finite? && (raw % 1) == 0
-            raise HaveAPI::ValidationError, "not a valid id #{original.inspect}"
+            raise invalid_id(original)
           end
 
           raw.to_i
@@ -240,13 +243,25 @@ module HaveAPI::ModelAdapters
           s = raw.strip
 
           if s.empty? || !s.match?(/\A[+-]?\d+\z/)
-            raise HaveAPI::ValidationError, "not a valid id #{original.inspect}"
+            raise invalid_id(original)
           end
 
           Integer(s, 10)
         else
-          raise HaveAPI::ValidationError, "not a valid id #{original.inspect}"
+          raise invalid_id(original)
         end
+      end
+
+      def self.invalid_id(original)
+        HaveAPI::ValidationError.new(
+          HaveAPI.message('haveapi.validation.invalid_id', value: original.inspect)
+        )
+      end
+
+      def self.resource_not_found
+        HaveAPI::ValidationError.new(
+          HaveAPI.message('haveapi.validation.resource_not_found')
+        )
       end
     end
 
@@ -268,12 +283,14 @@ module HaveAPI::ModelAdapters
                    elsif raw.is_a?(Array)
                      raw
                    else
-                     raise HaveAPI::ValidationError, 'includes must be a string or array'
+                     raise HaveAPI::ValidationError,
+                           HaveAPI.message('haveapi.validation.includes_string_or_array')
                    end
 
           values.map do |value|
             unless value.is_a?(String)
-              raise HaveAPI::ValidationError, 'includes must contain only strings'
+              raise HaveAPI::ValidationError,
+                    HaveAPI.message('haveapi.validation.includes_only_strings')
             end
 
             value.strip

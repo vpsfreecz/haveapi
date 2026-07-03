@@ -23,13 +23,16 @@ module HaveAPI
                  take(:value)
                end
 
-      @message = take(:message, "has to be #{@value}")
+      @message = take(
+        :message,
+        HaveAPI.message('haveapi.validators.acceptance.accepted', value: @value)
+      )
     end
 
     def describe
       {
         value: @value,
-        message: @message
+        message: HaveAPI.localize(@message)
       }
     end
 

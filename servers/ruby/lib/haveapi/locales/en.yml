@@ -1,0 +1,74 @@
+---
+en:
+  haveapi:
+    action_state:
+      cancellation_failed: cancellation failed
+      not_found: action state not found
+      timeout_max: timeout has to be maximally %{max}
+    authentication:
+      failed: authentication failed
+      invalid_credentials: invalid authentication credentials
+      multiple_oauth2_tokens: Multiple OAuth2 tokens provided
+      multiple_tokens: Multiple authentication tokens provided
+      renew_failed: renew failed
+      required: Action requires user to authenticate
+      revoke_failed: revoke failed
+      token_required: Action requires user to authenticate with a token
+    authorization:
+      insufficient_permissions: Access denied. Insufficient permissions.
+    errors:
+      action_not_found: Action not found
+      bad_accept_header: Bad Accept header
+      bad_json_syntax: Bad JSON syntax
+      json_body_object: JSON body must be an object
+      server_error: Server error occurred
+      unsupported_content_type: Unsupported Content-Type
+    pagination:
+      limit_max: limit has to be maximally %{max}
+    types:
+      invalid_boolean: not a valid boolean %{value}
+      invalid_datetime: not in ISO 8601 format '%{value}'
+      invalid_float: not a valid float %{value}
+      invalid_integer: not a valid integer %{value}
+      invalid_string: not a valid string %{value}
+    validation:
+      cannot_be_null: cannot be null
+      includes_only_strings: includes must contain only strings
+      includes_string_or_array: includes must be a string or array
+      input_parameters_not_valid: input parameters not valid
+      invalid_id: not a valid id %{value}
+      invalid_input_layout: invalid input layout
+      invalid_path_parameter_encoding: invalid path parameter encoding
+      invalid_string_encoding: invalid string encoding
+      required_parameter_missing: required parameter missing
+      resource_not_found: resource not found
+    validators:
+      acceptance:
+        accepted: has to be %{value}
+      confirmation:
+        different: must be different from %{parameter}
+        same: must be the same as %{parameter}
+      exclusion:
+        excluded: "%{value} cannot be used"
+      format:
+        invalid: "%{value} is not in a valid format"
+      inclusion:
+        included: "%{value} cannot be used"
+      length:
+        equals: length has to be %{equals}
+        max: length has to be maximally %{max}
+        min: length has to be minimally %{min}
+        range: length has to be in range <%{min}, %{max}>
+      numericality:
+        composite: "%{requirements}"
+        even: even
+        max: has to be maximally %{max}
+        min: has to be minimally %{min}
+        mod: mod %{mod} must equal zero
+        number: has to be a number
+        odd: odd
+        range: has to be in range <%{min}, %{max}>
+        step: in steps of %{step}
+      presence:
+        non_empty: must be present and non-empty
+        present: must be present

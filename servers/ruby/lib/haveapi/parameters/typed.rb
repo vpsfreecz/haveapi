@@ -56,8 +56,8 @@ module HaveAPI::Parameters
       {
         required: required?,
         nullable: nullable?,
-        label: @label,
-        description: @desc,
+        label: HaveAPI.localize(@label),
+        description: HaveAPI.localize(@desc),
         type: @type ? @type.to_s : String.to_s,
         validators: @validators ? @validators.describe : {},
         default: @default,
@@ -88,7 +88,7 @@ module HaveAPI::Parameters
       if raw.nil?
         return nil if nullable?
 
-        raise HaveAPI::ValidationError, 'cannot be null'
+        raise validation_error('haveapi.validation.cannot_be_null')
       end
 
       if raw.is_a?(String)
@@ -154,7 +154,7 @@ module HaveAPI::Parameters
 
     def validate_cleaned_value(value)
       if value.nil? && !nullable?
-        raise HaveAPI::ValidationError, 'cannot be null'
+        raise validation_error('haveapi.validation.cannot_be_null')
       end
 
       value
@@ -188,7 +188,7 @@ module HaveAPI::Parameters
     def strip_string(value)
       value.strip
     rescue ArgumentError, Encoding::CompatibilityError
-      raise HaveAPI::ValidationError, 'invalid string encoding'
+      raise validation_error('haveapi.validation.invalid_string_encoding')
     end
 
     def coerce_integer(raw)
@@ -197,7 +197,7 @@ module HaveAPI::Parameters
         raw
       when Float
         unless raw.finite? && (raw % 1) == 0
-          raise HaveAPI::ValidationError, "not a valid integer #{raw.inspect}"
+          raise validation_error('haveapi.types.invalid_integer', value: raw.inspect)
         end
 
         raw.to_i
@@ -205,12 +205,12 @@ module HaveAPI::Parameters
         s = strip_string(raw)
 
         if s.empty? || !s.match?(/\A[+-]?\d+\z/)
-          raise HaveAPI::ValidationError, "not a valid integer #{raw.inspect}"
+          raise validation_error('haveapi.types.invalid_integer', value: raw.inspect)
         end
 
         Integer(s, 10)
       else
-        raise HaveAPI::ValidationError, "not a valid integer #{raw.inspect}"
+        raise validation_error('haveapi.types.invalid_integer', value: raw.inspect)
       end
     end
 
@@ -220,19 +220,19 @@ module HaveAPI::Parameters
 
       elsif raw.is_a?(String)
         s = strip_string(raw)
-        raise HaveAPI::ValidationError, "not a valid float #{raw.inspect}" if s.empty?
+        raise validation_error('haveapi.types.invalid_float', value: raw.inspect) if s.empty?
 
         begin
           f = Float(s)
         rescue ArgumentError
-          raise HaveAPI::ValidationError, "not a valid float #{raw.inspect}"
+          raise validation_error('haveapi.types.invalid_float', value: raw.inspect)
         end
 
       else
-        raise HaveAPI::ValidationError, "not a valid float #{raw.inspect}"
+        raise validation_error('haveapi.types.invalid_float', value: raw.inspect)
       end
 
-      raise HaveAPI::ValidationError, "not a valid float #{raw.inspect}" unless f.finite?
+      raise validation_error('haveapi.types.invalid_float', value: raw.inspect) unless f.finite?
 
       f
     end
@@ -247,35 +247,39 @@ module HaveAPI::Parameters
 
       elsif raw.is_a?(String)
         s = strip_string(raw)
-        raise HaveAPI::ValidationError, "not a valid boolean #{raw.inspect}" if s.empty?
+        raise validation_error('haveapi.types.invalid_boolean', value: raw.inspect) if s.empty?
 
         return true if %w[true t yes y 1].include?(s.downcase)
         return false if %w[false f no n 0].include?(s.downcase)
       end
 
-      raise HaveAPI::ValidationError, "not a valid boolean #{raw.inspect}"
+      raise validation_error('haveapi.types.invalid_boolean', value: raw.inspect)
     end
 
     def coerce_datetime(raw)
       unless raw.is_a?(String)
-        raise HaveAPI::ValidationError, "not in ISO 8601 format '#{raw}'"
+        raise validation_error('haveapi.types.invalid_datetime', value: raw)
       end
 
       if strip_string(raw).empty?
-        raise HaveAPI::ValidationError, "not in ISO 8601 format '#{raw}'"
+        raise validation_error('haveapi.types.invalid_datetime', value: raw)
       end
 
       DateTime.iso8601(raw).to_time
     rescue ArgumentError, TypeError
-      raise HaveAPI::ValidationError, "not in ISO 8601 format '#{raw}'"
+      raise validation_error('haveapi.types.invalid_datetime', value: raw)
     end
 
     def coerce_string(raw)
       if raw.is_a?(Array) || raw.is_a?(Hash)
-        raise HaveAPI::ValidationError, "not a valid string #{raw.inspect}"
+        raise validation_error('haveapi.types.invalid_string', value: raw.inspect)
       end
 
       raw.to_s
+    end
+
+    def validation_error(key, **values)
+      HaveAPI::ValidationError.new(HaveAPI.message(key, **values))
     end
   end
 end

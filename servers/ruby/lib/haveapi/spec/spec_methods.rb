@@ -19,6 +19,14 @@ module HaveAPI::Spec
       @api.action_state_auth = asa if asa
       ves = get_opt(:validation_error_http_status)
       @api.validation_error_http_status = ves if ves
+      dl = get_opt(:default_locale)
+      @api.default_locale = dl if dl
+      al = get_opt(:available_locales)
+      @api.available_locales = al if al
+      lh = get_opt(:locale_header)
+      @api.locale_header = lh if lh
+      locale = get_opt(:locale)
+      @api.locale(&locale) if locale
       @api.mount(get_opt(:mount) || '/')
       @api.app
     end

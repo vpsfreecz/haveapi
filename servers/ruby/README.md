@@ -224,6 +224,53 @@ This should start the application using WEBrick. Check
 
 and more.
 
+## Localization
+
+HaveAPI can translate framework-owned response messages, validation errors and
+validator descriptions using Ruby `i18n`. The JSON envelope shape does not
+change; `message`, `errors` and self-description validator messages are still
+plain strings. Existing application-supplied strings passed to `error!` or
+custom validator `message:` options are returned unchanged.
+
+English is the default locale. Czech translations are bundled and can be
+selected with `Accept-Language: cs` or a regional tag such as
+`Accept-Language: cs-CZ`.
+
+```ruby
+api = HaveAPI::Server.new(MyAPI)
+
+api.default_locale = :en
+api.available_locales = %i[en cs]
+api.locale_header = 'Accept-Language'
+
+api.locale do |request:, current_user:, default_locale:|
+  current_user&.language&.code || default_locale
+end
+```
+
+The explicit request header has precedence over the resolver. The resolver is
+called again after authentication, so applications can use authenticated user
+preferences when the client did not request a locale. If `locale_header` is set
+to a custom header name, HaveAPI also allows that header in CORS preflight
+responses. The header value uses the same syntax as `Accept-Language`.
+
+Actions can opt into application translations by passing lazy messages to
+`error!` or validator options:
+
+```ruby
+error!(api_message('my_api.errors.quota_exceeded', limit: max_limit))
+
+input do
+  string :name, required: {
+    message: HaveAPI.message('my_api.validation.name_required')
+  }
+end
+```
+
+Use `api_t(key, **values)` when an immediate string translation is needed in an
+action. Use `HaveAPI.message(key, **values)` in class-level DSL blocks such as
+`input`.
+
 ### Run with rackup
 Use the same code as above, only the last line would be
 

@@ -231,7 +231,7 @@ module HaveAPI
 
         {
           auth: @auth,
-          description: @desc,
+          description: HaveAPI.localize(@desc),
           aliases: @aliases,
           blocking: @blocking ? true : false,
           input: @input ? @input.describe(context) : { parameters: {} },
@@ -339,7 +339,7 @@ module HaveAPI
       status = @context.server.validation_error_http_status
       opts[:http_status] = status if status
 
-      error!(e.message, e.to_hash, opts)
+      error!(e.message_value, e.to_hash, opts)
     end
 
     def authorized?(user)
@@ -397,7 +397,7 @@ module HaveAPI
         if tmp.empty?
           p e.message
           puts e.backtrace
-          error!('Server error occurred', {}, http_status: 500)
+          error!(HaveAPI.message('haveapi.errors.server_error'), {}, http_status: 500)
         end
 
         unless tmp[:status]
@@ -415,7 +415,7 @@ module HaveAPI
 
         return [
           tmp[:status] || false,
-          tmp[:message] || 'Server error occurred',
+          tmp[:message] || HaveAPI.message('haveapi.errors.server_error'),
           {},
           tmp[:http_status] || 500
         ]
@@ -590,6 +590,14 @@ module HaveAPI
       @errors = errs
       @http_status = opts[:http_status]
       throw(:return, false)
+    end
+
+    def api_message(...)
+      HaveAPI.message(...)
+    end
+
+    def api_t(...)
+      HaveAPI.t(...)
     end
 
     private

@@ -127,7 +127,7 @@ module HaveAPI::Authentication
             tokens.first
           else
             raise HaveAPI::Authentication::TokenConflict,
-                  'Multiple OAuth2 tokens provided'
+                  HaveAPI.t('haveapi.authentication.multiple_oauth2_tokens')
           end
 
         token && config.find_user_by_access_token(request, token)

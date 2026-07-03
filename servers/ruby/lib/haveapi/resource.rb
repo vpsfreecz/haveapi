@@ -80,7 +80,7 @@ module HaveAPI
     end
 
     def self.describe(hash, context)
-      ret = { description: desc, actions: {}, resources: {} }
+      ret = { description: HaveAPI.localize(desc), actions: {}, resources: {} }
 
       context.resource = self
 

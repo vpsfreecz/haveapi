@@ -101,7 +101,7 @@ module HaveAPI::Parameters
       if raw.nil?
         return nil if nullable?
 
-        raise HaveAPI::ValidationError, 'cannot be null'
+        raise validation_error('haveapi.validation.cannot_be_null')
       end
 
       if raw.is_a?(String)
@@ -133,7 +133,7 @@ module HaveAPI::Parameters
     def strip_string(value)
       value.strip
     rescue ArgumentError, Encoding::CompatibilityError
-      raise HaveAPI::ValidationError, 'invalid string encoding'
+      raise validation_error('haveapi.validation.invalid_string_encoding')
     end
 
     def build_resource_path(r)
@@ -175,7 +175,11 @@ module HaveAPI::Parameters
       action = show_action.new(context.request, context.version, path_params, {}, child_context)
       return if action.authorized?(context.current_user)
 
-      raise HaveAPI::ValidationError, 'resource not found'
+      raise validation_error('haveapi.validation.resource_not_found')
+    end
+
+    def validation_error(key, **values)
+      HaveAPI::ValidationError.new(HaveAPI.message(key, **values))
     end
   end
 end

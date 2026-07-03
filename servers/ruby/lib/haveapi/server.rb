@@ -6,9 +6,10 @@ require 'haveapi/hooks'
 
 module HaveAPI
   class Server
-    attr_accessor :default_version, :action_state, :validation_error_http_status
+    attr_accessor :default_version, :action_state, :validation_error_http_status,
+                  :default_locale
     attr_reader :root, :routes, :module_name, :auth_chain, :versions, :extensions,
-                :action_state_auth
+                :action_state_auth, :locale_header, :available_locales
 
     include Hookable
 
@@ -57,6 +58,50 @@ module HaveAPI
              }
 
     module ServerHelpers
+      def setup_request_locale
+        return if @haveapi_locale_setup
+
+        server = settings.api_server
+        @haveapi_previous_locale = ::I18n.locale
+        locale_header_value = server.locale_header_value(request)
+        @haveapi_locale_requested = !locale_header_value.nil?
+        @haveapi_explicit_locale = server.request_locale(request)
+        @haveapi_locale = if @haveapi_locale_requested
+                            @haveapi_explicit_locale || server.default_locale
+                          else
+                            server.resolved_locale(
+                              request:,
+                              current_user: nil
+                            )
+                          end
+        server.activate_locale(@haveapi_locale)
+        add_vary_header(server.locale_header) if server.locale_header
+        @haveapi_locale_setup = true
+      end
+
+      def resolve_request_locale(user = current_user)
+        setup_request_locale
+        return @haveapi_locale if @haveapi_locale_requested
+
+        @haveapi_locale = settings.api_server.resolved_locale(
+          request:,
+          current_user: user
+        )
+        settings.api_server.activate_locale(@haveapi_locale)
+      end
+
+      def restore_request_locale
+        return unless @haveapi_locale_setup
+
+        settings.api_server.activate_locale(@haveapi_previous_locale)
+      end
+
+      def add_vary_header(name)
+        values = response['Vary'].to_s.split(/\s*,\s*/).reject(&:empty?)
+        values << name unless values.include?(name)
+        headers 'Vary' => values.join(', ')
+      end
+
       def setup_formatter
         return if @formatter
 
@@ -64,7 +109,7 @@ module HaveAPI
         accept = request.accept
       rescue ArgumentError, EncodingError
         @formatter.supports?([])
-        report_error(400, {}, 'Bad Accept header')
+        report_error(400, {}, HaveAPI.message('haveapi.errors.bad_accept_header'))
       else
         unless @formatter.supports?(accept)
           @halted = true
@@ -79,7 +124,10 @@ module HaveAPI
       end
 
       def authenticated?(v)
-        return @current_user if @current_user
+        if @current_user
+          resolve_request_locale
+          return @current_user
+        end
 
         begin
           @current_user = settings.api_server.send(:do_authenticate, v, request)
@@ -92,12 +140,13 @@ module HaveAPI
           report_error(400, {}, e.message)
         end
         settings.api_server.call_hooks_for(:post_authenticated, args: [@current_user])
+        resolve_request_locale
         @current_user
       end
 
       def authenticated_versions
-        settings.api_server.versions.each_with_object({}) do |v, ret|
-          ret[v] = settings.api_server.send(:do_authenticate, v, request)
+        ret = settings.api_server.versions.each_with_object({}) do |v, users|
+          users[v] = settings.api_server.send(:do_authenticate, v, request)
         rescue HaveAPI::Authentication::TokenConflict => e
           unless @formatter
             @formatter = OutputFormatter.new
@@ -106,6 +155,9 @@ module HaveAPI
 
           report_error(400, {}, e.message)
         end
+
+        resolve_request_locale(ret[settings.api_server.default_version] || ret.values.compact.first)
+        ret
       end
 
       def access_control
@@ -133,7 +185,7 @@ module HaveAPI
         report_error(
           401,
           { 'www-authenticate' => 'Basic realm="Restricted Area"' },
-          'Action requires user to authenticate'
+          HaveAPI.message('haveapi.authentication.required')
         )
       end
 
@@ -170,7 +222,7 @@ module HaveAPI
         report_error(
           tmp[:http_status] || 500,
           {},
-          tmp[:message] || 'Server error occurred'
+          tmp[:message] || HaveAPI.message('haveapi.errors.server_error')
         )
       end
 
@@ -260,6 +312,62 @@ module HaveAPI
       @extensions = []
       @action_state_auth = :backend
       @validation_error_http_status = nil
+      @default_locale = :en
+      self.available_locales = HaveAPI::I18n.available_locales
+      self.locale_header = 'Accept-Language'
+    end
+
+    def available_locales=(locales)
+      @available_locales = Array(locales)
+      allow_i18n_locales(@available_locales)
+    end
+
+    def locale_header=(header)
+      @locale_header = header
+      allow_header(header) if header
+    end
+
+    def activate_locale(locale)
+      allow_i18n_locales([locale])
+      ::I18n.locale = locale
+    end
+
+    def allow_i18n_locales(locales)
+      requested = Array(locales).compact.map { |locale| locale.to_s.to_sym }
+      current = ::I18n.available_locales
+      missing = requested.reject do |locale|
+        current.any? { |available| available.to_s == locale.to_s }
+      end
+
+      ::I18n.available_locales = current + missing unless missing.empty?
+    end
+
+    def locale(&block)
+      @locale_resolver = block if block
+      @locale_resolver
+    end
+
+    def request_locale(request)
+      HaveAPI::I18n.accept_language(
+        locale_header_value(request),
+        available_locales
+      )
+    end
+
+    def locale_header_value(request)
+      request.env["HTTP_#{locale_header.to_s.upcase.tr('-', '_')}"]
+    end
+
+    def resolved_locale(request:, current_user:)
+      locale = if @locale_resolver
+                 @locale_resolver.call(
+                   request:,
+                   current_user:,
+                   default_locale:
+                 )
+               end
+
+      HaveAPI::I18n.normalize_locale(locale, available_locales) || default_locale
     end
 
     def action_state_auth=(mode)
@@ -321,6 +429,8 @@ module HaveAPI
         helpers DocHelpers
 
         before do
+          setup_request_locale
+
           if request.env['HTTP_ORIGIN']
             headers 'access-control-allow-origin' => '*',
                     'access-control-allow-credentials' => 'false'
@@ -329,7 +439,7 @@ module HaveAPI
 
         not_found do
           setup_formatter
-          report_error(404, {}, 'Action not found') unless @halted
+          report_error(404, {}, HaveAPI.message('haveapi.errors.action_not_found')) unless @halted
         end
 
         error do
@@ -337,6 +447,8 @@ module HaveAPI
         end
 
         after do
+          restore_request_locale
+
           if Object.const_defined?(:ActiveRecord)
             ActiveRecord::Base.connection_handler.clear_active_connections!
           end
@@ -584,17 +696,17 @@ module HaveAPI
           body_method = !%i[get head options].include?(route.http_method.to_sym)
 
           if body_method && !raw_body.empty? && !settings.api_server.send(:json_content_type?, request)
-            report_error(415, {}, 'Unsupported Content-Type')
+            report_error(415, {}, HaveAPI.message('haveapi.errors.unsupported_content_type'))
           end
 
           begin
             body = raw_body.empty? ? nil : JSON.parse(raw_body)
           rescue JSON::ParserError
-            report_error(400, {}, 'Bad JSON syntax')
+            report_error(400, {}, HaveAPI.message('haveapi.errors.bad_json_syntax'))
           end
 
           if !raw_body.empty? && !body.is_a?(Hash)
-            report_error(400, {}, 'JSON body must be an object')
+            report_error(400, {}, HaveAPI.message('haveapi.errors.json_body_object'))
           end
 
           action_params = settings.api_server.send(:path_params, route, params)
@@ -616,7 +728,7 @@ module HaveAPI
           action = route.action.new(request, v, action_params, action_input, context)
 
           unless action.authorized?(current_user)
-            report_error(403, {}, 'Access denied. Insufficient permissions.')
+            report_error(403, {}, HaveAPI.message('haveapi.authorization.insufficient_permissions'))
           end
 
           status, reply, errors, http_status = action.safe_exec
@@ -671,16 +783,16 @@ module HaveAPI
             desc = route.action.describe(ctx)
 
             unless desc
-              report_error(403, {}, 'Access denied. Insufficient permissions.')
+              report_error(403, {}, HaveAPI.message('haveapi.authorization.insufficient_permissions'))
             end
           rescue ValidationError => e
-            report_error(400, e.to_hash, e.message)
+            report_error(400, e.to_hash, e.message_value)
           rescue StandardError => e
             tmp = settings.api_server.call_hooks_for(:description_exception, args: [ctx, e])
             report_error(
               tmp[:http_status] || 500,
               {},
-              tmp[:message] || 'Server error occured'
+              tmp[:message] || HaveAPI.message('haveapi.errors.server_error')
             )
           end
 

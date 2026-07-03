@@ -103,7 +103,11 @@ module HaveAPI::Resources
 
       def exec
         if input[:timeout] > MAX_TIMEOUT
-          error!("timeout has to be maximally #{MAX_TIMEOUT}", {}, http_status: 400)
+          error!(
+            HaveAPI.message('haveapi.action_state.timeout_max', max: MAX_TIMEOUT),
+            {},
+            http_status: 400
+          )
         end
 
         t = Time.now
@@ -114,7 +118,7 @@ module HaveAPI::Resources
             id: path_params['action_state_id']
           )
 
-          error!('action state not found') unless state.valid?
+          error!(HaveAPI.message('haveapi.action_state.not_found')) unless state.valid?
 
           if state.finished? || (Time.now - t) >= input[:timeout]
             return state_to_hash(state)
@@ -153,7 +157,7 @@ module HaveAPI::Resources
 
         return state_to_hash(state) if state.valid?
 
-        error!('action state not found')
+        error!(HaveAPI.message('haveapi.action_state.not_found'))
       end
     end
 
@@ -172,7 +176,7 @@ module HaveAPI::Resources
           id: path_params['action_state_id']
         )
 
-        error!('action state not found') unless state.valid?
+        error!(HaveAPI.message('haveapi.action_state.not_found')) unless state.valid?
 
         ret = state.cancel
 
@@ -183,7 +187,7 @@ module HaveAPI::Resources
           ok!
 
         else
-          error!('cancellation failed')
+          error!(HaveAPI.message('haveapi.action_state.cancellation_failed'))
         end
       rescue RuntimeError, NotImplementedError => e
         error!(e.message)

@@ -3,9 +3,20 @@ module HaveAPI
   end
 
   class ValidationError < StandardError
+    attr_reader :message_value
+
     def initialize(msg, errors = {})
+      @message_value = msg
       super(msg)
       @errors = errors
+    end
+
+    def message
+      HaveAPI.localize(@message_value)
+    end
+
+    def to_s
+      message
     end
 
     def to_hash
@@ -202,10 +213,10 @@ module HaveAPI
       value = namespace ? params[namespace] : params
 
       if value.nil?
-        raise ValidationError.new('invalid input layout', {}) if any_required_params?
+        raise ValidationError.new(HaveAPI.message('haveapi.validation.invalid_input_layout'), {}) if any_required_params?
 
       elsif !valid_layout?(value)
-        raise ValidationError.new('invalid input layout', {})
+        raise ValidationError.new(HaveAPI.message('haveapi.validation.invalid_input_layout'), {})
       end
 
       return unless namespace
@@ -231,7 +242,7 @@ module HaveAPI
           next if permitted && !permitted.include?(p.name)
 
           if p.required? && input[p.name].nil?
-            errors[p.name] = ['required parameter missing']
+            errors[p.name] = [HaveAPI.message('haveapi.validation.required_parameter_missing')]
             next
           end
 
@@ -248,7 +259,7 @@ module HaveAPI
                       end
           rescue ValidationError => e
             errors[p.name] ||= []
-            errors[p.name] << e.message
+            errors[p.name] << e.message_value
             next
           end
 
@@ -271,7 +282,7 @@ module HaveAPI
       end
 
       unless errors.empty?
-        raise ValidationError.new('input parameters not valid', errors)
+        raise ValidationError.new(HaveAPI.message('haveapi.validation.input_parameters_not_valid'), errors)
       end
 
       params

@@ -64,6 +64,26 @@ module HaveAPI::Spec
       opt(:validation_error_http_status, status)
     end
 
+    # Set default response locale.
+    def default_locale(locale)
+      opt(:default_locale, locale)
+    end
+
+    # Set locales available to the API server.
+    def available_locales(locales)
+      opt(:available_locales, locales)
+    end
+
+    # Set request header used to negotiate the response locale.
+    def locale_header(header)
+      opt(:locale_header, header)
+    end
+
+    # Set custom locale resolver.
+    def locale(&block)
+      opt(:locale, block)
+    end
+
     # Set a custom mount path.
     def mount_to(path)
       opt(:mount, path)

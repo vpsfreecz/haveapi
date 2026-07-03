@@ -20,7 +20,10 @@ module HaveAPI
       @rx = simple? ? take : take(:rx)
       @match = take(:match, true)
       @desc = take(:desc)
-      @message = take(:message, @desc || '%{value} is not in a valid format')
+      @message = take(
+        :message,
+        @desc || HaveAPI.message('haveapi.validators.format.invalid')
+      )
     end
 
     def describe
@@ -28,7 +31,7 @@ module HaveAPI
         rx: @rx.source,
         match: @match,
         description: @desc,
-        message: @message
+        message: HaveAPI.localize(@message)
       }
     end
 

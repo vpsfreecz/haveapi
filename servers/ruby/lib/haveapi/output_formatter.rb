@@ -51,8 +51,8 @@ module HaveAPI
       ret.update({
         status:,
         response:,
-        message:,
-        errors:
+        message: HaveAPI.localize(message),
+        errors: HaveAPI.localize(errors)
       })
       ret
     end

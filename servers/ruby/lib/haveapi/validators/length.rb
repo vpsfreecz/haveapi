@@ -30,16 +30,16 @@ module HaveAPI
       end
 
       msg = if @equals
-              "length has to be #{@equals}"
+              HaveAPI.message('haveapi.validators.length.equals', equals: @equals)
 
             elsif @min && !@max
-              "length has to be minimally #{@min}"
+              HaveAPI.message('haveapi.validators.length.min', min: @min)
 
             elsif !@min && @max
-              "length has to be maximally #{@max}"
+              HaveAPI.message('haveapi.validators.length.max', max: @max)
 
             else
-              "length has to be in range <#{@min}, #{@max}>"
+              HaveAPI.message('haveapi.validators.length.range', min: @min, max: @max)
             end
 
       @message = take(:message, msg)
@@ -47,7 +47,7 @@ module HaveAPI
 
     def describe
       ret = {
-        message: @message
+        message: HaveAPI.localize(@message)
       }
 
       if @equals

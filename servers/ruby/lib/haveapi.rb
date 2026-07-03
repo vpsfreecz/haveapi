@@ -13,6 +13,7 @@ module HaveAPI
   module Actions; end
 end
 
+require_relative 'haveapi/i18n'
 require_relative 'haveapi/params'
 require_rel 'haveapi/parameters/'
 require_rel 'haveapi/*.rb'

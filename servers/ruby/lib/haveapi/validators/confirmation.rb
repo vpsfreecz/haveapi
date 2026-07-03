@@ -24,7 +24,10 @@ module HaveAPI
       @equal = take(:equal, true)
       @message = take(
         :message,
-        @equal ? "must be the same as #{@param}" : "must be different from #{@param}"
+        HaveAPI.message(
+          @equal ? 'haveapi.validators.confirmation.same' : 'haveapi.validators.confirmation.different',
+          parameter: @param
+        )
       )
     end
 
@@ -32,7 +35,7 @@ module HaveAPI
       {
         equal: @equal ? true : false,
         parameter: @param,
-        message: @message
+        message: HaveAPI.localize(@message)
       }
     end
 

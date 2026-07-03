@@ -113,7 +113,10 @@ module HaveAPI
 
     def resolve_arg!(path, arg)
       value = arg.to_s
-      raise HaveAPI::ValidationError, 'invalid path parameter encoding' unless value.valid_encoding?
+      unless value.valid_encoding?
+        raise HaveAPI::ValidationError,
+              HaveAPI.message('haveapi.validation.invalid_path_parameter_encoding')
+      end
 
       path.sub!(/\{[a-zA-Z0-9\-_]+\}/, value)
     end

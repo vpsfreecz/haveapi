@@ -32,49 +32,47 @@ module HaveAPI
       @even = take(:even)
       @odd = take(:odd)
 
-      msg = if @min && !@max
-              "has to be minimally #{@min}"
+      requirements = []
 
-            elsif !@min && @max
-              "has to be maximally #{@max}"
-
-            elsif @min && @max
-              "has to be in range <#{@min}, #{@max}>"
-
-            else
-              'has to be a number'
-            end
+      requirements << if @min && !@max
+                        HaveAPI.message('haveapi.validators.numericality.min', min: @min)
+                      elsif !@min && @max
+                        HaveAPI.message('haveapi.validators.numericality.max', max: @max)
+                      elsif @min && @max
+                        HaveAPI.message('haveapi.validators.numericality.range', min: @min, max: @max)
+                      else
+                        HaveAPI.message('haveapi.validators.numericality.number')
+                      end
 
       if @step
-        msg += '; ' unless msg.empty?
-        msg += "in steps of #{@step}"
+        requirements << HaveAPI.message('haveapi.validators.numericality.step', step: @step)
       end
 
       if @mod
-        msg += '; ' unless msg.empty?
-        msg += "mod #{@step} must equal zero"
+        requirements << HaveAPI.message('haveapi.validators.numericality.mod', mod: @mod)
       end
 
       if @odd
-        msg += '; ' unless msg.empty?
-        msg += 'odd'
+        requirements << HaveAPI.message('haveapi.validators.numericality.odd')
       end
 
       if @even
-        msg += '; ' unless msg.empty?
-        msg += 'even'
+        requirements << HaveAPI.message('haveapi.validators.numericality.even')
       end
 
       if @odd && @even
         raise 'cannot be both odd and even at the same time'
       end
 
-      @message = take(:message, msg)
+      @message = take(
+        :message,
+        HaveAPI.message('haveapi.validators.numericality.composite', requirements:)
+      )
     end
 
     def describe
       ret = {
-        message: @message
+        message: HaveAPI.localize(@message)
       }
 
       ret[:min] = @min if @min

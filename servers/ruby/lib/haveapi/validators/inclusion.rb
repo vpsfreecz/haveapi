@@ -31,13 +31,13 @@ module HaveAPI
         @values = values.map { |v| v.is_a?(::Symbol) ? v.to_s : v }
       end
 
-      @message = take(:message, '%{value} cannot be used')
+      @message = take(:message, HaveAPI.message('haveapi.validators.inclusion.included'))
     end
 
     def describe
       {
         values: @values,
-        message: @message
+        message: HaveAPI.localize(@message)
       }
     end
 

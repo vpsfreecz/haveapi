@@ -1,3 +1,8 @@
+# Sat Jul 4 2026 - version 0.29.1
+## Ruby client
+- Fix direct `require 'haveapi/client'` by defining the `HaveAPI` namespace
+  before loading the client i18n helper.
+
 # Fri Jul 3 2026 - version 0.29.0
 ## Ruby server
 - Add localization support for framework-owned response messages, validation

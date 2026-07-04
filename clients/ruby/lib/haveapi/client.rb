@@ -1,8 +1,6 @@
 require 'require_all'
 require 'date'
 
-require_relative 'client/i18n'
-
 module HaveAPI
   module Client
     # Shortcut to HaveAPI::Client::Client.new
@@ -12,6 +10,7 @@ module HaveAPI
   end
 end
 
+require_relative 'client/i18n'
 require_rel 'client/*.rb'
 require_rel 'client/authentication/'
 require_rel 'client/parameters/'

@@ -62,7 +62,7 @@ module HaveAPI::Parameters
         label: localized_label(context, i18n_path),
         description: localized_description(context, i18n_path),
         type: @type ? @type.to_s : String.to_s,
-        validators: @validators ? @validators.describe : {},
+        validators: @validators ? localized_validators(context, i18n_path, @validators.describe) : {},
         default: @default,
         protected: @protected || false
       }
@@ -165,6 +165,10 @@ module HaveAPI::Parameters
 
     def custom?
       @type == Custom
+    end
+
+    def metadata_i18n_choice_values
+      @validators&.describe&.dig(:include, :values)
     end
 
     def normalize_custom_keys(value)

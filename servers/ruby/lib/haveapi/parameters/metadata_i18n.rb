@@ -14,7 +14,7 @@ module HaveAPI::Parameters
           keys:,
           value:
         }
-      end
+      end + choice_i18n_catalog_items(context, i18n_path)
     end
 
     private
@@ -25,6 +25,17 @@ module HaveAPI::Parameters
 
     def localized_description(context, i18n_path)
       localized_metadata(context, i18n_path, :description, @desc)
+    end
+
+    def localized_validators(context, i18n_path, validators)
+      include_validator = validators[:include]
+      return validators unless include_validator && include_validator.has_key?(:values)
+
+      values = include_validator.fetch(:values)
+      localized_values = localized_choice_values(context, i18n_path, values)
+      return validators if localized_values.equal?(values)
+
+      validators.merge(include: include_validator.merge(values: localized_values))
     end
 
     def localized_metadata(context, i18n_path, kind, fallback)
@@ -61,6 +72,74 @@ module HaveAPI::Parameters
       [exact_key, *metadata_i18n_default_keys(context, i18n_path, kind, scope)].uniq
     end
 
+    def localized_choice_values(context, i18n_path, values)
+      case values
+      when ::Hash
+        values.to_h do |value, label|
+          [
+            value,
+            localized_metadata(context, i18n_path, choice_i18n_kind(value), label)
+          ]
+        end
+      when ::Array
+        localized = values.to_h do |value|
+          label = localized_metadata(
+            context,
+            i18n_path,
+            choice_i18n_kind(value),
+            value.to_s
+          )
+          [value, label]
+        end
+
+        localized.any? { |value, label| label.to_s != value.to_s } ? localized : values
+      else
+        values
+      end
+    end
+
+    def choice_i18n_catalog_items(context, i18n_path)
+      values = choice_i18n_values
+      return [] unless values
+
+      choice_i18n_fallbacks(values).filter_map do |value, fallback|
+        keys = metadata_i18n_keys(context, i18n_path, choice_i18n_kind(value), fallback)
+        label = HaveAPI.localize(fallback).to_s.strip
+
+        next if keys.empty? || label.empty?
+
+        {
+          param: HaveAPI::Params.i18n_segment(@name),
+          kind: metadata_i18n_key_suffix(choice_i18n_kind(value)),
+          keys:,
+          value: label
+        }
+      end
+    end
+
+    def choice_i18n_values
+      metadata_i18n_choice_values
+    end
+
+    def metadata_i18n_choice_values
+      nil
+    end
+
+    def choice_i18n_fallbacks(values)
+      case values
+      when ::Hash
+        values
+      when ::Array
+        values.to_h { |value| [value, value.to_s] }
+      else
+        {}
+      end
+    end
+
+    def choice_i18n_kind(value)
+      "choices.#{HaveAPI::Params.i18n_segment(value)}.label"
+    end
+
     def metadata_i18n_fallback(kind)
       case kind
       when :label
@@ -78,8 +157,6 @@ module HaveAPI::Parameters
         @label_key
       when :description
         @desc_key
-      else
-        raise ArgumentError, "unsupported parameter metadata kind #{kind.inspect}"
       end
     end
 

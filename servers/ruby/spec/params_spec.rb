@@ -258,6 +258,8 @@ describe HaveAPI::Params do
     p = described_class.new(:input, ParamsSpec::MyResource::Index)
     p.add_block(proc do
       string :hostname, label: 'Hostname', desc: 'VPS hostname'
+      string :state, choices: %i[queued running]
+      string :priority, choices: { values: { low: 'Low priority' } }
       string :framework,
              label: HaveAPI.message('haveapi.parameters.metadata.no.label')
     end)
@@ -274,6 +276,22 @@ describe HaveAPI::Params do
                                  params_spec.attributes.hostname.label
                                ])
     expect(items.none? { |item| item[:param] == 'framework' }).to be true
+
+    choice = items.detect do |item|
+      item[:param] == 'state' && item[:kind] == 'choices.queued.label'
+    end
+    expect(choice[:value]).to eq('queued')
+    expect(choice[:keys]).to eq(%w[
+                                  params_spec.resources.my_resource.actions.index.input.state.choices.queued.label
+                                  params_spec.resources.my_resource.input.state.choices.queued.label
+                                  params_spec.resources.my_resource.attributes.state.choices.queued.label
+                                  params_spec.attributes.state.choices.queued.label
+                                ])
+
+    choice = items.detect do |item|
+      item[:param] == 'priority' && item[:kind] == 'choices.low.label'
+    end
+    expect(choice[:value]).to eq('Low priority')
   end
 
   it 'does not parse meta resource path segments as metadata paths' do

@@ -328,6 +328,27 @@ cs:
         label: "Hostname"
 ```
 
+Choice labels declared through the `choices`/`include` validator use the same
+parameter metadata path with `choices.<value>.label` appended. If choices were
+declared as a value-to-label map, the declared label is used as the English
+fallback. If choices were declared as an array, untranslated self-description
+keeps the array form; a locale that supplies labels is returned as the existing
+HaveAPI `{value: label}` map form.
+
+```yaml
+cs:
+  my_api:
+    resources:
+      vps:
+        attributes:
+          state:
+            choices:
+              running:
+                label: "bezi"
+              stopped:
+                label: "vypnuto"
+```
+
 Metadata parameters fall back through resource and global metadata keys:
 
 ```yaml

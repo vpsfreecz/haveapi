@@ -48,6 +48,14 @@ describe HaveAPI::I18n do
             string :global_attr_label,
                    label: 'Global attribute fallback',
                    desc: 'Global attribute description fallback'
+            string :status, choices: %i[enabled disabled]
+            string :priority,
+                   choices: {
+                     values: {
+                       low: 'Low priority',
+                       high: 'High priority'
+                     }
+                   }
             string :code, length: {
               min: 3,
               message: HaveAPI.message('haveapi.validators.length.min', min: 3)
@@ -146,6 +154,14 @@ describe HaveAPI::I18n do
       expect(length[:message]).to eq('délka musí být v rozsahu <3, 5>')
     end
 
+    it 'keeps untranslated array choices unchanged in OPTIONS responses' do
+      header 'Accept', 'application/json'
+      options '/v1/things', method: 'POST'
+
+      choices = api_response[:input][:parameters][:status][:validators][:include]
+      expect(choices[:values]).to eq(%w[enabled disabled])
+    end
+
     it 'localizes API metadata in OPTIONS responses' do
       previous_available = ::I18n.available_locales
       ::I18n.available_locales = (previous_available + %i[en cs]).uniq
@@ -218,6 +234,18 @@ describe HaveAPI::I18n do
                     global_attr_label: {
                       label: 'Přesný globální popisek',
                       description: 'Přesný globální popis'
+                    },
+                    status: {
+                      choices: {
+                        enabled: { label: 'Zapnuto' },
+                        disabled: { label: 'Vypnuto' }
+                      }
+                    },
+                    priority: {
+                      choices: {
+                        low: { label: 'Nízká priorita' },
+                        high: { label: 'Vysoká priorita' }
+                      }
                     }
                   },
                   output: {
@@ -324,6 +352,14 @@ describe HaveAPI::I18n do
       expect(input_params[:global_attr_label]).to include(
         label: 'Přesný globální popisek',
         description: 'Přesný globální popis'
+      )
+      expect(input_params[:status][:validators][:include][:values]).to eq(
+        enabled: 'Zapnuto',
+        disabled: 'Vypnuto'
+      )
+      expect(input_params[:priority][:validators][:include][:values]).to eq(
+        low: 'Nízká priorita',
+        high: 'Vysoká priorita'
       )
       expect(input_params[:count]).to include(
         label: 'Count',

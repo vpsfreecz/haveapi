@@ -1,3 +1,8 @@
+# Sun Jul 5 2026 - version 0.29.2
+## Ruby server
+- Localize `choices`/`include` validator labels in parameter metadata while
+  preserving internal choice values.
+
 # Sat Jul 4 2026 - version 0.29.1
 ## Ruby client
 - Fix direct `require 'haveapi/client'` by defining the `HaveAPI` namespace

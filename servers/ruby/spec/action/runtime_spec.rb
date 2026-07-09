@@ -638,7 +638,7 @@ describe HaveAPI::Action do
 
       expect(last_response.status).to eq(200)
       expect(api_response).not_to be_ok
-      expect(api_response.errors[:confirmed]).to include('required parameter missing')
+      expect(api_response.errors[:confirmed]).to include('required parameter is missing')
 
       call_api([:Test], :batch, { tests: [{ label: 'one' }], _meta: { confirmed: 'maybe' } })
 

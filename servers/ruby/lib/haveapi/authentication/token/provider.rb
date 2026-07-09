@@ -185,7 +185,7 @@ module HaveAPI::Authentication
         {
           http_header: config.class.http_header,
           query_parameter: config.class.query_parameter,
-          description: 'The client authenticates with credentials, usually username and password, and gets a token. From this point, the credentials can be forgotten and the token is used instead. Tokens can have different lifetimes, can be renewed and revoked. The token is passed either via HTTP header or query parameter.'
+          description: HaveAPI.message('haveapi.authentication.token.description')
         }
       end
 
@@ -203,12 +203,16 @@ module HaveAPI::Authentication
         provider = self
 
         HaveAPI::Resource.define_resource(:Token) do
+          desc HaveAPI.message('haveapi.authentication.token.resource.description')
+
           define_singleton_method(:token_instance) { provider }
 
           auth false
           version :all
 
           define_action(:Request) do
+            desc HaveAPI.message('haveapi.authentication.token.actions.request.description')
+
             route ''
             http_method :post
 
@@ -275,6 +279,8 @@ module HaveAPI::Authentication
           end
 
           define_action(:Revoke) do
+            desc HaveAPI.message('haveapi.authentication.token.actions.revoke.description')
+
             http_method :post
             auth true
 
@@ -318,6 +324,8 @@ module HaveAPI::Authentication
           end
 
           define_action(:Renew) do
+            desc HaveAPI.message('haveapi.authentication.token.actions.renew.description')
+
             http_method :post
             auth true
 

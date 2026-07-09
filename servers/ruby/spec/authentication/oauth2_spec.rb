@@ -225,7 +225,7 @@ describe HaveAPI::Authentication::OAuth2 do
 
       expect(last_response.status).to eq(400)
       expect(api_response).to be_failed
-      expect(api_response.message).to eq('Bylo poskytnuto více OAuth2 tokenů')
+      expect(api_response.message).to eq('Bylo zadáno více OAuth2 tokenů')
     end
 
     it 'ignores structured access_token query values before backend lookup' do
@@ -248,6 +248,7 @@ describe HaveAPI::Authentication::OAuth2 do
     end
 
     it 'exposes oauth2 provider in version description' do
+      header 'Accept-Language', 'cs'
       call_api(:options, '/v1/')
 
       expect(last_response.status).to eq(200)
@@ -257,6 +258,7 @@ describe HaveAPI::Authentication::OAuth2 do
       expect(auth).to have_key(:oauth2)
 
       desc = auth[:oauth2]
+      expect(desc[:description]).to start_with('OAuth2 autorizační provider')
       expect(desc).to have_key(:http_header)
       expect(desc[:http_header]).to eq('X-HaveAPI-OAuth2-Token')
 

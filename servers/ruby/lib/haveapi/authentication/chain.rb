@@ -54,7 +54,7 @@ module HaveAPI::Authentication
       return ret unless @instances[context.version]
 
       @instances[context.version].each do |provider|
-        ret[provider.name] = provider.describe
+        ret[provider.name] = HaveAPI.localize(provider.describe)
 
         next unless provider.resource_module
 

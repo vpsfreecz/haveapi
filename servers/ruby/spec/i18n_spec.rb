@@ -10,6 +10,16 @@ module I18nSpec
       User.new(:cs) if username == 'user' && password == 'pass'
     end
   end
+
+  module ActionStateBackend
+    def self.list_pending(*)
+      []
+    end
+
+    def self.new(*)
+      nil
+    end
+  end
 end
 
 describe HaveAPI::I18n do
@@ -113,8 +123,8 @@ describe HaveAPI::I18n do
       header 'Accept', 'application/json'
       call_api(:post, '/v1/things', thing: {})
 
-      expect(api_response.message).to eq('input parameters not valid')
-      expect(api_response.errors[:name]).to include('required parameter missing')
+      expect(api_response.message).to eq('input parameters are not valid')
+      expect(api_response.errors[:name]).to include('required parameter is missing')
       expect(last_response.headers['Vary']).to include('Accept-Language')
     end
 
@@ -123,9 +133,9 @@ describe HaveAPI::I18n do
       header 'Accept-Language', 'cs'
       call_api(:post, '/v1/things', thing: { count: 'nope' })
 
-      expect(api_response.message).to eq('vstupní parametry nejsou platné')
-      expect(api_response.errors[:name]).to include('povinný parametr chybí')
-      expect(api_response.errors[:count].first).to include('neplatné celé číslo')
+      expect(api_response.message).to eq('vstupní parametry jsou neplatné')
+      expect(api_response.errors[:name]).to include('chybí povinný parametr')
+      expect(api_response.errors[:count].first).to include('není platné celé číslo')
       expect(last_response.headers['Vary']).to include('Accept-Language')
     end
 
@@ -151,7 +161,7 @@ describe HaveAPI::I18n do
       options '/v1/things', method: 'POST'
 
       length = api_response[:input][:parameters][:name][:validators][:length]
-      expect(length[:message]).to eq('délka musí být v rozsahu <3, 5>')
+      expect(length[:message]).to eq('délka musí být v rozsahu 3–5')
     end
 
     it 'keeps untranslated array choices unchanged in OPTIONS responses' do
@@ -393,7 +403,7 @@ describe HaveAPI::I18n do
       create = api_response[:resources][:thing][:actions][:create]
       no_meta = create[:meta][:global][:input][:parameters][:no]
 
-      expect(no_meta[:label]).to eq('Zakázat metadata')
+      expect(no_meta[:label]).to eq('Vypnout metadata')
     end
 
     it 'localizes application-supplied lazy validator messages' do
@@ -459,7 +469,7 @@ describe HaveAPI::I18n do
       expect(HaveAPI.localize(data)).to eq({
                                              message: 'Akce nebyla nalezena',
                                              errors: {
-                                               name: ['povinný parametr chybí']
+                                               name: ['chybí povinný parametr']
                                              }
                                            })
     ensure
@@ -489,6 +499,39 @@ describe HaveAPI::I18n do
 
         expect(api_response.message).to eq('Action not found')
       end
+    end
+  end
+
+  context 'with localized framework self-description' do
+    empty_api
+    use_version 1
+    default_version 1
+    auth_chain I18nSpec::Provider
+    action_state I18nSpec::ActionStateBackend
+
+    before do
+      header 'Accept', 'application/json'
+      header 'Accept-Language', 'cs'
+    end
+
+    it 'localizes authentication provider descriptions' do
+      call_api(:options, '/?describe=default')
+
+      description = api_response[:authentication][:basic][:description]
+      expect(description).to start_with('Autentizace pomocí HTTP Basic')
+    end
+
+    it 'localizes ActionState resource and action descriptions' do
+      call_api(:options, '/?describe=default')
+
+      action_state = api_response[:resources][:action_state]
+      expect(action_state[:description]).to eq('Procházet stavy blokujících akcí')
+      expect(action_state[:actions][:index][:description]).to eq('Vypsat stavy čekajících akcí')
+      expect(action_state[:actions][:poll][:description]).to eq(
+        'Vrátit stav po dokončení akce, změně průběhu nebo vypršení časového limitu'
+      )
+      expect(action_state[:actions][:show][:description]).to eq('Zobrazit stav čekající akce')
+      expect(action_state[:actions][:cancel][:description]).to eq('Zrušit čekající akci')
     end
   end
 
@@ -525,7 +568,7 @@ describe HaveAPI::I18n do
 
       action = api_response[:resources][:thing][:actions][:create]
       length = action.dig(:input, :parameters, :name, :validators, :length)
-      expect(length[:message]).to eq('délka musí být v rozsahu <3, 5>')
+      expect(length[:message]).to eq('délka musí být v rozsahu 3–5')
     end
   end
 

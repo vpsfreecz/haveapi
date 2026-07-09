@@ -117,7 +117,7 @@ final class ClientIntegrationTest extends TestCase
         } catch (\HaveAPI\Client\Exception\ValidationError $e) {
             $errors = $e->getErrors();
             $this->assertArrayHasKey('label', $errors);
-            $this->assertContains('required parameter missing', $errors['label']);
+            $this->assertContains('required parameter is missing', $errors['label']);
         }
     }
 
@@ -197,7 +197,7 @@ final class ClientIntegrationTest extends TestCase
         } catch (\HaveAPI\Client\Exception\ValidationError $e) {
             $errors = $e->getErrors();
             $this->assertArrayHasKey('i', $errors);
-            $this->assertContains('required parameter missing', $errors['i']);
+            $this->assertContains('required parameter is missing', $errors['i']);
         }
     }
 
@@ -236,8 +236,8 @@ final class ClientIntegrationTest extends TestCase
             $this->fail('Expected ValidationError');
         } catch (\HaveAPI\Client\Exception\ValidationError $e) {
             $errors = $e->getErrors();
-            $this->assertStringContainsString('nejsou platné', $e->getMessage());
-            $this->assertContains('neplatné celé číslo', $errors['i']);
+            $this->assertStringContainsString('jsou neplatné', $e->getMessage());
+            $this->assertContains('není platné celé číslo', $errors['i']);
         }
     }
 
@@ -291,7 +291,7 @@ final class ClientIntegrationTest extends TestCase
 
         $this->assertValidationError(function () use ($api) {
             $api->test->echo_resource(['project' => 'abc']);
-        }, 'project', 'not a valid resource id');
+        }, 'project', 'not a valid resource ID');
     }
 
     public function testOptionalResourceNullIsAccepted(): void

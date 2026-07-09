@@ -29,8 +29,8 @@ RSpec.describe HaveAPI::Client::Client do
 
     expect { client.test.echo(valid_params.merge(i: 'abc')) }
       .to raise_error(HaveAPI::Client::ValidationError) do |err|
-        expect(err.message).to include('vstupní parametry nejsou platné')
-        expect(err.errors[:i]).to include('neplatné celé číslo')
+        expect(err.message).to include('Vstupní parametry jsou neplatné')
+        expect(err.errors[:i]).to include('není platné celé číslo')
       end
   end
 end

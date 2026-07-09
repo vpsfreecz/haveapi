@@ -184,7 +184,7 @@ describe HaveAPI::Resources::ActionState do
       get_action '/v1/action_states/999'
 
       expect(api_response).not_to be_ok
-      expect(api_response.message).to eq('action state not found')
+      expect(api_response.message).to eq('Action state not found')
     end
 
     it 'poll returns immediately if finished' do
@@ -227,7 +227,7 @@ describe HaveAPI::Resources::ActionState do
 
       expect(last_response.status).to eq(200)
       expect(api_response).not_to be_ok
-      expect(api_response.errors[:timeout].first).to include('range <0, 30>')
+      expect(api_response.errors[:timeout].first).to include('between 0 and 30')
     end
 
     it 'poll returns immediately when update_in check mismatches' do
@@ -274,7 +274,7 @@ describe HaveAPI::Resources::ActionState do
       get_action '/v1/action_states/999/poll', action_state: { timeout: 0 }
 
       expect(api_response).not_to be_ok
-      expect(api_response.message).to eq('action state not found')
+      expect(api_response.message).to eq('Action state not found')
     end
 
     it 'cancel returns ok for true' do
@@ -303,7 +303,7 @@ describe HaveAPI::Resources::ActionState do
       call_api(:post, '/v1/action_states/1/cancel', {})
 
       expect(api_response).not_to be_ok
-      expect(api_response.message).to eq('cancellation failed')
+      expect(api_response.message).to eq('Action cancellation failed')
     end
 
     it 'cancel returns error for NotImplementedError' do

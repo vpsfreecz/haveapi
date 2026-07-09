@@ -33,7 +33,7 @@ describe HaveAPI::Action do
 
         expect(last_response.status).to eq(200)
         expect(api_response).not_to be_ok
-        expect(api_response.errors[:name]).to include('required parameter missing')
+        expect(api_response.errors[:name]).to include('required parameter is missing')
       end
     end
 
@@ -69,7 +69,7 @@ describe HaveAPI::Action do
 
         expect(last_response.status).to eq(400)
         expect(api_response).not_to be_ok
-        expect(api_response.errors[:name]).to include('required parameter missing')
+        expect(api_response.errors[:name]).to include('required parameter is missing')
       end
     end
   end

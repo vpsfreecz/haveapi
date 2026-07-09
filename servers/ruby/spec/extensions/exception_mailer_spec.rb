@@ -113,7 +113,7 @@ describe HaveAPI::Extensions::ExceptionMailer do
 
     expect(last_response.status).to eq(500)
     expect(api_response).not_to be_ok
-    expect(api_response.message).to eq('Server error occurred')
+    expect(api_response.message).to eq('A server error occurred')
 
     expect(calls.size).to eq(1)
     context, exception, body = calls.first
@@ -190,6 +190,6 @@ describe HaveAPI::Extensions::ExceptionMailer do
 
     expect(last_response.status).to eq(500)
     expect(api_response).not_to be_ok
-    expect(api_response.message).to eq('Server error occurred')
+    expect(api_response.message).to eq('A server error occurred')
   end
 end

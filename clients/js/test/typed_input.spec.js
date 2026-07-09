@@ -108,7 +108,7 @@ describe('HaveAPI JS client typed input', function () {
     const reply = await invoke(client.test.echo, echoParams({ i: 'abc' }));
 
     expect(reply.isOk()).to.equal(false);
-    expect(reply.message()).to.equal('invalid input parameters');
+    expect(reply.message()).to.equal('Invalid input parameters');
     expect(reply.envelope.errors).to.have.property('i');
     expect(reply.envelope.errors.i.join(' ')).to.match(/not a valid integer/);
   });
@@ -125,8 +125,8 @@ describe('HaveAPI JS client typed input', function () {
     const reply = await invoke(client.test.echo, echoParams({ i: 'abc' }));
 
     expect(reply.isOk()).to.equal(false);
-    expect(reply.message()).to.equal('neplatné vstupní parametry');
-    expect(reply.envelope.errors.i).to.include('neplatné celé číslo');
+    expect(reply.message()).to.equal('Neplatné vstupní parametry');
+    expect(reply.envelope.errors.i).to.include('není platné celé číslo');
   });
 
   it('rejects non-integral numbers as integers', async () => {
@@ -233,7 +233,7 @@ describe('HaveAPI JS client typed input', function () {
 
     expect(reply.isOk()).to.equal(false);
     expect(reply.envelope.errors).to.have.property('project');
-    expect(reply.envelope.errors.project.join(' ')).to.match(/not a valid resource id/);
+    expect(reply.envelope.errors.project.join(' ')).to.match(/not a valid resource ID/);
   });
 
   it('accepts null for optional resource params', async () => {

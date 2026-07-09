@@ -100,7 +100,7 @@ If the server attempts to resolve the resource and it does not exist, it MUST be
 ("resource not found"), not a 500.
 
 ## Error reporting expectations
-- On the server, invalid typed values are reported as parameter validation errors ("input parameters not valid").
+- On the server, invalid typed values are reported as parameter validation errors ("input parameters are not valid").
 - Clients should fail fast locally when possible and report per-parameter errors.
 
 Recommended canonical messages used by clients:
@@ -109,5 +109,5 @@ Recommended canonical messages used by clients:
 - `not a valid boolean`
 - `not in ISO 8601 format`
 - `not a valid string`
-- `not a valid resource id`
+- `not a valid resource ID`
 - `cannot be null`

@@ -5,33 +5,57 @@
 cs:
   haveapi:
     action_state:
-      cancellation_failed: zrušení selhalo
-      not_found: stav akce nebyl nalezen
-      timeout_max: timeout může být nejvýše %{max}
+      cancellation_failed: Zrušení akce se nezdařilo
+      not_found: Stav akce nebyl nalezen
+      timeout_max: Časový limit může být nejvýše %{max}
     authentication:
-      failed: přihlášení selhalo
-      invalid_credentials: neplatné přihlašovací údaje
-      multiple_oauth2_tokens: Bylo poskytnuto více OAuth2 tokenů
-      multiple_tokens: Bylo poskytnuto více ověřovacích tokenů
-      renew_failed: obnovení selhalo
-      required: Akce vyžaduje přihlášení uživatele
-      revoke_failed: zrušení selhalo
-      token_required: Akce vyžaduje přihlášení uživatele tokenem
+      basic:
+        description: |-
+          Autentizace pomocí HTTP Basic. Uživatelské jméno a heslo se předávají v HTTP hlavičce.
+          Tato metoda se nesmí používat z webových prohlížečů.
+      failed: Přihlášení se nezdařilo
+      invalid_credentials: Neplatné přihlašovací údaje
+      multiple_oauth2_tokens: Bylo zadáno více OAuth2 tokenů
+      multiple_tokens: Bylo zadáno více autentizačních tokenů
+      oauth2:
+        description: |-
+          OAuth2 autorizační provider.
+          Podpora OAuth2 v klientech HaveAPI je omezená, ale API lze použít jako zdroj autentizace a k přístupu k API lze používat OAuth2 tokeny. HaveAPI částečně implementuje RFC 6749: autorizační response type "code" a token grant types "authorization_code" a "refresh_token". Ostatní response a grant types momentálně nejsou podporovány. Přístupový token lze předat jako bearer token podle RFC 6750 nebo vlastní HTTP hlavičkou, pokud není praktické použít hlavičku Authorization.
+          Přístupové a refresh tokeny lze zneplatnit podle RFC 7009.
+      renew_failed: Obnovení tokenu se nezdařilo
+      required: Tato akce vyžaduje přihlášení
+      revoke_failed: Zneplatnění tokenu se nezdařilo
+      token:
+        actions:
+          renew:
+            description: Obnovit aktuální autentizační token
+          request:
+            description: Vyžádat autentizační token
+          revoke:
+            description: Zneplatnit aktuální autentizační token
+        description: Klient se autentizuje přihlašovacími údaji, obvykle uživatelským
+          jménem a heslem, a získá token. Od té chvíle už přihlašovací údaje nepotřebuje
+          a používá místo nich token. Tokeny mohou mít různou dobu platnosti a lze
+          je obnovovat nebo zneplatňovat. Token se předává buď v HTTP hlavičce, nebo
+          jako parametr dotazu.
+        resource:
+          description: Spravovat autentizační tokeny
+      token_required: Tato akce vyžaduje autentizaci tokenem
     authorization:
       insufficient_permissions: Přístup odepřen. Nedostatečná oprávnění.
     errors:
       action_not_found: Akce nebyla nalezena
-      bad_accept_header: Chybná hlavička Accept
-      bad_json_syntax: Chybná syntaxe JSON
-      json_body_object: Tělo JSON musí být objekt
+      bad_accept_header: Neplatná hlavička Accept
+      bad_json_syntax: Neplatná syntaxe JSON
+      json_body_object: Tělo JSON požadavku musí být objekt
       server_error: Došlo k chybě serveru
-      unsupported_content_type: Nepodporovaný Content-Type
+      unsupported_content_type: Nepodporovaná hlavička Content-Type
     pagination:
-      limit_max: limit může být nejvýše %{max}
+      limit_max: Limit může být nejvýše %{max}
     parameters:
       action_state:
         can_cancel:
-          description: Je-li true, spuštění této akce lze zrušit
+          description: Je-li hodnota true, lze běh této akce zrušit
           label: Lze zrušit
         created_at:
           label: Vytvořeno
@@ -43,98 +67,111 @@ cs:
           label: Popisek
         poll:
           current:
-            description: průběh, se kterým se porovnává při nastaveném update_in
+            description: Aktuální průběh pro porovnání, je-li nastaveno update_in
           status:
-            description: stav, se kterým se porovnává při nastaveném update_in
+            description: Stav pro porovnání, je-li nastaveno update_in
           timeout:
-            description: v sekundách
+            description: Časový limit v sekundách
             label: Časový limit
           total:
-            description: průběh, se kterým se porovnává při nastaveném update_in
+            description: Celkový průběh pro porovnání, je-li nastaveno update_in
           update_in:
-            description: počet sekund, po kterém se stav vrátí, pokud se průběh změnil
-            label: Průběh
+            description: Vrátit stav dříve, pokud se změní status, current nebo total;
+              hodnota se předává implementacím pollingu v API
+            label: Čekat na změnu
         status:
-          description: Určuje, zda akce probíhá nebo selhává
+          description: Určuje, zda akce probíhá úspěšně nebo selhala
           label: Stav
         total:
-          description: Akce je dokončena, když se aktuální průběh rovná celkovému
+          description: Akce je dokončena, když aktuální průběh dosáhne celkového
           label: Celkem
         unit:
-          description: Jednotka aktuálního a celkového průběhu
+          description: Jednotka hodnot current a total
           label: Jednotka
         updated_at:
-          description: Kdy byl průběh naposledy aktualizován
+          description: Čas poslední aktualizace průběhu
           label: Aktualizováno
       action_state_id:
-        description: ID objektu ActionState pro dotazování stavu. Pokud je null, akce
-          není pro aktuální volání blokující.
+        description: |-
+          ID objektu ActionState pro dotazování na stav.
+          Pokud je hodnota null, akce v aktuálním volání neblokuje.
         label: ID stavu akce
       active_record:
         includes:
-          description: |-
-            Seznam názvů asociovaných prostředků oddělených čárkou.
-            Vnořené asociace se zapisují pomocí '__' mezi názvy prostředků.
-            Například 'user,node' přeloží tyto dvě asociace.
-            Pro přeložení dalších asociací uzlu použijte např. 'user,node__location',
-            pro ještě hlubší úroveň např. 'user,node__location__environment'.
+          description: Seznam názvů asociovaných zdrojů oddělených čárkou. Vnořené
+            asociace se zapisují pomocí '__' mezi názvy zdrojů. Například 'user,node'
+            načte tyto dvě asociace. Pro načtení dalších asociací zdroje node použijte
+            např. 'user,node__location'; pro ještě hlubší úroveň např. 'user,node__location__environment'.
           label: Zahrnuté asociace
         path_params:
-          description: Pole parametrů potřebných k přeložení URL na tento objekt
+          description: Pole parametrů potřebných k sestavení URL k tomuto objektu
           label: Parametry URL
         resolved:
-          description: True, pokud je asociace přeložena
-          label: Přeloženo
+          description: True, pokud je asociace načtena
+          label: Načteno
       authentication:
         token:
           interval:
-            description: Jak dlouho bude požadovaný token platný, v sekundách.
+            description: Doba platnosti požadovaného tokenu v sekundách.
             label: Interval
           lifetime:
             description: |-
               fixed - token má pevnou dobu platnosti a nelze ho obnovit
-              renewable_manual - token lze obnovit, ale musí se obnovit ručně akcí renew
-              renewable_auto - token se při každém použití automaticky obnoví na now+interval
-              permanent - token bude platný navždy, dokud nebude smazán
+              renewable_manual - platnost tokenu lze prodloužit, ale pouze ručně akcí renew
+              renewable_auto - platnost tokenu se při každém použití automaticky prodlouží na now + interval
+              permanent - token je platný trvale, dokud není smazán
             label: Životnost
           password:
             label: Heslo
           scope:
-            label: Rozsah
+            label: Scope
           user:
             label: Uživatel
       default:
         count:
-          label: Vrátit počet všech položek
+          label: Vrátit celkový počet položek
         total_count:
-          label: Celkový počet všech položek
+          label: Celkový počet položek
       metadata:
         'no':
-          label: Zakázat metadata
+          label: Vypnout metadata
       paginable:
         from_id:
-          description: Vypsat objekty s větším/menším ID
+          description: Vypsat objekty s ID větším/menším než zadaná hodnota
           label: Od ID
         limit:
           description: Počet objektů k načtení
           label: Limit
+    resources:
+      action_state:
+        actions:
+          cancel:
+            description: Zrušit čekající akci
+          index:
+            description: Vypsat stavy čekajících akcí
+          poll:
+            description: Vrátit stav po dokončení akce, změně průběhu nebo vypršení
+              časového limitu
+          show:
+            description: Zobrazit stav čekající akce
+        description: Procházet stavy blokujících akcí
     types:
-      invalid_boolean: neplatná pravdivostní hodnota %{value}
-      invalid_datetime: není ve formátu ISO 8601 '%{value}'
-      invalid_float: neplatné desetinné číslo %{value}
-      invalid_integer: neplatné celé číslo %{value}
-      invalid_string: neplatný řetězec %{value}
+      invalid_boolean: 'není platná pravdivostní hodnota: %{value}'
+      invalid_datetime: 'není ve formátu ISO 8601: ''%{value}'''
+      invalid_float: 'není platné desetinné číslo: %{value}'
+      invalid_integer: 'není platné celé číslo: %{value}'
+      invalid_string: 'není platný řetězec: %{value}'
     validation:
       cannot_be_null: nesmí být null
       includes_only_strings: includes musí obsahovat jen řetězce
       includes_string_or_array: includes musí být řetězec nebo pole
-      input_parameters_not_valid: vstupní parametry nejsou platné
-      invalid_id: neplatné ID %{value}
+      input_parameters_not_valid: vstupní parametry jsou neplatné
+      invalid_id: 'není platné ID: %{value}'
       invalid_input_layout: neplatná struktura vstupu
       invalid_path_parameter_encoding: neplatné kódování parametru cesty
       invalid_string_encoding: neplatné kódování řetězce
-      required_parameter_missing: povinný parametr chybí
-      resource_not_found: prostředek nebyl nalezen
+      required_parameter_missing: chybí povinný parametr
+      resource_not_found: zdroj nebyl nalezen
     validators:
       acceptance:
         accepted: musí být %{value}
@@ -149,19 +186,19 @@ cs:
         included: "%{value} nelze použít"
       length:
         equals: délka musí být %{equals}
-        max: délka může být nejvýše %{max}
+        max: délka musí být nejvýše %{max}
         min: délka musí být alespoň %{min}
-        range: délka musí být v rozsahu <%{min}, %{max}>
+        range: délka musí být v rozsahu %{min}–%{max}
       numericality:
         composite: "%{requirements}"
-        even: sudé číslo
+        even: musí být sudé číslo
         max: musí být nejvýše %{max}
         min: musí být alespoň %{min}
         mod: zbytek po dělení %{mod} musí být nula
         number: musí být číslo
-        odd: liché číslo
-        range: musí být v rozsahu <%{min}, %{max}>
-        step: v krocích po %{step}
+        odd: musí být liché číslo
+        range: musí být v rozsahu %{min}–%{max}
+        step: musí být v krocích po %{step}
       presence:
-        non_empty: musí být vyplněno a neprázdné
+        non_empty: musí být vyplněno a nesmí být prázdné
         present: musí být vyplněno

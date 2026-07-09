@@ -73,7 +73,7 @@ describe HaveAPI::Authentication::Basic::Provider do
     expect(last_response.headers['www-authenticate']).to include('Basic realm=')
 
     expect(api_response).to be_failed
-    expect(api_response.message).to include('authenticate')
+    expect(api_response.message).to eq('This action requires authentication')
     expect(seen_users.last).to be_nil
   end
 
@@ -123,7 +123,7 @@ describe HaveAPI::Authentication::Basic::Provider do
     expect(last_response.status).to eq(401)
     expect(last_response.headers['www-authenticate']).to include('Basic realm=')
     expect(api_response).to be_failed
-    expect(api_response.message).to include('authenticate')
+    expect(api_response.message).to eq('This action requires authentication')
   end
 
   it 'returns an authentication error envelope from _logout' do
@@ -132,6 +132,6 @@ describe HaveAPI::Authentication::Basic::Provider do
     expect(last_response.status).to eq(401)
     expect(last_response.headers['www-authenticate']).to include('Basic realm=')
     expect(api_response).to be_failed
-    expect(api_response.message).to include('authenticate')
+    expect(api_response.message).to eq('This action requires authentication')
   end
 end

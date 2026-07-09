@@ -97,7 +97,7 @@ describe HaveAPI::Server do
 
       expect(last_response.status).to eq(400)
       expect(api_response).not_to be_ok
-      expect(api_response.message).to match(/Bad JSON syntax/)
+      expect(api_response.message).to match(/Invalid JSON syntax/)
     end
 
     it 'returns 400 for non-object JSON bodies' do
@@ -109,7 +109,7 @@ describe HaveAPI::Server do
 
         expect(last_response.status).to eq(400)
         expect(api_response).not_to be_ok
-        expect(api_response.message).to eq('JSON body must be an object')
+        expect(api_response.message).to eq('The JSON request body must be an object')
       end
     end
 
@@ -132,7 +132,7 @@ describe HaveAPI::Server do
 
       expect(last_response.status).to eq(415)
       expect(api_response).not_to be_ok
-      expect(api_response.message).to eq('Unsupported Content-Type')
+      expect(api_response.message).to eq('Unsupported Content-Type header')
       expect(ServerIntegrationSpec::State.writes).to be_empty
     end
 
@@ -145,7 +145,7 @@ describe HaveAPI::Server do
 
       expect(last_response.status).to eq(400)
       expect(api_response).not_to be_ok
-      expect(api_response.message).to eq('Bad Accept header')
+      expect(api_response.message).to eq('Invalid Accept header')
     end
 
     it 'returns JSON envelope for unknown route' do
@@ -169,7 +169,7 @@ describe HaveAPI::Server do
 
       expect(last_response.status).to eq(500)
       expect(api_response).not_to be_ok
-      expect(api_response.message).to eq('Server error occurred')
+      expect(api_response.message).to eq('A server error occurred')
 
       expect(calls.size).to eq(1)
       context, exception = calls.first

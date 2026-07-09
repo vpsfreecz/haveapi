@@ -259,7 +259,7 @@ RSpec.describe HaveAPI::GoClient::Generator do
             t.Fatalf("expected ValidationError, got %T: %v", err, err)
           }
 
-          if got := strings.Join(verr.Errors["f"], " "); !strings.Contains(got, "neplatné desetinné číslo") {
+          if got := strings.Join(verr.Errors["f"], " "); !strings.Contains(got, "není platné desetinné číslo") {
             t.Fatalf("expected Czech float error, got %q", got)
           }
 

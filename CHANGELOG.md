@@ -1,3 +1,15 @@
+# Thu Jul 9 2026 - version 0.29.3
+## Ruby server
+- Polish English and Czech framework messages for authentication, validation,
+  pagination, metadata, action states and ActiveRecord-backed resources.
+- Localize built-in authentication provider descriptions, token authentication
+  resources and ActionState resource/action descriptions in API
+  self-description.
+
+## Ruby, JavaScript, PHP and Go clients
+- Polish bundled English and Czech client-side validation and authentication
+  messages.
+
 # Sun Jul 5 2026 - version 0.29.2
 ## Ruby server
 - Localize `choices`/`include` validator labels in parameter metadata while

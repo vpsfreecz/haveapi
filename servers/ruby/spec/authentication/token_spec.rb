@@ -290,6 +290,7 @@ describe HaveAPI::Authentication::Token do
   end
 
   it 'exposes token provider in version description' do
+    header 'Accept-Language', 'cs'
     call_api(:options, '/v1/')
 
     expect(last_response.status).to eq(200)
@@ -297,11 +298,18 @@ describe HaveAPI::Authentication::Token do
 
     auth = api_response[:authentication]
     expect(auth).to have_key(:token)
+    expect(auth[:token][:description]).to start_with('Klient se autentizuje')
     expect(auth[:token][:http_header]).to eq(AuthSpecToken::Config.http_header)
     expect(auth[:token][:query_parameter]).to eq(AuthSpecToken::Config.query_parameter.to_s)
 
     expect(auth[:token]).to have_key(:resources)
     expect(auth[:token][:resources]).to have_key(:token)
+
+    resource = auth[:token][:resources][:token]
+    expect(resource[:description]).to eq('Spravovat autentizační tokeny')
+    expect(resource[:actions][:request][:description]).to eq('Vyžádat autentizační token')
+    expect(resource[:actions][:revoke][:description]).to eq('Zneplatnit aktuální autentizační token')
+    expect(resource[:actions][:renew][:description]).to eq('Obnovit aktuální autentizační token')
   end
 end
 

@@ -1,33 +1,66 @@
 en:
   haveapi:
     action_state:
-      cancellation_failed: cancellation failed
-      not_found: action state not found
-      timeout_max: timeout has to be maximally %{max}
+      cancellation_failed: Action cancellation failed
+      not_found: Action state not found
+      timeout_max: timeout must be at most %{max}
     authentication:
-      failed: authentication failed
-      invalid_credentials: invalid authentication credentials
-      multiple_oauth2_tokens: Multiple OAuth2 tokens provided
-      multiple_tokens: Multiple authentication tokens provided
-      renew_failed: renew failed
-      required: Action requires user to authenticate
-      revoke_failed: revoke failed
-      token_required: Action requires user to authenticate with a token
+      failed: Authentication failed
+      invalid_credentials: Invalid authentication credentials
+      multiple_oauth2_tokens: Multiple OAuth2 tokens were provided
+      multiple_tokens: Multiple authentication tokens were provided
+      renew_failed: Token renewal failed
+      required: This action requires authentication
+      revoke_failed: Token revocation failed
+      token_required: This action requires token authentication
+      basic:
+        description: |-
+          Authentication using HTTP Basic. The username and password are passed in an HTTP header.
+          This method must not be used from web browsers.
+      token:
+        description: |-
+          The client authenticates with credentials, usually a username and password, and receives a token. From that point on, the credentials can be forgotten and the token is used instead. Tokens can have different lifetimes and can be renewed or revoked. The token is passed either in an HTTP header or as a query parameter.
+        resource:
+          description: Manage authentication tokens
+        actions:
+          request:
+            description: Request an authentication token
+          revoke:
+            description: Revoke the current authentication token
+          renew:
+            description: Renew the current authentication token
+      oauth2:
+        description: |-
+          OAuth2 authorization provider.
+          HaveAPI clients have limited OAuth2 support, but the API can be used as an authentication source and OAuth2 tokens can be used to access it. HaveAPI partially implements RFC 6749: authorization response type "code" and token grant types "authorization_code" and "refresh_token". Other response and grant types are not supported at this time. The access token can be passed as a bearer token according to RFC 6750, or using a custom HTTP header when the Authorization header is not practical.
+          Access and refresh tokens can be revoked according to RFC 7009.
     authorization:
       insufficient_permissions: Access denied. Insufficient permissions.
     errors:
       action_not_found: Action not found
-      bad_accept_header: Bad Accept header
-      bad_json_syntax: Bad JSON syntax
-      json_body_object: JSON body must be an object
-      server_error: Server error occurred
-      unsupported_content_type: Unsupported Content-Type
+      bad_accept_header: Invalid Accept header
+      bad_json_syntax: Invalid JSON syntax
+      json_body_object: The JSON request body must be an object
+      server_error: A server error occurred
+      unsupported_content_type: Unsupported Content-Type header
     pagination:
-      limit_max: limit has to be maximally %{max}
+      limit_max: limit must be at most %{max}
+    resources:
+      action_state:
+        description: Browse states of blocking actions
+        actions:
+          index:
+            description: List pending action states
+          poll:
+            description: Return when the action is completed, its progress changes, or a timeout occurs
+          show:
+            description: Show the state of a pending action
+          cancel:
+            description: Cancel a pending action
     parameters:
       action_state:
         can_cancel:
-          description: When true, execution of this action can be cancelled
+          description: When true, this action can be cancelled
           label: Can cancel
         created_at:
           label: Created at
@@ -39,58 +72,56 @@ en:
           label: Label
         poll:
           current:
-            description: progress to check with if update_in is set
+            description: Current progress value to compare when update_in is set
           status:
-            description: status to check with if update_in is set
+            description: Status value to compare when update_in is set
           timeout:
-            description: in seconds
+            description: Timeout in seconds
             label: Timeout
           total:
-            description: progress to check with if update_in is set
+            description: Total progress value to compare when update_in is set
           update_in:
-            description: number of seconds after which the state is returned if the progress has changed
-            label: Progress
+            description: Return early when status, current, or total changes; the value is passed to API-specific polling implementations
+            label: Update in
         status:
-          description: Determines whether the action is proceeding or failing
+          description: Whether the action is proceeding successfully or has failed
           label: Status
         total:
-          description: The action is finished when current equals to total
+          description: The action is finished when current reaches total
           label: Total
         unit:
           description: Unit of current and total
           label: Unit
         updated_at:
-          description: When was the progress last updated
+          description: When the progress was last updated
           label: Updated at
       action_state_id:
-        description: ID of ActionState object for state querying. When null, the action is not blocking for the current invocation.
+        description: |-
+          ID of the ActionState object for state polling.
+          When null, the action is not blocking for the current invocation.
         label: Action state ID
       active_record:
         includes:
           description: |-
-            A list of names of associated resources separated by a comma.
-            Nested associations are declared with '__' between resource names.
-            For example, 'user,node' will resolve the two associations.
-            To resolve further associations of node, use e.g. 'user,node__location',
-            to go even deeper, use e.g. 'user,node__location__environment'.
+            A comma-separated list of associated resource names. Nested associations are declared with '__' between resource names. For example, 'user,node' includes these two associations. To include further associations of node, use e.g. 'user,node__location'; to go even deeper, use e.g. 'user,node__location__environment'.
           label: Included associations
         path_params:
-          description: An array of parameters needed to resolve URL to this object
+          description: An array of parameters needed to build the URL for this object
           label: URL parameters
         resolved:
-          description: True if the association is resolved
+          description: True if the association has been loaded
           label: Resolved
       authentication:
         token:
           interval:
-            description: How long will requested token be valid, in seconds.
+            description: How long the requested token will be valid, in seconds.
             label: Interval
           lifetime:
             description: |-
-              fixed - the token has a fixed validity period, it cannot be renewed
-              renewable_manual - the token can be renewed, but it must be done manually via renew action
-              renewable_auto - the token is renewed automatically to now+interval every time it is used
-              permanent - the token will be valid forever, unless deleted
+              fixed - the token has a fixed validity period and cannot be renewed
+              renewable_manual - the token can be renewed, but only manually using the renew action
+              renewable_auto - the token is renewed automatically to now + interval whenever it is used
+              permanent - the token is valid forever unless deleted
             label: Lifetime
           password:
             label: Password
@@ -100,39 +131,39 @@ en:
             label: User
       default:
         count:
-          label: Return the count of all items
+          label: Return total count
         total_count:
-          label: Total count of all items
+          label: Total item count
       metadata:
         'no':
           label: Disable metadata
       paginable:
         from_id:
-          description: List objects with greater/lesser ID
+          description: List objects with IDs greater or lower than this value
           label: From ID
         limit:
           description: Number of objects to retrieve
           label: Limit
     types:
-      invalid_boolean: not a valid boolean %{value}
-      invalid_datetime: not in ISO 8601 format '%{value}'
-      invalid_float: not a valid float %{value}
-      invalid_integer: not a valid integer %{value}
-      invalid_string: not a valid string %{value}
+      invalid_boolean: "not a valid boolean: %{value}"
+      invalid_datetime: "not in ISO 8601 format: '%{value}'"
+      invalid_float: "not a valid float: %{value}"
+      invalid_integer: "not a valid integer: %{value}"
+      invalid_string: "not a valid string: %{value}"
     validation:
       cannot_be_null: cannot be null
       includes_only_strings: includes must contain only strings
       includes_string_or_array: includes must be a string or array
-      input_parameters_not_valid: input parameters not valid
-      invalid_id: not a valid id %{value}
+      input_parameters_not_valid: input parameters are not valid
+      invalid_id: "not a valid ID: %{value}"
       invalid_input_layout: invalid input layout
       invalid_path_parameter_encoding: invalid path parameter encoding
       invalid_string_encoding: invalid string encoding
-      required_parameter_missing: required parameter missing
+      required_parameter_missing: required parameter is missing
       resource_not_found: resource not found
     validators:
       acceptance:
-        accepted: has to be %{value}
+        accepted: must be %{value}
       confirmation:
         different: must be different from %{parameter}
         same: must be the same as %{parameter}
@@ -143,49 +174,51 @@ en:
       inclusion:
         included: '%{value} cannot be used'
       length:
-        equals: length has to be %{equals}
-        max: length has to be maximally %{max}
-        min: length has to be minimally %{min}
-        range: length has to be in range <%{min}, %{max}>
+        equals: length must be %{equals}
+        max: length must be at most %{max}
+        min: length must be at least %{min}
+        range: length must be between %{min} and %{max}
       numericality:
         composite: '%{requirements}'
-        even: even
-        max: has to be maximally %{max}
-        min: has to be minimally %{min}
-        mod: mod %{mod} must equal zero
-        number: has to be a number
-        odd: odd
-        range: has to be in range <%{min}, %{max}>
-        step: in steps of %{step}
+        even: must be even
+        max: must be at most %{max}
+        min: must be at least %{min}
+        mod: remainder after division by %{mod} must be zero
+        number: must be a number
+        odd: must be odd
+        range: must be between %{min} and %{max}
+        step: must be in steps of %{step}
       presence:
         non_empty: must be present and non-empty
         present: must be present
   haveapi_client:
     authentication:
-      callback_invalid_return: "callback has to return an array or 'stop'"
-      callback_failed: "%{callback} failed: %{error}"
-      callback_required: "Implement callback %{callback}"
-      invalid_credentials: invalid credentials
+      callback_invalid_return: "The callback must return an array or 'stop'"
+      callback_failed: "Callback %{callback} failed: %{error}"
+      callback_required: "Callback %{callback} must be implemented"
+      invalid_credentials: Invalid credentials
       invalid_oauth2_pkce_verifier: Invalid OAuth2 PKCE verifier
       invalid_oauth2_state: Invalid OAuth2 state
-      mfa_required: implement multi-factor authentication
-      multistep_callback_required: add callback to handle multi-step authentication
-      oauth2_access_token_required: Option access_token must be provided
+      mfa_required: Multi-factor authentication support must be implemented
+      multistep_callback_required: Add a callback to handle multi-step authentication
+      oauth2_access_token_required: The access_token option must be provided
       oauth2_not_configured: OAuth2 authentication is not configured
       oauth2_revoke_failed: "Unable to revoke access token, HTTP %{status}"
       token_request_failed: "Unable to request token: %{message}"
       token_revoke_failed: "Unable to revoke token: %{message}"
-      token_step_failed: "Failed at authentication step '%{action}': %{message}"
+      token_step_failed: "Authentication step '%{action}' failed: %{message}"
       unsupported_auth_action: "Unsupported authentication action '%{action}'"
     errors:
-      access_forbidden: Access forbidden. Bad user name or password? Not authorized?
-      action_failed: "%{action} failed: %{message}"
+      access_forbidden: |-
+        Access forbidden.
+        Bad username or password? Insufficient permissions?
+      action_failed: "Action %{action} failed: %{message}"
       fatal_api_error: "Fatal API error: %{error}"
-      input_parameters_not_valid: input parameters not valid
-      input_parameters_not_valid_for_action: "Input parameters not valid for action '%{action}'"
-      invalid_input_parameters: invalid input parameters
-      uncancelable_action: "Action state #%{id} cannot be cancelled"
-      unresolved_arguments: "Unable to execute action '%{action}': unresolved arguments"
+      input_parameters_not_valid: Input parameters are not valid
+      input_parameters_not_valid_for_action: "Input parameters are not valid for action '%{action}'"
+      invalid_input_parameters: Invalid input parameters
+      uncancelable_action: "Action with state #%{id} cannot be cancelled"
+      unresolved_arguments: "Unable to execute action '%{action}': unresolved path arguments"
     validation:
       cannot_be_null: cannot be null
       invalid_boolean: not a valid boolean
@@ -193,41 +226,74 @@ en:
       invalid_float: not a valid float
       invalid_integer: not a valid integer
       invalid_input_layout: invalid input layout
-      invalid_resource_id: not a valid resource id
+      invalid_resource_id: not a valid resource ID
       invalid_string: not a valid string
-      required_parameter_missing: required parameter missing
+      required_parameter_missing: required parameter is missing
       validation_failed: validation failed
       validation_failed_with_errors: "validation failed: %{errors}"
 cs:
   haveapi:
     action_state:
-      cancellation_failed: zrušení selhalo
-      not_found: stav akce nebyl nalezen
-      timeout_max: timeout může být nejvýše %{max}
+      cancellation_failed: Zrušení akce se nezdařilo
+      not_found: Stav akce nebyl nalezen
+      timeout_max: Časový limit může být nejvýše %{max}
     authentication:
-      failed: přihlášení selhalo
-      invalid_credentials: neplatné přihlašovací údaje
-      multiple_oauth2_tokens: Bylo poskytnuto více OAuth2 tokenů
-      multiple_tokens: Bylo poskytnuto více ověřovacích tokenů
-      renew_failed: obnovení selhalo
-      required: Akce vyžaduje přihlášení uživatele
-      revoke_failed: zrušení selhalo
-      token_required: Akce vyžaduje přihlášení uživatele tokenem
+      failed: Přihlášení se nezdařilo
+      invalid_credentials: Neplatné přihlašovací údaje
+      multiple_oauth2_tokens: Bylo zadáno více OAuth2 tokenů
+      multiple_tokens: Bylo zadáno více autentizačních tokenů
+      renew_failed: Obnovení tokenu se nezdařilo
+      required: Tato akce vyžaduje přihlášení
+      revoke_failed: Zneplatnění tokenu se nezdařilo
+      token_required: Tato akce vyžaduje autentizaci tokenem
+      basic:
+        description: |-
+          Autentizace pomocí HTTP Basic. Uživatelské jméno a heslo se předávají v HTTP hlavičce.
+          Tato metoda se nesmí používat z webových prohlížečů.
+      token:
+        description: |-
+          Klient se autentizuje přihlašovacími údaji, obvykle uživatelským jménem a heslem, a získá token. Od té chvíle už přihlašovací údaje nepotřebuje a používá místo nich token. Tokeny mohou mít různou dobu platnosti a lze je obnovovat nebo zneplatňovat. Token se předává buď v HTTP hlavičce, nebo jako parametr dotazu.
+        resource:
+          description: Spravovat autentizační tokeny
+        actions:
+          request:
+            description: Vyžádat autentizační token
+          revoke:
+            description: Zneplatnit aktuální autentizační token
+          renew:
+            description: Obnovit aktuální autentizační token
+      oauth2:
+        description: |-
+          OAuth2 autorizační provider.
+          Podpora OAuth2 v klientech HaveAPI je omezená, ale API lze použít jako zdroj autentizace a k přístupu k API lze používat OAuth2 tokeny. HaveAPI částečně implementuje RFC 6749: autorizační response type "code" a token grant types "authorization_code" a "refresh_token". Ostatní response a grant types momentálně nejsou podporovány. Přístupový token lze předat jako bearer token podle RFC 6750 nebo vlastní HTTP hlavičkou, pokud není praktické použít hlavičku Authorization.
+          Přístupové a refresh tokeny lze zneplatnit podle RFC 7009.
     authorization:
       insufficient_permissions: Přístup odepřen. Nedostatečná oprávnění.
     errors:
       action_not_found: Akce nebyla nalezena
-      bad_accept_header: Chybná hlavička Accept
-      bad_json_syntax: Chybná syntaxe JSON
-      json_body_object: Tělo JSON musí být objekt
+      bad_accept_header: Neplatná hlavička Accept
+      bad_json_syntax: Neplatná syntaxe JSON
+      json_body_object: Tělo JSON požadavku musí být objekt
       server_error: Došlo k chybě serveru
-      unsupported_content_type: Nepodporovaný Content-Type
+      unsupported_content_type: Nepodporovaná hlavička Content-Type
     pagination:
-      limit_max: limit může být nejvýše %{max}
+      limit_max: Limit může být nejvýše %{max}
+    resources:
+      action_state:
+        description: Procházet stavy blokujících akcí
+        actions:
+          index:
+            description: Vypsat stavy čekajících akcí
+          poll:
+            description: Vrátit stav po dokončení akce, změně průběhu nebo vypršení časového limitu
+          show:
+            description: Zobrazit stav čekající akce
+          cancel:
+            description: Zrušit čekající akci
     parameters:
       action_state:
         can_cancel:
-          description: Je-li true, spuštění této akce lze zrušit
+          description: Je-li hodnota true, lze běh této akce zrušit
           label: Lze zrušit
         created_at:
           label: Vytvořeno
@@ -239,97 +305,95 @@ cs:
           label: Popisek
         poll:
           current:
-            description: průběh, se kterým se porovnává při nastaveném update_in
+            description: Aktuální průběh pro porovnání, je-li nastaveno update_in
           status:
-            description: stav, se kterým se porovnává při nastaveném update_in
+            description: Stav pro porovnání, je-li nastaveno update_in
           timeout:
-            description: v sekundách
+            description: Časový limit v sekundách
             label: Časový limit
           total:
-            description: průběh, se kterým se porovnává při nastaveném update_in
+            description: Celkový průběh pro porovnání, je-li nastaveno update_in
           update_in:
-            description: počet sekund, po kterém se stav vrátí, pokud se průběh změnil
-            label: Průběh
+            description: Vrátit stav dříve, pokud se změní status, current nebo total; hodnota se předává implementacím pollingu v API
+            label: Čekat na změnu
         status:
-          description: Určuje, zda akce probíhá nebo selhává
+          description: Určuje, zda akce probíhá úspěšně nebo selhala
           label: Stav
         total:
-          description: Akce je dokončena, když se aktuální průběh rovná celkovému
+          description: Akce je dokončena, když aktuální průběh dosáhne celkového
           label: Celkem
         unit:
-          description: Jednotka aktuálního a celkového průběhu
+          description: Jednotka hodnot current a total
           label: Jednotka
         updated_at:
-          description: Kdy byl průběh naposledy aktualizován
+          description: Čas poslední aktualizace průběhu
           label: Aktualizováno
       action_state_id:
-        description: ID objektu ActionState pro dotazování stavu. Pokud je null, akce není pro aktuální volání blokující.
+        description: |-
+          ID objektu ActionState pro dotazování na stav.
+          Pokud je hodnota null, akce v aktuálním volání neblokuje.
         label: ID stavu akce
       active_record:
         includes:
           description: |-
-            Seznam názvů asociovaných prostředků oddělených čárkou.
-            Vnořené asociace se zapisují pomocí '__' mezi názvy prostředků.
-            Například 'user,node' přeloží tyto dvě asociace.
-            Pro přeložení dalších asociací uzlu použijte např. 'user,node__location',
-            pro ještě hlubší úroveň např. 'user,node__location__environment'.
+            Seznam názvů asociovaných zdrojů oddělených čárkou. Vnořené asociace se zapisují pomocí '__' mezi názvy zdrojů. Například 'user,node' načte tyto dvě asociace. Pro načtení dalších asociací zdroje node použijte např. 'user,node__location'; pro ještě hlubší úroveň např. 'user,node__location__environment'.
           label: Zahrnuté asociace
         path_params:
-          description: Pole parametrů potřebných k přeložení URL na tento objekt
+          description: Pole parametrů potřebných k sestavení URL k tomuto objektu
           label: Parametry URL
         resolved:
-          description: True, pokud je asociace přeložena
-          label: Přeloženo
+          description: True, pokud je asociace načtena
+          label: Načteno
       authentication:
         token:
           interval:
-            description: Jak dlouho bude požadovaný token platný, v sekundách.
+            description: Doba platnosti požadovaného tokenu v sekundách.
             label: Interval
           lifetime:
             description: |-
               fixed - token má pevnou dobu platnosti a nelze ho obnovit
-              renewable_manual - token lze obnovit, ale musí se obnovit ručně akcí renew
-              renewable_auto - token se při každém použití automaticky obnoví na now+interval
-              permanent - token bude platný navždy, dokud nebude smazán
+              renewable_manual - platnost tokenu lze prodloužit, ale pouze ručně akcí renew
+              renewable_auto - platnost tokenu se při každém použití automaticky prodlouží na now + interval
+              permanent - token je platný trvale, dokud není smazán
             label: Životnost
           password:
             label: Heslo
           scope:
-            label: Rozsah
+            label: Scope
           user:
             label: Uživatel
       default:
         count:
-          label: Vrátit počet všech položek
+          label: Vrátit celkový počet položek
         total_count:
-          label: Celkový počet všech položek
+          label: Celkový počet položek
       metadata:
         'no':
-          label: Zakázat metadata
+          label: Vypnout metadata
       paginable:
         from_id:
-          description: Vypsat objekty s větším/menším ID
+          description: Vypsat objekty s ID větším/menším než zadaná hodnota
           label: Od ID
         limit:
           description: Počet objektů k načtení
           label: Limit
     types:
-      invalid_boolean: neplatná pravdivostní hodnota %{value}
-      invalid_datetime: není ve formátu ISO 8601 '%{value}'
-      invalid_float: neplatné desetinné číslo %{value}
-      invalid_integer: neplatné celé číslo %{value}
-      invalid_string: neplatný řetězec %{value}
+      invalid_boolean: "není platná pravdivostní hodnota: %{value}"
+      invalid_datetime: "není ve formátu ISO 8601: '%{value}'"
+      invalid_float: "není platné desetinné číslo: %{value}"
+      invalid_integer: "není platné celé číslo: %{value}"
+      invalid_string: "není platný řetězec: %{value}"
     validation:
       cannot_be_null: nesmí být null
       includes_only_strings: includes musí obsahovat jen řetězce
       includes_string_or_array: includes musí být řetězec nebo pole
-      input_parameters_not_valid: vstupní parametry nejsou platné
-      invalid_id: neplatné ID %{value}
+      input_parameters_not_valid: vstupní parametry jsou neplatné
+      invalid_id: "není platné ID: %{value}"
       invalid_input_layout: neplatná struktura vstupu
       invalid_path_parameter_encoding: neplatné kódování parametru cesty
       invalid_string_encoding: neplatné kódování řetězce
-      required_parameter_missing: povinný parametr chybí
-      resource_not_found: prostředek nebyl nalezen
+      required_parameter_missing: chybí povinný parametr
+      resource_not_found: zdroj nebyl nalezen
     validators:
       acceptance:
         accepted: musí být %{value}
@@ -344,57 +408,59 @@ cs:
         included: '%{value} nelze použít'
       length:
         equals: délka musí být %{equals}
-        max: délka může být nejvýše %{max}
+        max: délka musí být nejvýše %{max}
         min: délka musí být alespoň %{min}
-        range: délka musí být v rozsahu <%{min}, %{max}>
+        range: délka musí být v rozsahu %{min}–%{max}
       numericality:
         composite: '%{requirements}'
-        even: sudé číslo
+        even: musí být sudé číslo
         max: musí být nejvýše %{max}
         min: musí být alespoň %{min}
         mod: zbytek po dělení %{mod} musí být nula
         number: musí být číslo
-        odd: liché číslo
-        range: musí být v rozsahu <%{min}, %{max}>
-        step: v krocích po %{step}
+        odd: musí být liché číslo
+        range: musí být v rozsahu %{min}–%{max}
+        step: musí být v krocích po %{step}
       presence:
-        non_empty: musí být vyplněno a neprázdné
+        non_empty: musí být vyplněno a nesmí být prázdné
         present: musí být vyplněno
   haveapi_client:
     authentication:
-      callback_invalid_return: "callback musí vrátit pole nebo 'stop'"
-      callback_failed: "%{callback} selhal: %{error}"
-      callback_required: "Implementujte callback %{callback}"
-      invalid_credentials: neplatné přihlašovací údaje
+      callback_invalid_return: "Callback musí vrátit pole nebo 'stop'"
+      callback_failed: "Callback %{callback} selhal: %{error}"
+      callback_required: "Je potřeba implementovat callback %{callback}"
+      invalid_credentials: Neplatné přihlašovací údaje
       invalid_oauth2_pkce_verifier: Neplatný OAuth2 PKCE verifier
-      invalid_oauth2_state: Neplatný OAuth2 state
-      mfa_required: implementujte vícefaktorové ověření
-      multistep_callback_required: přidejte callback pro zpracování vícefázového ověření
+      invalid_oauth2_state: Neplatný parametr OAuth2 state
+      mfa_required: Klient musí implementovat vícefaktorové ověření
+      multistep_callback_required: Je potřeba přidat callback pro zpracování vícefázové autentizace
       oauth2_access_token_required: Volba access_token musí být zadána
-      oauth2_not_configured: OAuth2 ověření není nastaveno
-      oauth2_revoke_failed: "Přístupový token nelze zrušit, HTTP %{status}"
-      token_request_failed: "Token nelze vyžádat: %{message}"
-      token_revoke_failed: "Token nelze zrušit: %{message}"
-      token_step_failed: "Krok ověření '%{action}' selhal: %{message}"
-      unsupported_auth_action: "Nepodporovaná ověřovací akce '%{action}'"
+      oauth2_not_configured: OAuth2 autentizace není nastavena
+      oauth2_revoke_failed: "Přístupový token se nepodařilo zneplatnit, HTTP %{status}"
+      token_request_failed: "Token se nepodařilo vyžádat: %{message}"
+      token_revoke_failed: "Token se nepodařilo zneplatnit: %{message}"
+      token_step_failed: "Krok autentizace '%{action}' se nezdařil: %{message}"
+      unsupported_auth_action: "Nepodporovaná autentizační akce '%{action}'"
     errors:
-      access_forbidden: Přístup odepřen. Chybné uživatelské jméno nebo heslo? Nejste oprávněni?
-      action_failed: "%{action} selhala: %{message}"
-      fatal_api_error: "Fatální chyba API: %{error}"
-      input_parameters_not_valid: vstupní parametry nejsou platné
-      input_parameters_not_valid_for_action: "Vstupní parametry pro akci '%{action}' nejsou platné"
-      invalid_input_parameters: neplatné vstupní parametry
-      uncancelable_action: "Stav akce #%{id} nelze zrušit"
-      unresolved_arguments: "Akci '%{action}' nelze spustit: chybí argumenty"
+      access_forbidden: |-
+        Přístup odepřen.
+        Chybné uživatelské jméno nebo heslo? Nedostatečná oprávnění?
+      action_failed: "Akce %{action} se nezdařila: %{message}"
+      fatal_api_error: "Závažná chyba API: %{error}"
+      input_parameters_not_valid: Vstupní parametry jsou neplatné
+      input_parameters_not_valid_for_action: "Vstupní parametry pro akci '%{action}' jsou neplatné"
+      invalid_input_parameters: Neplatné vstupní parametry
+      uncancelable_action: "Akci se stavem #%{id} nelze zrušit"
+      unresolved_arguments: "Akci '%{action}' nelze spustit: chybí argumenty cesty"
     validation:
       cannot_be_null: nesmí být null
-      invalid_boolean: neplatná pravdivostní hodnota
+      invalid_boolean: není platná pravdivostní hodnota
       invalid_datetime: není ve formátu ISO 8601
-      invalid_float: neplatné desetinné číslo
-      invalid_integer: neplatné celé číslo
+      invalid_float: není platné desetinné číslo
+      invalid_integer: není platné celé číslo
       invalid_input_layout: neplatná struktura vstupu
-      invalid_resource_id: neplatné ID prostředku
-      invalid_string: neplatný řetězec
-      required_parameter_missing: povinný parametr chybí
+      invalid_resource_id: neplatné ID zdroje
+      invalid_string: není platný řetězec
+      required_parameter_missing: chybí povinný parametr
       validation_failed: validace selhala
       validation_failed_with_errors: "validace selhala: %{errors}"

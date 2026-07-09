@@ -9,7 +9,7 @@ final class TokenAuthenticationI18nTest extends TestCase
         $auth = $this->newTokenAuth([]);
 
         $this->expectException(\BadFunctionCallException::class);
-        $this->expectExceptionMessage('přidejte callback pro zpracování vícefázového ověření');
+        $this->expectExceptionMessage('Je potřeba přidat callback pro zpracování vícefázové autentizace');
 
         $auth->run();
     }
@@ -21,7 +21,7 @@ final class TokenAuthenticationI18nTest extends TestCase
         ]);
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage("callback musí vrátit pole nebo 'stop'");
+        $this->expectExceptionMessage("Callback musí vrátit pole nebo 'stop'");
 
         $auth->run();
     }

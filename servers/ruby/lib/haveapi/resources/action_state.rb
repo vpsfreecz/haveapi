@@ -2,7 +2,7 @@ require 'haveapi/resource'
 
 module HaveAPI::Resources
   class ActionState < HaveAPI::Resource
-    desc 'Browse states of blocking actions'
+    desc HaveAPI.message('haveapi.resources.action_state.description')
     auth false
     version :all
 
@@ -54,7 +54,7 @@ module HaveAPI::Resources
     class Index < HaveAPI::Actions::Default::Index
       include Mixin
 
-      desc 'List states of pending actions'
+      desc HaveAPI.message('haveapi.resources.action_state.actions.index.description')
 
       input(:hash) do
         string :order, choices: %w[newest oldest], default: 'newest', fill: true
@@ -85,7 +85,7 @@ module HaveAPI::Resources
 
       MAX_TIMEOUT = 30
 
-      desc 'Returns when the action is completed or timeout occurs'
+      desc HaveAPI.message('haveapi.resources.action_state.actions.poll.description')
       http_method :get
       route '{%{resource}_id}/poll'
 
@@ -157,7 +157,7 @@ module HaveAPI::Resources
     class Show < HaveAPI::Actions::Default::Show
       include Mixin
 
-      desc 'Show state of a pending action'
+      desc HaveAPI.message('haveapi.resources.action_state.actions.show.description')
 
       output(:hash) do
         use :all
@@ -178,6 +178,8 @@ module HaveAPI::Resources
     end
 
     class Cancel < HaveAPI::Action
+      desc HaveAPI.message('haveapi.resources.action_state.actions.cancel.description')
+
       http_method :post
       route '{%{resource}_id}/cancel'
       blocking true

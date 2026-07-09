@@ -39,7 +39,7 @@ final class OAuth2AuthenticationSecurityTest extends TestCase
             $auth->requestAccessToken();
             $this->fail('Expected AuthenticationFailed');
         } catch (\HaveAPI\Client\Exception\AuthenticationFailed $e) {
-            $this->assertSame('Neplatný OAuth2 state', $e->getMessage());
+            $this->assertSame('Neplatný parametr OAuth2 state', $e->getMessage());
         }
 
         $this->assertNull($provider->grant);

@@ -150,24 +150,8 @@ module HaveAPI::Authentication
       end
 
       def describe
-        desc = <<-END
-        OAuth2 authorization provider. While OAuth2 support in HaveAPI clients
-        is limited, it is possible to use your API as an authentication source
-        and to use OAuth2 tokens to access the API.
-
-        HaveAPI partially implements RFC 6749: authorization response type "code"
-        and token grant types "authorization_code" and "refresh_token". Other
-        response and grant types are not supported at this time.
-
-        The access token can be passed as bearer token according to RFC 6750,
-        or using a custom HTTP header when the Authorization header is not
-        practical.
-
-        The access and refresh tokens can be revoked as per RFC 7009.
-        END
-
         {
-          description: desc,
+          description: HaveAPI.message('haveapi.authentication.oauth2.description'),
           http_header: config.http_header,
           authorize_url: @authorize_url,
           authorize_path: @authorize_path,

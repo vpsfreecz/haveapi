@@ -325,7 +325,7 @@ final class RequestConstructionSecurityTest extends TestCase
             $action->call(['name' => 'bob']);
             $this->fail('Expected unresolved path argument');
         } catch (\HaveAPI\Client\Exception\UnresolvedArguments $e) {
-            $this->assertStringContainsString('unresolved arguments', $e->getMessage());
+            $this->assertStringContainsString('unresolved path arguments', $e->getMessage());
         }
 
         $this->assertSame(['/v1/users/42'], $client->callPaths);
@@ -349,7 +349,7 @@ final class RequestConstructionSecurityTest extends TestCase
             $action->directCall(['name' => 'bob']);
             $this->fail('Expected unresolved path argument');
         } catch (\HaveAPI\Client\Exception\UnresolvedArguments $e) {
-            $this->assertStringContainsString('unresolved arguments', $e->getMessage());
+            $this->assertStringContainsString('unresolved path arguments', $e->getMessage());
         }
 
         $this->assertSame(['/v1/users/42'], $client->directCallPaths);

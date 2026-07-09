@@ -869,23 +869,23 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
 
     expect do
       described_class::Input.clean(ARAdapterSpec::Environment, 'abc', {})
-    end.to raise_error(HaveAPI::ValidationError, /not a valid id/)
+    end.to raise_error(HaveAPI::ValidationError, /not a valid ID/)
 
     expect do
       described_class::Input.clean(ARAdapterSpec::Environment, '', {})
-    end.to raise_error(HaveAPI::ValidationError, /not a valid id/)
+    end.to raise_error(HaveAPI::ValidationError, /not a valid ID/)
 
     expect do
       described_class::Input.clean(ARAdapterSpec::Environment, 1.2, {})
-    end.to raise_error(HaveAPI::ValidationError, /not a valid id/)
+    end.to raise_error(HaveAPI::ValidationError, /not a valid ID/)
 
     expect do
       described_class::Input.clean(ARAdapterSpec::Environment, false, {})
-    end.to raise_error(HaveAPI::ValidationError, /not a valid id/)
+    end.to raise_error(HaveAPI::ValidationError, /not a valid ID/)
 
     expect do
       described_class::Input.clean(ARAdapterSpec::Environment, true, {})
-    end.to raise_error(HaveAPI::ValidationError, /not a valid id/)
+    end.to raise_error(HaveAPI::ValidationError, /not a valid ID/)
 
     expect do
       described_class::Input.clean(ARAdapterSpec::Environment, 9999, {})
@@ -913,11 +913,11 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
 
     expect do
       described_class::Input.clean(ARAdapterSpec::StringAccount, %w[acct-alpha acct-beta], {})
-    end.to raise_error(HaveAPI::ValidationError, /not a valid id/)
+    end.to raise_error(HaveAPI::ValidationError, /not a valid ID/)
 
     expect do
       described_class::Input.clean(ARAdapterSpec::StringAccount, { id: 'acct-alpha' }, {})
-    end.to raise_error(HaveAPI::ValidationError, /not a valid id/)
+    end.to raise_error(HaveAPI::ValidationError, /not a valid ID/)
   end
 
   it 'rejects non-string includes metadata entries' do
@@ -957,7 +957,7 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
     expect(last_response.status).to eq(200)
     expect(api_response).not_to be_ok
     expect(api_response.errors[:limit].first).to include(
-      "range <0, #{HaveAPI::Actions::Paginable::MAX_LIMIT}>"
+      "between 0 and #{HaveAPI::Actions::Paginable::MAX_LIMIT}"
     )
   end
 

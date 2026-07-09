@@ -5,33 +5,57 @@
 en:
   haveapi:
     action_state:
-      cancellation_failed: cancellation failed
-      not_found: action state not found
-      timeout_max: timeout has to be maximally %{max}
+      cancellation_failed: Action cancellation failed
+      not_found: Action state not found
+      timeout_max: timeout must be at most %{max}
     authentication:
-      failed: authentication failed
-      invalid_credentials: invalid authentication credentials
-      multiple_oauth2_tokens: Multiple OAuth2 tokens provided
-      multiple_tokens: Multiple authentication tokens provided
-      renew_failed: renew failed
-      required: Action requires user to authenticate
-      revoke_failed: revoke failed
-      token_required: Action requires user to authenticate with a token
+      basic:
+        description: |-
+          Authentication using HTTP Basic. The username and password are passed in an HTTP header.
+          This method must not be used from web browsers.
+      failed: Authentication failed
+      invalid_credentials: Invalid authentication credentials
+      multiple_oauth2_tokens: Multiple OAuth2 tokens were provided
+      multiple_tokens: Multiple authentication tokens were provided
+      oauth2:
+        description: |-
+          OAuth2 authorization provider.
+          HaveAPI clients have limited OAuth2 support, but the API can be used as an authentication source and OAuth2 tokens can be used to access it. HaveAPI partially implements RFC 6749: authorization response type "code" and token grant types "authorization_code" and "refresh_token". Other response and grant types are not supported at this time. The access token can be passed as a bearer token according to RFC 6750, or using a custom HTTP header when the Authorization header is not practical.
+          Access and refresh tokens can be revoked according to RFC 7009.
+      renew_failed: Token renewal failed
+      required: This action requires authentication
+      revoke_failed: Token revocation failed
+      token:
+        actions:
+          renew:
+            description: Renew the current authentication token
+          request:
+            description: Request an authentication token
+          revoke:
+            description: Revoke the current authentication token
+        description: The client authenticates with credentials, usually a username
+          and password, and receives a token. From that point on, the credentials
+          can be forgotten and the token is used instead. Tokens can have different
+          lifetimes and can be renewed or revoked. The token is passed either in an
+          HTTP header or as a query parameter.
+        resource:
+          description: Manage authentication tokens
+      token_required: This action requires token authentication
     authorization:
       insufficient_permissions: Access denied. Insufficient permissions.
     errors:
       action_not_found: Action not found
-      bad_accept_header: Bad Accept header
-      bad_json_syntax: Bad JSON syntax
-      json_body_object: JSON body must be an object
-      server_error: Server error occurred
-      unsupported_content_type: Unsupported Content-Type
+      bad_accept_header: Invalid Accept header
+      bad_json_syntax: Invalid JSON syntax
+      json_body_object: The JSON request body must be an object
+      server_error: A server error occurred
+      unsupported_content_type: Unsupported Content-Type header
     pagination:
-      limit_max: limit has to be maximally %{max}
+      limit_max: limit must be at most %{max}
     parameters:
       action_state:
         can_cancel:
-          description: When true, execution of this action can be cancelled
+          description: When true, this action can be cancelled
           label: Can cancel
         created_at:
           label: Created at
@@ -43,60 +67,59 @@ en:
           label: Label
         poll:
           current:
-            description: progress to check with if update_in is set
+            description: Current progress value to compare when update_in is set
           status:
-            description: status to check with if update_in is set
+            description: Status value to compare when update_in is set
           timeout:
-            description: in seconds
+            description: Timeout in seconds
             label: Timeout
           total:
-            description: progress to check with if update_in is set
+            description: Total progress value to compare when update_in is set
           update_in:
-            description: number of seconds after which the state is returned if the
-              progress has changed
-            label: Progress
+            description: Return early when status, current, or total changes; the
+              value is passed to API-specific polling implementations
+            label: Update in
         status:
-          description: Determines whether the action is proceeding or failing
+          description: Whether the action is proceeding successfully or has failed
           label: Status
         total:
-          description: The action is finished when current equals to total
+          description: The action is finished when current reaches total
           label: Total
         unit:
           description: Unit of current and total
           label: Unit
         updated_at:
-          description: When was the progress last updated
+          description: When the progress was last updated
           label: Updated at
       action_state_id:
-        description: ID of ActionState object for state querying. When null, the action
-          is not blocking for the current invocation.
+        description: |-
+          ID of the ActionState object for state polling.
+          When null, the action is not blocking for the current invocation.
         label: Action state ID
       active_record:
         includes:
-          description: |-
-            A list of names of associated resources separated by a comma.
-            Nested associations are declared with '__' between resource names.
-            For example, 'user,node' will resolve the two associations.
-            To resolve further associations of node, use e.g. 'user,node__location',
-            to go even deeper, use e.g. 'user,node__location__environment'.
+          description: A comma-separated list of associated resource names. Nested
+            associations are declared with '__' between resource names. For example,
+            'user,node' includes these two associations. To include further associations
+            of node, use e.g. 'user,node__location'; to go even deeper, use e.g. 'user,node__location__environment'.
           label: Included associations
         path_params:
-          description: An array of parameters needed to resolve URL to this object
+          description: An array of parameters needed to build the URL for this object
           label: URL parameters
         resolved:
-          description: True if the association is resolved
+          description: True if the association has been loaded
           label: Resolved
       authentication:
         token:
           interval:
-            description: How long will requested token be valid, in seconds.
+            description: How long the requested token will be valid, in seconds.
             label: Interval
           lifetime:
             description: |-
-              fixed - the token has a fixed validity period, it cannot be renewed
-              renewable_manual - the token can be renewed, but it must be done manually via renew action
-              renewable_auto - the token is renewed automatically to now+interval every time it is used
-              permanent - the token will be valid forever, unless deleted
+              fixed - the token has a fixed validity period and cannot be renewed
+              renewable_manual - the token can be renewed, but only manually using the renew action
+              renewable_auto - the token is renewed automatically to now + interval whenever it is used
+              permanent - the token is valid forever unless deleted
             label: Lifetime
           password:
             label: Password
@@ -106,39 +129,52 @@ en:
             label: User
       default:
         count:
-          label: Return the count of all items
+          label: Return total count
         total_count:
-          label: Total count of all items
+          label: Total item count
       metadata:
         'no':
           label: Disable metadata
       paginable:
         from_id:
-          description: List objects with greater/lesser ID
+          description: List objects with IDs greater or lower than this value
           label: From ID
         limit:
           description: Number of objects to retrieve
           label: Limit
+    resources:
+      action_state:
+        actions:
+          cancel:
+            description: Cancel a pending action
+          index:
+            description: List pending action states
+          poll:
+            description: Return when the action is completed, its progress changes,
+              or a timeout occurs
+          show:
+            description: Show the state of a pending action
+        description: Browse states of blocking actions
     types:
-      invalid_boolean: not a valid boolean %{value}
-      invalid_datetime: not in ISO 8601 format '%{value}'
-      invalid_float: not a valid float %{value}
-      invalid_integer: not a valid integer %{value}
-      invalid_string: not a valid string %{value}
+      invalid_boolean: 'not a valid boolean: %{value}'
+      invalid_datetime: 'not in ISO 8601 format: ''%{value}'''
+      invalid_float: 'not a valid float: %{value}'
+      invalid_integer: 'not a valid integer: %{value}'
+      invalid_string: 'not a valid string: %{value}'
     validation:
       cannot_be_null: cannot be null
       includes_only_strings: includes must contain only strings
       includes_string_or_array: includes must be a string or array
-      input_parameters_not_valid: input parameters not valid
-      invalid_id: not a valid id %{value}
+      input_parameters_not_valid: input parameters are not valid
+      invalid_id: 'not a valid ID: %{value}'
       invalid_input_layout: invalid input layout
       invalid_path_parameter_encoding: invalid path parameter encoding
       invalid_string_encoding: invalid string encoding
-      required_parameter_missing: required parameter missing
+      required_parameter_missing: required parameter is missing
       resource_not_found: resource not found
     validators:
       acceptance:
-        accepted: has to be %{value}
+        accepted: must be %{value}
       confirmation:
         different: must be different from %{parameter}
         same: must be the same as %{parameter}
@@ -149,20 +185,20 @@ en:
       inclusion:
         included: "%{value} cannot be used"
       length:
-        equals: length has to be %{equals}
-        max: length has to be maximally %{max}
-        min: length has to be minimally %{min}
-        range: length has to be in range <%{min}, %{max}>
+        equals: length must be %{equals}
+        max: length must be at most %{max}
+        min: length must be at least %{min}
+        range: length must be between %{min} and %{max}
       numericality:
         composite: "%{requirements}"
-        even: even
-        max: has to be maximally %{max}
-        min: has to be minimally %{min}
-        mod: mod %{mod} must equal zero
-        number: has to be a number
-        odd: odd
-        range: has to be in range <%{min}, %{max}>
-        step: in steps of %{step}
+        even: must be even
+        max: must be at most %{max}
+        min: must be at least %{min}
+        mod: remainder after division by %{mod} must be zero
+        number: must be a number
+        odd: must be odd
+        range: must be between %{min} and %{max}
+        step: must be in steps of %{step}
       presence:
         non_empty: must be present and non-empty
         present: must be present

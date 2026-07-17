@@ -362,7 +362,7 @@ module HaveAPI::ModelAdapters
         resolve_assoc = includes_include?(param.name)
         pass_includes = includes_pass_on_to(param.name) if resolve_assoc
 
-        with_association_context(res_show, args) do |show|
+        with_association_context(param, res_show, args) do |show|
           # Tell the child action it is being checked as a nested association.
           show.flags[:inner_assoc] = true
 
@@ -393,15 +393,17 @@ module HaveAPI::ModelAdapters
         end
       end
 
-      def with_association_context(res_show, args)
+      def with_association_context(param, res_show, args)
         push_cls = @context.action
         push_ins = @context.action_instance
         push_path = @context.path
         push_path_params = @context.path_params
+        push_resource_path = @context.resource_path
         path = @context.action_path_for(res_show)
         path_params = @context.path_params_for(res_show, args)
         @context.path = path
         @context.path_params = path_params
+        @context.resource_path = param.resource_path
 
         res_show.new(
           push_ins.request,
@@ -412,14 +414,15 @@ module HaveAPI::ModelAdapters
         )
         yield @context.action_instance
       ensure
-        restore_context(push_cls, push_ins, push_path, push_path_params)
+        restore_context(push_cls, push_ins, push_path, push_path_params, push_resource_path)
       end
 
-      def restore_context(action, action_instance, path, path_params)
+      def restore_context(action, action_instance, path, path_params, resource_path)
         @context.action = action
         @context.action_instance = action_instance
         @context.path = path
         @context.path_params = path_params
+        @context.resource_path = resource_path
       end
 
       def show_prepared?(show)

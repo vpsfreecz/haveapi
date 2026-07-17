@@ -5,7 +5,7 @@ module HaveAPI::Parameters
     include MetadataI18n
 
     attr_reader :name, :resource, :label, :desc, :type, :value_id, :value_label,
-                :choices, :value_params
+                :choices, :value_params, :resource_path
 
     def initialize(resource, name: nil, label: nil, desc: nil,
                    choices: nil, value_id: :id, value_label: :label, required: nil,

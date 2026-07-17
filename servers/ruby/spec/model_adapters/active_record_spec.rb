@@ -656,6 +656,27 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
     expect(group_data).not_to have_key(:note)
   end
 
+  it 'uses the associated resource scope when authorizing output records' do
+    group = ARAdapterSpec::Group.create!(label: 'grp', note: 'GRP_NOTE')
+    user = create_user(name: 'user', group:)
+    group_show = action_class(:Group, :show)
+    scopes = []
+
+    with_pre_authorize(proc do |ret, context|
+      if context.action == group_show
+        scopes << context.action_scope
+      end
+      ret
+    end) do
+      get "/v1/users/#{user.id}", {}, input: ''
+    end
+
+    expect(api_response).to be_ok
+    expect(api_response[:user][:group][:id]).to eq(group.id)
+    expect(scopes.length).to eq(1)
+    expect(scopes.first).to end_with('.group#show')
+  end
+
   it 'resolves direct associations when included' do
     environment = ARAdapterSpec::Environment.create!(label: 'env', note: 'ENV_NOTE')
     group = ARAdapterSpec::Group.create!(label: 'grp', note: 'GRP_NOTE', environment: environment)

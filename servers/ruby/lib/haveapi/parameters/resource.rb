@@ -177,7 +177,8 @@ module HaveAPI::Parameters
         path_params:,
         input: {},
         user: context.current_user,
-        endpoint: context.endpoint
+        endpoint: context.endpoint,
+        resource_path: @resource_path
       )
       action = show_action.new(context.request, context.version, path_params, {}, child_context)
       return if action.authorized?(context.current_user)

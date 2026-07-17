@@ -572,6 +572,18 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
     validators[klass] || validators[short_name.to_sym] || validators[short_name.to_s]
   end
 
+  def with_pre_authorize(listener)
+    hooks = HaveAPI::Hooks.hooks
+    action_hooks = hooks[HaveAPI::Action][:pre_authorize]
+    original = action_hooks[:listeners].dup
+
+    HaveAPI::Action.connect_hook(:pre_authorize, &listener)
+
+    yield
+  ensure
+    action_hooks[:listeners] = original
+  end
+
   it 'translates ActiveModel validators to HaveAPI validators' do
     app
     create_action = action_class(:User, :create)
@@ -723,16 +735,25 @@ describe HaveAPI::ModelAdapters::ActiveRecord do
 
   it 'uses full nested paths when authorizing resource input records' do
     _dataset, snapshot, link = create_snapshot_link
+    scopes = []
 
-    put "/v1/snapshot_links/#{link.id}", {
-      snapshot_link: {
-        snapshot: snapshot.id
-      }
-    }.to_json, 'CONTENT_TYPE' => 'application/json'
+    with_pre_authorize(proc do |ret, context|
+      scopes << context.action_scope
+      ret[:blocks] << proc { deny if context.action_scope == '#show' }
+      ret
+    end) do
+      put "/v1/snapshot_links/#{link.id}", {
+        snapshot_link: {
+          snapshot: snapshot.id
+        }
+      }.to_json, 'CONTENT_TYPE' => 'application/json'
+    end
 
     expect(last_response.status).to eq(200)
     expect(api_response).to be_ok
     expect(api_response[:snapshot_link]).to eq(assigned: true)
+    expect(scopes).to include(a_string_ending_with('dataset.snapshot#show'))
+    expect(scopes).not_to include('#show')
   end
 
   it 'drops invalid nested include paths from requests' do

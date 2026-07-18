@@ -30,8 +30,8 @@ release:
 	cp clients/js/dist/haveapi-client.js dist/
 
 publish:
-	gem push dist/haveapi-$(VERSION).gem
 	gem push dist/haveapi-client-$(VERSION).gem
+	gem push dist/haveapi-$(VERSION).gem
 	gem push dist/haveapi-go-client-$(VERSION).gem
 	
 	mkdir -p tmp/haveapi-client-js

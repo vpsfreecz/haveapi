@@ -1,3 +1,9 @@
+# Sat Jul 18 2026 - version 0.29.4
+## Ruby server
+- Preserve the referenced resource path while authorizing resource-valued
+  input and output associations, so scoped tokens are checked against the
+  referenced resource's actions instead of the parent resource's actions.
+
 # Thu Jul 9 2026 - version 0.29.3
 ## Ruby server
 - Polish English and Czech framework messages for authentication, validation,

@@ -464,6 +464,19 @@ module HaveAPI
         desc 'Error testing resource'
         auth false
 
+        define_action(:Test) do
+          extend DocFilter
+
+          route 'test'
+          http_method :get
+          output(:hash) {}
+          authorize { allow }
+
+          def exec
+            {}
+          end
+        end
+
         define_action(:Fail) do
           extend DocFilter
 
@@ -609,6 +622,24 @@ module HaveAPI
             }
             ret[:project] = input[:project] unless input[:project].nil?
             ret
+          end
+        end
+      end
+
+      define_resource(:TestGenerated) do
+        desc 'Reserved filename collision testing resource'
+        auth false
+
+        define_action(:Show) do
+          extend DocFilter
+
+          route ''
+          http_method :get
+          output(:hash) {}
+          authorize { allow }
+
+          def exec
+            {}
           end
         end
       end

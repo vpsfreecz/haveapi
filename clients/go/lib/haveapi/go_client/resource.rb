@@ -94,7 +94,10 @@ module HaveAPI::GoClient
           package: gen.package,
           resource: self
         },
-        File.join(gen.dst, prefix_underscore("resource_#{file_name}.go"))
+        File.join(
+          gen.dst,
+          go_source_filename(prefix_underscore("resource_#{file_name}"))
+        )
       )
 
       resources.each { |r| r.generate(gen) }
@@ -106,7 +109,12 @@ module HaveAPI::GoClient
             package: gen.package,
             action: a
           },
-          File.join(gen.dst, prefix_underscore("resource_#{file_name}_action_#{a.file_name}.go"))
+          File.join(
+            gen.dst,
+            go_source_filename(
+              prefix_underscore("resource_#{file_name}_action_#{a.file_name}")
+            )
+          )
         )
       end
     end

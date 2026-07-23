@@ -41,6 +41,15 @@ module HaveAPI::GoClient
       end
     end
 
+    # Add the .go suffix without accidentally creating a Go test source file.
+    # Generated resources and actions are package code, even when their API
+    # name is "test".
+    def go_source_filename(v)
+      base = v.to_s
+      base = "#{base}_#{identifier_hash(base)}" if base.end_with?('_test')
+      "#{base}.go"
+    end
+
     # @param v [String]
     # @return [String]
     def go_package_name(v)

@@ -78,6 +78,22 @@ RSpec.describe HaveAPI::GoClient::Generator do
       stdout, stderr, status = Open3.capture3(*cmd, chdir: cwd)
       expect(status).to be_success, "generator failed: #{stdout}\n#{stderr}"
 
+      expect(File).to exist(File.join(dir, 'client', 'resource_test_cd8aff96.go'))
+      expect(File).to exist(
+        File.join(dir, 'client', 'resource_test_action_test_b557b63f.go')
+      )
+      expect(File).to exist(File.join(dir, 'client', 'resource_test_generated.go'))
+
+      build_out, build_err, build_status = Open3.capture3(
+        { 'CGO_ENABLED' => '0' },
+        'go',
+        'build',
+        './...',
+        chdir: dir
+      )
+      expect(build_status).to be_success,
+                              "go build failed: #{build_out}\n#{build_err}"
+
       File.write(File.join(dir, 'client', 'client_integration_test.go'), <<~GO)
         package client
 

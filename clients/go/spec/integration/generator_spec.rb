@@ -268,6 +268,30 @@ RSpec.describe HaveAPI::GoClient::Generator do
           }
         }
 
+        func TestLocalizedChoiceMetadataAcceptsValidValue(t *testing.T) {
+          c := newValidationClient()
+          if err := c.SetLanguage("cs"); err != nil {
+            t.Fatalf("set language failed: %v", err)
+          }
+
+          req := c.Test.EchoChoice.Prepare()
+          in := req.NewInput()
+          in.SetFormat("archive")
+
+          resp, err := req.Call()
+          if err != nil {
+            t.Fatalf("request failed: %v", err)
+          }
+
+          if !resp.Status {
+            t.Fatalf("request failed: %s", resp.Message)
+          }
+
+          if resp.Output.Format != "archive" {
+            t.Fatalf("expected archive format, got %q", resp.Output.Format)
+          }
+        }
+
         func TestEchoRejectsInvalidDatetime(t *testing.T) {
           c := newValidationClient()
           req := c.Test.Echo.Prepare()

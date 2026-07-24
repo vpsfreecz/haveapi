@@ -519,6 +519,31 @@ module HaveAPI
           end
         end
 
+        define_action(:EchoChoice) do
+          extend DocFilter
+
+          route 'echo_choice'
+          http_method :post
+          input(:hash) do
+            string :format,
+                   required: true,
+                   choices: {
+                     values: {
+                       archive: 'Archive',
+                       stream: 'Stream'
+                     }
+                   }
+          end
+          output(:hash) do
+            string :format
+          end
+          authorize { allow }
+
+          def exec
+            input
+          end
+        end
+
         define_action(:EchoOptional) do
           extend DocFilter
 
@@ -692,10 +717,32 @@ module HaveAPI
       HaveAPI.implicit_version = '1.0'
 
       reset!
+      ::I18n.backend.store_translations(
+        :cs,
+        client_test: {
+          resources: {
+            test: {
+              actions: {
+                echo_choice: {
+                  input: {
+                    format: {
+                      choices: {
+                        archive: { label: 'Archiv' },
+                        stream: { label: 'Proud' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      )
 
       api = HaveAPI::Server.new(Resources)
       api.use_version(:all)
       api.default_version = '1.0'
+      api.parameter_i18n_scope = 'client_test'
       api.auth_chain << BasicProvider
       api.auth_chain << TokenProvider
       api.action_state = ActionStateBackend

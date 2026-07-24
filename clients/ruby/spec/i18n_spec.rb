@@ -33,4 +33,17 @@ RSpec.describe HaveAPI::Client::Client do
         expect(err.errors[:i]).to include('není platné celé číslo')
       end
   end
+
+  it 'accepts a value from localized choice metadata' do
+    client = described_class.new(TEST_SERVER.base_url, language: 'cs')
+    values = client.test.actions[:echo_choice]
+                   .input_params[:format]
+                   .dig(:validators, :include, :values)
+
+    expect(values).to eq(archive: 'Archiv', stream: 'Proud')
+
+    response = client.test.echo_choice(format: 'archive')
+
+    expect(response[:format]).to eq('archive')
+  end
 end

@@ -6,7 +6,7 @@ module HaveAPI::Client
 
     def valid?
       if opts[:values].is_a?(::Hash)
-        opts[:values].keys.include?(value)
+        opts[:values].keys.any? { |v| v.to_s == value.to_s }
 
       else
         opts[:values].include?(value)

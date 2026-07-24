@@ -129,6 +129,16 @@ describe('HaveAPI JS client typed input', function () {
     expect(reply.envelope.errors.i).to.include('není platné celé číslo');
   });
 
+  it('accepts values from localized choice metadata', async () => {
+    client = new HaveAPI.Client(baseUrl, { language: 'cs' });
+
+    await setup(client);
+    const reply = await invoke(client.test.echo_choice, { format: 'archive' });
+
+    expect(reply.isOk()).to.equal(true);
+    expect(reply.response().format).to.equal('archive');
+  });
+
   it('rejects non-integral numbers as integers', async () => {
     await setup(client);
     const reply = await invoke(client.test.echo, echoParams({ i: 12.3 }));

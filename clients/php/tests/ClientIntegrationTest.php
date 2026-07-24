@@ -241,6 +241,21 @@ final class ClientIntegrationTest extends TestCase
         }
     }
 
+    public function testLocalizedChoiceMetadataAcceptsValidValue(): void
+    {
+        $api = new \HaveAPI\Client(
+            self::$baseUrl,
+            null,
+            'haveapi-client-php-test',
+            ['language' => 'cs']
+        );
+
+        $resp = $api->test->echo_choice(['format' => 'archive']);
+
+        $this->assertTrue($resp->isOk());
+        $this->assertSame('archive', $resp['format']);
+    }
+
     public function testTypedInputInvalidValuesAreRejectedLocally(): void
     {
         $api = new \HaveAPI\Client(self::$baseUrl);

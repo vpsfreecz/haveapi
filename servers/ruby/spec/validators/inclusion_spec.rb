@@ -12,30 +12,32 @@ describe HaveAPI::Validators::Inclusion do
     end
   end
 
-  [
-    %w[one two three],
-    {
-      one: 'Fancy one',
-      two: 'Fancy two',
-      three: 'Fancy three'
-    }
-  ].each do |include|
-    context "with include as a '#{include.class}'" do
-      context 'with short form' do
-        let(:validator) { described_class.new(:include, %w[one two three]) }
+  context 'with include as an Array' do
+    let(:values) { %w[one two three] }
 
-        it_behaves_like 'all'
-      end
+    context 'with short form' do
+      let(:validator) { described_class.new(:include, values) }
 
-      context 'with full form' do
-        let(:validator) do
-          described_class.new(:include, {
-            values: %w[one two three]
-          })
-        end
-
-        it_behaves_like 'all'
-      end
+      it_behaves_like 'all'
     end
+
+    context 'with full form' do
+      let(:validator) { described_class.new(:include, { values: }) }
+
+      it_behaves_like 'all'
+    end
+  end
+
+  context 'with include as a Hash' do
+    let(:values) do
+      {
+        one: 'Fancy one',
+        two: 'Fancy two',
+        three: 'Fancy three'
+      }
+    end
+    let(:validator) { described_class.new(:include, { values: }) }
+
+    it_behaves_like 'all'
   end
 end

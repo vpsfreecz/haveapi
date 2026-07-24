@@ -24,6 +24,18 @@ RSpec.describe HaveAPI::Client::Client do
     expect(client.communicator.language_headers).to eq('X-Language' => 'cs-CZ')
   end
 
+  it 'updates and reports language options through the option interface' do
+    client = described_class.new(TEST_SERVER.base_url)
+
+    client.set_opts(language: 'cs-CZ', language_header: 'X-Language')
+
+    expect(client.opts(:language, :language_header)).to eq(
+      language: 'cs-CZ',
+      language_header: 'X-Language'
+    )
+    expect(client.communicator.language_headers).to eq('X-Language' => 'cs-CZ')
+  end
+
   it 'localizes local validation errors' do
     client = described_class.new(TEST_SERVER.base_url, language: 'cs')
 

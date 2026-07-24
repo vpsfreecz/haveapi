@@ -80,6 +80,10 @@ RSpec.describe HaveAPI::Client::Client do
         actions: {},
         resources: {}
       },
+      language: {
+        actions: {},
+        resources: {}
+      },
       users: {
         actions: {},
         resources: {}
@@ -94,8 +98,9 @@ RSpec.describe HaveAPI::Client::Client do
     expect(client.method(:setup).owner).to eq(described_class)
     expect(client.authenticate(:token, token: 'secret-token')).to eq(:authenticated)
     expect(api.authenticate_calls).to eq(2)
+    expect(client.language).to be_a(HaveAPI::Client::Resource)
     expect(client.users).to be_a(HaveAPI::Client::Resource)
-    expect(client.resources.keys).to contain_exactly(:authenticate, :setup, :users)
+    expect(client.resources.keys).to contain_exactly(:authenticate, :setup, :language, :users)
   end
 
   it 'does not let actions or nested resources replace resource methods' do

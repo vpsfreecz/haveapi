@@ -47,6 +47,11 @@ module HaveAPI::GoClient
       @request_action ||= resource.actions.detect { |a| a.name == 'request' }
     end
 
+    # @return [Action]
+    def revoke_action
+      @revoke_action ||= resource.actions.detect { |a| a.name == 'revoke' }
+    end
+
     # @return [Array<Action>]
     def custom_actions
       @custom_actions ||= resource.actions.reject do |a|

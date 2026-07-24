@@ -33,8 +33,13 @@ func (client *Client) SetLanguage(language string) error {
 		return err
 	}
 
-	client.Language = language
+	client.language = language
 	return nil
+}
+
+// GetLanguage returns the configured language request header value.
+func (client *Client) GetLanguage() string {
+	return client.language
 }
 
 // SetLanguageHeader configures the HTTP header used by SetLanguage.
@@ -47,30 +52,35 @@ func (client *Client) SetLanguageHeader(header string) error {
 		return err
 	}
 
-	client.LanguageHeader = header
+	client.languageHeader = header
 	return nil
 }
 
+// GetLanguageHeader returns the configured language header name.
+func (client *Client) GetLanguageHeader() string {
+	return client.languageHeader
+}
+
 func (client *Client) addLanguageHeader(req *http.Request) {
-	if client == nil || req == nil || client.Language == "" {
+	if client == nil || req == nil || client.language == "" {
 		return
 	}
 
-	req.Header.Set(client.languageHeaderName(), client.Language)
+	req.Header.Set(client.languageHeaderName(), client.language)
 }
 
 func (client *Client) languageHeaderName() string {
-	if client == nil || client.LanguageHeader == "" {
+	if client == nil || client.languageHeader == "" {
 		return defaultLanguageHeader
 	}
 
-	return client.LanguageHeader
+	return client.languageHeader
 }
 
 func t(client *Client, key string, values map[string]string) string {
 	language := ""
 	if client != nil {
-		language = client.Language
+		language = client.language
 	}
 
 	return tLanguage(language, key, values)

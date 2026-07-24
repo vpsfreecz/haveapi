@@ -76,4 +76,5 @@ api.SetLanguage("cs")
 
 The value is sent in `Accept-Language` by default. Use
 `SetLanguageHeader("X-Language")` when the API is configured with a custom
-language header.
+language header. Read the configured values with `GetLanguage()` and
+`GetLanguageHeader()`.

@@ -28,6 +28,10 @@ module HaveAPI::GoClient
     # @return [String]
     attr_reader :go_name
 
+    # Name of the field in the parent Go struct
+    # @return [String]
+    attr_reader :go_member_name
+
     # Type in Go
     # @return [String]
     attr_reader :go_type
@@ -55,6 +59,31 @@ module HaveAPI::GoClient
       @actions = desc[:actions].map do |k, v|
         Action.new(self, k.to_s, v, prefix:)
       end.sort!
+      self.class.allocate_member_names(@resources, @actions, reserved: %w[Client])
+    end
+
+    # @param resources [Array<Resource>]
+    # @param actions [Array<Action>]
+    # @param reserved [Array<String>]
+    def self.allocate_member_names(resources, actions, reserved:)
+      allocator = MemberNameAllocator.new(reserved)
+
+      resources.each do |resource|
+        resource.assign_go_member_name(
+          allocator.allocate(
+            resource.go_name,
+            suffix: 'Resource',
+            identity: "resource:#{resource.resource_path.map(&:name).join('/')}"
+          )
+        )
+      end
+
+      actions.each { |action| action.allocate_member_names(allocator) }
+    end
+
+    # @param name [String]
+    def assign_go_member_name(name)
+      @go_member_name = name
     end
 
     # @return [ApiVersion]
@@ -112,7 +141,7 @@ module HaveAPI::GoClient
     end
 
     def <=>(other)
-      go_name <=> other.go_name
+      [go_name, name] <=> [other.go_name, other.name]
     end
 
     protected

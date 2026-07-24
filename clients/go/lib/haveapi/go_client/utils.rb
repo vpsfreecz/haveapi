@@ -2,6 +2,48 @@ require 'digest/sha1'
 require 'json'
 
 module HaveAPI::GoClient
+  class MemberNameAllocator
+    def initialize(reserved = [])
+      @used = reserved.to_h { |name| [name, true] }
+    end
+
+    # Allocate a Go struct member name while preserving the preferred name
+    # whenever it does not collide with another field or method.
+    #
+    # @param preferred [String]
+    # @param suffix [String]
+    # @param identity [String]
+    # @return [String]
+    def allocate(preferred, suffix:, identity:)
+      return use(preferred) unless @used[preferred]
+
+      suffixed = "#{preferred}#{suffix}"
+      return use(suffixed) unless @used[suffixed]
+
+      digest = Digest::SHA1.hexdigest(identity)
+
+      (8..digest.length).each do |length|
+        candidate = "#{suffixed}_#{digest[0, length]}"
+        return use(candidate) unless @used[candidate]
+      end
+
+      index = 2
+      loop do
+        candidate = "#{suffixed}_#{digest}_#{index}"
+        return use(candidate) unless @used[candidate]
+
+        index += 1
+      end
+    end
+
+    protected
+
+    def use(name)
+      @used[name] = true
+      name
+    end
+  end
+
   module Utils
     GO_KEYWORDS = %w[
       break case chan const continue default defer else fallthrough for func go

@@ -39,8 +39,8 @@ func NewValidationError(client ...*Client) *ValidationError {
 		Errors: make(map[string][]string),
 	}
 
-	if len(client) > 0 && client[0] != nil && client[0].Language != "" {
-		validationErrorLanguages.Store(validationErrorKey(ret), client[0].Language)
+	if len(client) > 0 && client[0] != nil && client[0].language != "" {
+		validationErrorLanguages.Store(validationErrorKey(ret), client[0].language)
 		runtime.SetFinalizer(ret, func(e *ValidationError) {
 			validationErrorLanguages.Delete(validationErrorKey(e))
 		})

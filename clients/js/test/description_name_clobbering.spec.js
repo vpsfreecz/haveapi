@@ -23,6 +23,26 @@ function actionWithAliases(aliases) {
   };
 }
 
+function showAction(parameters) {
+  return {
+    aliases: [],
+    blocking: false,
+    method: 'GET',
+    path: '/v1/unsafe/{unsafe_id}',
+    input: {
+      layout: 'object',
+      namespace: 'unsafe',
+      parameters: {}
+    },
+    output: {
+      layout: 'object',
+      namespace: 'unsafe',
+      parameters
+    },
+    meta: {}
+  };
+}
+
 function apiDescription(resources) {
   return {
     authentication: {},
@@ -137,5 +157,75 @@ describe('HaveAPI JS client description member attachment', () => {
     expect(client.inherited).to.equal(undefined);
     expect(client.widgets.actions).to.deep.equal(['list']);
     expect(client.widgets.inherited).to.equal(undefined);
+  });
+
+  it('finds top-level and nested resources that cannot be attached directly', () => {
+    const HaveAPI = loadHaveAPI();
+    const client = newClient(HaveAPI);
+    const childResources = resourceMap();
+
+    childResources.resources = emptyResource({
+      show: showAction({id: {type: 'Integer'}})
+    });
+
+    client.useDescription(apiDescription({
+      setup: emptyResource({
+        show: showAction({id: {type: 'Integer'}})
+      }),
+      widgets: emptyResource({}, childResources)
+    }));
+
+    expect(HaveAPI.Client.findResource(client, ['setup']).getName()).to.equal('setup');
+    expect(
+      HaveAPI.Client.findResource(client, ['widgets', 'resources']).getName()
+    ).to.equal('resources');
+  });
+
+  it('materializes an association to a resource with an unsafe direct name', () => {
+    const HaveAPI = loadHaveAPI();
+    const client = newClient(HaveAPI);
+
+    client.useDescription(apiDescription({
+      setup: emptyResource({
+        show: showAction({id: {type: 'Integer'}})
+      })
+    }));
+
+    const owner = {
+      _private: {
+        client,
+        attributes: {
+          target: {
+            id: 1,
+            _meta: {
+              resolved: true,
+              path_params: [1]
+            }
+          }
+        }
+      }
+    };
+
+    const association = HaveAPI.Client.ResourceInstance.prototype.resolveAssociation.call(
+      owner,
+      'target',
+      ['setup']
+    );
+
+    expect(association).to.be.an.instanceof(HaveAPI.Client.ResourceInstance);
+    expect(association.id).to.equal(1);
+  });
+
+  it('reports an invalid association resource path as a protocol error', () => {
+    const HaveAPI = loadHaveAPI();
+    const client = newClient(HaveAPI);
+
+    client.useDescription(apiDescription({}));
+
+    expect(() => HaveAPI.Client.findResource(client, ['missing']))
+      .to.throw(
+        HaveAPI.Client.Exceptions.ProtocolError,
+        "Associated resource 'missing' not found"
+      );
   });
 });

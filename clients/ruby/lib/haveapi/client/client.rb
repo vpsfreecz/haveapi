@@ -90,24 +90,8 @@ class HaveAPI::Client::Client
   # @param opts [Hash] options
   def set_opts(opts)
     @opts.update(opts)
-    self.language = opts[:language] if opts.has_key?(:language)
-    self.language_header = opts[:language_header] if opts.has_key?(:language_header)
-  end
-
-  def language
-    @api.language
-  end
-
-  def language=(value)
-    @api.language = value
-  end
-
-  def language_header
-    @api.language_header
-  end
-
-  def language_header=(value)
-    @api.language_header = value
+    @api.language = opts[:language] if opts.has_key?(:language)
+    @api.language_header = opts[:language_header] if opts.has_key?(:language_header)
   end
 
   def client_message(key, **values)

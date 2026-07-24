@@ -120,6 +120,14 @@ client-side validation errors:
 api = HaveAPI::Client::Client.new('https://your.api.tld', language: 'cs')
 ```
 
+Change the request language on an existing client with `set_opts`. Read the
+configured value through `opts`:
+
+```ruby
+api.set_opts(language: 'en')
+p api.opts[:language]
+```
+
 The value is sent in `Accept-Language` by default. Use `language_header` when
 the API is configured with a custom language header. Set the language before
 the client fetches the API description so translated validator descriptions

@@ -1,3 +1,8 @@
+# Fri Jul 24 2026 - version 0.29.5
+## Ruby client
+- Accept valid inputs when `choices`/`include` metadata is represented as a
+  labeled map, including maps created by localized choice labels.
+
 # Sat Jul 18 2026 - version 0.29.4
 ## Ruby server
 - Preserve the referenced resource path while authorizing resource-valued

@@ -1,3 +1,21 @@
+# Fri Jul 24 2026 - version 0.29.6
+## Ruby client
+- Resolve association paths through resource registries so resource names
+  that overlap client methods remain usable.
+- Backward incompatible: remove Client `language` and `language_header`
+  accessors; use constructor options and `set_opts`/`opts`.
+
+## JavaScript client
+- Resolve association paths through structural resource collections instead
+  of optional directly attached properties.
+
+## Go client generator
+- Generate collision-safe Client and resource struct members while preserving
+  names that do not actually conflict.
+- Backward incompatible: replace exported `Language` and `LanguageHeader`
+  configuration fields with setters and getters so `Language` can be an API
+  resource.
+
 # Fri Jul 24 2026 - version 0.29.5
 ## Ruby client
 - Accept valid inputs when `choices`/`include` metadata is represented as a

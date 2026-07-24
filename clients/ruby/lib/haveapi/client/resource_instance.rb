@@ -205,10 +205,17 @@ module HaveAPI::Client
     def find_association(res_desc, res_val)
       return nil unless res_val
 
-      tmp = @client
+      resource = @client
+      path = []
 
-      res_desc[:resource].each do |r|
-        tmp = tmp.method(r).call
+      res_desc[:resource].each do |name|
+        path << name
+
+        begin
+          resource = resource.resources.fetch(name.to_sym)
+        rescue KeyError
+          raise ProtocolError, "associated resource '#{path.join('.')}' not found"
+        end
       end
 
       # FIXME: read _meta namespace from description
@@ -217,8 +224,8 @@ module HaveAPI::Client
       ResourceInstance.new(
         @client,
         @api,
-        tmp,
-        action: tmp.actions[:show],
+        resource,
+        action: resource.actions[:show],
         resolved: meta[:resolved],
         response: meta[:resolved] ? res_val : nil,
         meta: meta

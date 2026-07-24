@@ -53,7 +53,7 @@ func (client *Client) SetNewTokenAuth(options *TokenAuthOptions) error {
 	auth := &TokenAuth{Resource: resource, Mode: HttpHeader}
 	auth.setDefaultOptions(options)
 
-	request := resource.Request.Prepare()
+	request := resource.<%= auth.request_action.go_member_name %>.Prepare()
 	request.SetInput(&AuthTokenActionTokenRequestInput{
 <% auth.request_action.input.parameters.each do |p| -%>
 		<%= p.go_name %>: options.<%= p.go_name %>,
@@ -98,7 +98,7 @@ func (auth *TokenAuth) setDefaultOptions(options *TokenAuthOptions) {
 func (auth *TokenAuth) nextAuthenticationStep(options *TokenAuthOptions, action string, token string) error {
 <% auth.custom_actions.each do |a| -%>
 	if action == <%= go_string_literal(a.name) %> {
-		request := auth.Resource.<%= a.go_name %>.Prepare()
+		request := auth.Resource.<%= a.go_member_name %>.Prepare()
 		input := request.NewInput()
 		input.SetToken(token)
 
@@ -162,7 +162,7 @@ func (client *Client) SetTokenAuthMode(mode Mode) {
 // RevokeAuthToken will revoke the authentication token and remove authentication
 // from the client
 func (client *Client) RevokeAuthToken() error {
-	revoke := client.Authentication.(*TokenAuth).Resource.Revoke.Prepare()
+	revoke := client.Authentication.(*TokenAuth).Resource.<%= auth.revoke_action.go_member_name %>.Prepare()
 	resp, err := revoke.Call()
 
 	if err != nil {

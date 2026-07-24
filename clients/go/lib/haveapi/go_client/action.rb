@@ -27,6 +27,10 @@ module HaveAPI::GoClient
     # @return [String]
     attr_reader :go_name
 
+    # Names of fields for the action and its aliases in the resource Go struct
+    # @return [Array<String>]
+    attr_reader :go_member_names
+
     # Data type for Go
     # @return [String]
     attr_reader :go_type
@@ -78,10 +82,31 @@ module HaveAPI::GoClient
       @blocking = desc[:blocking]
     end
 
-    # Return action name with all aliases, camelized
+    # Return allocated action member names, including aliases.
     # @return [Array<String>]
     def all_names(&)
-      ([go_name] + aliases.map { |v| camelize(v) }).uniq.each(&)
+      go_member_names.each(&)
+    end
+
+    # @return [String]
+    def go_member_name
+      go_member_names.first
+    end
+
+    # @param allocator [MemberNameAllocator]
+    def allocate_member_names(allocator)
+      @go_member_names = ([name] + aliases.map(&:to_s)).uniq.map do |raw_name|
+        allocator.allocate(
+          camelize(raw_name),
+          suffix: 'Action',
+          identity: [
+            'action',
+            resource.resource_path.map(&:name).join('/'),
+            name,
+            raw_name
+          ].join(':')
+        )
+      end
     end
 
     # @return [Boolean]
@@ -116,7 +141,7 @@ module HaveAPI::GoClient
     end
 
     def <=>(other)
-      go_name <=> other.go_name
+      [go_name, name] <=> [other.go_name, other.name]
     end
 
     protected

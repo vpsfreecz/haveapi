@@ -13,18 +13,14 @@ type Client struct {
 	// Options for authentication method
 	Authentication Authenticator
 
-	// Language sent to the API server, e.g. "cs" or "cs-CZ".
-	Language string
-
-	// HTTP header used to send Language. Defaults to Accept-Language.
-	LanguageHeader string
-
 	httpClient            *http.Client
 	oauth2TrustedOrigins map[string]struct{}
+	language              string
+	languageHeader        string
 
 <% api.resources.each do |r| -%>
 	// Resource <%= go_comment_text(r.full_dot_name) %>
-	<%= r.go_name %> *<%= r.go_type %>
+	<%= r.go_member_name %> *<%= r.go_type %>
 <% end -%>
 }
 
@@ -36,7 +32,7 @@ func New(url string) *Client {
 	}
 
 <% api.resources.each do |r| -%>
-	c.<%= r.go_name %> = New<%= r.go_type %>(c)
+	c.<%= r.go_member_name %> = New<%= r.go_type %>(c)
 <% end -%>
 
 	return c

@@ -230,6 +230,12 @@ RSpec.describe HaveAPI::GoClient::Generator do
           if err := c.SetLanguageHeader("X-Language"); err != nil {
             t.Fatalf("set language header failed: %v", err)
           }
+          if got := c.GetLanguage(); got != "cs-CZ" {
+            t.Fatalf("expected configured language cs-CZ, got %q", got)
+          }
+          if got := c.GetLanguageHeader(); got != "X-Language" {
+            t.Fatalf("expected configured language header X-Language, got %q", got)
+          }
 
           httpReq, err := http.NewRequest("GET", "#{base_url}/v1/test", nil)
           if err != nil {
@@ -442,6 +448,144 @@ RSpec.describe HaveAPI::GoClient::Generator do
       )
       expect(go_status).to be_success, "go test failed: #{go_out}\n#{go_err}"
     end
+  end
+
+  it 'allocates resource and action members without hiding client configuration' do
+    description = oauth2_revoke_description
+    description[:resources].merge!(
+      language: {
+        resources: {},
+        actions: {}
+      },
+      set_language: {
+        resources: {},
+        actions: {}
+      },
+      get_language: {
+        resources: {},
+        actions: {}
+      },
+      url: {
+        resources: {},
+        actions: {}
+      },
+      authentication: {
+        resources: {},
+        actions: {}
+      },
+      revoke_access_token: {
+        resources: {},
+        actions: {}
+      },
+      widget: {
+        resources: {
+          client: {
+            resources: {},
+            actions: {}
+          },
+          list: {
+            resources: {},
+            actions: {}
+          }
+        },
+        actions: {
+          run: action_description(
+            method: 'GET',
+            path: '/widgets/run',
+            aliases: %w[client list]
+          )
+        }
+      }
+    )
+
+    Dir.mktmpdir('haveapi-go-client-member-names-') do |dir|
+      communicator = instance_double(
+        HaveAPI::Client::Communicator,
+        describe_api: description
+      )
+      allow(HaveAPI::Client::Communicator).to receive(:new).and_return(communicator)
+
+      generator = described_class.new(
+        'http://unused.example',
+        dir,
+        module: 'example.com/haveapi-member-names',
+        package: 'client'
+      )
+      generator.generate
+      generator.go_fmt
+
+      File.write(File.join(dir, 'client', 'member_names_test.go'), <<~GO)
+        package client
+
+        import "testing"
+
+        func TestCollisionSafeMemberNames(t *testing.T) {
+          c := New("http://unused.example")
+
+          if c.Language == nil {
+            t.Fatalf("language resource is not initialized")
+          }
+          if c.SetLanguageResource == nil || c.GetLanguageResource == nil {
+            t.Fatalf("language method collision resources are not initialized")
+          }
+          if c.UrlResource == nil || c.AuthenticationResource == nil {
+            t.Fatalf("fixed client member collision resources are not initialized")
+          }
+          if c.RevokeAccessTokenResource == nil {
+            t.Fatalf("OAuth2 method collision resource is not initialized")
+          }
+          if c.Widget.ClientResource == nil || c.Widget.List == nil {
+            t.Fatalf("nested resources are not initialized")
+          }
+          if c.Widget.Run != c.Widget.ClientAction {
+            t.Fatalf("client alias does not reference the run action")
+          }
+          if c.Widget.Run != c.Widget.ListAction {
+            t.Fatalf("list alias does not reference the run action")
+          }
+
+          if err := c.SetLanguage("cs-CZ"); err != nil {
+            t.Fatalf("set language failed: %v", err)
+          }
+          if err := c.SetLanguageHeader("X-Language"); err != nil {
+            t.Fatalf("set language header failed: %v", err)
+          }
+          if c.GetLanguage() != "cs-CZ" || c.GetLanguageHeader() != "X-Language" {
+            t.Fatalf("language configuration was not retained")
+          }
+        }
+      GO
+
+      go_out, go_err, go_status = Open3.capture3(
+        { 'CGO_ENABLED' => '0' },
+        'go',
+        'test',
+        './...',
+        chdir: dir
+      )
+      expect(go_status).to be_success, "go test failed: #{go_out}\n#{go_err}"
+    end
+  end
+
+  it 'reserves only authentication methods emitted for the described API' do
+    description = oauth2_revoke_description
+    description[:resources][:revoke_access_token] = {
+      resources: {},
+      actions: {}
+    }
+
+    with_oauth2 = HaveAPI::GoClient::ApiVersion.new(description)
+    oauth2_resource = with_oauth2.resources.detect do |resource|
+      resource.name == 'revoke_access_token'
+    end
+    expect(oauth2_resource.go_member_name).to eq('RevokeAccessTokenResource')
+
+    description[:authentication] = {}
+    without_oauth2 = HaveAPI::GoClient::ApiVersion.new(description)
+    plain_resource = without_oauth2.resources.detect do |resource|
+      resource.name == 'revoke_access_token'
+    end
+    expect(plain_resource.go_member_name).to eq('RevokeAccessToken')
   end
 
   it 'generates an OAuth2 client that sends the revoke token as form data' do

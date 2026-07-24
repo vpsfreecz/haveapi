@@ -607,6 +607,42 @@ module HaveAPI
           end
         end
 
+        define_action(:EchoCustom) do
+          extend DocFilter
+
+          route 'echo_custom'
+          http_method :post
+          input(:hash) do
+            custom :value, required: true
+          end
+          output(:hash) do
+            custom :value
+          end
+          authorize { allow }
+
+          def exec
+            input
+          end
+        end
+
+        define_action(:EchoCustomGet) do
+          extend DocFilter
+
+          route 'echo_custom_get'
+          http_method :get
+          input(:hash) do
+            custom :value, required: true
+          end
+          output(:hash) do
+            custom :value
+          end
+          authorize { allow }
+
+          def exec
+            input
+          end
+        end
+
         define_action(:EchoResource) do
           extend DocFilter
 

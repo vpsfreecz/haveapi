@@ -99,6 +99,7 @@ RSpec.describe HaveAPI::GoClient::Generator do
 
         import (
           "net/http"
+          "strings"
           "testing"
           "time"
         )
@@ -177,6 +178,65 @@ RSpec.describe HaveAPI::GoClient::Generator do
           _, err := c.Test.Slow.Prepare().Call()
           if err == nil {
             t.Fatalf("expected timeout error, got nil")
+          }
+        }
+
+        func TestCustomParameters(t *testing.T) {
+          c := New("#{base_url}")
+
+          postReq := c.Test.EchoCustom.Prepare()
+          postReq.NewInput().SetValue(map[string]interface{}{
+            "group_by": []interface{}{"vps_id", "cgroup"},
+          })
+
+          postResp, err := postReq.Call()
+          if err != nil {
+            t.Fatalf("custom POST failed: %v", err)
+          }
+
+          postValue, ok := postResp.Output.Value.(map[string]interface{})
+          if !ok {
+            t.Fatalf("expected custom object output, got %T", postResp.Output.Value)
+          }
+          if _, ok := postValue["group_by"].([]interface{}); !ok {
+            t.Fatalf("expected custom array output, got %#v", postValue)
+          }
+
+          getReq := c.Test.EchoCustomGet.Prepare()
+          getReq.NewInput().SetValue("vps_id")
+
+          getResp, err := getReq.Call()
+          if err != nil {
+            t.Fatalf("custom GET failed: %v", err)
+          }
+          if getResp.Output.Value != "vps_id" {
+            t.Fatalf("expected custom string output, got %#v", getResp.Output.Value)
+          }
+
+          structuredReq := c.Test.EchoCustomGet.Prepare()
+          structuredReq.NewInput().SetValue(map[string]interface{}{
+            "group_by": []interface{}{"vps_id", "cgroup"},
+          })
+
+          structuredResp, err := structuredReq.Call()
+          if err != nil {
+            t.Fatalf("structured custom GET failed: %v", err)
+          }
+
+          structuredValue, ok := structuredResp.Output.Value.(string)
+          if !ok || structuredValue != `{"group_by":["vps_id","cgroup"]}` {
+            t.Fatalf("expected JSON-encoded custom query value, got %#v", structuredResp.Output.Value)
+          }
+
+          invalidReq := c.Test.EchoCustomGet.Prepare()
+          invalidReq.NewInput().SetValue(func() {})
+
+          _, err = invalidReq.Call()
+          if err == nil {
+            t.Fatalf("expected custom query encoding error, got nil")
+          }
+          if !strings.Contains(err.Error(), "encode custom query parameter") {
+            t.Fatalf("unexpected custom query encoding error: %v", err)
           }
         }
       GO

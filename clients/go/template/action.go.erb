@@ -448,10 +448,14 @@ func (inv *<%= action.go_invocation_type %>) Call() (*<%= action.go_response_typ
 func (inv *<%= action.go_invocation_type %>) callAsQuery() (*<%= action.go_response_type %>, error) {
 	queryParams := make(map[string]string)
 <% if action.has_input? -%>
-	inv.convertInputToQueryParams(queryParams)
+	if err := inv.convertInputToQueryParams(queryParams); err != nil {
+		return nil, err
+	}
 <% end -%>
 <% if action.metadata.has_global_input? -%>
-	inv.convertMetaInputToQueryParams(queryParams)
+	if err := inv.convertMetaInputToQueryParams(queryParams); err != nil {
+		return nil, err
+	}
 <% end -%>
 	resp := &<%= action.go_response_type %>{Action: inv.Action}
 	err := inv.Action.Client.DoQueryStringRequest(inv.Path, queryParams, resp)
@@ -561,7 +565,7 @@ func (resp *<%= action.go_response_type %>) CancelOperation() (*ActionActionStat
 <% end -%>
 
 <% if action.http_method == 'GET' && action.has_input? -%>
-func (inv *<%= action.go_invocation_type %>) convertInputToQueryParams(ret map[string]string) {
+func (inv *<%= action.go_invocation_type %>) convertInputToQueryParams(ret map[string]string) error {
 	if inv.Input != nil {
 	<% action.input.parameters.each do |p| -%>
 		if inv.IsParameterSelected(<%= go_string_literal(p.go_name) %>) {
@@ -569,36 +573,72 @@ func (inv *<%= action.go_invocation_type %>) convertInputToQueryParams(ret map[s
 			if inv.IsParameterNil(<%= go_string_literal(p.go_name) %>) {
 				ret[<%= go_query_key(action.input.namespace, p.name) %>] = ""
 			} else {
+		<% if p.type == 'Custom' -%>
+				queryValue, err := convertCustomToString(inv.Input.<%= p.go_name %>)
+				if err != nil {
+					return err
+				}
+				ret[<%= go_query_key(action.input.namespace, p.name) %>] = queryValue
+		<% else -%>
 				ret[<%= go_query_key(action.input.namespace, p.name) %>] = <% if p.go_in_type == 'string' %>inv.Input.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.Input.<%= p.go_name %>)<% end %>
+		<% end -%>
 			}
 	<% else -%>
+		<% if p.type == 'Custom' -%>
+			queryValue, err := convertCustomToString(inv.Input.<%= p.go_name %>)
+			if err != nil {
+				return err
+			}
+			ret[<%= go_query_key(action.input.namespace, p.name) %>] = queryValue
+		<% else -%>
 			ret[<%= go_query_key(action.input.namespace, p.name) %>] = <% if p.go_in_type == 'string' %>inv.Input.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.Input.<%= p.go_name %>)<% end %>
+		<% end -%>
 	<% end -%>
 		}
 	<% end -%>
 	}
+
+	return nil
 }
 <% end -%>
 
-	<% if action.http_method == 'GET' && action.metadata.has_global_input? -%>
-	func (inv *<%= action.go_invocation_type %>) convertMetaInputToQueryParams(ret map[string]string) {
-		if inv.MetaInput != nil {
+<% if action.http_method == 'GET' && action.metadata.has_global_input? -%>
+func (inv *<%= action.go_invocation_type %>) convertMetaInputToQueryParams(ret map[string]string) error {
+	if inv.MetaInput != nil {
 	<% action.metadata.global.input.parameters.each do |p| -%>
-			if inv.IsMetaParameterSelected(<%= go_string_literal(p.go_name) %>) {
+		if inv.IsMetaParameterSelected(<%= go_string_literal(p.go_name) %>) {
 	<% if p.nillable? -%>
-				if inv.IsMetaParameterNil(<%= go_string_literal(p.go_name) %>) {
-					ret[<%= go_query_key(action.resource.api_version.metadata_namespace, p.name) %>] = ""
-				} else {
-					ret[<%= go_query_key(action.resource.api_version.metadata_namespace, p.name) %>] = <% if p.go_in_type == 'string' %>inv.MetaInput.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.MetaInput.<%= p.go_name %>)<% end %>
+			if inv.IsMetaParameterNil(<%= go_string_literal(p.go_name) %>) {
+				ret[<%= go_query_key(action.resource.api_version.metadata_namespace, p.name) %>] = ""
+			} else {
+		<% if p.type == 'Custom' -%>
+				queryValue, err := convertCustomToString(inv.MetaInput.<%= p.go_name %>)
+				if err != nil {
+					return err
 				}
-	<% else -%>
+				ret[<%= go_query_key(action.resource.api_version.metadata_namespace, p.name) %>] = queryValue
+		<% else -%>
 				ret[<%= go_query_key(action.resource.api_version.metadata_namespace, p.name) %>] = <% if p.go_in_type == 'string' %>inv.MetaInput.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.MetaInput.<%= p.go_name %>)<% end %>
-	<% end -%>
+		<% end -%>
 			}
+	<% else -%>
+		<% if p.type == 'Custom' -%>
+			queryValue, err := convertCustomToString(inv.MetaInput.<%= p.go_name %>)
+			if err != nil {
+				return err
+			}
+			ret[<%= go_query_key(action.resource.api_version.metadata_namespace, p.name) %>] = queryValue
+		<% else -%>
+			ret[<%= go_query_key(action.resource.api_version.metadata_namespace, p.name) %>] = <% if p.go_in_type == 'string' %>inv.MetaInput.<%= p.go_name %><% else %>convert<%= p.go_in_type.capitalize %>ToString(inv.MetaInput.<%= p.go_name %>)<% end %>
+		<% end -%>
 	<% end -%>
 		}
-	}
 	<% end -%>
+	}
+
+	return nil
+}
+<% end -%>
 
 <% if action.http_method != 'GET' && (action.has_input? || action.metadata.has_global_input?) -%>
 func (inv *<%= action.go_invocation_type %>) makeAllInputParams() *<%= action.go_request_type %> {

@@ -171,11 +171,7 @@ ResourceInstance.prototype.defaultParams = function(action) {
  * @return {HaveAPI.Client.ResourceInstance}
  */
 ResourceInstance.prototype.resolveAssociation = function(attr, resourcePath, path) {
-	var tmp = this._private.client;
-
-	for(var i = 0; i < resourcePath.length; i++) {
-		tmp = tmp[ resourcePath[i] ];
-	}
+	var tmp = Client.findResource(this._private.client, resourcePath);
 
 	var obj = this._private.attributes[ attr ];
 	var metaNs = this._private.client.apiSettings.meta.namespace;

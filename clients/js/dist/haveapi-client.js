@@ -312,6 +312,35 @@ Client.attachDescriptionMember = function(target, name, value, reservedNames) {
 	return true;
 };
 
+Client.findResource = function(root, resourcePath) {
+	var current = root;
+	var path = [];
+
+	for (var i = 0; i < resourcePath.length; i++) {
+		var name = resourcePath[i];
+		var found = null;
+
+		path.push(name);
+
+		for (var j = 0; j < current.resources.length; j++) {
+			if (current.resources[j].getName() === name) {
+				found = current.resources[j];
+				break;
+			}
+		}
+
+		if (found === null) {
+			throw new Client.Exceptions.ProtocolError(
+				"Associated resource '" + path.join('.') + "' not found"
+			);
+		}
+
+		current = found;
+	}
+
+	return current;
+};
+
 Client.normalizeTrustedOrigins = function(origins) {
 	if (origins === undefined || origins === null)
 		return [];
@@ -2531,11 +2560,7 @@ ResourceInstance.prototype.defaultParams = function(action) {
  * @return {HaveAPI.Client.ResourceInstance}
  */
 ResourceInstance.prototype.resolveAssociation = function(attr, resourcePath, path) {
-	var tmp = this._private.client;
-
-	for(var i = 0; i < resourcePath.length; i++) {
-		tmp = tmp[ resourcePath[i] ];
-	}
+	var tmp = Client.findResource(this._private.client, resourcePath);
 
 	var obj = this._private.attributes[ attr ];
 	var metaNs = this._private.client.apiSettings.meta.namespace;

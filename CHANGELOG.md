@@ -1,3 +1,8 @@
+# Sun Jul 26 2026 - version 0.29.8
+## Ruby server
+- Generate valid PHP literals for nested custom example values and escape
+  quoted strings in documented client examples.
+
 # Fri Jul 24 2026 - version 0.29.6
 ## Ruby client
 - Resolve association paths through resource registries so resource names

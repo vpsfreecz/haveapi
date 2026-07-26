@@ -111,6 +111,10 @@
             label = "haveapi:server-ruby";
             componentDir = "servers/ruby";
             gemHome = "$HAVEAPI_REPO_ROOT/.gems";
+            packages = [
+              pkgs.nodejs
+              pkgs.php83
+            ];
           };
 
           client-ruby = rubyShell {

@@ -148,20 +148,26 @@ module HaveAPI::ClientExamples
 
     def format_parameters(dir, params, prefix = '')
       ret = params.map do |k, v|
-        if action[dir][:parameters][k][:type] == 'Custom'
-          "#{prefix}  \"#{k}\" => custom type}"
-        else
-          "#{prefix}  \"#{k}\" => #{value(v)}"
-        end
+        "#{prefix}  #{value(k.to_s)} => #{value(v)}"
       end
 
       "#{prefix}[\n#{ret.join(",\n")}\n#{prefix}]"
     end
 
     def value(v)
-      return v if v.is_a?(::Numeric) || v === true || v === false
-
-      "\"#{v}\""
+      case v
+      when ::NilClass
+        'null'
+      when ::Numeric, true, false
+        v.to_s
+      when ::Array
+        "[#{v.map { |item| value(item) }.join(', ')}]"
+      when ::Hash
+        "[#{v.map { |key, item| "#{value(key.to_s)} => #{value(item)}" }.join(', ')}]"
+      else
+        escaped = v.to_s.gsub(/[\\']/) { |char| "\\#{char}" }
+        "'#{escaped}'"
+      end
     end
   end
 end

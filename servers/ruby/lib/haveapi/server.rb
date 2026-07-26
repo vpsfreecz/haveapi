@@ -640,7 +640,9 @@ module HaveAPI
 
     def validate_resources(resources)
       resources.each_value do |r|
-        r[:actions].each_key(&:validate_build)
+        r[:actions].each do |action, path|
+          action.validate_build(path:)
+        end
 
         validate_resources(r[:resources])
       end

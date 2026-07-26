@@ -19,6 +19,12 @@ module HaveAPI
       ret
     end
 
+    def validate_build(action, path:)
+      @examples.each_with_index do |example, index|
+        example.validate_build(action, path:, index:)
+      end
+    end
+
     def each(&)
       @examples.each(&)
     end

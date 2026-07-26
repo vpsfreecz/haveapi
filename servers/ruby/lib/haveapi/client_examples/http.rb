@@ -95,7 +95,7 @@ module HaveAPI::ClientExamples
     end
 
     def resolve_path(method, path, path_params, input_params)
-      ret = path.clone
+      ret = path.dup
 
       path_params.each do |v|
         ret.sub!(/\{[a-zA-Z\-_]+\}/, v.to_s)

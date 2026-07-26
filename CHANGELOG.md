@@ -49,6 +49,13 @@
 - Fix direct `require 'haveapi/client'` by defining the `HaveAPI` namespace
   before loading the client i18n helper.
 
+# Sun Jul 26 2026 - version 0.29.7
+## Ruby server
+- Validate structured API documentation examples against their mounted route,
+  request, response, resource and error metadata during API construction.
+- Syntax-check generated JavaScript, PHP, Ruby, curl and raw HTTP examples, and
+  fix invalid JavaScript comments/newlines and frozen HTTP route mutation.
+
 # Fri Jul 3 2026 - version 0.29.0
 ## Ruby server
 - Add localization support for framework-owned response messages, validation

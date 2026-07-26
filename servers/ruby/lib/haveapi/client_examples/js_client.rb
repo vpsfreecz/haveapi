@@ -101,18 +101,20 @@ module HaveAPI::ClientExamples
 
       case action[:output][:layout]
       when :hash
-        out << "# reply is an instance of HaveAPI.Client.Response\n"
-        out << "# reply.response() returns an object with output parameters:\n"
+        out << "  // reply is an instance of HaveAPI.Client.Response\n"
+        out << "  // reply.response() returns an object with output parameters:\n"
         out << JSON.pretty_generate(sample[:response] || {}).split("\n").map do |v|
           "  // #{v}"
         end.join("\n")
+        out << "\n"
 
       when :hash_list
-        out << "# reply is an instance of HaveAPI.Client.Response\n"
-        out << "# reply.response() returns an array of objects:\n"
+        out << "  // reply is an instance of HaveAPI.Client.Response\n"
+        out << "  // reply.response() returns an array of objects:\n"
         out << JSON.pretty_generate(sample[:response] || []).split("\n").map do |v|
           "  // #{v}"
         end.join("\n")
+        out << "\n"
 
       when :object
         out << "  // reply is an instance of HaveAPI.Client.ResourceInstance\n"

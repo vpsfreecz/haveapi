@@ -1,3 +1,10 @@
+# Mon Oct 12 2026 - version 0.29.9
+## Ruby server
+- Include generated JSON schema and shared protocol/client documentation in
+  release gems, and reject builds with missing documentation.
+- Return 404 instead of sending exception mail when the JSON schema page is
+  missing from an existing installation.
+
 # Sun Jul 26 2026 - version 0.29.8
 ## Ruby server
 - Generate valid PHP literals for nested custom example values and escape

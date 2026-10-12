@@ -13,7 +13,8 @@
 	"main": "dist/haveapi-client.js",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/vpsfreecz/haveapi-client-js"
+		"url": "https://github.com/vpsfreecz/haveapi",
+		"directory": "clients/js"
 	},
 	"scripts": {
 		"test": "mocha"

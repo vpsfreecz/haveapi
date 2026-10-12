@@ -83,7 +83,10 @@
             packages = with pkgs; [
               git
               gnumake
-              nodejs
+              gh
+              go
+              nodejs_24
+              openssh
               php83
               php83Packages.composer
               php83Packages.php-cs-fixer
@@ -96,13 +99,14 @@
               export GEM_HOME="$HAVEAPI_REPO_ROOT/.gems"
               export PATH="$GEM_HOME/bin:$PATH"
               export RUBOCOP_CACHE_ROOT="$HAVEAPI_REPO_ROOT/.rubocop_cache"
-              gem install --no-document bundler
+              # Publishing only needs packaged tools and Ruby's standard library.
+              # Do not install dependencies while registry credentials are present.
+              if [ "''${HAVEAPI_RELEASE_TOOLS_ONLY:-0}" != 1 ]; then
+                gem install --no-document bundler
 
-              # Purity disabled because of prism gem, which has a native extension.
-              # The extension has its header files in .gems, which gets stripped by
-              # the cc wrapper in Nix. Without NIX_ENFORCE_PURITY=0, we get a
-              # prism.h not found error.
-              (cd "$HAVEAPI_REPO_ROOT" && NIX_ENFORCE_PURITY=0 bundle install)
+                # prism's native extension reads headers from the local gem home.
+                (cd "$HAVEAPI_REPO_ROOT" && NIX_ENFORCE_PURITY=0 bundle install)
+              fi
             '';
           };
 

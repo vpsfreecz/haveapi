@@ -17,7 +17,9 @@ stop the affected action and report it.
 | Changing framework/client translations, generated catalogs, parameter metadata or localization lookup behavior | [Localization](doc/agent-instructions/localization.md) |
 | Selecting a branch for a release/backport, versioning, publishing or synchronizing the PHP client | [Branches and releases](doc/agent-instructions/releases.md) |
 
-Always ask before publishing a new version. Do not edit generated locale or
+Always ask before publishing a new version. GitHub Actions publication requires
+approval in the protected `release` environment; build-only runs do not publish.
+Follow the release procedure for setup and recovery. Do not edit generated locale or
 catalog artifacts directly; translation changes start in `i18n/haveapi.yml` and
 require the localization procedure. Release and publish commands must run in the
 top-level Nix development shell.

@@ -12,6 +12,10 @@ repository root unless explicitly stated otherwise.
   `nix develop .#example-ruby-activerecord-auth`. From within the shell,
   standard language tools are used.
 - Sync documentation into server packages with `make doc`.
+- Release tooling checks: `make release-check` and `make release-test` in the
+  top-level Nix shell. `make release-deps` installs maintained-component
+  dependencies. See [Branches and releases](releases.md) for packaging and
+  GitHub Actions publication.
 - Run `make doc` before Ruby server specs. They check shared documentation and
   build/extract a real server gem to exercise the packaged documentation routes.
 - Run the full suite from repo root with `make test` (install deps first or use `nix develop`; this starts local test servers and needs permission to bind localhost ports).

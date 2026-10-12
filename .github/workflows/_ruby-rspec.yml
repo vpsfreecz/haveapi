@@ -32,7 +32,7 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
@@ -54,7 +54,7 @@ jobs:
 
       - name: Set up Go
         if: ${{ inputs.setup-go }}
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: "stable"
 

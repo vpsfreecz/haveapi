@@ -58,6 +58,10 @@ jobs:
         with:
           go-version: "stable"
 
+      - name: Generate shared server documentation
+        if: ${{ inputs.rspec-working-directory == 'servers/ruby' }}
+        run: make doc
+
       - name: Run RSpec
         working-directory: ${{ inputs.rspec-working-directory }}
         shell: bash

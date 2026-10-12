@@ -122,6 +122,39 @@ describe HaveAPI::Extensions::ExceptionMailer do
     expect(body).to include('request boom')
   end
 
+  it 'does not mail a missing JSON schema documentation file' do
+    mailer = new_mailer
+    calls = collect_mail_calls(mailer)
+    doc_path = File.join(app.settings.root, '../../doc/json-schema.html')
+    allow(File).to receive(:read).and_call_original
+    allow(File).to receive(:read).with(doc_path).and_raise(Errno::ENOENT, doc_path)
+
+    with_exception_mailer(mailer) do
+      get '/doc/json-schema'
+    end
+
+    expect(last_response.status).to eq(404)
+    expect(calls).to be_empty
+  end
+
+  it 'still mails other JSON schema file errors' do
+    mailer = new_mailer
+    calls = collect_mail_calls(mailer)
+    app.set :raise_errors, false
+    app.set :show_exceptions, false
+    doc_path = File.join(app.settings.root, '../../doc/json-schema.html')
+    allow(File).to receive(:read).and_call_original
+    allow(File).to receive(:read).with(doc_path).and_raise(Errno::EACCES, doc_path)
+
+    with_exception_mailer(mailer) do
+      get '/doc/json-schema'
+    end
+
+    expect(last_response.status).to eq(500)
+    expect(calls.size).to eq(1)
+    expect(calls.first[1]).to be_a(Errno::EACCES)
+  end
+
   it 'redacts secrets from request-level exception emails' do
     mailer = new_mailer
     calls = collect_mail_calls(mailer)

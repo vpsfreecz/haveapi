@@ -12,6 +12,8 @@ repository root unless explicitly stated otherwise.
   `nix develop .#example-ruby-activerecord-auth`. From within the shell,
   standard language tools are used.
 - Sync documentation into server packages with `make doc`.
+- Run `make doc` before Ruby server specs. They check shared documentation and
+  build/extract a real server gem to exercise the packaged documentation routes.
 - Run the full suite from repo root with `make test` (install deps first or use `nix develop`; this starts local test servers and needs permission to bind localhost ports).
 - Ruby server tests: from `servers/ruby`, run `bundle exec rspec` or `bundle exec rake spec`.
 - JS client build: from `clients/js`, run `./node_modules/.bin/gulp` after installing deps to refresh `dist/haveapi-client.js`.

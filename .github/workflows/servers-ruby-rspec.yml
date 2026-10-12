@@ -4,10 +4,18 @@ on:
   push:
     paths:
       - "servers/ruby/**"
+      - "doc/**"
+      - "utils/copydoc.sh"
+      - "Makefile"
+      - ".github/workflows/_ruby-rspec.yml"
       - ".github/workflows/servers-ruby-rspec.yml"
   pull_request:
     paths:
       - "servers/ruby/**"
+      - "doc/**"
+      - "utils/copydoc.sh"
+      - "Makefile"
+      - ".github/workflows/_ruby-rspec.yml"
       - ".github/workflows/servers-ruby-rspec.yml"
 
 jobs:

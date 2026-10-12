@@ -6,6 +6,25 @@ require 'haveapi'
 require 'haveapi/tasks/i18n'
 require 'haveapi/tasks/yard'
 
+desc 'Check shared documentation required in the server gem'
+task :check_doc do
+  required = %w[
+    doc/json-schema.html
+    doc/protocol.md
+    doc/create-client.md
+    doc/typed-input-validation.md
+    doc/protocol.png
+  ]
+  missing = required.reject { |path| File.file?(path) && File.size?(path) }
+
+  unless missing.empty?
+    abort "Missing or empty shared documentation: #{missing.join(', ')}. " \
+          'Run `make doc` from the repository root before building the server gem.'
+  end
+end
+
+Rake::Task[:build].enhance([:check_doc])
+
 RSpec::Core::RakeTask.new(:spec) do |spec|
   spec.pattern = FileList['spec/**/*_spec.rb']
   spec.rspec_opts = '--require spec_helper'

@@ -14,6 +14,8 @@
   `nix develop .#example-ruby-activerecord-auth`. From within the shell,
   standard language tools are used.
 - Sync documentation into server packages with `make doc`.
+- Run `make doc` before Ruby server specs. They check shared documentation and
+  build/extract a real server gem to exercise the packaged documentation routes.
 - Run the full suite from repo root with `make test` (install deps first or use `nix develop`; this starts local test servers and needs permission to bind localhost ports).
 - Ruby server tests: from `servers/ruby`, run `bundle exec rspec` or `bundle exec rake spec`.
 - JS client build: from `clients/js`, run `./node_modules/.bin/gulp` after installing deps to refresh `dist/haveapi-client.js`.
@@ -78,6 +80,14 @@
 - Update `CHANGELOG.md` and add a brief description of changes for each component. If there are no changes to a component, it is not mentioned.
 - Always run `make release` and `make publish` from within the top-level `nix develop` shell so the correct toolchain is used; running them outside nix can produce build failures or mismatched Ruby versions.
 - `make release` will build artifacts of all components. Run it inside `nix develop`.
+- `make release` generates shared server documentation before building gems.
+  Generation failures stop the release. A direct server `bundle exec rake build`
+  rejects missing or empty shared documentation; run `make doc` from the
+  repository root first. Do not commit the generated server documents.
+- Before publication, run the Ruby server specs after `make doc`. The packaging
+  specs build and extract a server gem, check the required documents and serve
+  the documentation routes using the extracted framework. This catches missing
+  package content that a prepared source checkout could conceal.
 - `make publish` will upload the built artifacts to package repositories, e.g. rubygems.org, npmjs.com, etc. Run it inside `nix develop` and always ask before publishing a new version.
 
 ## PHP client irregularity

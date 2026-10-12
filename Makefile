@@ -13,7 +13,7 @@ test:
 	cd clients/js && npm test
 	cd clients/php && vendor/bin/phpunit
 
-release:
+release: doc
 	mkdir -p dist
 	
 	cd clients/ruby && bundle install && bundle exec rake build

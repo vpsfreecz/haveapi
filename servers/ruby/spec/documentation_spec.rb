@@ -195,4 +195,18 @@ describe 'Documentation' do
     expect(last_response.status).to eq(200)
     expect(last_response.headers['Content-Type']).to include('text/html')
   end
+
+  {
+    '/doc/json-schema' => 'Envelope',
+    '/doc/protocol.md' => 'Protocol definition',
+    '/doc/create-client.md' => 'Client definition'
+  }.each do |path, heading|
+    it "serves shared documentation at #{path}" do
+      get path
+
+      expect(last_response.status).to eq(200)
+      expect(last_response.headers['Content-Type']).to include('text/html')
+      expect(last_response.body).to include(heading)
+    end
+  end
 end

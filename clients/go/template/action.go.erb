@@ -1,6 +1,8 @@
 package <%= package %>
 
 import (
+	"context"
+	"net/http"
 <% if action.has_path_params? -%>
 	"net/url"
 	"strings"
@@ -256,7 +258,17 @@ type <%= action.go_response_type %> struct {
 <% if !action.has_path_params? && !action.has_input? -%>
 // Call the action directly without any path or input parameters
 func (action *<%= action.go_type %>) Call() (*<%= action.go_response_type %>, error) {
-	return action.Prepare().Call()
+	return action.CallContext(context.Background())
+}
+
+// CallContext calls the action with cancellation and deadline support.
+func (action *<%= action.go_type %>) CallContext(ctx context.Context) (*<%= action.go_response_type %>, error) {
+	return action.Prepare().CallContext(ctx)
+}
+
+// CallRaw calls the action without decoding or classifying its response.
+func (action *<%= action.go_type %>) CallRaw(ctx context.Context) (*RawResponse, error) {
+	return action.Prepare().CallRaw(ctx)
 }
 <% end -%>
 
@@ -432,20 +444,56 @@ func (inv *<%= action.go_invocation_type %>) validate() error {
 	return verr
 }
 
-// Call() invokes the action and returns a response from the API server
+// Call invokes the action using a background context.
 func (inv *<%= action.go_invocation_type %>) Call() (*<%= action.go_response_type %>, error) {
+	return inv.CallContext(context.Background())
+}
+
+// CallContext invokes the action and decodes its typed response.
+func (inv *<%= action.go_invocation_type %>) CallContext(ctx context.Context) (*<%= action.go_response_type %>, error) {
+	req, err := inv.newRequest(ctx)
+	if err != nil {
+		return nil, err
+	}
+	resp := &<%= action.go_response_type %>{Action: inv.Action}
+	raw, err := inv.Action.Client.doRaw(req)
+	if err != nil {
+		return resp, err
+	}
+	if err := decodeTypedResponse(raw.Body, resp); err != nil {
+		return resp, err
+	}
+<% if action.has_output? || action.blocking? -%>
+	if resp.Status {
+		if resp.Response == nil {
+			return resp, errMalformedResponse
+		}
+<% if action.has_output? -%>
+		if resp.Response.<%= action.output.go_namespace %> == nil {
+			return resp, errMalformedResponse
+		}
+		resp.Output = resp.Response.<%= action.output.go_namespace %>
+<% end -%>
+	}
+<% end -%>
+	return resp, nil
+}
+
+// CallRaw validates and sends the action without decoding its response body.
+// The caller owns HTTP and API status classification.
+func (inv *<%= action.go_invocation_type %>) CallRaw(ctx context.Context) (*RawResponse, error) {
+	req, err := inv.newRequest(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return inv.Action.Client.doRaw(req)
+}
+
+func (inv *<%= action.go_invocation_type %>) newRequest(ctx context.Context) (*http.Request, error) {
 	if err := inv.validate(); err != nil {
 		return nil, err
 	}
 <% if action.http_method == 'GET' -%>
-	return inv.callAsQuery()
-<% else -%>
-	return inv.callAsBody()
-<% end -%>
-}
-
-<% if action.http_method == 'GET' -%>
-func (inv *<%= action.go_invocation_type %>) callAsQuery() (*<%= action.go_response_type %>, error) {
 	queryParams := make(map[string]string)
 <% if action.has_input? -%>
 	inv.convertInputToQueryParams(queryParams)
@@ -453,34 +501,16 @@ func (inv *<%= action.go_invocation_type %>) callAsQuery() (*<%= action.go_respo
 <% if action.metadata.has_global_input? -%>
 	inv.convertMetaInputToQueryParams(queryParams)
 <% end -%>
-	resp := &<%= action.go_response_type %>{Action: inv.Action}
-	err := inv.Action.Client.DoQueryStringRequest(inv.Path, queryParams, resp)
-<% if action.has_output? -%>
-	if err == nil && resp.Status {
-		resp.Output = resp.Response.<%= action.output.go_namespace %>
-	}
-<% end -%>
-	return resp, err
-}
-<% end -%>
-
-<% if action.http_method != 'GET' -%>
-func (inv *<%= action.go_invocation_type %>) callAsBody() (*<%= action.go_response_type %>, error) {
+	return inv.Action.Client.newQueryStringRequest(ctx, inv.Path, queryParams)
+<% else -%>
 <% if action.has_input? || action.metadata.has_global_input? -%>
 	input := inv.makeAllInputParams()
 <% else -%>
 	input := make(map[string]interface{})
 <% end -%>
-	resp := &<%= action.go_response_type %>{Action: inv.Action}
-	err := inv.Action.Client.DoBodyRequest(<%= go_string_literal(action.http_method) %>, inv.Path, input, resp)
-<% if action.has_output? -%>
-	if err == nil && resp.Status {
-		resp.Output = resp.Response.<%= action.output.go_namespace %>
-	}
+	return inv.Action.Client.newBodyRequest(ctx, <%= go_string_literal(action.http_method) %>, inv.Path, input)
 <% end -%>
-	return resp, err
 }
-<% end -%>
 
 <% if action.blocking? -%>
 // IsBlocking checks whether the current invocation resulted in a blocking operation

@@ -64,6 +64,50 @@ func main() {
 }
 ```
 
+## Context and raw responses
+
+Generated action invocations provide three call methods:
+
+- `Call()` returns the typed response using `context.Background()`.
+- `CallContext(ctx)` returns the same typed response with the supplied context.
+- `CallRaw(ctx)` returns `*client.RawResponse`, containing `StatusCode int` and
+  `Body json.RawMessage`, without decoding the body or classifying HTTP/API status.
+
+Actions with a direct, parameter-free `Call()` also provide `CallContext` and
+`CallRaw` shortcuts. For example, use a deadline for a typed request:
+
+```go
+ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+defer cancel()
+
+resp, err := api.Cluster.PublicStats.CallContext(ctx)
+```
+
+As an alternative to the typed call, inspect the complete response yourself:
+
+```go
+raw, err := api.Cluster.PublicStats.CallRaw(ctx)
+if err != nil {
+	return err
+}
+// Check raw.StatusCode, then decode raw.Body for the fields the caller needs.
+```
+
+Each call validates and serializes the selected inputs and dispatches once
+through the configured HTTP client.
+The context covers waiting for headers and reading the body. Response bodies
+are closed before return, and cancellation errors retain `errors.Is` identity.
+The client adds no request retry. Configure HTTP timeouts, redirects and the
+transport with `SetTimeout` or `SetHTTPClient` as needed.
+
+Raw bodies retain their received bytes, including whitespace, JSON null, large
+numbers and malformed JSON. A complete HTTP error response is a raw result;
+validation, transport, cancellation and body-read failures remain Go errors.
+Typed calls retain the existing HTTP/API status semantics: inspect `Status`,
+`Message` and `Errors`. Missing or malformed required envelopes/output containers
+return errors instead of panicking. Existing low-level request helpers retain
+their signatures and use a background context.
+
 ## Localization
 
 Generated clients include bundled HaveAPI client translations. Set the

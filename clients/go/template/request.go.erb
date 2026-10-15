@@ -2,6 +2,7 @@ package <%= package %>
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -167,19 +168,30 @@ func originPort(u *url.URL) string {
 	}
 }
 
-// DoQueryStringRequests makes a HTTP requests in which input parameters are
-// sent as query parameters.
+// DoQueryStringRequest sends input parameters as query parameters.
 func (client *Client) DoQueryStringRequest(path string, queryParams map[string]string, output interface{}) error {
-	requestURL, err := client.actionURL(path)
-
+	req, err := client.newQueryStringRequest(context.Background(), path, queryParams)
 	if err != nil {
 		return err
 	}
-
-	req, err := http.NewRequest("GET", requestURL, nil)
-
+	resp, err := client.doRaw(req)
 	if err != nil {
 		return err
+	}
+	return json.Unmarshal(resp.Body, output)
+}
+
+func (client *Client) newQueryStringRequest(ctx context.Context, path string, queryParams map[string]string) (*http.Request, error) {
+	requestURL, err := client.actionURL(path)
+
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", requestURL, nil)
+
+	if err != nil {
+		return nil, err
 	}
 
 	client.addLanguageHeader(req)
@@ -196,41 +208,39 @@ func (client *Client) DoQueryStringRequest(path string, queryParams map[string]s
 
 	req.URL.RawQuery = q.Encode()
 
-	resp, err := client.do(req)
-
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-
-	if err != nil {
-		return err
-	}
-
-	if err := json.Unmarshal(body, output); err != nil {
-		return err
-	}
-
-	return nil
+	return req, nil
 }
 
 // DoBodyRequest makes a HTTP requests in which the input parameters are sent
 // within the request body, encoded in JSON.
 func (client *Client) DoBodyRequest(method string, path string, params interface{}, output interface{}) error {
+	req, err := client.newBodyRequest(context.Background(), method, path, params)
+	if err != nil {
+		return err
+	}
+	resp, err := client.doRaw(req)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(resp.Body, output)
+}
+
+func (client *Client) newBodyRequest(ctx context.Context, method string, path string, params interface{}) (*http.Request, error) {
 	requestURL, err := client.actionURL(path)
+	if err != nil {
+		return nil, err
+	}
 
 	jsonData, err := json.Marshal(params)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	req, err := http.NewRequest(method, requestURL, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(ctx, method, requestURL, bytes.NewBuffer(jsonData))
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -240,22 +250,29 @@ func (client *Client) DoBodyRequest(method string, path string, params interface
 		client.Authentication.Authenticate(req)
 	}
 
-	resp, err := client.do(req)
+	return req, nil
+}
 
-	if err != nil {
-		return err
+// doRaw is the single dispatch and body owner for generated action calls.
+// HTTP status and API envelope classification belong to the caller.
+func (client *Client) doRaw(req *http.Request) (*RawResponse, error) {
+	if err := req.Context().Err(); err != nil {
+		return nil, err
 	}
-
+	resp, err := client.do(req)
+	if err != nil {
+		if contextErr := req.Context().Err(); contextErr != nil {
+			return nil, contextErr
+		}
+		return nil, err
+	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
-
 	if err != nil {
-		return err
+		if contextErr := req.Context().Err(); contextErr != nil {
+			return nil, contextErr
+		}
+		return nil, err
 	}
-
-	if err := json.Unmarshal(body, output); err != nil {
-		return err
-	}
-
-	return nil
+	return &RawResponse{StatusCode: resp.StatusCode, Body: json.RawMessage(body)}, nil
 }

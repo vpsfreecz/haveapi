@@ -1,5 +1,32 @@
 package <%= package %>
 
+import (
+	"encoding/json"
+	"errors"
+)
+
+// RawResponse holds a complete response without decoding or classifying it.
+// Body retains the received bytes, including invalid JSON and whitespace.
+type RawResponse struct {
+	StatusCode int
+	Body json.RawMessage
+}
+
+var errMalformedResponse = errors.New("malformed API response")
+
+func decodeTypedResponse(body json.RawMessage, output interface{}) error {
+	var envelope struct {
+		Status *bool
+	}
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		return err
+	}
+	if envelope.Status == nil {
+		return errMalformedResponse
+	}
+	return json.Unmarshal(body, output)
+}
+
 // Envelope represents a response from the API server
 type Envelope struct {
 	// Determines action success

@@ -714,6 +714,443 @@ RSpec.describe HaveAPI::GoClient::Generator do
     end
   end
 
+  it 'generates context and raw calls with shared request and response ownership' do
+    description = oauth2_revoke_description
+    description[:authentication] = { basic: {} }
+    output = { layout: 'object', namespace: 'probe', parameters: { value: { type: 'String' } } }
+    input = {
+      layout: 'hash', namespace: 'payload',
+      parameters: {
+        s: { type: 'String' }, f: { type: 'Float' },
+        skip: { type: 'String', nullable: true }, unused: { type: 'String', nullable: true }
+      }
+    }
+    meta = {
+      global: {
+        input: { layout: 'hash', namespace: '_meta', parameters: { includes: { type: 'String' } } }
+      }
+    }
+    description[:resources][:probe] = {
+      resources: {},
+      actions: {
+        list: action_description(
+          method: 'GET', path: '/probes',
+          output: { layout: 'object_list', namespace: 'probes', parameters: { value: { type: 'String' } } }
+        ),
+        fetch: action_description(method: 'GET', path: '/probes/{probe_id}', input:, output:, meta:),
+        create: action_description(method: 'POST', path: '/probes', input:, output:, meta:),
+        ping: action_description(method: 'POST', path: '/ping')
+      }
+    }
+
+    Dir.mktmpdir('haveapi-go-client-context-raw-') do |dir|
+      communicator = instance_double(HaveAPI::Client::Communicator, describe_api: description)
+      allow(HaveAPI::Client::Communicator).to receive(:new).and_return(communicator)
+      generator = described_class.new(
+        'http://api.example', dir,
+        module: 'example.com/haveapi-context-raw', package: 'client'
+      )
+      generator.generate
+      generator.go_fmt
+
+      File.write(File.join(dir, 'client', 'context_raw_test.go'), <<~'GO')
+        package client
+
+        import (
+          "bytes"
+          "context"
+          "encoding/json"
+          "errors"
+          "io"
+          "math"
+          "net/http"
+          "reflect"
+          "strings"
+          "testing"
+          "time"
+        )
+
+        type contextRawTransport func(*http.Request) (*http.Response, error)
+
+        func (f contextRawTransport) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+        type contextRawBody struct {
+          io.Reader
+          closes int
+        }
+
+        func (b *contextRawBody) Close() error { b.closes++; return nil }
+
+        func contextRawClient(f contextRawTransport) *Client {
+          c := New("http://api.example")
+          c.SetHTTPClient(&http.Client{Transport: f})
+          c.SetBasicAuthentication("user", "password")
+          c.SetLanguage("cs")
+          return c
+        }
+
+        func contextRawReply(code int, body io.ReadCloser) *http.Response {
+          return &http.Response{StatusCode: code, Header: make(http.Header), Body: body}
+        }
+
+        func TestContextRawSerializationAndLegacyCalls(t *testing.T) {
+          for _, mode := range []string{"legacy", "context", "raw"} {
+            for _, method := range []string{"GET", "POST"} {
+              t.Run(mode+method, func(t *testing.T) {
+                calls := 0
+                body := &contextRawBody{Reader: strings.NewReader(`{"status":true,"response":{"probe":{"value":"ok"}}}`)}
+                c := contextRawClient(func(r *http.Request) (*http.Response, error) {
+                  calls++
+                  if r.Method != method || r.Header.Get("Accept-Language") != "cs" {
+                    t.Fatal("method/language changed")
+                  }
+                  user, pass, ok := r.BasicAuth()
+                  if !ok || user != "user" || pass != "password" { t.Fatal("authentication lost") }
+                  if method == "GET" {
+                    if r.URL.EscapedPath() != "/probes/a%20%2F%3F" || r.Body != nil { t.Fatal("path/body changed", r.URL) }
+                    want := map[string][]string{"payload[s]": {" a +b"}, "payload[skip]": {""}, "_meta[includes]": {"node"}}
+                    if !reflect.DeepEqual(map[string][]string(r.URL.Query()), want) { t.Fatal("query selection changed", r.URL.RawQuery) }
+                  } else {
+                    if r.URL.Path != "/probes" || r.Header.Get("Content-Type") != "application/json" { t.Fatal("body route/type changed") }
+                    var got map[string]interface{}
+                    if err := json.NewDecoder(r.Body).Decode(&got); err != nil { t.Fatal(err) }
+                    want := map[string]interface{}{"payload": map[string]interface{}{"s": " a +b", "skip": nil}, "_meta": map[string]interface{}{"includes": "node"}}
+                    if !reflect.DeepEqual(got, want) { t.Fatal("body selection/namespace changed", got) }
+                  }
+                  return contextRawReply(200, body), nil
+                })
+                ctx := context.Background()
+                var typed *ActionProbeFetchResponse
+                var err error
+                if method == "GET" {
+                  inv := c.Probe.Fetch.Prepare().SetPathParamString("probe_id", "a /?")
+                  in := inv.NewInput(); in.SetS(" a +b").SetSkipNil(true)
+                  inv.NewMetaInput().SetIncludes("node")
+                  switch mode {
+                  case "legacy": typed, err = inv.Call()
+                  case "context": typed, err = inv.CallContext(ctx)
+                  case "raw":
+                    var raw *RawResponse
+                    raw, err = inv.CallRaw(ctx)
+                    if err == nil && (raw.StatusCode != 200 || !bytes.Contains(raw.Body, []byte(`"value":"ok"`))) { t.Fatal(raw) }
+                  }
+                  if mode != "raw" && err == nil && (!typed.Status || typed.Output.Value != "ok") { t.Fatal(typed) }
+                } else {
+                  inv := c.Probe.Create.Prepare()
+                  in := inv.NewInput(); in.SetS(" a +b").SetSkipNil(true)
+                  inv.NewMetaInput().SetIncludes("node")
+                  var result *ActionProbeCreateResponse
+                  switch mode {
+                  case "legacy": result, err = inv.Call()
+                  case "context": result, err = inv.CallContext(ctx)
+                  case "raw":
+                    var raw *RawResponse
+                    raw, err = inv.CallRaw(ctx)
+                    if err == nil && raw.StatusCode != 200 { t.Fatal(raw) }
+                  }
+                  if mode != "raw" && err == nil && (!result.Status || result.Output.Value != "ok") { t.Fatal(result) }
+                }
+                if err != nil || calls != 1 || body.closes != 1 { t.Fatal(err, calls, body.closes) }
+              })
+            }
+          }
+        }
+
+        func TestContextRawNoInputShortcuts(t *testing.T) {
+          bodies := []*contextRawBody{}
+          c := contextRawClient(func(r *http.Request) (*http.Response, error) {
+            text := `{"status":true,"response":{"probes":[]}}`
+            if r.Method == "POST" { text = `{"status":true}` }
+            b := &contextRawBody{Reader: strings.NewReader(text)}; bodies = append(bodies, b)
+            return contextRawReply(200, b), nil
+          })
+          if result, err := c.Probe.List.Call(); err != nil || !result.Status || len(result.Output) != 0 { t.Fatal(result, err) }
+          if result, err := c.Probe.List.CallContext(context.Background()); err != nil || !result.Status { t.Fatal(result, err) }
+          if _, err := c.Probe.List.CallRaw(context.Background()); err != nil { t.Fatal(err) }
+          if result, err := c.Probe.Ping.Call(); err != nil || !result.Status { t.Fatal(result, err) }
+          if result, err := c.Probe.Ping.CallContext(context.Background()); err != nil || !result.Status { t.Fatal(result, err) }
+          if _, err := c.Probe.Ping.CallRaw(context.Background()); err != nil { t.Fatal(err) }
+          if len(bodies) != 6 { t.Fatal(len(bodies)) }
+          for _, body := range bodies { if body.closes != 1 { t.Fatal(body.closes) } }
+        }
+
+        func TestContextRawUntouchedBodiesAndStatus(t *testing.T) {
+          for _, code := range []int{200, 302, 400, 403, 404, 500} {
+            for _, text := range []string{
+              " \nnull \t", "not-json", string([]byte{0xff, 0}),
+              ` {"status":true,"response":{"probes":[{"value":null,"n":184467440737095516160000,"_meta":{"resolved":false,"path_params":[9007199254740993]}}]}} `,
+              `{"status":false,"message":"failed","errors":{"field":["invalid"]}}`,
+            } {
+              body := &contextRawBody{Reader: strings.NewReader(text)}; calls := 0
+              c := contextRawClient(func(*http.Request) (*http.Response, error) { calls++; return contextRawReply(code, body), nil })
+              got, err := c.Probe.List.CallRaw(context.Background())
+              if err != nil || got.StatusCode != code || !bytes.Equal(got.Body, []byte(text)) || calls != 1 || body.closes != 1 {
+                t.Fatal("raw response was decoded, classified or replayed", code, got, err, calls, body.closes)
+              }
+            }
+          }
+        }
+
+        func TestContextTypedEnvelopeAndOutputGuards(t *testing.T) {
+          for _, method := range []string{"GET", "POST"} {
+            for _, text := range []string{
+              "", "null", "[]", "true", `{}`, `{"message":"missing status"}`,
+              `{"status":null}`, `{"status":"true"}`, `{"status":true}`,
+              `{"status":true,"response":null}`, `{"status":true,"response":[]}`,
+              `{"status":true,"response":{}}`, `{"status":true,"response":{"probes":null,"probe":null}}`,
+              `{"status":true,"response":{"probes":{},"probe":[]}}`,
+            } {
+              body := &contextRawBody{Reader: strings.NewReader(text)}; calls := 0
+              c := contextRawClient(func(*http.Request) (*http.Response, error) { calls++; return contextRawReply(200, body), nil })
+              var err error
+              if method == "GET" { _, err = c.Probe.List.CallContext(context.Background()) } else { _, err = c.Probe.Create.Prepare().CallContext(context.Background()) }
+              if err == nil || calls != 1 || body.closes != 1 { t.Fatal("malformed typed response accepted", method, text, err, calls, body.closes) }
+            }
+          }
+        }
+
+        func TestContextTypedPreservesHTTPAndAPIStatusSemantics(t *testing.T) {
+          for _, code := range []int{200, 400, 500} {
+            for _, success := range []bool{false, true} {
+              text := `{"status":false,"message":"failed","errors":{"field":["invalid"]}}`
+              if success { text = `{"status":true,"response":{"probes":[]}}` }
+              c := contextRawClient(func(*http.Request) (*http.Response, error) {
+                return contextRawReply(code, &contextRawBody{Reader: strings.NewReader(text)}), nil
+              })
+              got, err := c.Probe.List.CallContext(context.Background())
+              if err != nil || got.Status != success || (!success && (got.Message != "failed" || len(got.Errors["field"]) != 1)) { t.Fatal(got, err) }
+            }
+          }
+        }
+
+        func TestContextRawValidationBeforeDispatch(t *testing.T) {
+          for _, mode := range []string{"legacy", "context", "raw"} {
+            for _, method := range []string{"GET", "POST"} {
+              calls := 0
+              c := contextRawClient(func(*http.Request) (*http.Response, error) { calls++; return nil, errors.New("unexpected dispatch") })
+              var err error
+              if method == "GET" {
+                inv := c.Probe.Fetch.Prepare().SetPathParamInt("probe_id", 1); inv.NewInput().SetF(math.NaN())
+                switch mode { case "legacy": _, err = inv.Call(); case "context": _, err = inv.CallContext(context.Background()); case "raw": _, err = inv.CallRaw(context.Background()) }
+              } else {
+                inv := c.Probe.Create.Prepare(); inv.NewInput().SetF(math.NaN())
+                switch mode { case "legacy": _, err = inv.Call(); case "context": _, err = inv.CallContext(context.Background()); case "raw": _, err = inv.CallRaw(context.Background()) }
+              }
+              var validation *ValidationError
+              if !errors.As(err, &validation) || calls != 0 { t.Fatal("validation skipped", method, mode, err, calls) }
+            }
+          }
+        }
+
+        func TestContextRawUnsafePathsBeforeDispatch(t *testing.T) {
+          for _, path := range []string{"@other.invalid/", "//other.invalid/", "https://other.invalid/", "/%zz"} {
+            c := contextRawClient(func(*http.Request) (*http.Response, error) { t.Fatal("unsafe path dispatched"); return nil, nil })
+            inv := c.Probe.Create.Prepare(); inv.Path = path
+            if _, err := inv.CallRaw(context.Background()); err == nil { t.Fatal(path) }
+            if _, err := inv.CallContext(context.Background()); err == nil { t.Fatal(path) }
+            get := c.Probe.List.Prepare(); get.Path = path
+            if _, err := get.CallRaw(context.Background()); err == nil { t.Fatal(path) }
+            if _, err := get.CallContext(context.Background()); err == nil { t.Fatal(path) }
+            var output interface{}
+            err := c.DoBodyRequest("POST", path, math.NaN(), &output)
+            if err == nil || strings.Contains(err.Error(), "unsupported value") { t.Fatal("path refusal was overwritten by JSON error", path, err) }
+          }
+        }
+
+        func TestContextCanceledBeforeDispatch(t *testing.T) {
+          c := contextRawClient(func(*http.Request) (*http.Response, error) { t.Fatal("canceled request dispatched"); return nil, nil })
+          ctx, cancel := context.WithCancel(context.Background()); cancel()
+          if _, err := c.Probe.List.CallContext(ctx); !errors.Is(err, context.Canceled) { t.Fatal(err) }
+          if _, err := c.Probe.List.CallRaw(ctx); !errors.Is(err, context.Canceled) { t.Fatal(err) }
+          if _, err := c.Probe.Ping.CallContext(ctx); !errors.Is(err, context.Canceled) { t.Fatal(err) }
+          if _, err := c.Probe.Ping.CallRaw(ctx); !errors.Is(err, context.Canceled) { t.Fatal(err) }
+        }
+
+        type contextWaitingBody struct {
+          ctx context.Context
+          reading chan struct{}
+          closes int
+        }
+
+        func (b *contextWaitingBody) Read([]byte) (int, error) { close(b.reading); <-b.ctx.Done(); return 0, b.ctx.Err() }
+        func (b *contextWaitingBody) Close() error { b.closes++; return nil }
+
+        func TestContextCancellationDuringHeadersAndBody(t *testing.T) {
+          for _, raw := range []bool{false, true} {
+            for _, reading := range []bool{false, true} {
+              ctx, cancel := context.WithCancel(context.Background())
+              started := make(chan struct{}); done := make(chan error, 1); calls := 0
+              var body *contextWaitingBody
+              c := contextRawClient(func(r *http.Request) (*http.Response, error) {
+                calls++
+                if !reading { close(started); <-r.Context().Done(); return nil, r.Context().Err() }
+                body = &contextWaitingBody{ctx: r.Context(), reading: started}
+                return contextRawReply(200, body), nil
+              })
+              go func() {
+                var err error
+                if raw { _, err = c.Probe.List.CallRaw(ctx) } else { _, err = c.Probe.List.CallContext(ctx) }
+                done <- err
+              }()
+              select { case <-started: cancel(); case <-time.After(3*time.Second): cancel(); t.Fatal("request never reached intended boundary") }
+              select {
+              case err := <-done:
+                if !errors.Is(err, context.Canceled) || calls != 1 || (reading && body.closes != 1) { t.Fatal(err, calls, body) }
+              case <-time.After(3*time.Second): t.Fatal("cancellation did not return")
+              }
+            }
+          }
+        }
+
+        type contextFailingReader struct { err error }
+        func (r contextFailingReader) Read([]byte) (int, error) { return 0, r.err }
+
+        func TestContextRawTransportAndReadFailures(t *testing.T) {
+          failure := errors.New("synthetic failure")
+          for _, raw := range []bool{false, true} {
+            for _, duringRead := range []bool{false, true} {
+              calls := 0
+              body := &contextRawBody{Reader: contextFailingReader{failure}}
+              c := contextRawClient(func(*http.Request) (*http.Response, error) {
+                calls++
+                if !duringRead { return nil, failure }
+                return contextRawReply(200, body), nil
+              })
+              var err error
+              if raw { _, err = c.Probe.List.CallRaw(context.Background()) } else { _, err = c.Probe.List.CallContext(context.Background()) }
+              if !errors.Is(err, failure) || calls != 1 || (duringRead && body.closes != 1) { t.Fatal(err, calls, body.closes) }
+            }
+          }
+        }
+
+        type contextRedirectBody struct { contextRawBody }
+
+        func (b *contextRedirectBody) Read(p []byte) (int, error) {
+          if b.closes != 0 { panic("read after response body close") }
+          return b.Reader.Read(p)
+        }
+
+        func (b *contextRedirectBody) Close() error {
+          b.closes++
+          if b.closes != 1 { panic("response body closed more than once") }
+          return nil
+        }
+
+        func TestContextRawRedirectResponseOwnership(t *testing.T) {
+          refusal := errors.New("synthetic redirect refusal")
+          const text = `{"status":true,"response":{"probe":{"value":"redirect body"}}}`
+          for _, mode := range []string{"legacy", "context", "raw", "low-level"} {
+            for _, method := range []string{"GET", "POST"} {
+              for _, useLast := range []bool{false, true} {
+                policy := "refuse"
+                if useLast { policy = "last-response" }
+                t.Run(mode+"/"+method+"/"+policy, func(t *testing.T) {
+                  calls, redirects := 0, 0
+                  body := &contextRedirectBody{contextRawBody{Reader: strings.NewReader(text)}}
+                  c := contextRawClient(func(r *http.Request) (*http.Response, error) {
+                    calls++
+                    if r.Method != method { t.Fatal("request method changed", r.Method) }
+                    resp := contextRawReply(http.StatusFound, body)
+                    resp.Header.Set("Location", "/redirect-target")
+                    return resp, nil
+                  })
+                  c.httpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+                    redirects++
+                    if req.URL.Path != "/redirect-target" || len(via) != 1 || body.closes != 0 {
+                      t.Fatal("redirect policy boundary changed", req.URL, len(via), body.closes)
+                    }
+                    if useLast { return http.ErrUseLastResponse }
+                    return refusal
+                  }
+                  var err error
+                  var value string
+                  if mode == "low-level" {
+                    var result struct { Response struct { Probe struct { Value string } } }
+                    if method == "GET" {
+                      err = c.DoQueryStringRequest("/probes/1", nil, &result)
+                    } else {
+                      err = c.DoBodyRequest("POST", "/probes", nil, &result)
+                    }
+                    value = result.Response.Probe.Value
+                  } else if method == "GET" {
+                    inv := c.Probe.Fetch.Prepare().SetPathParamInt("probe_id", 1)
+                    var result *ActionProbeFetchResponse
+                    switch mode {
+                    case "legacy": result, err = inv.Call()
+                    case "context": result, err = inv.CallContext(context.Background())
+                    case "raw":
+                      var raw *RawResponse
+                      raw, err = inv.CallRaw(context.Background())
+                      if useLast && (raw == nil || raw.StatusCode != http.StatusFound || !bytes.Equal(raw.Body, []byte(text))) {
+                        t.Fatal("last raw response not read intact", raw, err)
+                      }
+                    }
+                    if err == nil && result != nil { value = result.Output.Value }
+                  } else {
+                    inv := c.Probe.Create.Prepare()
+                    var result *ActionProbeCreateResponse
+                    switch mode {
+                    case "legacy": result, err = inv.Call()
+                    case "context": result, err = inv.CallContext(context.Background())
+                    case "raw":
+                      var raw *RawResponse
+                      raw, err = inv.CallRaw(context.Background())
+                      if useLast && (raw == nil || raw.StatusCode != http.StatusFound || !bytes.Equal(raw.Body, []byte(text))) {
+                        t.Fatal("last raw response not read intact", raw, err)
+                      }
+                    }
+                    if err == nil && result != nil { value = result.Output.Value }
+                  }
+                  if useLast {
+                    if err != nil || (mode != "raw" && value != "redirect body") { t.Fatal("last response not decoded", value, err) }
+                  } else if !errors.Is(err, refusal) {
+                    t.Fatal("redirect refusal identity lost", err)
+                  }
+                  if calls != 1 || redirects != 1 || body.closes != 1 { t.Fatal("redirect replay/close mismatch", calls, redirects, body.closes) }
+                })
+              }
+            }
+          }
+        }
+
+        func TestContextDeadlineAndClientBodyTimeout(t *testing.T) {
+          for _, clientTimeout := range []bool{false, true} {
+            var body *contextWaitingBody
+            c := contextRawClient(func(r *http.Request) (*http.Response, error) {
+              body = &contextWaitingBody{ctx: r.Context(), reading: make(chan struct{})}
+              return contextRawReply(200, body), nil
+            })
+            ctx := context.Background()
+            cancel := func() {}
+            if clientTimeout { c.SetTimeout(15*time.Millisecond) } else { ctx, cancel = context.WithTimeout(ctx, 15*time.Millisecond) }
+            _, err := c.Probe.List.CallRaw(ctx); cancel()
+            if !errors.Is(err, context.DeadlineExceeded) || body.closes != 1 { t.Fatal(err, body) }
+          }
+        }
+
+        func TestLegacyLowLevelHelpersShareRawOwner(t *testing.T) {
+          for _, method := range []string{"GET", "POST"} {
+            calls := 0; body := &contextRawBody{Reader: strings.NewReader(`{"value":5}`)}
+            c := contextRawClient(func(r *http.Request) (*http.Response, error) {
+              calls++
+              if r.Method != method { t.Fatal(r.Method) }
+              return contextRawReply(200, body), nil
+            })
+            var output struct { Value int }
+            var err error
+            if method == "GET" { err = c.DoQueryStringRequest("/probes", map[string]string{"x":"y"}, &output) } else { err = c.DoBodyRequest("POST", "/probes", map[string]string{"x":"y"}, &output) }
+            if err != nil || output.Value != 5 || calls != 1 || body.closes != 1 { t.Fatal(output, err, calls, body.closes) }
+          }
+        }
+      GO
+
+      go_out, go_err, go_status = Open3.capture3(
+        { 'CGO_ENABLED' => '0' }, 'go', 'test', './...', chdir: dir
+      )
+      expect(go_status).to be_success, "go test failed: #{go_out}\n#{go_err}"
+    end
+  end
+
   it 'rejects generated action paths that can switch request authority' do
     malicious_description = {
       authentication: {

@@ -742,6 +742,32 @@ RSpec.describe HaveAPI::GoClient::Generator do
         ping: action_description(method: 'POST', path: '/ping')
       }
     }
+    custom_input = {
+      layout: 'hash', namespace: 'payload',
+      parameters: {
+        label: { type: 'String' }, value: { type: 'Custom', required: true },
+        optional: { type: 'Custom', nullable: true }
+      }
+    }
+    custom_output = {
+      layout: 'object', namespace: 'record',
+      parameters: { label: { type: 'String' }, value: { type: 'Custom' } }
+    }
+    custom_meta = {
+      global: {
+        input: { layout: 'hash', namespace: '_meta', parameters: { includes: { type: 'Custom' } } }
+      }
+    }
+    description[:resources][:record] = {
+      resources: {},
+      actions: {
+        create: action_description(method: 'POST', path: '/records', input: custom_input, output: custom_output,
+                                   meta: custom_meta),
+        update: action_description(method: 'PUT', path: '/records', input: custom_input, output: custom_output,
+                                   meta: custom_meta),
+        read: action_description(method: 'GET', path: '/records', output: custom_output, meta: custom_meta)
+      }
+    }
 
     Dir.mktmpdir('haveapi-go-client-context-raw-') do |dir|
       communicator = instance_double(HaveAPI::Client::Communicator, describe_api: description)
@@ -1142,12 +1168,189 @@ RSpec.describe HaveAPI::GoClient::Generator do
             if err != nil || output.Value != 5 || calls != 1 || body.closes != 1 { t.Fatal(output, err, calls, body.closes) }
           }
         }
+
+        func TestCustomInputJSONValues(t *testing.T) {
+          for _, mode := range []string{"legacy", "context", "raw"} {
+            for _, method := range []string{"POST", "PUT"} {
+              for _, value := range []string{`{"nested":[null,9007199254740993]}`, `[1,"x",false]`, `"text"`, `true`, `9007199254740993`, `null`} {
+                t.Run(mode+method+value, func(t *testing.T) {
+                  calls := 0
+                  c := contextRawClient(func(r *http.Request) (*http.Response, error) {
+                    calls++
+                    if r.Method != method || r.URL.Path != "/records" { t.Fatal(r.Method, r.URL) }
+                    var got map[string]map[string]json.RawMessage
+                    if err := json.NewDecoder(r.Body).Decode(&got); err != nil { t.Fatal(err) }
+                    if len(got) != 2 || len(got["payload"]) != 2 || string(got["payload"]["value"]) != value ||
+                      string(got["payload"]["label"]) != `"sibling"` || len(got["_meta"]) != 1 || string(got["_meta"]["includes"]) != `"node"` {
+                      t.Fatal("custom input was omitted, rounded or encoded as a string", got)
+                    }
+                    return contextRawReply(200, &contextRawBody{Reader: strings.NewReader(`{"status":true,"response":{"record":{"label":"ok","value":{"output":9007199254740993}}}}`)}), nil
+                  })
+                  var err error
+                  if method == "POST" {
+                    inv := c.Record.Create.Prepare()
+                    inv.NewInput().SetValue(json.RawMessage(value)).SetLabel("sibling")
+                    inv.NewMetaInput().SetIncludes("node")
+                    switch mode {
+                    case "legacy": _, err = inv.Call()
+                    case "context": _, err = inv.CallContext(context.Background())
+                    case "raw": _, err = inv.CallRaw(context.Background())
+                    }
+                  } else {
+                    inv := c.Record.Update.Prepare()
+                    inv.NewInput().SetValue(json.RawMessage(value)).SetLabel("sibling")
+                    inv.NewMetaInput().SetIncludes("node")
+                    switch mode {
+                    case "legacy": _, err = inv.Call()
+                    case "context": _, err = inv.CallContext(context.Background())
+                    case "raw": _, err = inv.CallRaw(context.Background())
+                    }
+                  }
+                  if err != nil || calls != 1 { t.Fatal(err, calls) }
+                })
+              }
+            }
+          }
+        }
+
+        func TestCustomInputSelectionAndNull(t *testing.T) {
+          cases := []struct {
+            name string
+            input func() *ActionRecordCreateInput
+            want string
+          }{
+            {"nil-input", func() *ActionRecordCreateInput { return nil }, `{}`},
+            {"select-all", func() *ActionRecordCreateInput { return &ActionRecordCreateInput{Label:"all", Value:json.RawMessage(`true`)} }, `{"label":"all","optional":null,"value":true}`},
+            {"unset-select-all", func() *ActionRecordCreateInput { return &ActionRecordCreateInput{} }, `{"label":"","optional":null,"value":null}`},
+            {"setter", func() *ActionRecordCreateInput { return (&ActionRecordCreateInput{}).SetValue(json.RawMessage(`[1]`)) }, `{"value":[1]}`},
+            {"empty-selection", func() *ActionRecordCreateInput { return (&ActionRecordCreateInput{Value:json.RawMessage(`broken`)}).SelectParameters() }, `{}`},
+            {"unselect", func() *ActionRecordCreateInput { return (&ActionRecordCreateInput{}).SetValue(json.RawMessage(`broken`)).UnselectParameters("Value").SetLabel("only") }, `{"label":"only"}`},
+            {"nil-raw", func() *ActionRecordCreateInput { return (&ActionRecordCreateInput{}).SetValue(nil) }, `{"value":null}`},
+            {"literal-null", func() *ActionRecordCreateInput { return (&ActionRecordCreateInput{}).SetValue(json.RawMessage(`null`)) }, `{"value":null}`},
+            {"nullable-override", func() *ActionRecordCreateInput { return (&ActionRecordCreateInput{}).SetOptional(json.RawMessage(`broken`)).SetOptionalNil(true) }, `{"optional":null}`},
+            {"nullable-clear", func() *ActionRecordCreateInput { return (&ActionRecordCreateInput{}).SetOptional(json.RawMessage(`false`)).SetOptionalNil(true).SetOptionalNil(false) }, `{"optional":false}`},
+            {"setter-clears-nil", func() *ActionRecordCreateInput { return (&ActionRecordCreateInput{}).SetOptionalNil(true).SetOptional(json.RawMessage(`{"x":1}`)) }, `{"optional":{"x":1}}`},
+          }
+          for _, mode := range []string{"legacy", "context", "raw"} {
+            for _, tc := range cases {
+              t.Run(mode+"/"+tc.name, func(t *testing.T) {
+                calls := 0
+                c := contextRawClient(func(r *http.Request) (*http.Response, error) {
+                  calls++
+                  var got map[string]json.RawMessage
+                  if err := json.NewDecoder(r.Body).Decode(&got); err != nil { t.Fatal(err) }
+                  if len(got) != 2 || string(got["_meta"]) != `{}` || string(got["payload"]) != tc.want { t.Fatal("selection/null changed", got, tc.want) }
+                  return contextRawReply(200, &contextRawBody{Reader: strings.NewReader(`{"status":true,"response":{"record":{"label":"ok"}}}`)}), nil
+                })
+                inv := c.Record.Create.Prepare().SetInput(tc.input())
+                var err error
+                switch mode {
+                case "legacy": _, err = inv.Call()
+                case "context": _, err = inv.CallContext(context.Background())
+                case "raw": _, err = inv.CallRaw(context.Background())
+                }
+                if err != nil || calls != 1 { t.Fatal(err, calls) }
+              })
+            }
+          }
+          if _, ok := reflect.TypeOf(&ActionRecordCreateInput{}).MethodByName("SetValueNil"); ok { t.Fatal("nonnullable Custom input gained nil helper") }
+        }
+
+        type customInputAuthCounter struct { calls int }
+        func (a *customInputAuthCounter) Authenticate(*http.Request) { a.calls++ }
+
+        func TestCustomInputInvalidJSONBeforeAuthAndDispatch(t *testing.T) {
+          for _, mode := range []string{"legacy", "context", "raw"} {
+            for _, value := range []json.RawMessage{json.RawMessage{}, json.RawMessage(`broken`), json.RawMessage(`{} []`)} {
+              auth := &customInputAuthCounter{}
+              c := contextRawClient(func(*http.Request) (*http.Response, error) { t.Fatal("invalid JSON dispatched"); return nil,nil })
+              c.Authentication = auth
+              inv := c.Record.Create.Prepare()
+              inv.NewInput().SetValue(value)
+              var err error
+              switch mode {
+              case "legacy": _, err = inv.Call()
+              case "context": _, err = inv.CallContext(context.Background())
+              case "raw": _, err = inv.CallRaw(context.Background())
+              }
+              var marshalErr *json.MarshalerError
+              if !errors.As(err, &marshalErr) || auth.calls != 0 { t.Fatal("invalid JSON reached authentication", err, auth.calls) }
+            }
+          }
+        }
+
+        func TestCustomInputLeavesApplicationValidationToServer(t *testing.T) {
+          const text = `{"status":false,"message":"invalid value","errors":{"value":["required"]}}`
+          for _, mode := range []string{"legacy", "context", "raw"} {
+            calls := 0
+            c := contextRawClient(func(r *http.Request) (*http.Response, error) {
+              calls++
+              var got map[string]map[string]json.RawMessage
+              if err := json.NewDecoder(r.Body).Decode(&got); err != nil { t.Fatal(err) }
+              if value, ok := got["payload"]["value"]; !ok || string(value) != "null" { t.Fatal("required null was changed", got) }
+              return contextRawReply(400, &contextRawBody{Reader:strings.NewReader(text)}),nil
+            })
+            inv := c.Record.Create.Prepare()
+            inv.NewInput().SetValue(nil)
+            var result *ActionRecordCreateResponse
+            var err error
+            switch mode {
+            case "legacy": result, err = inv.Call()
+            case "context": result, err = inv.CallContext(context.Background())
+            case "raw":
+              var raw *RawResponse
+              raw, err = inv.CallRaw(context.Background())
+              if err == nil && (raw.StatusCode != 400 || !bytes.Equal(raw.Body,[]byte(text))) { t.Fatal(raw) }
+            }
+            if err != nil || calls != 1 { t.Fatal(err,calls) }
+            if mode != "raw" && (result.Status || result.Message != "invalid value" || len(result.Errors["value"]) != 1) { t.Fatal(result) }
+          }
+        }
+
+        func TestCustomMetadataIncludesAndOutputBoundary(t *testing.T) {
+          calls := 0
+          const text = `{"status":true,"response":{"record":{"label":"ok","value":{"n":9007199254740993}}}}`
+          c := contextRawClient(func(r *http.Request) (*http.Response, error) {
+            calls++
+            if r.Method != "GET" || r.URL.RawQuery != "_meta%5Bincludes%5D=node__location" { t.Fatal("Custom includes query changed", r.URL) }
+            return contextRawReply(200, &contextRawBody{Reader:strings.NewReader(text)}),nil
+          })
+          inv := c.Record.Read.Prepare()
+          inv.NewMetaInput().SetIncludes("node__location")
+          typed, err := inv.CallContext(context.Background())
+          if err != nil || typed.Output.Label != "ok" { t.Fatal(typed,err) }
+          if _, ok := reflect.TypeOf(ActionRecordReadOutput{}).FieldByName("Value"); ok { t.Fatal("unsupported Custom output gained typed field") }
+          raw, err := inv.CallRaw(context.Background())
+          if err != nil || !bytes.Equal(raw.Body,[]byte(text)) || calls != 2 { t.Fatal(raw,err,calls) }
+        }
       GO
 
       go_out, go_err, go_status = Open3.capture3(
         { 'CGO_ENABLED' => '0' }, 'go', 'test', './...', chdir: dir
       )
       expect(go_status).to be_success, "go test failed: #{go_out}\n#{go_err}"
+    end
+  end
+
+  it 'rejects ordinary Custom query inputs before emitting files' do
+    description = oauth2_revoke_description
+    description[:resources][:record] = {
+      resources: {},
+      actions: {
+        search: action_description(
+          method: 'GET', path: '/records',
+          input: { layout: 'hash', namespace: 'record', parameters: { value: { type: 'Custom' } } }
+        )
+      }
+    }
+    Dir.mktmpdir('haveapi-go-custom-query-') do |dir|
+      destination = File.join(dir, 'not-created')
+      communicator = instance_double(HaveAPI::Client::Communicator, describe_api: description)
+      allow(HaveAPI::Client::Communicator).to receive(:new).and_return(communicator)
+      expect do
+        described_class.new('http://api.example', destination, module: 'example.com/custom-query', package: 'client')
+      end.to raise_error(RuntimeError, "unsupported Custom query input 'value' for action 'Record#Search'")
+      expect(File.exist?(destination)).to be(false)
     end
   end
 

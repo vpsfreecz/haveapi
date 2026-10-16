@@ -108,6 +108,38 @@ Typed calls retain the existing HTTP/API status semantics: inspect `Status`,
 return errors instead of panicking. Existing low-level request helpers retain
 their signatures and use a background context.
 
+## Custom JSON inputs
+
+Ordinary `Custom` inputs on actions with a JSON request body use
+`json.RawMessage`. For example, a field named `value` has a fluent setter:
+
+```go
+input.SetValue(json.RawMessage(`{"enabled":true}`))
+```
+
+Objects, arrays, strings, booleans and numbers are embedded as JSON. Numbers do
+not pass through `float64`. The standard JSON encoder may compact whitespace
+and escape strings, so request bytes need not match the supplied bytes.
+Keep the raw slice stable until the call returns. `Call`, `CallContext` and
+`CallRaw` use the same input selection and serialization.
+
+A nil invocation input sends no action fields. A nonnil input with no explicit
+selection sends every field, including null for an unset Custom field. Setters
+select their field; `SelectParameters` and `UnselectParameters` can select or
+omit fields explicitly. An empty explicit selection sends no fields. Omitted
+raw fields are neither sent nor checked, even if they contain invalid JSON.
+
+A selected nil `json.RawMessage` or JSON `null` sends null. A selected nonnil
+empty slice, malformed JSON or multiple JSON values fails before authentication
+and HTTP dispatch. Nullable fields also have `SetValueNil(bool)`; calling
+`SetValue` clears that override. Required fields, nullability, value shape and
+application validation remain the server's responsibility.
+
+Ordinary Custom GET inputs fail during generator construction with the action
+and parameter name. Global metadata `includes` keeps its string setter and
+query encoding. Custom output fields remain absent from typed responses;
+use `CallRaw` and decode the response fields the caller needs.
+
 ## Localization
 
 Generated clients include bundled HaveAPI client translations. Set the

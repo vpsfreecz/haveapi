@@ -2,6 +2,9 @@ package <%= package %>
 
 import (
 	"context"
+<% if action.has_input? && action.input.parameters.any? { |p| p.go_in_type == 'json.RawMessage' } -%>
+	"encoding/json"
+<% end -%>
 	"net/http"
 <% if action.has_path_params? -%>
 	"net/url"

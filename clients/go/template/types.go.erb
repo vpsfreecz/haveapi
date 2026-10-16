@@ -102,6 +102,7 @@ func (e *ValidationError) language() string {
 	}
 
 	v, ok := validationErrorLanguages.Load(validationErrorKey(e))
+	runtime.KeepAlive(e)
 	if !ok {
 		return ""
 	}

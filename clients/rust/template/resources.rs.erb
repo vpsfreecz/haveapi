@@ -1,0 +1,4 @@
+// Generated resource modules. Component boundaries use double underscores.
+<% ir.resources.each do |resource| -%>
+pub mod <%= resource[:module] %>;
+<% end -%>

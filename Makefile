@@ -1,6 +1,6 @@
 VERSION=$(shell cat VERSION)
 
-.PHONY: doc publish release release-check release-test release-deps test version
+.PHONY: doc publish release release-check release-test release-deps test test-rust test-rust-unit version
 
 doc:
 	./utils/copydoc.sh servers/ruby
@@ -12,6 +12,15 @@ test: doc
 	cd clients/go && bundle exec rspec
 	cd clients/js && npm test
 	cd clients/php && vendor/bin/phpunit
+
+test-rust-unit:
+	cd clients/rust && bundle exec rspec spec/unit
+
+# Run in nix develop .#client-rust after the generator unit checks.
+test-rust: test-rust-unit
+	cd clients/rust/runtime && cargo test --locked
+	cd clients/rust/runtime && cargo test --locked --features blocking
+	HAVEAPI_RUST_INTEGRATION=1 ruby clients/rust/spec/integration/run.rb
 
 release-deps:
 	cd servers/ruby && bundle install
@@ -38,11 +47,13 @@ version:
 	@sed -ri "s/ VERSION = '[^']+'/ VERSION = '$(VERSION)'/" servers/ruby/lib/haveapi/version.rb
 	@sed -ri "s/ VERSION = '[^']+'/ VERSION = '$(VERSION)'/" clients/ruby/lib/haveapi/client/version.rb
 	@sed -ri "s/ VERSION = '[^']+'/ VERSION = '$(VERSION)'/" clients/go/lib/haveapi/go_client/version.rb
+	@sed -ri "s/ VERSION = '[^']+'/ VERSION = '$(VERSION)'/" clients/rust/lib/haveapi/rust_client/version.rb
 	@sed -ri "s/\"version\": \"[^\"]+\"/\"version\": \"$(VERSION)\"/" clients/js/package.json
 	@sed -ri "s/Client\.Version = '[^']+'/Client.Version = '$(VERSION)'/" clients/js/src/haveapi/client.js
 	@sed -ri "s/Client\.Version = '[^']+'/Client.Version = '$(VERSION)'/" clients/js/dist/haveapi-client.js
 	@sed -ri "s/\"version\": \"[^\"]+\"/\"version\": \"$(VERSION)\"/" clients/php/composer.json
 	@sed -ri "s/const VERSION = '[^']+'/const VERSION = '$(VERSION)'/" clients/php/src/Client.php
 	@sed -ri "s/s.add_dependency 'haveapi-client', '~> [^']+'/s.add_dependency 'haveapi-client', '~> $(VERSION)'/" servers/ruby/haveapi.gemspec
+	@sed -ri "s/spec.add_dependency 'haveapi-client', '~> [^']+'/spec.add_dependency 'haveapi-client', '~> $(VERSION)'/" clients/rust/haveapi-rust-client.gemspec
 	@sed -ri "s/spec.add_dependency 'haveapi-client', '~> [^']+'/spec.add_dependency 'haveapi-client', '~> $(VERSION)'/" clients/go/haveapi-go-client.gemspec
 	@sed -ri "s/gem 'haveapi', '~> [^']+'/gem 'haveapi', '~> $(VERSION)'/" examples/servers/ruby/activerecord_auth/Gemfile

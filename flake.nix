@@ -150,6 +150,18 @@
             afterInstall = "export RUBYOPT=-rbundler/setup";
           };
 
+          client-rust = rubyShell {
+            name = "haveapi-rust-client";
+            label = "haveapi:client-rust";
+            componentDir = "clients/rust";
+            gemHome = "$HAVEAPI_REPO_ROOT/clients/rust/.gems";
+            packages = with pkgs; [ cargo rustc rustfmt clippy pkg-config openssl ];
+            installBundler = "gem install --no-document bundler";
+            afterInstall = ''
+              export RUBOCOP_CACHE_ROOT="$HAVEAPI_REPO_ROOT/.rubocop_cache"
+            '';
+          };
+
           example-ruby-activerecord-auth = rubyShell {
             name = "haveapi-example-servers-ruby";
             label = "haveapi:example-ruby-activerecord-auth";

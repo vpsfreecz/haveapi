@@ -8,7 +8,7 @@ repository root unless explicitly stated otherwise.
 - Use `nix develop` from the top-level directory for tree-wide work, e.g. making new releases.
 - Component development shells are available as `nix develop .#server-ruby`,
   `nix develop .#client-ruby`, `nix develop .#client-js`,
-  `nix develop .#client-go`, and
+  `nix develop .#client-go`, `nix develop .#client-rust`, and
   `nix develop .#example-ruby-activerecord-auth`. From within the shell,
   standard language tools are used.
 - Sync documentation into server packages with `make doc`.
@@ -27,3 +27,11 @@ repository root unless explicitly stated otherwise.
   local update, run `./utils/update-nixpkgs.sh`, review the generated commit,
   and push it. The commit subject must be
   `flake: nixpkgs <oldrev11> -> <newrev11>`.
+
+## Rust generator and runtime
+
+See [the Rust client development guide](../../clients/rust/README.md) for the
+locked Ruby component bundle, pinned Rust formatter, generator unit specs and
+separate runtime/integration checks. `make test-rust-unit` is the quick Ruby
+check; `make test-rust` also compiles and exercises generated clients. The Rust
+generator is not added to existing broad release/publication targets.

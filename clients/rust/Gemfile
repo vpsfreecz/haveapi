@@ -1,0 +1,11 @@
+source 'https://rubygems.org'
+gemspec
+
+gem 'haveapi-client', path: '../ruby'
+
+group :development, :test do
+  gem 'rake'
+  gem 'rspec'
+  gem 'rubocop', '~> 1.85.0'
+  gem 'rubocop-rspec'
+end

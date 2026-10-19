@@ -70,6 +70,13 @@ They resolve runtime dependencies from the package index and require network
 access. Disposable vpsAdmin integration has its own explicit bridge setup; it is
 not required for a standard Python checkout or the generic CI job.
 
+The optional vpsAdmin bridge requires `HAVEAPI_VPSADMIN_EVIDENCE_DIR` to name an
+existing directory. Failed scenarios write `vpsadmin-<scenario>-<mode>-failure.log`
+there with mode 0600. These bounded logs contain only the test identity, known
+source locations and allowlisted exception types. Messages, source lines, local
+values and fixture credentials are excluded. Private child output and manifests
+are removed after each scenario.
+
 Python follows the repository's shared `VERSION`. Use root
 `make version VERSION=X.Y.Z` for an authorized release preparation; it updates
 pyproject and uv.lock with the other maintained clients. See the repository

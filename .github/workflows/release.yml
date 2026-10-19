@@ -1,0 +1,156 @@
+name: release
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+    paths:
+      - '.github/workflows/release.yml'
+      - 'utils/release/**'
+      - 'Makefile'
+      - 'Gemfile'
+      - 'flake.nix'
+      - 'flake.lock'
+      - 'clients/js/package.json'
+  pull_request:
+    paths:
+      - '.github/workflows/release.yml'
+      - 'utils/release/**'
+      - 'Makefile'
+      - 'Gemfile'
+      - 'flake.nix'
+      - 'flake.lock'
+      - 'clients/js/package.json'
+  workflow_dispatch:
+
+# Finish one tagged release before starting another. Branch checks are separate.
+concurrency:
+  group: ${{ startsWith(github.ref, 'refs/tags/') && 'haveapi-release' || format('haveapi-release-check-{0}', github.ref) }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Validate, test and build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      artifact-id: ${{ steps.restore.outputs.id || steps.upload.outputs.artifact-id }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702 # v31.11.2
+
+      - name: Check source and release metadata
+        shell: bash
+        run: |
+          if [[ -n "$RELEASE_TAG" ]]; then
+            nix develop -c ruby utils/release/cli.rb check-clean "$RELEASE_TAG"
+          else
+            nix develop -c ruby utils/release/cli.rb check-clean
+          fi
+
+      - name: Check publication setup
+        if: env.RELEASE_TAG != ''
+        env:
+          HAVEAPI_RELEASE_ENABLED: ${{ vars.HAVEAPI_RELEASE_ENABLED }}
+        run: nix develop -c ruby utils/release/cli.rb check-activation
+
+      - name: Find original artifacts
+        id: restore
+        run: nix develop -c ruby utils/release/cli.rb artifact-state
+
+      - name: Restore original artifacts
+        if: steps.restore.outputs.id != ''
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ steps.restore.outputs.id }}
+          path: dist
+          github-token: ${{ github.token }}
+
+      - name: Test and build maintained packages
+        if: steps.restore.outputs.id == ''
+        run: |
+          nix develop -c bash -euo pipefail -c '
+            make release-deps
+            bundle exec rake i18n:health
+            make release-test
+            make release
+            make test
+            ruby utils/release/cli.rb smoke-npm dist
+          '
+
+      - name: Retain release artifacts
+        id: upload
+        if: steps.restore.outputs.id == ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-${{ github.run_id }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Verify retained artifacts
+        run: nix develop -c ruby utils/release/cli.rb verify dist
+
+      - name: Summarize candidate release
+        shell: bash
+        run: |
+          echo 'Artifacts are retained under release-${{ github.run_id }}.' >> "$GITHUB_STEP_SUMMARY"
+          if [[ -z "$RELEASE_TAG" ]]; then
+            echo 'Build-only run: no packages will be published.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          cat dist/release-notes.md >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    name: Publish approved artifacts
+    needs: build
+    if: github.repository == 'vpsfreecz/haveapi' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+      actions: read
+      id-token: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      HAVEAPI_RELEASE_TOOLS_ONLY: '1'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702 # v31.11.2
+
+      - name: Download approved artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact-id }}
+          path: dist
+          github-token: ${{ github.token }}
+
+      - name: Verify artifacts and retain draft release assets
+        run: nix develop -c ruby utils/release/cli.rb github-prepare dist
+
+      - name: Configure RubyGems trusted publishing
+        uses: rubygems/configure-rubygems-credentials@dc5a8d8553e6ee01fc26761a49e99e733d17954a # v2.1.0
+
+      - name: Publish packages and complete the GitHub Release
+        env:
+          HAVEAPI_PHP_DEPLOY_KEY: ${{ secrets.HAVEAPI_PHP_DEPLOY_KEY }}
+        run: nix develop -c ruby utils/release/cli.rb publish dist

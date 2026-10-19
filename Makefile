@@ -1,51 +1,43 @@
 VERSION=$(shell cat VERSION)
 
-.PHONY: doc publish release test version
+.PHONY: doc publish release release-check release-test release-deps test version
 
 doc:
-	./utils/copydoc.sh servers/*
+	./utils/copydoc.sh servers/ruby
 
 # Run component test suites (install deps first or use nix develop).
-test:
+test: doc
 	cd servers/ruby && bundle exec rspec
 	cd clients/ruby && bundle exec rspec
 	cd clients/go && bundle exec rspec
 	cd clients/js && npm test
 	cd clients/php && vendor/bin/phpunit
 
-release: doc
-	mkdir -p dist
-	
-	cd clients/ruby && bundle install && bundle exec rake build
-	mv clients/ruby/pkg/haveapi-client-$(VERSION).gem dist/
-	gem install dist/haveapi-client-$(VERSION).gem
-	
-	cd servers/ruby && bundle install && bundle exec rake build
-	mv servers/ruby/pkg/haveapi-$(VERSION).gem dist/
-	
-	cd clients/go && bundle install && bundle exec rake build
-	mv clients/go/pkg/haveapi-go-client-$(VERSION).gem dist/
-	
-	cd clients/js && ./node_modules/.bin/gulp
-	cp clients/js/dist/haveapi-client.js dist/
+release-deps:
+	cd servers/ruby && bundle install
+	cd clients/ruby && bundle install
+	cd clients/go && bundle install
+	cd clients/js && npm install --no-audit --no-fund
+	cd clients/php && composer install --no-interaction --prefer-dist
+
+release-check:
+	ruby utils/release/cli.rb check
+
+release-test:
+	bundle exec rspec utils/release/spec
+
+release:
+	bash utils/release/build.sh
 
 publish:
-	gem push dist/haveapi-client-$(VERSION).gem
-	gem push dist/haveapi-$(VERSION).gem
-	gem push dist/haveapi-go-client-$(VERSION).gem
-	
-	mkdir -p tmp/haveapi-client-js
-	cd clients/js && cp -p --parents $(shell cd clients/js && git ls-files) ../../tmp/haveapi-client-js/
-	cd tmp/haveapi-client-js && npm publish
-	rm -rf tmp/haveapi-client-js
+	@echo 'Publish through the release GitHub Actions workflow; see doc/agent-instructions/releases.md.' >&2
+	@exit 1
 
 version:
 	@echo "$(VERSION)" > VERSION
 	@sed -ri "s/ VERSION = '[^']+'/ VERSION = '$(VERSION)'/" servers/ruby/lib/haveapi/version.rb
-	#@sed -ri "s/version: \"[^\"]+\"/version: \"$(VERSION)\"/" servers/elixir/mix.exs
 	@sed -ri "s/ VERSION = '[^']+'/ VERSION = '$(VERSION)'/" clients/ruby/lib/haveapi/client/version.rb
 	@sed -ri "s/ VERSION = '[^']+'/ VERSION = '$(VERSION)'/" clients/go/lib/haveapi/go_client/version.rb
-	#@sed -ri "s/version: \"[^\"]+\"/version: \"$(VERSION)\"/" clients/elixir/mix.exs
 	@sed -ri "s/\"version\": \"[^\"]+\"/\"version\": \"$(VERSION)\"/" clients/js/package.json
 	@sed -ri "s/Client\.Version = '[^']+'/Client.Version = '$(VERSION)'/" clients/js/src/haveapi/client.js
 	@sed -ri "s/Client\.Version = '[^']+'/Client.Version = '$(VERSION)'/" clients/js/dist/haveapi-client.js

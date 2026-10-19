@@ -7,6 +7,8 @@
 .yardoc
 .gems
 Gemfile.lock
+clients/js/package-lock.json
+clients/php/composer.lock
 InstalledFiles
 _yardoc
 coverage

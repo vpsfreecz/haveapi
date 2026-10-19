@@ -114,9 +114,19 @@ export interface LegacyXMLHttpRequest {
 	open(method: string, url: string, async?: boolean, user?: string, password?: string): void;
 	setRequestHeader(name: string, value: string): void;
 	onreadystatechange: ((this: LegacyXMLHttpRequest) => void) | null;
+	onerror?: (() => void) | null;
+	onabort?: (() => void) | null;
+	ontimeout?: (() => void) | null;
+	abort?(): void;
 	send(body?: string): void;
 }
 
 export interface LegacyXMLHttpRequestConstructor {
 	new(): LegacyXMLHttpRequest;
+}
+
+/** Shared validation needs descriptions and translation, not a callback client. */
+export interface ParameterContext {
+	description: ActionDescription;
+	client: {translate(key: string, values?: Values): string};
 }

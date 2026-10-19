@@ -55,3 +55,29 @@ These local fixtures do not verify a server or browser implementation. The Mocha
 suite includes Ruby-server contract tests and requires the matching Ruby
 environment. Run longer server/browser verification through the workspace's
 verification workflow after final review.
+
+The async-resource unit suite checks the resource layer independently of the
+client's transport/authentication implementation. Its test-only CommonJS emit
+is stored under ignored `test/tmp/async-resources`:
+
+```sh
+cd clients/js
+./node_modules/.bin/tsc -p test/async-resources.tsconfig.json
+node --test test/async_resources/resource.spec.cjs
+```
+
+The suite covers immutable concurrent IDs/options, local getters and iteration,
+nonthenable name collisions, save publication and accepted-unbound protection,
+explicit association loading, abort forwarding and generation-bound sends.
+It imports only the async resource modules from that private test emit. Legacy
+callback modules require the final non-strict bundle and are checked through
+that artifact. `test/types/async.tsconfig.json` checks async examples against the
+emitted package declarations. The shared Ruby-server contract file runs both
+`CallbackAdapter` and `AsyncAdapter`; do not run it as a quick unit check.
+
+`test/async/resource_save.spec.cjs` also exercises the built bundle with actual
+parameter validation and fake XHR. It checks Resource-valued create/save inputs,
+association identifier selection, dispatch snapshots and duplicate-create
+protection after a validated successful response cannot be materialized. It runs
+with the other bundle fixtures through `npm run test:async`; no API server is
+required.

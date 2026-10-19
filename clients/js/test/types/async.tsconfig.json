@@ -1,0 +1,4 @@
+{
+  "extends": "./callback.tsconfig.json",
+  "files": ["async.ts"]
+}

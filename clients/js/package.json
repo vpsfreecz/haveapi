@@ -8,7 +8,10 @@
 		"email": "jakub.skokan@vpsfree.cz"
 	},
 	"files": [
-		"dist"
+		"dist",
+		"doc-async-client.md",
+		"doc-async-resources.md",
+		"test/README.md"
 	],
 	"main": "dist/haveapi-client.js",
 	"repository": {
@@ -17,11 +20,13 @@
 		"directory": "clients/js"
 	},
 	"scripts": {
-		"test": "mocha",
+		"test": "npm run build && npm run test:compatibility && npm run test:async && npm run test:resources && npm run test:types && mocha",
 		"build": "gulp",
 		"typecheck": "tsc --noEmit",
 		"test:compatibility": "node --test test/compatibility/*.spec.cjs",
-		"test:types": "tsc -p test/types/callback.tsconfig.json"
+		"test:types": "tsc -p test/types/callback.tsconfig.json && tsc -p test/types/async.tsconfig.json",
+		"test:async": "node --test test/async/*.spec.cjs",
+		"test:resources": "tsc -p test/async-resources.tsconfig.json && node --test test/async_resources/resource.spec.cjs"
 	},
 	"dependencies": {
 		"xmlhttprequest": "latest"

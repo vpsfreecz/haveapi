@@ -263,6 +263,14 @@ api.after('authenticated', function() {
 })
 ```
 
+### AsyncClient
+
+The same package also exports `HaveAPI.AsyncClient`, whose network methods
+return Promises. Existing `HaveAPI.Client` methods retain their callback API.
+See [async requests and authentication](doc-async-client.md) for setup, typed
+requests, errors and completion waiting, and [async resources and binding](doc-async-resources.md)
+for action results, identity, save and explicit association loading.
+
 Documentation
 -------------
 https://projects.vpsfree.cz/haveapi-client-js/ref/

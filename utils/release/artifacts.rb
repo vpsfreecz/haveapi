@@ -51,7 +51,11 @@ module HaveAPI
         GEMS.keys.map { |name| "#{name}-#{version}.gem" } + [
           "haveapi-client-#{version}.tgz", 'haveapi-client.js',
           "haveapi-client-php-#{version}.tar", 'release-notes.md'
-        ]
+        ] + python_names
+      end
+
+      def python_names
+        ["haveapi_client-#{version}-py3-none-any.whl", "haveapi_client-#{version}.tar.gz"]
       end
 
       def notes
@@ -69,7 +73,8 @@ module HaveAPI
           'clients/ruby/lib/haveapi/client/version.rb' => /\bVERSION = '([^']+)'/,
           'clients/go/lib/haveapi/go_client/version.rb' => /\bVERSION = '([^']+)'/,
           'clients/js/src/haveapi/client.js' => /Client\.Version = '([^']+)'/,
-          'clients/php/src/Client.php' => /const VERSION = '([^']+)'/
+          'clients/php/src/Client.php' => /const VERSION = '([^']+)'/,
+          'clients/python/pyproject.toml' => /^version = "([^"]+)"/
         }
         paths.each do |path, pattern|
           actual = File.read(File.join(root, path)).match(pattern)&.captures&.first
@@ -116,11 +121,11 @@ module HaveAPI
         File.write(File.join(directory, 'release-notes.md'), notes)
         inspect_packages(directory)
         files = names.to_h { |name| [name, Digest::SHA256.file(File.join(directory, name)).hexdigest] }
-        tools = %w[ruby gem node npm go php composer].to_h do |tool|
+        tools = %w[ruby gem node npm go php composer python uv].to_h do |tool|
           flag = tool == 'go' ? 'version' : '--version'
           [tool, Release.capture(tool, flag).strip]
         end
-        lock_paths = %w[Gemfile.lock servers/ruby/Gemfile.lock clients/ruby/Gemfile.lock clients/go/Gemfile.lock clients/js/package-lock.json clients/php/composer.lock]
+        lock_paths = %w[Gemfile.lock servers/ruby/Gemfile.lock clients/ruby/Gemfile.lock clients/go/Gemfile.lock clients/js/package-lock.json clients/php/composer.lock clients/python/uv.lock]
         dependency_locks = lock_paths.to_h { |path| [path, File.read(File.join(root, path))] }
         manifest = { schema: 1, source:, version:, tag:, run_id: ENV.fetch('GITHUB_RUN_ID', 'local'), files:, tools:, dependency_locks: }
         File.write(File.join(directory, 'release-manifest.json'), "#{JSON.pretty_generate(manifest)}\n")
@@ -193,6 +198,8 @@ module HaveAPI
 
         php = tar_files(File.join(directory, "haveapi-client-php-#{version}.tar"))
         raise Error, 'Wrong Composer identity' unless JSON.parse(php.fetch('composer.json').first).values_at('name', 'version') == ['haveapi/client', version]
+
+        Release.capture('python', File.join(root, 'utils/release/python_artifacts.py'), directory, version)
       end
 
       def smoke_npm(directory)

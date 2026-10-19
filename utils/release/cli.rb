@@ -21,7 +21,7 @@ begin
   when 'smoke-npm'
     artifacts.verify(argument || 'dist')
     artifacts.smoke_npm(argument || 'dist')
-  when 'github-prepare', 'publish'
+  when 'github-prepare', 'pypi-prepare', 'publish'
     unless ENV['GITHUB_ACTIONS'] == 'true' && ENV['GITHUB_REPOSITORY'] == HaveAPI::Release::REPOSITORY &&
            ENV['GITHUB_EVENT_NAME'] == 'push' && ENV['GITHUB_REF'] == "refs/tags/#{artifacts.tag}"
       raise HaveAPI::Release::Error, 'Publication is available only in the tagged GitHub Actions release job'
@@ -32,6 +32,8 @@ begin
     publisher = HaveAPI::Release::Publisher.new(artifacts, argument || 'dist')
     if command == 'github-prepare'
       publisher.prepare_github
+    elsif command == 'pypi-prepare'
+      publisher.prepare_pypi
     else
       publisher.publish
     end

@@ -21,6 +21,7 @@ All maintained components use the shared version and are released together:
 | Go client generator, implemented in Ruby | RubyGems `haveapi-go-client` |
 | JavaScript client | npm `haveapi-client` and a browser bundle |
 | PHP client | Composer `haveapi/client`, through `vpsfreecz/haveapi-client-php` |
+| Python client | PyPI `haveapi-client` |
 
 The Elixir server and client are unmaintained and excluded from releases.
 Consumers keep their existing package names and installation commands. Release
@@ -58,6 +59,14 @@ source revision.
 6. Set the HaveAPI repository Actions variable `HAVEAPI_RELEASE_ENABLED` to
    `true` after setup is complete. Tag builds fail visibly while publication is
    disabled or the release environment lacks required reviewers.
+7. Configure a [PyPI trusted publisher](https://docs.pypi.org/trusted-publishers/)
+   for project `haveapi-client`: owner `vpsfreecz`, repository `haveapi`, workflow
+   `release.yml`, environment `release`. Before the first upload, confirm control
+   of the project name and use PyPI's pending-publisher setup if needed. A 404
+   from the package JSON endpoint does not establish ownership or availability.
+   The official PyPA action exchanges the job's OIDC identity for a short-lived
+   upload credential; no PyPI password or API token is configured. TestPyPI needs
+   its own publisher configuration.
 
 Only the publishing job receives OIDC and repository write permissions. It uses
 the top-level Nix shell with `HAVEAPI_RELEASE_TOOLS_ONLY=1`, which skips dependency
@@ -84,19 +93,23 @@ Run release commands from the top-level `nix develop` shell.
    builds are not promised to be byte-identical.
 5. Open the Actions run and inspect its test results, candidate summary and
    artifacts. Click **Review deployments**, select `release`, then **Approve and
-   deploy**. This authorizes RubyGems/npm publication and synchronization into
+   deploy**. This authorizes RubyGems/npm/PyPI publication and synchronization into
    `haveapi-client-php/master` with the corresponding version tag. Rejecting the
    request fails the workflow before the publishing job starts.
 6. The publishing job verifies the saved files and retains them in a draft
-   GitHub Release. It validates the PHP mirror before writing to any registry,
-   then pushes the Ruby client before its dependent server and
-   Go-generator gems, publishes the npm tarball and updates the PHP mirror. It
+   GitHub Release. It validates the PHP mirror and existing registry hashes
+   before writing to any registry. The PyPA action uploads missing retained
+   Python files, then the helper confirms their PyPI hashes. It pushes the Ruby
+   client before its dependent server and Go-generator gems, publishes the npm
+   tarball and updates the PHP mirror. It
    publishes the GitHub Release only after all destinations succeed.
 7. Confirm the workflow's publication receipts and verify that the PHP version
    appears on Packagist. Packagist indexes the mirror asynchronously.
 
 The GitHub Release contains the three gems, npm tarball, browser bundle, PHP
-source archive, release notes and manifest. No package is rebuilt after approval.
+source archive, Python wheel and sdist, release notes and manifest. Python uses
+the shared `VERSION`; `make version` updates its pyproject and lockfile, and
+release checks reject a mismatch. No package is rebuilt after approval.
 `make publish` directs maintainers to this workflow and exits without publishing.
 
 ## Build-only checks and local packaging
@@ -116,13 +129,15 @@ make release
 make test
 ruby utils/release/cli.rb smoke-npm dist
 ruby utils/release/cli.rb verify dist
+cd clients/python && uv run --locked python utils/package_smoke.py
 ```
 
 `make release` requires a clean tracked checkout and an empty `dist` directory.
 Move earlier artifacts aside before building. It generates shared documentation
 for the Ruby server, builds three gems, rebuilds and packs JavaScript, and
-archives the tracked PHP subtree. It never uploads packages. Component gems use
-the local Ruby client, so a new shared version need not already exist on RubyGems.
+archives the tracked PHP subtree, and builds the Python wheel and sdist with uv.
+It never uploads packages. Component gems use the local Ruby client, so a new
+shared version need not already exist on RubyGems.
 Do not commit generated server documentation or build artifacts.
 
 The Ruby server packaging specs extract a gem and test its documentation routes.
@@ -149,7 +164,11 @@ Each destination is checked before publication. Existing gems must match the
 retained SHA-256; npm must match package identity and tarball integrity. An
 existing PHP tag must contain the same snapshot and HaveAPI source commit. The
 workflow skips only verified matches. Conflicting versions, authentication
-errors and network errors fail visibly.
+errors and network errors fail visibly. Existing PyPI filenames and SHA-256
+values must match the manifest. Unexpected or changed files stop the release.
+On partial Python publication, only missing original files are staged for the
+PyPA action. The workflow does not use `skip-existing` or rebuild those files.
+Final release completion requires both Python files with their original hashes.
 
 If retained Actions artifacts have expired, preserve or download the draft
 Release assets and their manifest for recovery. Operator-assisted recovery must

@@ -45,6 +45,48 @@ module HaveAPI
         true
       end
 
+      def pypi_files
+        metadata = registry_json("https://pypi.org/pypi/haveapi-client/#{@artifacts.version}/json")
+        return {} unless metadata
+
+        unless metadata.fetch('info').values_at('name', 'version') == ['haveapi-client', @artifacts.version]
+          raise Error, 'Existing PyPI package identity differs'
+        end
+
+        metadata.fetch('urls').each_with_object({}) do |file, present|
+          name = file.fetch('filename')
+          unless @artifacts.python_names.include?(name) && !present.has_key?(name)
+            raise Error, 'Existing PyPI version has unexpected files'
+          end
+          unless file.fetch('digests').fetch('sha256') == @manifest.fetch('files').fetch(name)
+            raise Error, "Existing PyPI file differs: #{name}"
+          end
+
+          present[name] = true
+        end
+      end
+
+      # Stage only missing, previously verified bytes. The official PyPA action
+      # owns OIDC exchange and upload; this helper never receives PyPI credentials.
+      def prepare_pypi
+        with_php_mirror do |mirror, _transport|
+          preflight_php(mirror)
+          GEMS.each_key { |name| gem_present?(name) }
+          npm_present?
+          missing = @artifacts.python_names - pypi_files.keys
+          stage = File.join(@directory, 'python-publish')
+          unless missing.empty?
+            raise Error, 'Python publication staging directory already exists' if File.exist?(stage)
+
+            Dir.mkdir(stage)
+            missing.each { |name| FileUtils.cp(File.join(@directory, name), stage) }
+          end
+          File.open(ENV.fetch('GITHUB_OUTPUT'), 'a') do |output|
+            output.puts "publish=#{!missing.empty?}"
+          end
+        end
+      end
+
       def confirm
         12.times do
           return if yield
@@ -173,6 +215,10 @@ module HaveAPI
       def publish
         with_php_mirror do |mirror, transport|
           preflight_php(mirror)
+          unless (@artifacts.python_names - pypi_files.keys).empty?
+            raise Error, 'PyPI publication is incomplete; upload the retained Python artifacts first'
+          end
+
           publish_registries
           sync_php(mirror, transport:)
           finish_github
@@ -229,7 +275,9 @@ module HaveAPI
       end
 
       def finish_github
-        raise Error, 'Registry publication is incomplete' unless GEMS.keys.all? { |name| gem_present?(name) } && npm_present?
+        unless GEMS.keys.all? { |name| gem_present?(name) } && npm_present? && (@artifacts.python_names - pypi_files.keys).empty?
+          raise Error, 'Registry publication is incomplete'
+        end
 
         Release.run('gh', 'release', 'edit', @artifacts.tag, '--repo', REPOSITORY, '--draft=false') if github_release.fetch('draft')
         puts "Release complete: https://github.com/#{REPOSITORY}/releases/tag/#{@artifacts.tag}"

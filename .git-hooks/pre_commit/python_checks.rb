@@ -6,8 +6,8 @@ module Overcommit::Hook::PreCommit
       root = File.expand_path('../..', __dir__)
       python = File.join(root, 'clients/python')
       commands = [
-        ['uv', 'run', '--locked', 'python', 'utils/run_ruff.py', 'format', '--check', '.'],
-        ['uv', 'run', '--locked', 'python', 'utils/run_ruff.py', 'check', '.']
+        ['uv', 'run', '--locked', 'python', 'utils/run_ruff.py', '--config', 'pyproject.toml', 'format', '--check', '.', '../../utils/release'],
+        ['uv', 'run', '--locked', 'python', 'utils/run_ruff.py', '--config', 'pyproject.toml', 'check', '.', '../../utils/release']
       ]
       commands.each do |command|
         stdout, stderr, status = Open3.capture3(*command, chdir: python)

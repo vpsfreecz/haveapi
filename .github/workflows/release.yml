@@ -12,6 +12,7 @@ on:
       - 'flake.nix'
       - 'flake.lock'
       - 'clients/js/package.json'
+      - 'clients/python/**'
   pull_request:
     paths:
       - '.github/workflows/release.yml'
@@ -21,6 +22,7 @@ on:
       - 'flake.nix'
       - 'flake.lock'
       - 'clients/js/package.json'
+      - 'clients/python/**'
   workflow_dispatch:
 
 # Finish one tagged release before starting another. Branch checks are separate.
@@ -51,7 +53,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Nix
-        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+        uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702 # v31.11.2
 
       - name: Check source and release metadata
         shell: bash
@@ -90,6 +92,8 @@ jobs:
             make release
             make test
             ruby utils/release/cli.rb smoke-npm dist
+            cd clients/python
+            uv run --locked python utils/package_smoke.py
           '
 
       - name: Retain release artifacts
@@ -135,7 +139,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Nix
-        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+        uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702 # v31.11.2
 
       - name: Download approved artifacts
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -149,6 +153,18 @@ jobs:
 
       - name: Configure RubyGems trusted publishing
         uses: rubygems/configure-rubygems-credentials@dc5a8d8553e6ee01fc26761a49e99e733d17954a # v2.1.0
+
+      - name: Preflight registries and stage missing Python artifacts
+        id: pypi
+        env:
+          HAVEAPI_PHP_DEPLOY_KEY: ${{ secrets.HAVEAPI_PHP_DEPLOY_KEY }}
+        run: nix develop -c ruby utils/release/cli.rb pypi-prepare dist
+
+      - name: Publish retained Python packages with PyPI trusted publishing
+        if: steps.pypi.outputs.publish == 'true'
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          packages-dir: dist/python-publish
 
       - name: Publish packages and complete the GitHub Release
         env:

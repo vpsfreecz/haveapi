@@ -144,6 +144,62 @@ RSpec.describe HaveAPI::Release do
 
     before { fixture_manifest }
 
+    def pypi_metadata(names = artifacts.python_names)
+      {
+        'info' => { 'name' => 'haveapi-client', 'version' => artifacts.version },
+        'urls' => names.map do |name|
+          { 'filename' => name, 'digests' => { 'sha256' => Digest::SHA256.file(File.join(tmp, name)).hexdigest } }
+        end
+      }
+    end
+
+    it 'accepts only the original Python artifact hashes from PyPI' do
+      allow(publisher).to receive(:registry_json).and_return(pypi_metadata)
+      expect(publisher.pypi_files.keys).to eq(artifacts.python_names)
+      mismatched = pypi_metadata
+      mismatched['urls'][0]['digests']['sha256'] = 'different'
+      allow(publisher).to receive(:registry_json).and_return(mismatched)
+      expect { publisher.pypi_files }.to raise_error(HaveAPI::Release::Error, /PyPI file differs/)
+    end
+
+    it 'refuses unexpected Python files and duplicate filenames' do
+      metadata = pypi_metadata
+      metadata['urls'] << metadata['urls'].first
+      allow(publisher).to receive(:registry_json).and_return(metadata)
+      expect { publisher.pypi_files }.to raise_error(HaveAPI::Release::Error, /unexpected files/)
+    end
+
+    it 'stages only missing original Python files after all registry preflights' do
+      allow(publisher).to receive(:with_php_mirror).and_yield('mirror', {})
+      allow(publisher).to receive(:preflight_php)
+      allow(publisher).to receive(:gem_present?)
+      allow(publisher).to receive(:npm_present?)
+      allow(publisher).to receive(:registry_json).and_return(pypi_metadata([artifacts.python_names.first]))
+      allow(ENV).to receive(:fetch).and_call_original
+      output = File.join(tmp, 'output')
+      allow(ENV).to receive(:fetch).with('GITHUB_OUTPUT').and_return(output)
+      publisher.prepare_pypi
+      expect(publisher).to have_received(:preflight_php).with('mirror').ordered
+      HaveAPI::Release::GEMS.each_key { |name| expect(publisher).to have_received(:gem_present?).with(name).ordered }
+      expect(publisher).to have_received(:npm_present?).ordered
+      staged = File.join(tmp, 'python-publish')
+      expect(Dir.children(staged)).to eq([artifacts.python_names.last])
+      expect(File.binread(File.join(staged, artifacts.python_names.last))).to eq(File.binread(File.join(tmp, artifacts.python_names.last)))
+      expect(File.read(output)).to eq("publish=true\n")
+    end
+
+    it 'does not write registries or the PHP mirror while Python publication is incomplete' do
+      allow(publisher).to receive(:registry_json).and_return(nil)
+      allow(publisher).to receive(:with_php_mirror).and_yield('mirror', {})
+      allow(publisher).to receive(:preflight_php)
+      allow(publisher).to receive(:publish_registries)
+      allow(publisher).to receive(:sync_php)
+      expect { publisher.publish }.to raise_error(HaveAPI::Release::Error, /PyPI publication is incomplete/)
+      expect(publisher).to have_received(:preflight_php).with('mirror')
+      expect(publisher).not_to have_received(:publish_registries)
+      expect(publisher).not_to have_received(:sync_php)
+    end
+
     it 'accepts a gem only when its registry checksum matches the retained gem' do
       name = "haveapi-client-#{artifacts.version}.gem"
       allow(publisher).to receive(:registry_json).and_return({ 'sha' => Digest::SHA256.file(File.join(tmp, name)).hexdigest })

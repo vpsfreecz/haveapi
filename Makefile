@@ -12,6 +12,8 @@ test: doc
 	cd clients/go && bundle exec rspec
 	cd clients/js && npm test
 	cd clients/php && vendor/bin/phpunit
+	clients/python/utils/check.sh
+	cd clients/python && uv run --locked pytest tests/integration
 
 release-deps:
 	cd servers/ruby && bundle install
@@ -19,12 +21,14 @@ release-deps:
 	cd clients/go && bundle install
 	cd clients/js && npm install --no-audit --no-fund
 	cd clients/php && composer install --no-interaction --prefer-dist
+	cd clients/python && uv sync --locked
 
 release-check:
 	ruby utils/release/cli.rb check
 
 release-test:
 	bundle exec rspec utils/release/spec
+	python utils/release/spec/python_artifacts_test.py
 
 release:
 	bash utils/release/build.sh
@@ -43,6 +47,8 @@ version:
 	@sed -ri "s/Client\.Version = '[^']+'/Client.Version = '$(VERSION)'/" clients/js/dist/haveapi-client.js
 	@sed -ri "s/\"version\": \"[^\"]+\"/\"version\": \"$(VERSION)\"/" clients/php/composer.json
 	@sed -ri "s/const VERSION = '[^']+'/const VERSION = '$(VERSION)'/" clients/php/src/Client.php
+	@sed -ri 's/^version = "[^"]+"/version = "$(VERSION)"/' clients/python/pyproject.toml
+	@cd clients/python && uv lock
 	@sed -ri "s/s.add_dependency 'haveapi-client', '~> [^']+'/s.add_dependency 'haveapi-client', '~> $(VERSION)'/" servers/ruby/haveapi.gemspec
 	@sed -ri "s/spec.add_dependency 'haveapi-client', '~> [^']+'/spec.add_dependency 'haveapi-client', '~> $(VERSION)'/" clients/go/haveapi-go-client.gemspec
 	@sed -ri "s/gem 'haveapi', '~> [^']+'/gem 'haveapi', '~> $(VERSION)'/" examples/servers/ruby/activerecord_auth/Gemfile

@@ -135,6 +135,10 @@ Publication across registries is not atomic. A failure can leave some packages
 published and others missing. Keep the source tag, original Actions artifacts
 and draft Release. Fix or diagnose the failure before rerunning jobs.
 
+A rerun uses the original tagged workflow and helpers. If the correction needs
+changes to that source, prepare a new patch version and obtain publication
+authorization for it. Preserve the failed tag and its original artifacts.
+
 Use **Re-run failed jobs** for a failed publishing job. **Re-run all jobs** also
 reuses the original artifact and skips its build/test stage. If an early build
 failed before uploading artifacts, it can retry the build. Once an artifact

@@ -47,6 +47,12 @@ RSpec.describe HaveAPI::Release do
       expect { artifacts.check }.not_to raise_error
     end
 
+    it 'rejects a mismatched authored JavaScript client version' do
+      allow(File).to receive(:read).and_call_original
+      allow(File).to receive(:read).with(File.join(root, 'clients/js/src/haveapi/client.ts')).and_return("Client.Version = '999.0.0';")
+      expect { artifacts.check }.to raise_error(HaveAPI::Release::Error, %r{Version mismatch in clients/js/src/haveapi/client\.ts})
+    end
+
     it 'rejects a version tag that differs from VERSION' do
       expect { artifacts.check_tag('v999.0.0') }.to raise_error(HaveAPI::Release::Error, /Tag must be/)
     end

@@ -1,0 +1,23 @@
+{
+	"compilerOptions": {
+		"target": "ES5",
+		"module": "ESNext",
+		"moduleResolution": "node",
+		"lib": [
+			"ES2015",
+			"DOM"
+		],
+		"strict": true,
+		"declaration": true,
+		"rootDir": "src",
+		"outDir": "build",
+		"noEmitOnError": true,
+		"types": []
+	},
+	"include": [
+		"src/**/*"
+	],
+	"exclude": [
+		"src/haveapi/i18n_messages.js"
+	]
+}

@@ -1,7 +1,12 @@
-import type { Action } from './action';
-import type { Params, ValidationErrors, Values } from './types';
+import type { Params, ParameterContext, ValidationErrors, Values } from './types';
+export interface DictionaryPolicy {
+    create<T>(): Record<string, T>;
+    owns(target: object, key: string): boolean;
+}
 export interface Parameters {
-    action: Action;
+    /** Present only for callers that opt into safe dictionary ownership. */
+    _dictionaryPolicy?: DictionaryPolicy;
+    action: ParameterContext;
     typeErrors: ValidationErrors;
     params: Params;
     errors: ValidationErrors;
@@ -12,7 +17,7 @@ export interface Parameters {
     validate(): boolean;
 }
 export interface ParametersConstructor {
-    new (action: Action, params?: Params): Parameters;
+    new (action: ParameterContext, params?: Params, dictionaryPolicy?: DictionaryPolicy): Parameters;
     prototype: Parameters;
 }
 /**

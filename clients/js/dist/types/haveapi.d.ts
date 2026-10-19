@@ -14,3 +14,9 @@ export type { ClientOptions, Description, ResourceDescription, ActionDescription
 export type { DoneCallback, VersionsCallback, CompatibleCallback } from './haveapi/client';
 export type { AuthenticationOptions, Provider, ProviderConstructor } from './haveapi/authentication';
 export type { ActionCall, InvocationArgument, ReplyCallback, StateCallback, ActionReply } from './haveapi/action';
+export { AsyncClient } from './haveapi/async/client';
+export { AsyncError } from './haveapi/async/error';
+export { AsyncResourceInstance } from './haveapi/async/resource_instance';
+export { AsyncResourceList } from './haveapi/async/resource_list';
+export type { AsyncResource, AsyncAction, AsyncActionOptions } from './haveapi/async/resource';
+export type { RequestSpec, RequestResult, InvocationResult, AsyncResourceContext, AsyncErrorKind, AsyncErrorDetails, AsyncAuthenticationOptions, CompletionOptions, CompletionResult, ActionStateSnapshot } from './haveapi/async/types';

@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "rootDir": "../src",
+    "outDir": "tmp/async-resources",
+    "declaration": false
+  },
+  "files": ["../src/haveapi/async/resource.ts"],
+  "include": [],
+  "exclude": []
+}

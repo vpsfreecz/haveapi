@@ -1,0 +1,57 @@
+# JavaScript client checks
+
+Run commands from the repository's `nix develop .#client-js` environment.
+The build owner regenerates `dist/haveapi-client.js` and `dist/types` before
+checking converted source. Do not edit those outputs directly.
+
+The callback compatibility fixture uses Node's built-in test runner and fake XHR
+responses. It needs no API server or additional test dependencies:
+
+```sh
+node --test clients/js/test/compatibility/callback.spec.cjs
+```
+
+It exercises the distributed bundle through CommonJS, browser-global and AMD
+loaders, with Promise and AbortController absent. It checks callback timing and
+arguments, undefined returns, synchronous throws, hooks, callable resource/action
+prototypes, metadata, list helpers and attribute descriptors. Hook receiver and
+argument assertions preserve the existing implementation, including its quirks;
+they do not specify the new AsyncClient contract.
+
+The initial 12 cases passed before conversion against the bundle at
+`cb3f39f75e8a63416388d24293f936d1db97162b`, SHA-256
+`3e8fcefe8edf78f6cea635c1bf4312b56c2e05355287153e142d30a9608c6436`.
+The same cases must pass against the converted bundle. The original bundle is
+available from Git history; a second tracked copy is unnecessary.
+
+The strict-context fixture checks the same distributed artifact inside a strict
+CommonJS wrapper, as used when a browser bundler embeds it in a module:
+
+```sh
+node --test clients/js/test/compatibility/strict_context.spec.cjs
+```
+
+It compares raw and strict callback loading, setup, version checks and
+`defaultParams`, including the existing `Authentication`, `v1`, `v2` and `ret`
+global effects and live reads. The `window`, `self` and `global` host fallbacks
+run with `globalThis`, Promise and AbortController absent. The `self` case uses
+fake CommonJS XHR and checks host lookup; it does not certify worker transport.
+This VM check complements actual minified browser-package import verification.
+
+The TypeScript fixture compiles against generated package declarations rather
+than authored source:
+
+```sh
+cd clients/js
+./node_modules/.bin/tsc -p test/types/callback.tsconfig.json
+```
+
+Its positive examples cover callback overloads, callable resources/actions and
+typed response payloads. Its expected errors reject Promise returns from Client,
+missing callbacks and endpoint names that have no application-supplied schema.
+Type checking cannot infer resource names from a runtime API description.
+
+These local fixtures do not verify a server or browser implementation. The Mocha
+suite includes Ruby-server contract tests and requires the matching Ruby
+environment. Run longer server/browser verification through the workspace's
+verification workflow after final review.

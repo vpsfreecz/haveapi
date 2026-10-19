@@ -1,0 +1,48 @@
+import { Client } from './haveapi/client';
+import { Action } from './haveapi/action';
+import { ActionState } from './haveapi/action_state';
+import { Authentication } from './haveapi/authentication';
+import { Base } from './haveapi/authentication/base';
+import { Basic } from './haveapi/authentication/basic';
+import { OAuth2 } from './haveapi/authentication/oauth2';
+import { Token } from './haveapi/authentication/token';
+import { BaseResource } from './haveapi/base_resource';
+import { Hooks } from './haveapi/hooks';
+import { Http } from './haveapi/http';
+import { Resource } from './haveapi/resource';
+import { ResourceInstance } from './haveapi/resource_instance';
+import { ResourceInstanceList } from './haveapi/resource_instance_list';
+import { Response } from './haveapi/response';
+import { LocalResponse } from './haveapi/local_response';
+import './haveapi/exceptions';
+import './haveapi/validators/accept';
+import './haveapi/validators/confirm';
+import './haveapi/validators/custom';
+import './haveapi/validators/exclude';
+import './haveapi/validators/format';
+import './haveapi/validators/include';
+import './haveapi/validators/length';
+import './haveapi/validators/number';
+import './haveapi/validators/present';
+
+// Keep public constructor/provider registration separate from module type cycles.
+Authentication.registerProvider('basic', Basic);
+Authentication.registerProvider('oauth2', OAuth2);
+Authentication.registerProvider('token', Token);
+Client.Action = Action;
+Client.ActionState = ActionState;
+Client.Authentication = Authentication;
+Client.BaseResource = BaseResource;
+Client.Hooks = Hooks;
+Client.Http = Http;
+Client.Resource = Resource;
+Client.ResourceInstance = ResourceInstance;
+Client.ResourceInstanceList = ResourceInstanceList;
+Client.Response = Response;
+Client.LocalResponse = LocalResponse;
+
+export { Client };
+export type { ClientOptions, Description, ResourceDescription, ActionDescription, ParameterDescription, Envelope } from './haveapi/types';
+export type { DoneCallback, VersionsCallback, CompatibleCallback } from './haveapi/client';
+export type { AuthenticationOptions, Provider, ProviderConstructor } from './haveapi/authentication';
+export type { ActionCall, InvocationArgument, ReplyCallback, StateCallback, ActionReply } from './haveapi/action';

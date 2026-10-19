@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "ES5",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "lib": ["ES2015", "DOM"],
+    "types": [],
+    "strict": true,
+    "noEmit": true
+  },
+  "files": ["callback.ts"]
+}

@@ -54,7 +54,7 @@ function Client(url, opts) {
 }
 
 /** @constant HaveAPI.Client.Version */
-Client.Version = '0.29.9';
+Client.Version = '0.29.10';
 
 /** @constant HaveAPI.Client.ProtocolVersion */
 Client.ProtocolVersion = '2.0';

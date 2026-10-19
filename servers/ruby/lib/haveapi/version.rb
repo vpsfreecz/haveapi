@@ -1,4 +1,4 @@
 module HaveAPI
   PROTOCOL_VERSION = '2.0'.freeze
-  VERSION = '0.29.9'.freeze
+  VERSION = '0.29.10'.freeze
 end

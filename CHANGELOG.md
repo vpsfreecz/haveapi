@@ -1,3 +1,11 @@
+# Mon Oct 19 2026 - version 0.29.10
+## Releases
+- Build and publish maintained packages through GitHub Actions after maintainer
+  approval, with retained artifacts for recovery from partial publication.
+
+## JavaScript client
+- Correct npm repository metadata to reference vpsfreecz/haveapi.
+
 # Mon Oct 12 2026 - version 0.29.9
 ## Ruby server
 - Include generated JSON schema and shared protocol/client documentation in

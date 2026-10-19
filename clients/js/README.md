@@ -22,17 +22,22 @@ With NodeJS:
 var HaveAPI = require('haveapi-client');
 ```
 
-Create a client instance:
+Use `CallbackClient` for callbacks or `AsyncClient` for Promises. `Client`
+remains supported as an alias of `CallbackClient`: both names refer to the same
+constructor, prototype and static helpers. Its runtime constructor name remains
+`Client`.
+
+Create a callback client instance:
 
 ```js
-var api = new HaveAPI.Client("http://your.api.tld");
+var api = new HaveAPI.CallbackClient("http://your.api.tld");
 ```
 
 Request translated API messages and translate local client-side validation
 errors by passing `language`:
 
 ```js
-var api = new HaveAPI.Client("http://your.api.tld", { language: "cs" });
+var api = new HaveAPI.CallbackClient("http://your.api.tld", { language: "cs" });
 ```
 
 The value is sent in `Accept-Language` by default. Use `language_header` when
@@ -266,7 +271,8 @@ api.after('authenticated', function() {
 ### AsyncClient
 
 The same package also exports `HaveAPI.AsyncClient`, whose network methods
-return Promises. Existing `HaveAPI.Client` methods retain their callback API.
+return Promises. `HaveAPI.CallbackClient` methods retain their callback API,
+also available through the supported `HaveAPI.Client` alias.
 See [async requests and authentication](doc-async-client.md) for setup, typed
 requests, errors and completion waiting, and [async resources and binding](doc-async-resources.md)
 for action results, identity, save and explicit association loading.

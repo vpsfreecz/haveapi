@@ -9,7 +9,7 @@ import './haveapi/validators/include';
 import './haveapi/validators/length';
 import './haveapi/validators/number';
 import './haveapi/validators/present';
-export { Client };
+export { Client, Client as CallbackClient };
 export type { ClientOptions, Description, ResourceDescription, ActionDescription, ParameterDescription, Envelope } from './haveapi/types';
 export type { DoneCallback, VersionsCallback, CompatibleCallback } from './haveapi/client';
 export type { AuthenticationOptions, Provider, ProviderConstructor } from './haveapi/authentication';

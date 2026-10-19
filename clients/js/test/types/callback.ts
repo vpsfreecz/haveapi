@@ -1,5 +1,5 @@
 // Compile against emitted package declarations, never the authored TS modules.
-import { Client } from '../../dist/types/haveapi';
+import { CallbackClient, Client } from '../../dist/types/haveapi';
 import type { Action, ActionReply } from '../../dist/types/haveapi/action';
 import type { Resource } from '../../dist/types/haveapi/resource';
 import type { ResourceInstance } from '../../dist/types/haveapi/resource_instance';
@@ -7,6 +7,17 @@ import type { Response } from '../../dist/types/haveapi/response';
 import type { ResourceDescription, ActionDescription } from '../../dist/types/haveapi/types';
 
 const client = new Client('https://api.example', { language: 'cs', version: '1.0' });
+const callbackClient: CallbackClient = new CallbackClient('https://api.example', { language: 'en' });
+const callbackAsLegacy: Client = callbackClient;
+const legacyAsCallback: CallbackClient = client;
+const callbackConstructor: typeof Client = CallbackClient;
+const legacyConstructor: typeof CallbackClient = Client;
+const callbackSetupReturn: void = callbackClient.setup((owner, status) => {
+  const namedOwner: CallbackClient = owner;
+  const legacyOwner: Client = owner;
+  namedOwner.setLanguage(status ? 'en' : 'cs');
+  legacyOwner.setLanguage('cs');
+});
 const actionDescription: ActionDescription = {
   method: 'GET', path: '/v1/widgets/{widget_id}', aliases: ['get'],
   input: { layout: 'hash', namespace: 'widget', parameters: {} },
@@ -18,6 +29,11 @@ const resourceDescription: ResourceDescription = {
 const resource = new Client.Resource(client, null, 'widgets', resourceDescription, []);
 const bound: Resource = resource(7);
 const action = new Client.Action(client, bound, 'show', actionDescription);
+const callbackAction = new CallbackClient.Action(callbackClient, bound, 'show', actionDescription);
+const callbackInvokeReturn: void = callbackAction(7, (owner, result) => {
+  const namedOwner: CallbackClient = owner;
+  namedOwner.setLanguage(result.isOk() ? 'en' : 'cs');
+});
 
 const setupReturn: void = client.setup((owner, status) => {
   const sameClient: Client = owner;
@@ -82,4 +98,6 @@ resource.missingAction();
 // @ts-expect-error directInvoke returns the raw Response wrapper.
 action.directInvoke(7, (owner: Client, raw: ResourceInstance) => {});
 
-void [setupReturn, noReply, oldParamsNoReply, oldCallback, oldParams, options];
+void [setupReturn, noReply, oldParamsNoReply, oldCallback, oldParams, options,
+  callbackAsLegacy, legacyAsCallback, callbackConstructor, legacyConstructor,
+  callbackSetupReturn, callbackInvokeReturn];

@@ -180,9 +180,11 @@ module HaveAPI
       end
 
       def github_release
-        stdout, stderr, status = Open3.capture3('gh', 'api', "repos/#{REPOSITORY}/releases/tags/#{@artifacts.tag}")
-        return JSON.parse(stdout) if status.success?
-        return nil if stderr.include?('HTTP 404')
+        # The tag endpoint only returns published releases; preparation needs drafts.
+        stdout, stderr, status = Open3.capture3('gh', 'api', '--paginate', '--slurp', "repos/#{REPOSITORY}/releases?per_page=100")
+        if status.success?
+          return JSON.parse(stdout).flatten(1).find { |release| release.fetch('tag_name') == @artifacts.tag }
+        end
 
         raise Error, "GitHub release query failed: #{stderr.strip}"
       end

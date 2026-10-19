@@ -170,6 +170,54 @@ RSpec.describe HaveAPI::Release do
     end
   end
 
+  describe 'GitHub release preparation' do
+    let(:publisher) { HaveAPI::Release::Publisher.new(artifacts, tmp) }
+    let(:draft) { { 'tag_name' => artifacts.tag, 'draft' => true, 'assets' => [] } }
+    let(:list_command) { ['gh', 'api', '--paginate', '--slurp', 'repos/vpsfreecz/haveapi/releases?per_page=100'] }
+
+    def github_response(pages, error: '')
+      [JSON.generate(pages), error, instance_double(Process::Status, success?: error.empty?)]
+    end
+
+    before do
+      fixture_manifest
+      allow(described_class).to receive(:run)
+      # The tag endpoint does not expose drafts, even after creating one.
+      allow(Open3).to receive(:capture3).with('gh', 'api', "repos/vpsfreecz/haveapi/releases/tags/#{artifacts.tag}").and_return(github_response([], error: 'gh: Not Found (HTTP 404)'))
+      pages = [[{ 'tag_name' => 'v0.0.1', 'draft' => false, 'assets' => [] }], [draft]]
+      allow(Open3).to receive(:capture3).with(*list_command).and_return(github_response(pages))
+    end
+
+    it 'finds an existing draft on a later page and uploads its retained artifacts' do
+      publisher.prepare_github
+      expect(described_class).not_to have_received(:run).with('gh', 'release', 'create', any_args)
+      (artifacts.names + ['release-manifest.json']).each do |name|
+        expect(described_class).to have_received(:run).with('gh', 'release', 'upload', artifacts.tag, File.join(tmp, name), '--repo', 'vpsfreecz/haveapi')
+      end
+    end
+
+    it 'finds a newly created draft before uploading artifacts' do
+      allow(Open3).to receive(:capture3).with(*list_command).and_return(github_response([[]]), github_response([[draft]]))
+      expect { publisher.prepare_github }.not_to raise_error
+      expect(described_class).to have_received(:run).with('gh', 'release', 'create', artifacts.tag, '--repo', 'vpsfreecz/haveapi', '--verify-tag', '--draft', '--title', "HaveAPI #{artifacts.version}", '--notes-file', File.join(tmp, 'release-notes.md'))
+      expect(described_class).to have_received(:run).with('gh', 'release', 'upload', artifacts.tag, File.join(tmp, 'release-manifest.json'), '--repo', 'vpsfreecz/haveapi')
+    end
+
+    it 'also finds an already published release with the exact tag' do
+      published = draft.merge('draft' => false)
+      allow(Open3).to receive(:capture3).with(*list_command).and_return(github_response([[published]]))
+      expect(publisher.github_release).to eq(published)
+    end
+
+    [403, 404].each do |status|
+      it "keeps HTTP #{status} query failures visible without creating a draft" do
+        allow(Open3).to receive(:capture3).with(*list_command).and_return(github_response([], error: "gh: query failed (HTTP #{status})"))
+        expect { publisher.prepare_github }.to raise_error(HaveAPI::Release::Error, /GitHub release query failed.*#{status}/)
+        expect(described_class).not_to have_received(:run)
+      end
+    end
+  end
+
   describe 'PHP synchronization' do
     let(:publisher) { HaveAPI::Release::Publisher.new(artifacts, tmp) }
     let(:mirror) { File.join(tmp, 'mirror') }

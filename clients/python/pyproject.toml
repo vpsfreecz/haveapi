@@ -1,0 +1,56 @@
+[project]
+name = "haveapi-client"
+version = "0.29.0"
+description = "Dynamic synchronous and asynchronous clients for HaveAPI APIs"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE.txt"]
+dependencies = ["httpx>=0.28.1,<1", "anyio>=4.15,<5"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
+  "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/vpsfreecz/haveapi"
+Source = "https://github.com/vpsfreecz/haveapi/tree/master/clients/python"
+Issues = "https://github.com/vpsfreecz/haveapi/issues"
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+  "mypy>=2.4,<3",
+  "pytest>=9.1,<10",
+  "ruff==0.16.10",
+  "trio>=0.34,<1",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["haveapi_client"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/unit"]
+addopts = "--strict-markers"
+markers = ["integration: starts a local real Ruby HaveAPI server"]

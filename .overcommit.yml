@@ -1,4 +1,12 @@
 PreCommit:
+  PythonChecks:
+    enabled: true
+    required: true
+    requires_files: true
+    include:
+      - 'clients/python/**/*.py'
+      - 'clients/python/pyproject.toml'
+      - 'clients/python/uv.lock'
   HaveapiI18n:
     enabled: true
     required: true

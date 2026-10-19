@@ -34,6 +34,7 @@ Available clients:
 
 - Ruby client library and CLI at [clients/ruby](clients/ruby)
 - PHP client at [clients/php](clients/php)
+- Python synchronous and asynchronous client at [clients/python](clients/python)
 - JavaScript client at [clients/js](clients/js)
 - Go client generator at [clients/go](clients/go)
 - Elixir client at [clients/elixir](clients/elixir) (outdated)

@@ -8,7 +8,7 @@ repository root unless explicitly stated otherwise.
 - Use `nix develop` from the top-level directory for tree-wide work, e.g. making new releases.
 - Component development shells are available as `nix develop .#server-ruby`,
   `nix develop .#client-ruby`, `nix develop .#client-js`,
-  `nix develop .#client-go`, and
+  `nix develop .#client-go`, `nix develop .#client-python`, and
   `nix develop .#example-ruby-activerecord-auth`. From within the shell,
   standard language tools are used.
 - Sync documentation into server packages with `make doc`.
@@ -22,6 +22,10 @@ repository root unless explicitly stated otherwise.
 - Ruby server tests: from `servers/ruby`, run `bundle exec rspec` or `bundle exec rake spec`.
 - JS client build: from `clients/js`, run `./node_modules/.bin/gulp` after installing deps to refresh `dist/haveapi-client.js`.
 - PHP client tests: from `clients/php`, run `composer install` then `php vendor/bin/phpunit`; this boots a local Ruby test server from `servers/ruby/test_support/client_test_server.rb` and needs permission to bind a localhost port.
+- Python checks: from `clients/python` in `.#client-python`, run
+  `./utils/check.sh`. Use the shared `python utils/run_ruff.py` entrypoint through
+  uv so Nix and CI use the same locked formatter. See
+  [Python contributor guidance](../../clients/python/CONTRIBUTING.md).
 - `nixpkgs` is updated weekly by the `update nixpkgs` GitHub workflow.
   For an on-demand update, prefer triggering that workflow manually. For a
   local update, run `./utils/update-nixpkgs.sh`, review the generated commit,

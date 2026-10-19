@@ -91,6 +91,9 @@
               php83Packages.composer
               php83Packages.php-cs-fixer
               ruby_3_3
+              python311
+              uv
+              ruff
             ];
 
             shellHook = ''
@@ -99,6 +102,7 @@
               export GEM_HOME="$HAVEAPI_REPO_ROOT/.gems"
               export PATH="$GEM_HOME/bin:$PATH"
               export RUBOCOP_CACHE_ROOT="$HAVEAPI_REPO_ROOT/.rubocop_cache"
+              export HAVEAPI_RUFF="${pkgs.ruff}/bin/ruff"
               # Publishing only needs packaged tools and Ruby's standard library.
               # Do not install dependencies while registry credentials are present.
               if [ "''${HAVEAPI_RELEASE_TOOLS_ONLY:-0}" != 1 ]; then
@@ -134,6 +138,19 @@
             shellHook = ''
               ${promptHook "haveapi:client-js"}
               ${repoRootHook}
+            '';
+          };
+
+          client-python = pkgs.mkShell {
+            name = "haveapi-client-python";
+            packages = [ pkgs.git pkgs.python311 pkgs.uv pkgs.ruby_3_3 pkgs.ruff ];
+            shellHook = ''
+              ${promptHook "haveapi:client-python"}
+              ${repoRootHook}
+              export GEM_HOME="$HAVEAPI_REPO_ROOT/.gems"
+              export PATH="$GEM_HOME/bin:$PATH"
+              export UV_PYTHON="${pkgs.python311}/bin/python3.11"
+              export HAVEAPI_RUFF="${pkgs.ruff}/bin/ruff"
             '';
           };
 

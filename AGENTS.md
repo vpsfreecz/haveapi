@@ -35,7 +35,9 @@ top-level Nix development shell.
 - Ruby code follows the repo `.rubocop.yml` (2-space indent, relaxed metrics); run `bundle exec rubocop` in the relevant Ruby component before submitting.
 - Keep generated outputs (`dist/`, `pkg/`, `html_doc/`) build-only—edit source files in `lib/`, `src/`, `doc/`, or templates instead.
 - Tests follow RSpec `_spec.rb` naming. Module/class names should nest under `HaveAPI` and mirror directory structure.
-- JS client code is plain ES5 bundled via gulp UMD; keep changes in `clients/js/src` and let the build regenerate `dist`.
+- JS clients are authored in TypeScript under `clients/js/src`; gulp generates
+  the ES5-compatible UMD bundle and TypeScript declarations under `clients/js/dist`.
+  Edit source files and let the build regenerate these artifacts.
 
 ## Testing Guidelines
 - Prioritize coverage for protocol descriptions, authentication flows, validators, and parameter edge cases in `servers/ruby/spec`.

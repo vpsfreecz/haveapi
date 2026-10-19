@@ -1,0 +1,172 @@
+# Branches and releases
+
+Required procedure selected by AGENTS.md. Paths and commands are relative to the
+repository root. Always ask before publishing a new version. Preparing release
+metadata or running a build does not authorize publication.
+
+## Branches and packages
+
+`master` contains the development version. For a major or minor release, create
+`haveapi-X.Y` from master. For a patch release, work on that release branch and
+backport fixes with `git cherry-pick -x`. Only the newest release branch is
+supported. The tag-triggered workflow verifies that its commit belongs to the
+newest `haveapi-X.Y` branch and that its tag agrees with VERSION.
+
+All maintained components use the shared version and are released together:
+
+| Component | Package or destination |
+| --- | --- |
+| Ruby server | RubyGems `haveapi` |
+| Ruby client and CLI | RubyGems `haveapi-client` |
+| Go client generator, implemented in Ruby | RubyGems `haveapi-go-client` |
+| JavaScript client | npm `haveapi-client` and a browser bundle |
+| PHP client | Composer `haveapi/client`, through `vpsfreecz/haveapi-client-php` |
+
+The Elixir server and client are unmaintained and excluded from releases.
+Consumers keep their existing package names and installation commands. Release
+automation does not change API behavior, data formats or deployment ordering.
+
+## One-time GitHub and registry setup
+
+Install `.github/workflows/release.yml` on master and the supported release
+branch before tagging an automated release. A tag uses the workflow in its own
+source revision.
+
+1. Under **Settings → Environments**, create `release` and enable **Required
+   reviewers**. Select the maintainers allowed to approve publication. One
+   reviewer approves the publishing job; **Prevent self-review** optionally
+   requires someone other than the person who pushed the tag. Restrict deployment
+   to tags matching `v*`. Disable administrator bypass if that is the desired
+   repository policy. The workflow checks that required reviewers are configured;
+   merely naming an environment does not enable approval.
+2. Configure a [RubyGems trusted publisher](https://guides.rubygems.org/trusted-publishing/)
+   for each of the three gems: owner `vpsfreecz`, repository `haveapi`, workflow
+   `release.yml`, environment `release`.
+3. Configure the [npm trusted publisher](https://docs.npmjs.com/trusted-publishers/)
+   for `haveapi-client` with the same owner, repository, workflow and environment.
+   Allow direct `npm publish`. The package's repository URL must identify
+   `https://github.com/vpsfreecz/haveapi`. The Nix release shell supplies Node 24;
+   publication checks that npm is at least 11.5.1. Registry access uses OIDC, with
+   no stored RubyGems or npm publishing tokens.
+4. Add a write deploy key to `vpsfreecz/haveapi-client-php`. Store its private key
+   as environment secret `HAVEAPI_PHP_DEPLOY_KEY` in HaveAPI's `release`
+   environment. This credential can push only to that repository. SSH verifies
+   GitHub against `utils/release/github_known_hosts`; update that file only after
+   verifying an upstream host-key change against [GitHub's published keys](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints).
+5. Verify the PHP package's [Packagist push webhook](https://packagist.org/about).
+   A successful mirror push and completed webhook indexing are separate events.
+6. Set the HaveAPI repository Actions variable `HAVEAPI_RELEASE_ENABLED` to
+   `true` after setup is complete. Tag builds fail visibly while publication is
+   disabled or the release environment lacks required reviewers.
+
+Only the publishing job receives OIDC and repository write permissions. It uses
+the top-level Nix shell with `HAVEAPI_RELEASE_TOOLS_ONLY=1`, which skips dependency
+installation while publishing credentials are present.
+
+## Preparing and publishing a version
+
+Run release commands from the top-level `nix develop` shell.
+
+1. Prepare the new major/minor branch or the supported patch branch. Keep its
+   source and release metadata changes in separate commits.
+2. Run `make version VERSION=X.Y.Z`. Update CHANGELOG.md using the existing
+   `# <date> - version X.Y.Z` heading, followed by descriptions of changed
+   components. Omit components that have no changes. Run `make release-check`
+   and commit the version/changelog changes with the declared hooks enabled.
+3. Push the release branch and an annotated `vX.Y.Z` tag after obtaining
+   publication authorization. Do not move existing tags or push another release
+   tag until this release has finished. The workflow serializes tagged releases.
+4. GitHub Actions validates the metadata, generates Ruby server documentation,
+   tests all maintained components and builds the packages in the locked Nix
+   toolchain. It retains `release-<run-id>` as an Actions artifact for 90 days.
+   Its manifest records source commit, version, checksums, tool versions and
+   resolved dependency locks. Dependencies are resolved for this build; separate
+   builds are not promised to be byte-identical.
+5. Open the Actions run and inspect its test results, candidate summary and
+   artifacts. Click **Review deployments**, select `release`, then **Approve and
+   deploy**. This authorizes RubyGems/npm publication and synchronization into
+   `haveapi-client-php/master` with the corresponding version tag. Rejecting the
+   request fails the workflow before the publishing job starts.
+6. The publishing job verifies the saved files and retains them in a draft
+   GitHub Release. It validates the PHP mirror before writing to any registry,
+   then pushes the Ruby client before its dependent server and
+   Go-generator gems, publishes the npm tarball and updates the PHP mirror. It
+   publishes the GitHub Release only after all destinations succeed.
+7. Confirm the workflow's publication receipts and verify that the PHP version
+   appears on Packagist. Packagist indexes the mirror asynchronously.
+
+The GitHub Release contains the three gems, npm tarball, browser bundle, PHP
+source archive, release notes and manifest. No package is rebuilt after approval.
+`make publish` directs maintainers to this workflow and exits without publishing.
+
+## Build-only checks and local packaging
+
+The release workflow also runs without publication on pushes and pull requests
+that change release tooling. Its **Run workflow** button is another build-only
+entry point once the workflow exists on the default branch. These paths do not
+enter the release environment or write to registries or the PHP repository.
+
+For local verification in the top-level Nix shell:
+
+```sh
+make release-check
+make release-test
+make release-deps
+make release
+make test
+ruby utils/release/cli.rb smoke-npm dist
+ruby utils/release/cli.rb verify dist
+```
+
+`make release` requires a clean tracked checkout and an empty `dist` directory.
+Move earlier artifacts aside before building. It generates shared documentation
+for the Ruby server, builds three gems, rebuilds and packs JavaScript, and
+archives the tracked PHP subtree. It never uploads packages. Component gems use
+the local Ruby client, so a new shared version need not already exist on RubyGems.
+Do not commit generated server documentation or build artifacts.
+
+The Ruby server packaging specs extract a gem and test its documentation routes.
+They require `make doc`, which `make test` runs automatically. Direct server
+`bundle exec rake build` still rejects missing or empty shared documentation.
+
+## Partial failure and recovery
+
+Publication across registries is not atomic. A failure can leave some packages
+published and others missing. Keep the source tag, original Actions artifacts
+and draft Release. Fix or diagnose the failure before rerunning jobs.
+
+Use **Re-run failed jobs** for a failed publishing job. **Re-run all jobs** also
+reuses the original artifact and skips its build/test stage. If an early build
+failed before uploading artifacts, it can retry the build. Once an artifact
+upload has succeeded, a rerun refuses to rebuild if that artifact is missing or
+expired. Do not substitute a new build for an accepted package version.
+
+Each destination is checked before publication. Existing gems must match the
+retained SHA-256; npm must match package identity and tarball integrity. An
+existing PHP tag must contain the same snapshot and HaveAPI source commit. The
+workflow skips only verified matches. Conflicting versions, authentication
+errors and network errors fail visibly.
+
+If retained Actions artifacts have expired, preserve or download the draft
+Release assets and their manifest for recovery. Operator-assisted recovery must
+use those exact files after checking their recorded source and hashes; the
+ordinary workflow does not automatically rebuild or replace missing artifacts.
+If no original files remain, prepare a new version after diagnosing the failure.
+
+The PHP preflight rejects existing tag/source conflicts, untagged master changes
+and backward version updates before any gem or npm push. Its later atomic push
+still refuses a conflicting concurrent update; such a race can leave partial
+publication and must be diagnosed before retrying.
+
+The PHP helper uses a clean isolated clone, preserves mirror-owned `.github`
+configuration and AGENTS.md, and replaces the released library files with the
+tracked PHP snapshot. It refuses untagged master changes and backward version
+updates. It records the HaveAPI source commit and pushes master and the version
+tag atomically without force. An unexpected mirror state needs inspection; do
+not bypass the refusal or overwrite unrelated changes. A Packagist delay needs
+webhook/indexing diagnosis rather than retagging.
+
+Defective published content requires a new patch version. Never overwrite
+package versions, move tags or delete accepted versions as part of recovery.
+Consumers can select a previous package version through their normal package
+manager. Release automation introduces no database or on-disk migration.

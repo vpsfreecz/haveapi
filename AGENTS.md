@@ -14,6 +14,8 @@
   `nix develop .#example-ruby-activerecord-auth`. From within the shell,
   standard language tools are used.
 - Sync documentation into server packages with `make doc`.
+- Run `make release-check` and `make release-test` for release metadata and
+  helper checks. `make release-deps` installs maintained-component dependencies.
 - Run `make doc` before Ruby server specs. They check shared documentation and
   build/extract a real server gem to exercise the packaged documentation routes.
 - Run the full suite from repo root with `make test` (install deps first or use `nix develop`; this starts local test servers and needs permission to bind localhost ports).
@@ -68,31 +70,14 @@
 - Avoid mixing version bumps with feature changes; use `make version` to update
   the shared `VERSION` value when coordinating releases.
 
-## Branches
-- `master` branch contains the latest development version.
-- When a new major/minor release is made, a new brach is created, e.g. `haveapi-0.26`. Fixes from the master are than cherry-picked (`git cherry-pick -x`) into the release branch and a new patch version is made, e.g. `v0.26.1` in branch `haveapi-0.26`.
-- Only the latest release branch is supported.
+## Branches and releases
 
-## Releasing a new version
-- When releasing a new major/minor version, create a new release branch.
-- When releasing a patch version, work within the release branch.
-- `make version VERSION=<major>.<minor>.<patch>` will update versions of all components.
-- Update `CHANGELOG.md` and add a brief description of changes for each component. If there are no changes to a component, it is not mentioned.
-- Always run `make release` and `make publish` from within the top-level `nix develop` shell so the correct toolchain is used; running them outside nix can produce build failures or mismatched Ruby versions.
-- `make release` will build artifacts of all components. Run it inside `nix develop`.
-- `make release` generates shared server documentation before building gems.
-  Generation failures stop the release. A direct server `bundle exec rake build`
-  rejects missing or empty shared documentation; run `make doc` from the
-  repository root first. Do not commit the generated server documents.
-- Before publication, run the Ruby server specs after `make doc`. The packaging
-  specs build and extract a server gem, check the required documents and serve
-  the documentation routes using the extracted framework. This catches missing
-  package content that a prepared source checkout could conceal.
-- `make publish` will upload the built artifacts to package repositories, e.g. rubygems.org, npmjs.com, etc. Run it inside `nix develop` and always ask before publishing a new version.
+Before selecting a release/backport branch, changing versions, publishing or
+synchronizing the PHP client, read [Branches and releases](doc/agent-instructions/releases.md)
+in full. It defines the supported release line, maintained packages, GitHub
+Actions publication, setup and recovery.
 
-## PHP client irregularity
-- The PHP client at `clients/php/` must be released separately due to a restriction in `composer` -- it does not support monorepos, the PHP package is expected to live in the top-level directory.
-- When releasing a new version, the contents of `clients/php/` is synchronized with another repository at `https://github.com/vpsfreecz/haveapi-client-php`.
-- Synchronization is done by cloning repository `vpsfreecz/haveapi-client-php` and using rsyncto update/remove files.
-- Release branches are not created in `vpsfreecz/haveapi-client-php`, since only the latest release is supported, only the `master` branch is updated.
-- New version is tagged and the changes are pushed.
+Always ask before publishing a new version. Run release commands in the top-level
+Nix shell. GitHub Actions publishes retained artifacts after approval in the
+protected `release` environment. Build-only runs do not publish. Elixir components
+are unmaintained and excluded from releases.

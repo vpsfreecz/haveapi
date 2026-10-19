@@ -63,5 +63,6 @@ If there isn't a client in the language you need, you can
  - [Protocol definition](doc/protocol.md)
  - [How to create a client](doc/create-client.md)
  - [Typed input validation rules](doc/typed-input-validation.md)
+ - [Release procedure](doc/agent-instructions/releases.md)
  - [Project templates](templates)
  - [API examples](examples)

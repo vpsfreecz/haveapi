@@ -1,0 +1,3 @@
+#!/usr/bin/env ruby
+require 'haveapi/rust_client/cli'
+exit HaveAPI::RustClient::Cli.run

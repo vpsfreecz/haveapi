@@ -1,0 +1,103 @@
+use crate::runtime;
+
+<% if action[:input] -%>
+#[derive(Default, serde::Serialize)]
+pub struct Input {
+<% action[:input][:parameters].each do |parameter| -%>
+    #[serde(rename = <%= generator.literal(parameter[:name]) %>, skip_serializing_if = "runtime::InputValue::is_unset")]
+    pub <%= parameter[:field] %>: runtime::InputValue<<%= generator.rust_type(parameter) %>>,
+<% end -%>
+}
+impl runtime::Validate for Input {
+    fn validate(&self) -> Result<(), runtime::Error> {
+<% action[:input][:parameters].each do |parameter| -%>
+        runtime::Validate::validate(&self.<%= parameter[:field] %>)?;
+<% end -%>
+        Ok(())
+    }
+}
+<% end -%>
+<% if action[:output] -%>
+#[derive(Default, serde::Deserialize)]
+#[non_exhaustive]
+pub struct Output {
+<% action[:output][:parameters].each do |parameter| -%>
+<% if parameter[:desc]['type'] == 'Resource' -%>
+    #[doc = <%= generator.literal("Association keys: ID=#{parameter[:desc]['value_id']}, label=#{parameter[:desc]['value_label']}") %>]
+<% end -%>
+    #[serde(default, rename = <%= generator.literal(parameter[:name]) %>)]
+    pub <%= parameter[:field] %>: Option<<%= generator.rust_type(parameter, output: true) %>>,
+<% end -%>
+    #[serde(default, rename = <%= generator.literal(schema.dig('description', 'meta', 'namespace')) %>)]
+    pub object_meta: Option<runtime::JsonMap>,
+    #[serde(flatten)]
+    pub extra: runtime::JsonMap,
+}
+<% if action[:auth_provider] == 'token' && %w[complete token next_action].all? { |name| action[:output][:parameters].any? { |parameter| parameter[:name] == name } } -%>
+impl Output {
+    pub fn token_step(&self) -> Result<runtime::TokenStep, runtime::Error> {
+        // Missing complete is inconsistent; force the checked protocol-error path.
+        let complete = match self.complete {
+            Some(value) => value,
+            None => return runtime::TokenStep::from_parts(true, None, None, &[]),
+        };
+        runtime::TokenStep::from_parts(complete, self.token.clone(), self.next_action.clone(), &[<%= action[:resource][:actions].select { |item| item[:desc]['auth'] == false }.map { |item| generator.literal(item[:name]) }.join(',') %>])
+    }
+}
+<% end -%>
+<% end -%>
+#[derive(Default, serde::Deserialize)]
+#[non_exhaustive]
+pub struct Meta {
+<% generator.meta_parameters(action).each do |parameter| -%>
+    #[serde(default, rename = <%= generator.literal(parameter[:name]) %>)]
+    pub <%= parameter[:field] %>: Option<<%= generator.rust_type(parameter, output: true) %>>,
+<% end -%>
+    #[serde(flatten)]
+    pub extra: runtime::JsonMap,
+}
+
+pub static SPEC: runtime::ActionSpec = runtime::ActionSpec {
+    name: <%= generator.literal(action[:path].join('/')) %>,
+    method: runtime::Method::<%= action[:desc].fetch('method').capitalize %>,
+    path: <%= generator.literal(action[:route]) %>,
+<% if action[:input] -%>
+    input: Some(runtime::InputSpec {
+        layout: runtime::Layout::<%= generator.layout(action[:input][:layout]) %>,
+        namespace: <%= generator.option(action[:input][:namespace]) %>,
+        parameters: <%= generator.parameter_specs(action[:input]) %>,
+    }),
+<% else -%>
+    input: None,
+<% end -%>
+<% if action[:output] -%>
+    output: Some(runtime::OutputSpec {
+        layout: runtime::Layout::<%= generator.layout(action[:output][:layout]) %>,
+        namespace: <%= generator.literal(action[:output][:namespace]) %>,
+        allow_empty_response: <%= %w[object hash].include?(action[:output][:layout]) && action[:output][:parameters].empty? %>,
+    }),
+<% else -%>
+    output: None,
+<% end -%>
+    meta_namespace: <%= generator.option(schema.dig('description', 'meta', 'namespace')) %>,
+    global_meta: <%= generator.parameter_specs(action[:global_input]) %>,
+    object_meta: <%= generator.parameter_specs(action[:object_input]) %>,
+    auth: runtime::RequestAuth::<%= action[:auth_provider] == 'token' && action[:desc]['auth'] == false ? 'None' : 'Configured' %>,
+};
+<% if action[:input] && !action[:input][:layout].end_with?('_list') -%>
+impl<'a, C: runtime::Mode> runtime::Request<'a, C, Input, <%= generator.output_type(action) %>, Meta> {
+<% action[:input][:parameters].each do |parameter| -%>
+<% type = generator.rust_type(parameter) -%>
+    pub fn <%= parameter[:field] %>(mut self, value: <%= type == 'String' ? 'impl Into<String>' : type %>) -> Self {
+        self.input_mut().<%= parameter[:field] %> = runtime::InputValue::Value(value<%= type == 'String' ? '.into()' : '' %>);
+        self
+    }
+<% if parameter[:desc]['nullable'] == true -%>
+    pub fn <%= parameter[:field] %>_null(mut self) -> Self {
+        self.input_mut().<%= parameter[:field] %> = runtime::InputValue::Null;
+        self
+    }
+<% end -%>
+<% end -%>
+}
+<% end -%>

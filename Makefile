@@ -1,6 +1,6 @@
 VERSION=$(shell cat VERSION)
 
-.PHONY: doc publish release release-check release-test release-deps test version
+.PHONY: doc publish release release-check release-test release-deps test test-rust test-rust-unit version
 
 doc:
 	./utils/copydoc.sh servers/ruby
@@ -14,6 +14,15 @@ test: doc
 	cd clients/php && vendor/bin/phpunit
 	clients/python/utils/check.sh
 	cd clients/python && uv run --locked pytest tests/integration
+
+test-rust-unit:
+	cd clients/rust && bundle exec rspec spec/unit
+
+# Run in nix develop .#client-rust after the generator unit checks.
+test-rust: test-rust-unit
+	cd clients/rust/runtime && cargo test --locked
+	cd clients/rust/runtime && cargo test --locked --features blocking
+	HAVEAPI_RUST_INTEGRATION=1 ruby clients/rust/spec/integration/run.rb
 
 release-deps:
 	cd servers/ruby && bundle install
@@ -42,6 +51,7 @@ version:
 	@sed -ri "s/ VERSION = '[^']+'/ VERSION = '$(VERSION)'/" servers/ruby/lib/haveapi/version.rb
 	@sed -ri "s/ VERSION = '[^']+'/ VERSION = '$(VERSION)'/" clients/ruby/lib/haveapi/client/version.rb
 	@sed -ri "s/ VERSION = '[^']+'/ VERSION = '$(VERSION)'/" clients/go/lib/haveapi/go_client/version.rb
+	@sed -ri "s/ VERSION = '[^']+'/ VERSION = '$(VERSION)'/" clients/rust/lib/haveapi/rust_client/version.rb
 	@sed -ri "s/\"version\": \"[^\"]+\"/\"version\": \"$(VERSION)\"/" clients/js/package.json
 	@node -e 'const fs = require("fs"); const p = "clients/js/package-lock.json"; const lock = JSON.parse(fs.readFileSync(p, "utf8")); lock.version = lock.packages[""].version = process.argv[1]; fs.writeFileSync(p, JSON.stringify(lock, null, "\t") + "\n");' "$(VERSION)"
 	@sed -ri "s/Client\.Version = '[^']+'/Client.Version = '$(VERSION)'/" clients/js/src/haveapi/client.ts
@@ -51,5 +61,6 @@ version:
 	@sed -ri 's/^version = "[^"]+"/version = "$(VERSION)"/' clients/python/pyproject.toml
 	@cd clients/python && uv lock
 	@sed -ri "s/s.add_dependency 'haveapi-client', '~> [^']+'/s.add_dependency 'haveapi-client', '~> $(VERSION)'/" servers/ruby/haveapi.gemspec
+	@sed -ri "s/spec.add_dependency 'haveapi-client', '~> [^']+'/spec.add_dependency 'haveapi-client', '~> $(VERSION)'/" clients/rust/haveapi-rust-client.gemspec
 	@sed -ri "s/spec.add_dependency 'haveapi-client', '~> [^']+'/spec.add_dependency 'haveapi-client', '~> $(VERSION)'/" clients/go/haveapi-go-client.gemspec
 	@sed -ri "s/gem 'haveapi', '~> [^']+'/gem 'haveapi', '~> $(VERSION)'/" examples/servers/ruby/activerecord_auth/Gemfile

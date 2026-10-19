@@ -1,0 +1,30 @@
+use crate::runtime;
+use std::collections::BTreeMap;
+<% resource[:actions].each do |action| -%>
+pub mod <%= action[:method] %>;
+<% end -%>
+
+pub struct Handle<'a, C: runtime::Mode> {
+    client: &'a runtime::Client<C>,
+    path_params: BTreeMap<String, String>,
+}
+impl<C: runtime::Mode> runtime::Client<C> {
+    pub fn <%= resource[:module] %>(&self<%= resource[:bound].map { |name| ", #{HaveAPI::RustClient::Naming.snake(name)}: impl ToString" }.join %>) -> Handle<'_, C> {
+        let path_params = BTreeMap::from([<%= resource[:bound].map { |name| "(#{generator.literal(name)}.to_owned(), #{HaveAPI::RustClient::Naming.snake(name)}.to_string())" }.join(',') %>]);
+        Handle { client: self, path_params }
+    }
+}
+impl<'a, C: runtime::Mode> Handle<'a, C> {
+<% resource[:actions].each do |action| -%>
+<% ([action[:method]] + action[:aliases]).each do |method_name| -%>
+    pub fn <%= method_name %>(&self<%= (action[:placeholders] - resource[:bound]).map { |name| ", #{action[:arguments].fetch(name)}: impl ToString" }.join %>) -> runtime::Request<'a, C, <%= generator.input_type(action).gsub(/\bInput\b/, "#{action[:method]}::Input") %>, <%= generator.output_type(action).gsub(/\bOutput\b/, "#{action[:method]}::Output") %>, <%= action[:method] %>::Meta> {
+        #[allow(unused_mut)]
+        let mut path_params = self.path_params.clone();
+<% (action[:placeholders] - resource[:bound]).each do |name| -%>
+        path_params.insert(<%= generator.literal(name) %>.to_owned(), <%= action[:arguments].fetch(name) %>.to_string());
+<% end -%>
+        runtime::Request::new(self.client, &<%= action[:method] %>::SPEC, path_params, Default::default())
+    }
+<% end -%>
+<% end -%>
+}

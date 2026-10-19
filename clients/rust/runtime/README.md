@@ -109,8 +109,8 @@ the configured deadlines still apply. There is no `block_on` bridge.
 Use the repository's `nix develop .#client-rust` shell. This crate uses
 edition 2024, MSRV 1.95 and the same dependency/feature requirements as generated
 clients. The committed Cargo.lock fixes the harness dependency resolution.
-The current repository Nix input supplies rustc 1.98.1 and rustfmt 1.9.0;
-generation records and checks the formatter's exact version output.
+The repository Nix shell supplies the development compiler and formatter.
+Generation records and checks the client's exact formatter version.
 
 From the repository root, formatting is a quick check:
 

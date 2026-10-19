@@ -1,4 +1,4 @@
-import { XMLHttpRequest } from './xml_http_request';
+import { openRequest, sendRequest } from './transport';
 import type { HttpOptions, LegacyXMLHttpRequest } from './types';
 
 export interface Http {
@@ -31,19 +31,7 @@ Http.prototype.request = function(opts) {
 	if (this.debug > 5)
 		console.log("Request to " + opts.method + " " + opts.url);
 
-	var r = new XMLHttpRequest();
-
-	if (opts.credentials === undefined)
-		r.open(opts.method, opts.url);
-	else
-		r.open(opts.method, opts.url, true, opts.credentials.user, opts.credentials.password);
-
-	for (var h in opts.headers) {
-		r.setRequestHeader(h, opts.headers[h]);
-	}
-
-	if (opts.params !== undefined)
-		r.setRequestHeader('Content-Type', 'application/json; charset=utf-8');
+	var r = openRequest(opts);
 
 	r.onreadystatechange = function() {
 		var state = r.readyState;
@@ -69,10 +57,5 @@ Http.prototype.request = function(opts) {
 		}
 	};
 
-	if (opts.params !== undefined) {
-		r.send(JSON.stringify( opts.params ));
-
-	} else {
-		r.send();
-	}
+	sendRequest(r, opts);
 };

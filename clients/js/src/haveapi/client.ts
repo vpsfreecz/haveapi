@@ -1,3 +1,4 @@
+import { normalizeTrustedOrigins, resolveApiUrl, addParamsToQuery } from './protocol';
 import './authentication';
 import { legacyGlobals } from './legacy_globals';
 import { I18n } from './i18n';
@@ -218,39 +219,7 @@ Client.findResource = function(root, resourcePath) {
 };
 
 Client.normalizeTrustedOrigins = function(origins) {
-	if (origins === undefined || origins === null)
-		return [];
-
-	if (typeof(origins) === 'string')
-		origins = [origins];
-
-	if (!Array.isArray(origins))
-		throw new Client.Exceptions.ProtocolError('Invalid trusted OAuth2 origins');
-
-	return origins.map(function(origin) {
-		var parsed;
-
-		if (typeof(origin) !== 'string' || origin.length == 0) {
-			throw new Client.Exceptions.ProtocolError('Invalid trusted OAuth2 origin');
-		}
-
-		if (/[\x00-\x1f\x7f]/.test(origin) || origin.indexOf('\\') != -1) {
-			throw new Client.Exceptions.ProtocolError('Unsafe trusted OAuth2 origin');
-		}
-
-		try {
-			parsed = new URL(origin);
-		} catch (e) {
-			throw new Client.Exceptions.ProtocolError('Invalid trusted OAuth2 origin');
-		}
-
-		if (!parsed.protocol || !parsed.host || parsed.username || parsed.password ||
-		    (parsed.pathname != '' && parsed.pathname != '/') || parsed.search || parsed.hash) {
-			throw new Client.Exceptions.ProtocolError('Invalid trusted OAuth2 origin');
-		}
-
-		return parsed.origin;
-	});
+	return normalizeTrustedOrigins(origins, message => new Client.Exceptions.ProtocolError(message));
 };
 
 /**
@@ -263,49 +232,7 @@ Client.normalizeTrustedOrigins = function(origins) {
  * @private
  */
 Client.prototype.sameOriginUrl = function(url, opts) {
-	opts = opts || {};
-
-	if (typeof(url) !== 'string' || url.length == 0) {
-		throw new Client.Exceptions.ProtocolError('Invalid API URL');
-	}
-
-	if (/[\x00-\x1f\x7f]/.test(url) || url.indexOf('\\') != -1) {
-		throw new Client.Exceptions.ProtocolError('Unsafe API URL');
-	}
-
-	var base = new URL(this._private.url);
-	var resolved;
-
-	if (opts.actionPath) {
-		if (url[0] != '/' || url[1] == '/' || url.indexOf('@') != -1) {
-			throw new Client.Exceptions.ProtocolError('Unsafe API action path');
-		}
-
-		resolved = new URL(this._private.url + url);
-
-	} else {
-		if (url[0] == '/' && url[1] == '/') {
-			throw new Client.Exceptions.ProtocolError('Unsafe API URL');
-		}
-
-		if (url[0] == '/') {
-			resolved = new URL(this._private.url + url);
-
-		} else {
-			resolved = new URL(url, this._private.url + '/');
-		}
-	}
-
-	if (resolved.username || resolved.password) {
-		throw new Client.Exceptions.ProtocolError('Unsafe API URL origin');
-	}
-
-	if (resolved.origin != base.origin &&
-	    (!opts.trustedOrigins || opts.trustedOrigins.indexOf(resolved.origin) == -1)) {
-		throw new Client.Exceptions.ProtocolError('Unsafe API URL origin');
-	}
-
-	return resolved.href;
+	return resolveApiUrl(this._private.url, url, opts, message => new Client.Exceptions.ProtocolError(message));
 };
 
 Client.prototype.oauth2Url = function(url) {
@@ -872,36 +799,5 @@ Client.prototype.sendAsQueryParams = function(method) {
  * @private
  */
 Client.prototype.addParamsToQuery = function(url, namespace, params, paramDesc) {
-	if (!params)
-		return url;
-
-	var first = true;
-
-	for (var key in params) {
-		if (!params.hasOwnProperty(key))
-			continue;
-
-		var value = params[key];
-
-		if (value === null) {
-			value = '';
-		} else if (value === undefined) {
-			continue;
-		}
-
-		if (first) {
-			if (url.indexOf('?') == -1)
-				url += '?';
-
-			else if (url[ url.length - 1 ] != '&')
-				url += '&';
-
-			first = false;
-
-		} else url += '&';
-
-		url += encodeURIComponent(namespace as string) + '[' + encodeURIComponent(key) + ']=' + encodeURIComponent(value as string);
-	}
-
-	return url;
+	return addParamsToQuery(url, namespace, params);
 };

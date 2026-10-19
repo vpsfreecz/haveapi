@@ -1,8 +1,10 @@
 const { expect } = require('chai');
 const server = require('../helpers/server');
 const CallbackAdapter = require('../helpers/adapter_callback');
+const AsyncAdapter = require('../helpers/adapter_async');
 
-describe('HaveAPI JS client contract', function () {
+for (const Adapter of [CallbackAdapter, AsyncAdapter]) {
+describe(`HaveAPI JS client contract: ${Adapter.name}`, function () {
   this.timeout(5000);
 
   let baseUrl;
@@ -19,7 +21,7 @@ describe('HaveAPI JS client contract', function () {
 
   beforeEach(async () => {
     await server.reset(baseUrl);
-    adapter = new CallbackAdapter(baseUrl);
+    adapter = new Adapter(baseUrl);
   });
 
   it('setup without auth hides protected resources', async () => {
@@ -41,7 +43,7 @@ describe('HaveAPI JS client contract', function () {
   it('token auth allows using existing token', async () => {
     const token = await adapter.authenticateToken({ user: 'user', pass: 'pass' });
 
-    const tokenAdapter = new CallbackAdapter(baseUrl);
+    const tokenAdapter = new Adapter(baseUrl);
     await tokenAdapter.useToken(token);
 
     const projects = await tokenAdapter.listProjects();
@@ -77,12 +79,17 @@ describe('HaveAPI JS client contract', function () {
     let thrown = null;
 
     try {
-      publicProjects.first().find({ onReply: () => {} });
+      if (Adapter === AsyncAdapter) {
+        await publicProjects.first().action('find')();
+      } else {
+        publicProjects.first().find({ onReply: () => {} });
+      }
     } catch (err) {
       thrown = err;
     }
 
-    expect(thrown).to.have.property('name', 'UnresolvedArguments');
+    if (Adapter === AsyncAdapter) expect(thrown).to.have.property('kind', 'protocol');
+    else expect(thrown).to.have.property('name', 'UnresolvedArguments');
   });
 
   it('runs blocking actions and reports progress', async () => {
@@ -108,10 +115,17 @@ describe('HaveAPI JS client contract', function () {
       await adapter.failAction();
     } catch (err) {
       failed = true;
-      expect(err).to.have.property('isOk');
-      expect(err.isOk()).to.equal(false);
+      if (Adapter === AsyncAdapter) {
+        expect(err).to.have.property('kind', 'api');
+        expect(err.envelope.status).to.equal(false);
+      } else {
+        expect(err).to.have.property('isOk');
+        expect(err.isOk()).to.equal(false);
+      }
     }
 
     expect(failed).to.equal(true);
   });
 });
+
+}

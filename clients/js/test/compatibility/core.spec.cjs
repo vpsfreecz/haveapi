@@ -140,3 +140,18 @@ test('legacy HTTP invalid JSON delivers false/undefined without constructing a P
   requests[0].respond('not json');
   assert.deepEqual(result, [false, undefined]);
 });
+
+test('callback Parameters keeps constructor arity and receiver-based ownership behavior', () => {
+  const {HaveAPI} = harness();
+  const client = new HaveAPI.Client('https://api.example');
+  client.useDescription({meta: {namespace: '_meta'}, authentication: {}, resources: {widgets: {
+    resources: {}, actions: {check: {method: 'POST', path: '/check', input: {
+      layout: 'hash', namespace: 'widget', parameters: {count: {type: 'Integer'}}
+    }, output: null}}
+  }}});
+  const prepared = client.widgets.check.prepareInvoke([{count: 1}]);
+  assert.equal(prepared.params.constructor.length, 2);
+  assert.equal(Object.prototype.hasOwnProperty.call(prepared.params, '_dictionaryPolicy'), false);
+  assert.throws(() => client.widgets.check({count: 1, hasOwnProperty: 'legacy'}, () => {}),
+    error => error.name === 'TypeError');
+});

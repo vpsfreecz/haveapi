@@ -1,11 +1,17 @@
 import { ResourceInstance } from './resource_instance';
 import { Validator } from './validator';
-import type { Action } from './action';
 import type { ValidatorOptions } from './validator';
-import type { Params, ValidationErrors, Values } from './types';
+import type { Params, ParameterContext, ValidationErrors, Values } from './types';
+
+export interface DictionaryPolicy {
+	create<T>(): Record<string, T>;
+	owns(target: object, key: string): boolean;
+}
 
 export interface Parameters {
-	action: Action;
+	/** Present only for callers that opt into safe dictionary ownership. */
+	_dictionaryPolicy?: DictionaryPolicy;
+	action: ParameterContext;
 	typeErrors: ValidationErrors;
 	params: Params;
 	errors: ValidationErrors;
@@ -16,7 +22,7 @@ export interface Parameters {
 	validate(): boolean;
 }
 export interface ParametersConstructor {
-	new(action: Action, params?: Params): Parameters;
+	new(action: ParameterContext, params?: Params, dictionaryPolicy?: DictionaryPolicy): Parameters;
 	prototype: Parameters;
 }
 
@@ -26,19 +32,30 @@ export interface ParametersConstructor {
  * @param {HaveAPI.Client.Action} action
  * @param {Object} input parameters
  */
-export const Parameters = function Parameters(this: Parameters, action: Action, params?: Params) {
+export const Parameters = function Parameters(this: Parameters, action: ParameterContext, params?: Params) {
+	// Read the optional policy without changing the legacy constructor arity.
+	const dictionaryPolicy = arguments[2] as DictionaryPolicy | undefined;
+	if (dictionaryPolicy) this._dictionaryPolicy = dictionaryPolicy;
 	this.action = action;
-	this.typeErrors = {};
+	this.typeErrors = createDictionary<string[]>(this);
 	this.params = this.coerceParams(params);
 
 	/**
 	 * @member {Object} Parameters#errors Errors found during the validation.
 	 */
-	this.errors = {};
+	this.errors = createDictionary<string[]>(this);
 } as unknown as ParametersConstructor;
 
+function createDictionary<T>(parameters: Parameters): Record<string, T> {
+	return parameters._dictionaryPolicy ? parameters._dictionaryPolicy.create<T>() : {};
+}
+function owns(parameters: Parameters, target: object, key: string): boolean {
+	// Keep receiver-based legacy checks unless this individual operation opts in.
+	return parameters._dictionaryPolicy ? parameters._dictionaryPolicy.owns(target, key) : target.hasOwnProperty(key);
+}
+
 Parameters.prototype._addTypeError = function (name: string, msg: string) {
-	if (!this.typeErrors.hasOwnProperty(name))
+	if (!owns(this, this.typeErrors, name))
 		this.typeErrors[name] = [];
 
 	this.typeErrors[name].push(msg);
@@ -118,7 +135,7 @@ Parameters.prototype._isIso8601Datetime = function (str: string) {
  * @return {Object}
  */
 Parameters.prototype.coerceParams = function (params?: Params) {
-	var ret: Params = {};
+	var ret: Params = createDictionary<unknown>(this);
 
 	if (this.action.description.input === null)
 		return ret;
@@ -127,7 +144,7 @@ Parameters.prototype.coerceParams = function (params?: Params) {
 	params = params || {};
 
 	for (var p in params) {
-		if (!params.hasOwnProperty(p) || !input.hasOwnProperty(p))
+		if (!owns(this, params, p) || !owns(this, input, p))
 			continue;
 
 		var v = params[p];
@@ -301,9 +318,9 @@ Parameters.prototype.validate = function () {
 	if (this.action.description.input === null)
 		return true;
 
-	this.errors = {};
+	this.errors = createDictionary<string[]>(this);
 	for (var errName in this.typeErrors) {
-		if (!this.typeErrors.hasOwnProperty(errName))
+		if (!owns(this, this.typeErrors, errName))
 			continue;
 
 		this.errors[errName] = this.typeErrors[errName].slice();
@@ -312,10 +329,10 @@ Parameters.prototype.validate = function () {
 	var input = this.action.description.input!.parameters;
 
 	for (var name in input) {
-		if (!input.hasOwnProperty(name))
+		if (!owns(this, input, name))
 			continue;
 
-		if (this.errors.hasOwnProperty(name))
+		if (owns(this, this.errors, name))
 			continue;
 
 		var p = input[name];
@@ -323,7 +340,7 @@ Parameters.prototype.validate = function () {
 		if (!p.validators)
 			continue;
 
-		if (!this.params.hasOwnProperty(name) || this.params[name] === undefined || this.params[name] === null) {
+		if (!owns(this, this.params, name) || this.params[name] === undefined || this.params[name] === null) {
 			if (p.validators.present)
 				this.errors[name] = [this._message('validation.required_parameter_missing')];
 
@@ -344,7 +361,7 @@ Parameters.prototype.validate = function () {
 			}
 
 			if (!validator.isValid()) {
-				if (!this.errors.hasOwnProperty(name))
+				if (!owns(this, this.errors, name))
 					this.errors[name] = [];
 
 				this.errors[name] = this.errors[name].concat(validator.errors);

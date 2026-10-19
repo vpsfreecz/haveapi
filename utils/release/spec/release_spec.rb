@@ -172,23 +172,27 @@ RSpec.describe HaveAPI::Release do
 
   describe 'GitHub release preparation' do
     let(:publisher) { HaveAPI::Release::Publisher.new(artifacts, tmp) }
-    let(:draft) { { 'tag_name' => artifacts.tag, 'draft' => true, 'assets' => [] } }
-    let(:list_command) { ['gh', 'api', '--paginate', '--slurp', 'repos/vpsfreecz/haveapi/releases?per_page=100'] }
+    let(:draft) { { 'id' => 123, 'tag_name' => 'untagged-pending-release', 'draft' => true, 'assets' => [] } }
+    let(:query_command) do
+      ['gh', 'api', 'graphql', '-f', a_string_matching(/\Aquery=.*repository\(owner: "vpsfreecz", name: "haveapi"\).*release\(tagName: \$tag\).*databaseId/m), '-f', "tag=#{artifacts.tag}"]
+    end
 
-    def github_response(pages, error: '')
-      [JSON.generate(pages), error, instance_double(Process::Status, success?: error.empty?)]
+    def github_response(value, error: '')
+      [JSON.generate(value), error, instance_double(Process::Status, success?: error.empty?)]
+    end
+
+    def github_lookup(release)
+      github_response({ 'data' => { 'repository' => { 'release' => release } } })
     end
 
     before do
       fixture_manifest
       allow(described_class).to receive(:run)
-      # The tag endpoint does not expose drafts, even after creating one.
-      allow(Open3).to receive(:capture3).with('gh', 'api', "repos/vpsfreecz/haveapi/releases/tags/#{artifacts.tag}").and_return(github_response([], error: 'gh: Not Found (HTTP 404)'))
-      pages = [[{ 'tag_name' => 'v0.0.1', 'draft' => false, 'assets' => [] }], [draft]]
-      allow(Open3).to receive(:capture3).with(*list_command).and_return(github_response(pages))
+      allow(Open3).to receive(:capture3).with(*query_command).and_return(github_lookup({ 'databaseId' => 123 }))
+      allow(Open3).to receive(:capture3).with('gh', 'api', 'repos/vpsfreecz/haveapi/releases/123').and_return(github_response(draft))
     end
 
-    it 'finds an existing draft on a later page and uploads its retained artifacts' do
+    it 'resolves an existing draft by its pending tag and uploads retained artifacts' do
       publisher.prepare_github
       expect(described_class).not_to have_received(:run).with('gh', 'release', 'create', any_args)
       (artifacts.names + ['release-manifest.json']).each do |name|
@@ -196,25 +200,43 @@ RSpec.describe HaveAPI::Release do
       end
     end
 
-    it 'finds a newly created draft before uploading artifacts' do
-      allow(Open3).to receive(:capture3).with(*list_command).and_return(github_response([[]]), github_response([[draft]]))
+    it 'finds a newly created draft by its pending tag before uploading artifacts' do
+      allow(Open3).to receive(:capture3).with(*query_command).and_return(github_lookup(nil), github_lookup({ 'databaseId' => 123 }))
       expect { publisher.prepare_github }.not_to raise_error
       expect(described_class).to have_received(:run).with('gh', 'release', 'create', artifacts.tag, '--repo', 'vpsfreecz/haveapi', '--verify-tag', '--draft', '--title', "HaveAPI #{artifacts.version}", '--notes-file', File.join(tmp, 'release-notes.md'))
       expect(described_class).to have_received(:run).with('gh', 'release', 'upload', artifacts.tag, File.join(tmp, 'release-manifest.json'), '--repo', 'vpsfreecz/haveapi')
     end
 
-    it 'also finds an already published release with the exact tag' do
-      published = draft.merge('draft' => false)
-      allow(Open3).to receive(:capture3).with(*list_command).and_return(github_response([[published]]))
+    it 'also retrieves an already published release by its resolved ID' do
+      published = draft.merge('draft' => false, 'tag_name' => artifacts.tag)
+      allow(Open3).to receive(:capture3).with('gh', 'api', 'repos/vpsfreecz/haveapi/releases/123').and_return(github_response(published))
       expect(publisher.github_release).to eq(published)
     end
 
+    it 'treats only an explicit null release as absent' do
+      allow(Open3).to receive(:capture3).with(*query_command).and_return(github_lookup(nil))
+      expect(publisher.github_release).to be_nil
+      expect(Open3).not_to have_received(:capture3).with('gh', 'api', 'repos/vpsfreecz/haveapi/releases/123')
+    end
+
     [403, 404].each do |status|
-      it "keeps HTTP #{status} query failures visible without creating a draft" do
-        allow(Open3).to receive(:capture3).with(*list_command).and_return(github_response([], error: "gh: query failed (HTTP #{status})"))
+      it "keeps HTTP #{status} GraphQL failures visible without creating a draft" do
+        allow(Open3).to receive(:capture3).with(*query_command).and_return(github_response({}, error: "gh: query failed (HTTP #{status})"))
         expect { publisher.prepare_github }.to raise_error(HaveAPI::Release::Error, /GitHub release query failed.*#{status}/)
         expect(described_class).not_to have_received(:run)
       end
+
+      it "keeps HTTP #{status} release-ID failures visible without creating a draft" do
+        allow(Open3).to receive(:capture3).with('gh', 'api', 'repos/vpsfreecz/haveapi/releases/123').and_return(github_response({}, error: "gh: query failed (HTTP #{status})"))
+        expect { publisher.prepare_github }.to raise_error(HaveAPI::Release::Error, /GitHub release query failed.*#{status}/)
+        expect(described_class).not_to have_received(:run)
+      end
+    end
+
+    it 'reports an absent post-create lookup before uploading any artifacts' do
+      allow(Open3).to receive(:capture3).with(*query_command).and_return(github_lookup(nil))
+      expect { publisher.prepare_github }.to raise_error(HaveAPI::Release::Error, /Created GitHub draft was not found/)
+      expect(described_class).not_to have_received(:run).with('gh', 'release', 'upload', any_args)
     end
   end
 

@@ -179,14 +179,28 @@ module HaveAPI
         end
       end
 
-      def github_release
-        # The tag endpoint only returns published releases; preparation needs drafts.
-        stdout, stderr, status = Open3.capture3('gh', 'api', '--paginate', '--slurp', "repos/#{REPOSITORY}/releases?per_page=100")
-        if status.success?
-          return JSON.parse(stdout).flatten(1).find { |release| release.fetch('tag_name') == @artifacts.tag }
-        end
+      def github_api(*)
+        stdout, stderr, status = Open3.capture3('gh', 'api', *)
+        raise Error, "GitHub release query failed: #{stderr.strip}" unless status.success?
 
-        raise Error, "GitHub release query failed: #{stderr.strip}"
+        JSON.parse(stdout)
+      end
+
+      def github_release
+        # Draft pending tags require GraphQL; REST may expose an untagged-* name.
+        owner, repository = REPOSITORY.split('/')
+        query = <<~GRAPHQL
+          query($tag: String!) {
+            repository(owner: "#{owner}", name: "#{repository}") {
+              release(tagName: $tag) { databaseId }
+            }
+          }
+        GRAPHQL
+        result = github_api('graphql', '-f', "query=#{query}", '-f', "tag=#{@artifacts.tag}")
+        release = result.fetch('data').fetch('repository').fetch('release')
+        return nil if release.nil?
+
+        github_api("repos/#{REPOSITORY}/releases/#{release.fetch('databaseId')}")
       end
 
       def prepare_github
@@ -194,6 +208,7 @@ module HaveAPI
         unless release
           Release.run('gh', 'release', 'create', @artifacts.tag, '--repo', REPOSITORY, '--verify-tag', '--draft', '--title', "HaveAPI #{@artifacts.version}", '--notes-file', File.join(@directory, 'release-notes.md'))
           release = github_release
+          raise Error, 'Created GitHub draft was not found by its pending tag' unless release
         end
         asset_names = release.fetch('assets').map { |asset| asset.fetch('name') }
         (@artifacts.names + ['release-manifest.json']).each do |name|

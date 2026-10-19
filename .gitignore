@@ -7,6 +7,8 @@
 .yardoc
 .gems
 Gemfile.lock
+!clients/rust/Gemfile.lock
+/clients/rust/runtime/target/
 clients/js/package-lock.json
 clients/php/composer.lock
 InstalledFiles

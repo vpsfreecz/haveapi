@@ -1,0 +1,51 @@
+name: clients/rust
+
+on:
+  push:
+    paths:
+      - 'clients/rust/**'
+      - 'clients/ruby/**'
+      - 'servers/ruby/**'
+      - 'flake.nix'
+      - 'flake.lock'
+      - '.github/workflows/clients-rust.yml'
+  pull_request:
+    paths:
+      - 'clients/rust/**'
+      - 'clients/ruby/**'
+      - 'servers/ruby/**'
+      - 'flake.nix'
+      - 'flake.lock'
+      - '.github/workflows/clients-rust.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust-client:
+    runs-on: ubuntu-latest
+    steps:
+      # Official upstream refs verified when introducing this workflow.
+      - uses: actions/checkout@v7.0.1
+      - uses: cachix/install-nix-action@v31.11.2
+      - name: Generator unit specs and Ruby style
+        run: |
+          nix develop .#client-rust --command bash -euc '
+            cd clients/rust
+            bundle exec rspec spec/unit
+            bundle exec rubocop lib bin spec/unit spec/spec_helper.rb haveapi-rust-client.gemspec
+          '
+      - name: Runtime formatting, features and lint
+        run: |
+          nix develop .#client-rust --command bash -euc '
+            cd clients/rust/runtime
+            cargo fmt --all -- --check
+            cargo test --locked
+            cargo test --locked --features blocking
+            cargo clippy --locked --all-targets --all-features -- -D warnings
+          '
+      - name: Prepare fixture server dependencies
+        run: nix develop .#server-ruby --command true
+      - name: Generated client protocol acceptance
+        run: HAVEAPI_RUST_INTEGRATION=1 nix develop .#client-rust --command ruby clients/rust/spec/integration/run.rb

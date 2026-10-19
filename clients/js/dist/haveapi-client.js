@@ -4084,6 +4084,7 @@ exports.AsyncClient = AsyncClient;
 exports.AsyncError = AsyncError;
 exports.AsyncResourceInstance = AsyncResourceInstance;
 exports.AsyncResourceList = AsyncResourceList;
+exports.CallbackClient = Client;
 exports.Client = Client;
 
 return exports;

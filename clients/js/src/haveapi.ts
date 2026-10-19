@@ -41,7 +41,7 @@ Client.ResourceInstanceList = ResourceInstanceList;
 Client.Response = Response;
 Client.LocalResponse = LocalResponse;
 
-export { Client };
+export { Client, Client as CallbackClient };
 export type { ClientOptions, Description, ResourceDescription, ActionDescription, ParameterDescription, Envelope } from './haveapi/types';
 export type { DoneCallback, VersionsCallback, CompatibleCallback } from './haveapi/client';
 export type { AuthenticationOptions, Provider, ProviderConstructor } from './haveapi/authentication';

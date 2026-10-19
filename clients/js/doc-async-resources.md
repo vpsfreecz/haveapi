@@ -1,7 +1,8 @@
 # Async resources and binding
 
-The package exports `AsyncClient` for Promise-based calls and `Client` for
-callbacks. Dynamic async calls return `{ value, response }`; `response`
+The package exports `AsyncClient` for Promise-based calls and `CallbackClient`
+for callbacks. `Client` remains a supported alias of `CallbackClient`.
+Dynamic async calls return `{ value, response }`; `response`
 contains `data`, `meta`, the raw `envelope` and `httpStatus`. A successful reply
 can be an acceptance receipt for a server job. Use `waitForCompletion` separately
 when the application needs its final outcome.

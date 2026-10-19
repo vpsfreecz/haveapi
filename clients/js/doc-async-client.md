@@ -1,7 +1,10 @@
 # Async client requests and authentication
 
-`HaveAPI.AsyncClient` and the callback-based `HaveAPI.Client` are exported by
-one package. The existing CommonJS entry and browser global remain available:
+`HaveAPI.AsyncClient` and `HaveAPI.CallbackClient` are exported by one package.
+`HaveAPI.Client` remains a supported alias of `CallbackClient`, including its
+constructor, prototype and static helpers. Both callback names are also usable
+as TypeScript instance types. The CommonJS entry and browser global remain
+available:
 
 ```js
 const HaveAPI = require('haveapi-client');

@@ -101,17 +101,43 @@ function reply(data = {}, meta = {}) {
 }
 
 for (const mode of ['commonjs', 'browser', 'amd']) {
-  test(`${mode} retains Client export/static constructors without async runtime globals`, () => {
-    const { HaveAPI, imports } = loadBundle(mode);
+  test(`${mode} retains Client/CallbackClient identity and callbacks without async runtime globals`, () => {
+    const { HaveAPI, imports, requests, context } = loadBundle(mode);
     assert.equal(typeof HaveAPI.Client, 'function');
+    assert.equal(HaveAPI.CallbackClient, HaveAPI.Client);
+    assert.equal(HaveAPI.CallbackClient.name, 'Client');
+    assert.equal(HaveAPI.CallbackClient.prototype, HaveAPI.Client.prototype);
     assert.equal(HaveAPI.default, undefined);
     for (const name of ['Action', 'ActionState', 'BaseResource', 'Hooks', 'Http', 'Resource', 'ResourceInstance', 'ResourceInstanceList', 'Response', 'LocalResponse']) {
       assert.equal(typeof HaveAPI.Client[name], 'function', name);
+      assert.equal(HaveAPI.CallbackClient[name], HaveAPI.Client[name], name);
     }
     assert.equal(typeof HaveAPI.Client.Authentication, 'object');
+    assert.equal(HaveAPI.CallbackClient.Authentication, HaveAPI.Client.Authentication);
     assert.equal(typeof HaveAPI.Client.Exceptions.ProtocolError, 'function');
+    assert.equal(HaveAPI.CallbackClient.Exceptions, HaveAPI.Client.Exceptions);
     assert.equal(typeof HaveAPI.Client.ActionState.Progress, 'function');
     assert.deepEqual(imports, mode === 'commonjs' ? ['xmlhttprequest'] : []);
+    const callbackClient = new HaveAPI.CallbackClient('https://api.example', {});
+    const legacyClient = new HaveAPI.Client('https://api.example', {});
+    for (const instance of [callbackClient, legacyClient]) {
+      assert.equal(instance instanceof HaveAPI.Client, true);
+      assert.equal(instance instanceof HaveAPI.CallbackClient, true);
+      assert.equal(instance.constructor, HaveAPI.Client);
+      assert.equal(Object.getPrototypeOf(instance), HaveAPI.Client.prototype);
+    }
+    callbackClient.useDescription(description());
+    let received;
+    assert.equal(callbackClient.widgets.show(7, (owner, response) => {
+      received = [owner, response];
+    }), undefined);
+    assert.equal(received, undefined);
+    requests[0].respond(200, reply({ count: 2 }));
+    assert.equal(received[0], callbackClient);
+    assert.equal(received[1] instanceof HaveAPI.CallbackClient.Response, true);
+    assert.equal(received[1].response().count, 2);
+    assert.equal(context.Promise, undefined);
+    assert.equal(context.AbortController, undefined);
     const { client } = prepared(mode);
     assert.equal(client.widgets.show(3), undefined);
   });

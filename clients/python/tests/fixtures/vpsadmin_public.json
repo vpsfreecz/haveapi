@@ -1,0 +1,2626 @@
+{
+  "errors": null,
+  "message": null,
+  "response": {
+    "authentication": {
+      "basic": {
+        "description": "Authentication using HTTP Basic. The username and password are passed in an HTTP header.\nThis method must not be used from web browsers."
+      },
+      "oauth2": {
+        "authorize_path": "/_auth/oauth2/authorize",
+        "authorize_url": "https://auth.vpsfree.cz/_auth/oauth2/authorize",
+        "description": "OAuth2 authorization provider.\nHaveAPI clients have limited OAuth2 support, but the API can be used as an authentication source and OAuth2 tokens can be used to access it. HaveAPI partially implements RFC 6749: authorization response type \"code\" and token grant types \"authorization_code\" and \"refresh_token\". Other response and grant types are not supported at this time. The access token can be passed as a bearer token according to RFC 6750, or using a custom HTTP header when the Authorization header is not practical.\nAccess and refresh tokens can be revoked according to RFC 7009.",
+        "http_header": "X-HaveAPI-OAuth2-Token",
+        "revoke_path": "/_auth/oauth2/revoke",
+        "revoke_url": "https://auth.vpsfree.cz/_auth/oauth2/revoke",
+        "token_path": "/_auth/oauth2/token",
+        "token_url": "https://auth.vpsfree.cz/_auth/oauth2/token"
+      },
+      "token": {
+        "description": "The client authenticates with credentials, usually a username and password, and receives a token. From that point on, the credentials can be forgotten and the token is used instead. Tokens can have different lifetimes and can be renewed or revoked. The token is passed either in an HTTP header or as a query parameter.",
+        "http_header": "X-HaveAPI-Auth-Token",
+        "query_parameter": "_auth_token",
+        "resources": {
+          "token": {
+            "actions": {
+              "renew": {
+                "aliases": [],
+                "auth": true,
+                "blocking": false,
+                "description": "Renew the current authentication token",
+                "examples": [],
+                "help": "/_auth/token/tokens/renew?method=POST",
+                "input": {
+                  "layout": "object",
+                  "namespace": "token",
+                  "parameters": {}
+                },
+                "meta": {
+                  "global": {
+                    "input": {
+                      "layout": "hash",
+                      "namespace": false,
+                      "parameters": {
+                        "no": {
+                          "default": null,
+                          "description": null,
+                          "label": "Disable metadata",
+                          "nullable": false,
+                          "protected": false,
+                          "required": false,
+                          "type": "Boolean",
+                          "validators": {}
+                        }
+                      }
+                    },
+                    "output": null
+                  },
+                  "object": null
+                },
+                "method": "POST",
+                "output": {
+                  "layout": "hash",
+                  "namespace": "token",
+                  "parameters": {
+                    "valid_to": {
+                      "default": null,
+                      "description": null,
+                      "label": "Valid_to",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Datetime",
+                      "validators": {}
+                    }
+                  }
+                },
+                "path": "/_auth/token/tokens/renew",
+                "scope": "token#renew"
+              },
+              "request": {
+                "aliases": [],
+                "auth": false,
+                "blocking": false,
+                "description": "Request an authentication token",
+                "examples": [],
+                "help": "/_auth/token/tokens?method=POST",
+                "input": {
+                  "layout": "hash",
+                  "namespace": "token",
+                  "parameters": {
+                    "interval": {
+                      "default": 300,
+                      "description": "How long the requested token will be valid, in seconds.",
+                      "label": "Interval",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Integer",
+                      "validators": {
+                        "number": {
+                          "max": 86400,
+                          "message": "must be between 1 and 86400",
+                          "min": 1
+                        }
+                      }
+                    },
+                    "lifetime": {
+                      "default": null,
+                      "description": "fixed - the token has a fixed validity period and cannot be renewed\nrenewable_manual - the token can be renewed, but only manually using the renew action\nrenewable_auto - the token is renewed automatically to now + interval whenever it is used\npermanent - the token is valid forever unless deleted",
+                      "label": "Lifetime",
+                      "nullable": false,
+                      "protected": false,
+                      "required": true,
+                      "type": "String",
+                      "validators": {
+                        "include": {
+                          "message": "%{value} cannot be used",
+                          "values": [
+                            "fixed",
+                            "renewable_manual",
+                            "renewable_auto",
+                            "permanent"
+                          ]
+                        },
+                        "present": {
+                          "empty": false,
+                          "message": "must be present and non-empty"
+                        }
+                      }
+                    },
+                    "password": {
+                      "default": null,
+                      "description": "Auto-generated password",
+                      "label": "Password",
+                      "nullable": false,
+                      "protected": true,
+                      "required": true,
+                      "type": "String",
+                      "validators": {
+                        "present": {
+                          "empty": false,
+                          "message": "must be present and non-empty"
+                        }
+                      }
+                    },
+                    "scope": {
+                      "default": "all",
+                      "description": null,
+                      "label": "Scope",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "String",
+                      "validators": {}
+                    },
+                    "user": {
+                      "default": null,
+                      "description": null,
+                      "label": "User",
+                      "nullable": false,
+                      "protected": false,
+                      "required": true,
+                      "type": "String",
+                      "validators": {
+                        "present": {
+                          "empty": false,
+                          "message": "must be present and non-empty"
+                        }
+                      }
+                    }
+                  }
+                },
+                "meta": {
+                  "global": {
+                    "input": {
+                      "layout": "hash",
+                      "namespace": false,
+                      "parameters": {
+                        "no": {
+                          "default": null,
+                          "description": null,
+                          "label": "Disable metadata",
+                          "nullable": false,
+                          "protected": false,
+                          "required": false,
+                          "type": "Boolean",
+                          "validators": {}
+                        }
+                      }
+                    },
+                    "output": null
+                  },
+                  "object": null
+                },
+                "method": "POST",
+                "output": {
+                  "layout": "hash",
+                  "namespace": "token",
+                  "parameters": {
+                    "complete": {
+                      "default": null,
+                      "description": null,
+                      "label": "Complete",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Boolean",
+                      "validators": {}
+                    },
+                    "next_action": {
+                      "default": null,
+                      "description": null,
+                      "label": "Next_action",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "String",
+                      "validators": {}
+                    },
+                    "token": {
+                      "default": null,
+                      "description": "Authentication token",
+                      "label": "Token",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "String",
+                      "validators": {}
+                    },
+                    "valid_to": {
+                      "default": null,
+                      "description": null,
+                      "label": "Valid_to",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Datetime",
+                      "validators": {}
+                    }
+                  }
+                },
+                "path": "/_auth/token/tokens",
+                "scope": "token#request"
+              },
+              "reset_password": {
+                "aliases": [],
+                "auth": false,
+                "blocking": false,
+                "description": null,
+                "examples": [],
+                "help": "/_auth/token/tokens/reset_password?method=POST",
+                "input": {
+                  "layout": "hash",
+                  "namespace": "token",
+                  "parameters": {
+                    "new_password1": {
+                      "default": null,
+                      "description": null,
+                      "label": "New password",
+                      "nullable": false,
+                      "protected": true,
+                      "required": true,
+                      "type": "String",
+                      "validators": {
+                        "present": {
+                          "empty": false,
+                          "message": "must be present and non-empty"
+                        }
+                      }
+                    },
+                    "new_password2": {
+                      "default": null,
+                      "description": null,
+                      "label": "Repeat new password",
+                      "nullable": false,
+                      "protected": true,
+                      "required": true,
+                      "type": "String",
+                      "validators": {
+                        "present": {
+                          "empty": false,
+                          "message": "must be present and non-empty"
+                        }
+                      }
+                    },
+                    "token": {
+                      "default": null,
+                      "description": "Authentication token",
+                      "label": "Token",
+                      "nullable": false,
+                      "protected": false,
+                      "required": true,
+                      "type": "String",
+                      "validators": {
+                        "present": {
+                          "empty": false,
+                          "message": "must be present and non-empty"
+                        }
+                      }
+                    }
+                  }
+                },
+                "meta": {
+                  "global": {
+                    "input": {
+                      "layout": "hash",
+                      "namespace": false,
+                      "parameters": {
+                        "no": {
+                          "default": null,
+                          "description": null,
+                          "label": "Disable metadata",
+                          "nullable": false,
+                          "protected": false,
+                          "required": false,
+                          "type": "Boolean",
+                          "validators": {}
+                        }
+                      }
+                    },
+                    "output": null
+                  },
+                  "object": null
+                },
+                "method": "POST",
+                "output": {
+                  "layout": "hash",
+                  "namespace": "token",
+                  "parameters": {
+                    "complete": {
+                      "default": null,
+                      "description": null,
+                      "label": "Complete",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Boolean",
+                      "validators": {}
+                    },
+                    "next_action": {
+                      "default": null,
+                      "description": null,
+                      "label": "Next_action",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "String",
+                      "validators": {}
+                    },
+                    "token": {
+                      "default": null,
+                      "description": "Authentication token",
+                      "label": "Token",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "String",
+                      "validators": {}
+                    },
+                    "valid_to": {
+                      "default": null,
+                      "description": null,
+                      "label": "Valid_to",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Datetime",
+                      "validators": {}
+                    }
+                  }
+                },
+                "path": "/_auth/token/tokens/reset_password",
+                "scope": "token#reset_password"
+              },
+              "revoke": {
+                "aliases": [],
+                "auth": true,
+                "blocking": false,
+                "description": "Revoke the current authentication token",
+                "examples": [],
+                "help": "/_auth/token/tokens/revoke?method=POST",
+                "input": {
+                  "layout": "object",
+                  "namespace": "token",
+                  "parameters": {}
+                },
+                "meta": {
+                  "global": {
+                    "input": {
+                      "layout": "hash",
+                      "namespace": false,
+                      "parameters": {
+                        "no": {
+                          "default": null,
+                          "description": null,
+                          "label": "Disable metadata",
+                          "nullable": false,
+                          "protected": false,
+                          "required": false,
+                          "type": "Boolean",
+                          "validators": {}
+                        }
+                      }
+                    },
+                    "output": null
+                  },
+                  "object": null
+                },
+                "method": "POST",
+                "output": {
+                  "layout": "object",
+                  "namespace": "token",
+                  "parameters": {}
+                },
+                "path": "/_auth/token/tokens/revoke",
+                "scope": "token#revoke"
+              },
+              "totp": {
+                "aliases": [],
+                "auth": false,
+                "blocking": false,
+                "description": null,
+                "examples": [],
+                "help": "/_auth/token/tokens/totp?method=POST",
+                "input": {
+                  "layout": "hash",
+                  "namespace": "token",
+                  "parameters": {
+                    "code": {
+                      "default": null,
+                      "description": null,
+                      "label": "TOTP code",
+                      "nullable": false,
+                      "protected": false,
+                      "required": true,
+                      "type": "String",
+                      "validators": {
+                        "present": {
+                          "empty": false,
+                          "message": "must be present and non-empty"
+                        }
+                      }
+                    },
+                    "token": {
+                      "default": null,
+                      "description": "Authentication token",
+                      "label": "Token",
+                      "nullable": false,
+                      "protected": false,
+                      "required": true,
+                      "type": "String",
+                      "validators": {
+                        "present": {
+                          "empty": false,
+                          "message": "must be present and non-empty"
+                        }
+                      }
+                    }
+                  }
+                },
+                "meta": {
+                  "global": {
+                    "input": {
+                      "layout": "hash",
+                      "namespace": false,
+                      "parameters": {
+                        "no": {
+                          "default": null,
+                          "description": null,
+                          "label": "Disable metadata",
+                          "nullable": false,
+                          "protected": false,
+                          "required": false,
+                          "type": "Boolean",
+                          "validators": {}
+                        }
+                      }
+                    },
+                    "output": null
+                  },
+                  "object": null
+                },
+                "method": "POST",
+                "output": {
+                  "layout": "hash",
+                  "namespace": "token",
+                  "parameters": {
+                    "complete": {
+                      "default": null,
+                      "description": null,
+                      "label": "Complete",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Boolean",
+                      "validators": {}
+                    },
+                    "next_action": {
+                      "default": null,
+                      "description": null,
+                      "label": "Next_action",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "String",
+                      "validators": {}
+                    },
+                    "token": {
+                      "default": null,
+                      "description": "Authentication token",
+                      "label": "Token",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "String",
+                      "validators": {}
+                    },
+                    "valid_to": {
+                      "default": null,
+                      "description": null,
+                      "label": "Valid_to",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Datetime",
+                      "validators": {}
+                    }
+                  }
+                },
+                "path": "/_auth/token/tokens/totp",
+                "scope": "token#totp"
+              }
+            },
+            "description": "Manage authentication tokens",
+            "resources": {}
+          }
+        }
+      }
+    },
+    "help": "/v7.0/",
+    "meta": {
+      "namespace": "_meta"
+    },
+    "resources": {
+      "network_interface": {
+        "actions": {
+          "index": {
+            "aliases": [
+              "list"
+            ],
+            "auth": true,
+            "blocking": false,
+            "description": "List network interfaces",
+            "examples": [],
+            "help": "/v7.0/network_interfaces?method=GET",
+            "input": {
+              "layout": "object",
+              "namespace": "network_interface",
+              "parameters": {
+                "from_id": {
+                  "default": null,
+                  "description": "List objects with IDs greater or lower than this value",
+                  "label": "From ID",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {
+                    "number": {
+                      "message": "must be at least 0",
+                      "min": 0
+                    }
+                  }
+                },
+                "limit": {
+                  "default": null,
+                  "description": "Number of objects to retrieve",
+                  "label": "Limit",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {
+                    "number": {
+                      "max": 1000,
+                      "message": "must be between 0 and 1000",
+                      "min": 0
+                    }
+                  }
+                },
+                "location": {
+                  "choices": {
+                    "help": "/v7.0/locations?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/locations"
+                  },
+                  "description": "Location this IP address is available in",
+                  "label": "Location",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "location"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "label"
+                },
+                "user": {
+                  "choices": {
+                    "help": "/v7.0/users?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/users"
+                  },
+                  "description": null,
+                  "label": "User",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "user"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "login"
+                },
+                "vps": {
+                  "choices": {
+                    "help": "/v7.0/vpses?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/vpses"
+                  },
+                  "description": "VPS the interface is assigned to, can be null",
+                  "label": "VPS",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "vps"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "hostname"
+                }
+              }
+            },
+            "meta": {
+              "global": {
+                "input": {
+                  "layout": "hash",
+                  "namespace": false,
+                  "parameters": {
+                    "count": {
+                      "default": false,
+                      "description": null,
+                      "label": "Return total count",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Boolean",
+                      "validators": {}
+                    },
+                    "includes": {
+                      "default": null,
+                      "description": "A comma-separated list of associated resource names. Nested associations are declared with '__' between resource names. For example, 'user,node' includes these two associations. To include further associations of node, use e.g. 'user,node__location'; to go even deeper, use e.g. 'user,node__location__environment'.",
+                      "label": "Included associations",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Custom",
+                      "validators": {}
+                    },
+                    "no": {
+                      "default": null,
+                      "description": null,
+                      "label": "Disable metadata",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Boolean",
+                      "validators": {}
+                    }
+                  }
+                },
+                "output": {
+                  "layout": "hash",
+                  "namespace": false,
+                  "parameters": {
+                    "total_count": {
+                      "default": null,
+                      "description": null,
+                      "label": "Total item count",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Integer",
+                      "validators": {}
+                    }
+                  }
+                }
+              },
+              "object": {
+                "input": null,
+                "output": {
+                  "layout": "hash",
+                  "namespace": false,
+                  "parameters": {
+                    "path_params": {
+                      "default": null,
+                      "description": "An array of parameters needed to build the URL for this object",
+                      "label": "URL parameters",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Custom",
+                      "validators": {}
+                    },
+                    "resolved": {
+                      "default": null,
+                      "description": "True if the association has been loaded",
+                      "label": "Resolved",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Boolean",
+                      "validators": {}
+                    }
+                  }
+                }
+              }
+            },
+            "method": "GET",
+            "output": {
+              "layout": "object_list",
+              "namespace": "network_interfaces",
+              "parameters": {
+                "enable": {
+                  "default": null,
+                  "description": null,
+                  "label": "Enable",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Boolean",
+                  "validators": {}
+                },
+                "id": {
+                  "default": null,
+                  "description": "Interface ID",
+                  "label": "ID",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "mac": {
+                  "default": null,
+                  "description": null,
+                  "label": "MAC Address",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {}
+                },
+                "max_rx": {
+                  "default": null,
+                  "description": "Maximum input throughput",
+                  "label": "Max incoming data throughput",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "max_tx": {
+                  "default": null,
+                  "description": "Maximum output throughput",
+                  "label": "Max outgoing data throughput",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "name": {
+                  "default": null,
+                  "description": null,
+                  "label": "Name",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {}
+                },
+                "type": {
+                  "default": null,
+                  "description": "node, storage or mailer",
+                  "label": "Type",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {
+                    "include": {
+                      "message": "%{value} cannot be used",
+                      "values": {
+                        "venet": "venet",
+                        "veth_bridge": "Bridged veth",
+                        "veth_routed": "Routed veth"
+                      }
+                    }
+                  }
+                },
+                "vps": {
+                  "choices": {
+                    "help": "/v7.0/vpses?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/vpses"
+                  },
+                  "description": "VPS the interface is assigned to, can be null",
+                  "label": "VPS",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "vps"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "hostname"
+                }
+              }
+            },
+            "path": "/v7.0/network_interfaces",
+            "scope": "network_interface#index"
+          },
+          "show": {
+            "aliases": [
+              "find"
+            ],
+            "auth": true,
+            "blocking": false,
+            "description": "Show a network interface",
+            "examples": [],
+            "help": "/v7.0/network_interfaces/{network_interface_id}?method=GET",
+            "input": {
+              "layout": "object",
+              "namespace": "network_interface",
+              "parameters": {}
+            },
+            "meta": {
+              "global": {
+                "input": {
+                  "layout": "hash",
+                  "namespace": false,
+                  "parameters": {
+                    "includes": {
+                      "default": null,
+                      "description": "A comma-separated list of associated resource names. Nested associations are declared with '__' between resource names. For example, 'user,node' includes these two associations. To include further associations of node, use e.g. 'user,node__location'; to go even deeper, use e.g. 'user,node__location__environment'.",
+                      "label": "Included associations",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Custom",
+                      "validators": {}
+                    },
+                    "no": {
+                      "default": null,
+                      "description": null,
+                      "label": "Disable metadata",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Boolean",
+                      "validators": {}
+                    }
+                  }
+                },
+                "output": null
+              },
+              "object": {
+                "input": null,
+                "output": {
+                  "layout": "hash",
+                  "namespace": false,
+                  "parameters": {
+                    "path_params": {
+                      "default": null,
+                      "description": "An array of parameters needed to build the URL for this object",
+                      "label": "URL parameters",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Custom",
+                      "validators": {}
+                    },
+                    "resolved": {
+                      "default": null,
+                      "description": "True if the association has been loaded",
+                      "label": "Resolved",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Boolean",
+                      "validators": {}
+                    }
+                  }
+                }
+              }
+            },
+            "method": "GET",
+            "output": {
+              "layout": "object",
+              "namespace": "network_interface",
+              "parameters": {
+                "enable": {
+                  "default": null,
+                  "description": null,
+                  "label": "Enable",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Boolean",
+                  "validators": {}
+                },
+                "id": {
+                  "default": null,
+                  "description": "Interface ID",
+                  "label": "ID",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "mac": {
+                  "default": null,
+                  "description": null,
+                  "label": "MAC Address",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {}
+                },
+                "max_rx": {
+                  "default": null,
+                  "description": "Maximum input throughput",
+                  "label": "Max incoming data throughput",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "max_tx": {
+                  "default": null,
+                  "description": "Maximum output throughput",
+                  "label": "Max outgoing data throughput",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "name": {
+                  "default": null,
+                  "description": null,
+                  "label": "Name",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {}
+                },
+                "type": {
+                  "default": null,
+                  "description": "node, storage or mailer",
+                  "label": "Type",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {
+                    "include": {
+                      "message": "%{value} cannot be used",
+                      "values": {
+                        "venet": "venet",
+                        "veth_bridge": "Bridged veth",
+                        "veth_routed": "Routed veth"
+                      }
+                    }
+                  }
+                },
+                "vps": {
+                  "choices": {
+                    "help": "/v7.0/vpses?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/vpses"
+                  },
+                  "description": "VPS the interface is assigned to, can be null",
+                  "label": "VPS",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "vps"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "hostname"
+                }
+              }
+            },
+            "path": "/v7.0/network_interfaces/{network_interface_id}",
+            "scope": "network_interface#show"
+          }
+        },
+        "description": "Manage VPS network interfaces"
+      },
+      "vps": {
+        "actions": {
+          "index": {
+            "aliases": [
+              "list"
+            ],
+            "auth": true,
+            "blocking": false,
+            "description": "List VPS",
+            "examples": [
+              {
+                "comment": null,
+                "errors": null,
+                "http_status": 200,
+                "message": null,
+                "path_params": null,
+                "request": {},
+                "response": [
+                  {
+                    "dns_resolver": {
+                      "id": 1
+                    },
+                    "hostname": "thehostname",
+                    "id": 150,
+                    "info": "My very important VPS",
+                    "node": {
+                      "id": 1,
+                      "name": "node1"
+                    },
+                    "onstartall": true,
+                    "os_template": {
+                      "id": 1,
+                      "label": "Scientific Linux 6"
+                    },
+                    "user": {
+                      "id": 1,
+                      "name": "somebody"
+                    }
+                  }
+                ],
+                "status": true,
+                "title": ""
+              }
+            ],
+            "help": "/v7.0/vpses?method=GET",
+            "input": {
+              "layout": "object",
+              "namespace": "vps",
+              "parameters": {
+                "environment": {
+                  "choices": {
+                    "help": "/v7.0/environments?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/environments"
+                  },
+                  "description": "Filter by environment",
+                  "label": "Environment",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "environment"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "label"
+                },
+                "from_id": {
+                  "default": null,
+                  "description": "List objects with IDs greater or lower than this value",
+                  "label": "From ID",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {
+                    "number": {
+                      "message": "must be at least 0",
+                      "min": 0
+                    }
+                  }
+                },
+                "hostname_any": {
+                  "default": null,
+                  "description": null,
+                  "label": "Hostname_any",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {}
+                },
+                "hostname_exact": {
+                  "default": null,
+                  "description": null,
+                  "label": "Hostname_exact",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {}
+                },
+                "limit": {
+                  "default": null,
+                  "description": "Number of objects to retrieve",
+                  "label": "Limit",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {
+                    "number": {
+                      "max": 1000,
+                      "message": "must be between 0 and 1000",
+                      "min": 0
+                    }
+                  }
+                },
+                "location": {
+                  "choices": {
+                    "help": "/v7.0/locations?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/locations"
+                  },
+                  "description": "Filter by location",
+                  "label": "Location",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "location"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "label"
+                },
+                "node": {
+                  "choices": {
+                    "help": "/v7.0/nodes?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/nodes"
+                  },
+                  "description": "Filter by node",
+                  "label": "Node",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "node"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "domain_name"
+                },
+                "object_state": {
+                  "default": null,
+                  "description": null,
+                  "label": "Object state",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {
+                    "include": {
+                      "message": "%{value} cannot be used",
+                      "values": {
+                        "active": "Active",
+                        "deleted": "Deleted",
+                        "hard_delete": "Hard delete",
+                        "soft_delete": "Soft delete",
+                        "suspended": "Suspended"
+                      }
+                    }
+                  }
+                },
+                "os_template": {
+                  "choices": {
+                    "help": "/v7.0/os_templates?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/os_templates"
+                  },
+                  "description": null,
+                  "label": "OS template",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "os_template"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "label"
+                },
+                "user": {
+                  "choices": {
+                    "help": "/v7.0/users?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/users"
+                  },
+                  "description": "Filter by owner",
+                  "label": "User",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "user"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "login"
+                },
+                "user_namespace_map": {
+                  "choices": {
+                    "help": "/v7.0/user_namespace_maps?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/user_namespace_maps"
+                  },
+                  "description": null,
+                  "label": "UID/GID mapping",
+                  "nullable": true,
+                  "required": null,
+                  "resource": [
+                    "user_namespace_map"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "label"
+                }
+              }
+            },
+            "meta": {
+              "global": {
+                "input": {
+                  "layout": "hash",
+                  "namespace": false,
+                  "parameters": {
+                    "count": {
+                      "default": false,
+                      "description": null,
+                      "label": "Return total count",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Boolean",
+                      "validators": {}
+                    },
+                    "includes": {
+                      "default": null,
+                      "description": "A comma-separated list of associated resource names. Nested associations are declared with '__' between resource names. For example, 'user,node' includes these two associations. To include further associations of node, use e.g. 'user,node__location'; to go even deeper, use e.g. 'user,node__location__environment'.",
+                      "label": "Included associations",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Custom",
+                      "validators": {}
+                    },
+                    "no": {
+                      "default": null,
+                      "description": null,
+                      "label": "Disable metadata",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Boolean",
+                      "validators": {}
+                    }
+                  }
+                },
+                "output": {
+                  "layout": "hash",
+                  "namespace": false,
+                  "parameters": {
+                    "total_count": {
+                      "default": null,
+                      "description": null,
+                      "label": "Total item count",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Integer",
+                      "validators": {}
+                    }
+                  }
+                }
+              },
+              "object": {
+                "input": null,
+                "output": {
+                  "layout": "hash",
+                  "namespace": false,
+                  "parameters": {
+                    "path_params": {
+                      "default": null,
+                      "description": "An array of parameters needed to build the URL for this object",
+                      "label": "URL parameters",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Custom",
+                      "validators": {}
+                    },
+                    "resolved": {
+                      "default": null,
+                      "description": "True if the association has been loaded",
+                      "label": "Resolved",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Boolean",
+                      "validators": {}
+                    }
+                  }
+                }
+              }
+            },
+            "method": "GET",
+            "output": {
+              "layout": "object_list",
+              "namespace": "vpses",
+              "parameters": {
+                "allow_admin_modifications": {
+                  "default": null,
+                  "description": null,
+                  "label": "Allow admin modifications",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Boolean",
+                  "validators": {}
+                },
+                "autostart_enable": {
+                  "default": null,
+                  "description": "Start VPS on node boot?",
+                  "label": "Auto-start",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Boolean",
+                  "validators": {}
+                },
+                "autostart_priority": {
+                  "default": 1000,
+                  "description": "0 is the highest priority, greater numbers have lower priority",
+                  "label": "Auto-start priority",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "cgroup_version": {
+                  "default": "cgroup_any",
+                  "description": null,
+                  "label": "Cgroup_version",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {
+                    "include": {
+                      "message": "%{value} cannot be used",
+                      "values": [
+                        "cgroup_any",
+                        "cgroup_v1",
+                        "cgroup_v2"
+                      ]
+                    }
+                  }
+                },
+                "config": {
+                  "default": "",
+                  "description": "Custom configuration options",
+                  "label": "Config",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {}
+                },
+                "cpu": {
+                  "default": null,
+                  "description": "Minimally 1, maximally 1024, step size is 1",
+                  "label": "CPU",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "cpu_idle": {
+                  "default": null,
+                  "description": null,
+                  "label": "Cpu_idle",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Float",
+                  "validators": {}
+                },
+                "cpu_iowait": {
+                  "default": null,
+                  "description": null,
+                  "label": "Cpu_iowait",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Float",
+                  "validators": {}
+                },
+                "cpu_irq": {
+                  "default": null,
+                  "description": null,
+                  "label": "Cpu_irq",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Float",
+                  "validators": {}
+                },
+                "cpu_limit": {
+                  "default": null,
+                  "description": "Limit of maximum CPU usage",
+                  "label": "CPU limit",
+                  "nullable": true,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "cpu_nice": {
+                  "default": null,
+                  "description": null,
+                  "label": "Cpu_nice",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Float",
+                  "validators": {}
+                },
+                "cpu_softirq": {
+                  "default": null,
+                  "description": null,
+                  "label": "Cpu_softirq",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Float",
+                  "validators": {}
+                },
+                "cpu_system": {
+                  "default": null,
+                  "description": null,
+                  "label": "Cpu_system",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Float",
+                  "validators": {}
+                },
+                "cpu_user": {
+                  "default": null,
+                  "description": null,
+                  "label": "Cpu_user",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Float",
+                  "validators": {}
+                },
+                "created_at": {
+                  "default": null,
+                  "description": null,
+                  "label": "Created at",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Datetime",
+                  "validators": {}
+                },
+                "dataset": {
+                  "choices": {
+                    "help": "/v7.0/datasets?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/datasets"
+                  },
+                  "description": "Dataset the VPS resides in",
+                  "label": "Dataset",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "dataset"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "name"
+                },
+                "diskspace": {
+                  "default": null,
+                  "description": "Minimally 1024, maximally 1048576, step size is 1",
+                  "label": "Disk space",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "dns_resolver": {
+                  "choices": {
+                    "help": "/v7.0/dns_resolvers?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/dns_resolvers"
+                  },
+                  "description": "DNS resolver the VPS will use",
+                  "label": "DNS resolver",
+                  "nullable": true,
+                  "required": null,
+                  "resource": [
+                    "dns_resolver"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "label"
+                },
+                "enable_network": {
+                  "default": null,
+                  "description": null,
+                  "label": "Enable network",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Boolean",
+                  "validators": {}
+                },
+                "enable_os_template_auto_update": {
+                  "default": null,
+                  "description": null,
+                  "label": "Enable OS template auto update",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Boolean",
+                  "validators": {}
+                },
+                "expiration_date": {
+                  "default": null,
+                  "description": "A date after which the state will progress",
+                  "label": "Expiration",
+                  "nullable": true,
+                  "protected": false,
+                  "required": false,
+                  "type": "Datetime",
+                  "validators": {}
+                },
+                "hostname": {
+                  "default": null,
+                  "description": "VPS hostname",
+                  "label": "Hostname",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {}
+                },
+                "id": {
+                  "default": null,
+                  "description": null,
+                  "label": "VPS id",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "implicit_oom_report_rule_hit_count": {
+                  "default": null,
+                  "description": null,
+                  "label": "Implicit_oom_report_rule_hit_count",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "in_rescue_mode": {
+                  "default": null,
+                  "description": null,
+                  "label": "In rescue mode",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Boolean",
+                  "validators": {}
+                },
+                "info": {
+                  "default": null,
+                  "description": "VPS description",
+                  "label": "Info",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {}
+                },
+                "is_running": {
+                  "default": null,
+                  "description": null,
+                  "label": "Running",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Boolean",
+                  "validators": {}
+                },
+                "loadavg1": {
+                  "default": null,
+                  "description": null,
+                  "label": "Loadavg1",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Float",
+                  "validators": {}
+                },
+                "loadavg15": {
+                  "default": null,
+                  "description": null,
+                  "label": "Loadavg15",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Float",
+                  "validators": {}
+                },
+                "loadavg5": {
+                  "default": null,
+                  "description": null,
+                  "label": "Loadavg5",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Float",
+                  "validators": {}
+                },
+                "maintenance_lock": {
+                  "default": null,
+                  "description": null,
+                  "label": "Maintenance lock",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {
+                    "include": {
+                      "message": "%{value} cannot be used",
+                      "values": [
+                        "no",
+                        "lock",
+                        "master_lock"
+                      ]
+                    }
+                  }
+                },
+                "maintenance_lock_reason": {
+                  "default": null,
+                  "description": null,
+                  "label": "Maintenance reason",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {}
+                },
+                "manage_hostname": {
+                  "default": null,
+                  "description": "Determines whether vpsAdmin sets VPS hostname or not",
+                  "label": "Manage hostname",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Boolean",
+                  "validators": {}
+                },
+                "map_mode": {
+                  "default": "native",
+                  "description": null,
+                  "label": "Map mode",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {
+                    "include": {
+                      "message": "%{value} cannot be used",
+                      "values": [
+                        "native",
+                        "zfs"
+                      ]
+                    }
+                  }
+                },
+                "memory": {
+                  "default": null,
+                  "description": "Minimally 128, maximally 1048576, step size is 1",
+                  "label": "Memory",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "node": {
+                  "choices": {
+                    "help": "/v7.0/nodes?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/nodes"
+                  },
+                  "description": "Node VPS will run on",
+                  "label": "Node",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "node"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "domain_name"
+                },
+                "object_state": {
+                  "default": null,
+                  "description": null,
+                  "label": "Object state",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {
+                    "include": {
+                      "message": "%{value} cannot be used",
+                      "values": {
+                        "active": "Active",
+                        "deleted": "Deleted",
+                        "hard_delete": "Hard delete",
+                        "soft_delete": "Soft delete",
+                        "suspended": "Suspended"
+                      }
+                    }
+                  }
+                },
+                "onstartall": {
+                  "default": true,
+                  "description": "Start VPS on start all action?",
+                  "label": "On start all",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Boolean",
+                  "validators": {}
+                },
+                "os_template": {
+                  "choices": {
+                    "help": "/v7.0/os_templates?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/os_templates"
+                  },
+                  "description": null,
+                  "label": "OS template",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "os_template"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "label"
+                },
+                "pool": {
+                  "choices": {
+                    "help": "/v7.0/pools?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/pools"
+                  },
+                  "description": "Storage pool the VPS resides in",
+                  "label": "Pool",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "pool"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "name"
+                },
+                "process_count": {
+                  "default": null,
+                  "description": null,
+                  "label": "Process count",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "remind_after_date": {
+                  "default": null,
+                  "description": "Mail warnings are silenced until this date",
+                  "label": "Remind after",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Datetime",
+                  "validators": {}
+                },
+                "start_menu_timeout": {
+                  "default": null,
+                  "description": "Number of seconds the start menu waits for the user",
+                  "label": "Start menu timeout",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "swap": {
+                  "default": null,
+                  "description": "Minimally 0, maximally 1048576, step size is 1",
+                  "label": "Swap",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "uptime": {
+                  "default": null,
+                  "description": null,
+                  "label": "Uptime",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "used_diskspace": {
+                  "default": null,
+                  "description": "in MB",
+                  "label": "Used disk space",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "used_memory": {
+                  "default": null,
+                  "description": "in MB",
+                  "label": "Used memory",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "used_swap": {
+                  "default": null,
+                  "description": "in MB",
+                  "label": "Used swap",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "user": {
+                  "choices": {
+                    "help": "/v7.0/users?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/users"
+                  },
+                  "description": "VPS owner",
+                  "label": "User",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "user"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "login"
+                },
+                "user_namespace_map": {
+                  "choices": {
+                    "help": "/v7.0/user_namespace_maps?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/user_namespace_maps"
+                  },
+                  "description": null,
+                  "label": "UID/GID mapping",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "user_namespace_map"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "label"
+                }
+              }
+            },
+            "path": "/v7.0/vpses",
+            "scope": "vps#index"
+          },
+          "show": {
+            "aliases": [
+              "find"
+            ],
+            "auth": true,
+            "blocking": false,
+            "description": "Show VPS properties",
+            "examples": [],
+            "help": "/v7.0/vpses/{vps_id}?method=GET",
+            "input": {
+              "layout": "object",
+              "namespace": "vps",
+              "parameters": {}
+            },
+            "meta": {
+              "global": {
+                "input": {
+                  "layout": "hash",
+                  "namespace": false,
+                  "parameters": {
+                    "includes": {
+                      "default": null,
+                      "description": "A comma-separated list of associated resource names. Nested associations are declared with '__' between resource names. For example, 'user,node' includes these two associations. To include further associations of node, use e.g. 'user,node__location'; to go even deeper, use e.g. 'user,node__location__environment'.",
+                      "label": "Included associations",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Custom",
+                      "validators": {}
+                    },
+                    "no": {
+                      "default": null,
+                      "description": null,
+                      "label": "Disable metadata",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Boolean",
+                      "validators": {}
+                    }
+                  }
+                },
+                "output": null
+              },
+              "object": {
+                "input": null,
+                "output": {
+                  "layout": "hash",
+                  "namespace": false,
+                  "parameters": {
+                    "path_params": {
+                      "default": null,
+                      "description": "An array of parameters needed to build the URL for this object",
+                      "label": "URL parameters",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Custom",
+                      "validators": {}
+                    },
+                    "resolved": {
+                      "default": null,
+                      "description": "True if the association has been loaded",
+                      "label": "Resolved",
+                      "nullable": false,
+                      "protected": false,
+                      "required": false,
+                      "type": "Boolean",
+                      "validators": {}
+                    }
+                  }
+                }
+              }
+            },
+            "method": "GET",
+            "output": {
+              "layout": "object",
+              "namespace": "vps",
+              "parameters": {
+                "allow_admin_modifications": {
+                  "default": null,
+                  "description": null,
+                  "label": "Allow admin modifications",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Boolean",
+                  "validators": {}
+                },
+                "autostart_enable": {
+                  "default": null,
+                  "description": "Start VPS on node boot?",
+                  "label": "Auto-start",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Boolean",
+                  "validators": {}
+                },
+                "autostart_priority": {
+                  "default": 1000,
+                  "description": "0 is the highest priority, greater numbers have lower priority",
+                  "label": "Auto-start priority",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "cgroup_version": {
+                  "default": "cgroup_any",
+                  "description": null,
+                  "label": "Cgroup_version",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {
+                    "include": {
+                      "message": "%{value} cannot be used",
+                      "values": [
+                        "cgroup_any",
+                        "cgroup_v1",
+                        "cgroup_v2"
+                      ]
+                    }
+                  }
+                },
+                "config": {
+                  "default": "",
+                  "description": "Custom configuration options",
+                  "label": "Config",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {}
+                },
+                "cpu": {
+                  "default": null,
+                  "description": "Minimally 1, maximally 1024, step size is 1",
+                  "label": "CPU",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "cpu_idle": {
+                  "default": null,
+                  "description": null,
+                  "label": "Cpu_idle",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Float",
+                  "validators": {}
+                },
+                "cpu_iowait": {
+                  "default": null,
+                  "description": null,
+                  "label": "Cpu_iowait",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Float",
+                  "validators": {}
+                },
+                "cpu_irq": {
+                  "default": null,
+                  "description": null,
+                  "label": "Cpu_irq",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Float",
+                  "validators": {}
+                },
+                "cpu_limit": {
+                  "default": null,
+                  "description": "Limit of maximum CPU usage",
+                  "label": "CPU limit",
+                  "nullable": true,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "cpu_nice": {
+                  "default": null,
+                  "description": null,
+                  "label": "Cpu_nice",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Float",
+                  "validators": {}
+                },
+                "cpu_softirq": {
+                  "default": null,
+                  "description": null,
+                  "label": "Cpu_softirq",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Float",
+                  "validators": {}
+                },
+                "cpu_system": {
+                  "default": null,
+                  "description": null,
+                  "label": "Cpu_system",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Float",
+                  "validators": {}
+                },
+                "cpu_user": {
+                  "default": null,
+                  "description": null,
+                  "label": "Cpu_user",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Float",
+                  "validators": {}
+                },
+                "created_at": {
+                  "default": null,
+                  "description": null,
+                  "label": "Created at",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Datetime",
+                  "validators": {}
+                },
+                "dataset": {
+                  "choices": {
+                    "help": "/v7.0/datasets?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/datasets"
+                  },
+                  "description": "Dataset the VPS resides in",
+                  "label": "Dataset",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "dataset"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "name"
+                },
+                "diskspace": {
+                  "default": null,
+                  "description": "Minimally 1024, maximally 1048576, step size is 1",
+                  "label": "Disk space",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "dns_resolver": {
+                  "choices": {
+                    "help": "/v7.0/dns_resolvers?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/dns_resolvers"
+                  },
+                  "description": "DNS resolver the VPS will use",
+                  "label": "DNS resolver",
+                  "nullable": true,
+                  "required": null,
+                  "resource": [
+                    "dns_resolver"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "label"
+                },
+                "enable_network": {
+                  "default": null,
+                  "description": null,
+                  "label": "Enable network",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Boolean",
+                  "validators": {}
+                },
+                "enable_os_template_auto_update": {
+                  "default": null,
+                  "description": null,
+                  "label": "Enable OS template auto update",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Boolean",
+                  "validators": {}
+                },
+                "expiration_date": {
+                  "default": null,
+                  "description": "A date after which the state will progress",
+                  "label": "Expiration",
+                  "nullable": true,
+                  "protected": false,
+                  "required": false,
+                  "type": "Datetime",
+                  "validators": {}
+                },
+                "hostname": {
+                  "default": null,
+                  "description": "VPS hostname",
+                  "label": "Hostname",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {}
+                },
+                "id": {
+                  "default": null,
+                  "description": null,
+                  "label": "VPS id",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "implicit_oom_report_rule_hit_count": {
+                  "default": null,
+                  "description": null,
+                  "label": "Implicit_oom_report_rule_hit_count",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "in_rescue_mode": {
+                  "default": null,
+                  "description": null,
+                  "label": "In rescue mode",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Boolean",
+                  "validators": {}
+                },
+                "info": {
+                  "default": null,
+                  "description": "VPS description",
+                  "label": "Info",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {}
+                },
+                "is_running": {
+                  "default": null,
+                  "description": null,
+                  "label": "Running",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Boolean",
+                  "validators": {}
+                },
+                "loadavg1": {
+                  "default": null,
+                  "description": null,
+                  "label": "Loadavg1",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Float",
+                  "validators": {}
+                },
+                "loadavg15": {
+                  "default": null,
+                  "description": null,
+                  "label": "Loadavg15",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Float",
+                  "validators": {}
+                },
+                "loadavg5": {
+                  "default": null,
+                  "description": null,
+                  "label": "Loadavg5",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Float",
+                  "validators": {}
+                },
+                "maintenance_lock": {
+                  "default": null,
+                  "description": null,
+                  "label": "Maintenance lock",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {
+                    "include": {
+                      "message": "%{value} cannot be used",
+                      "values": [
+                        "no",
+                        "lock",
+                        "master_lock"
+                      ]
+                    }
+                  }
+                },
+                "maintenance_lock_reason": {
+                  "default": null,
+                  "description": null,
+                  "label": "Maintenance reason",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {}
+                },
+                "manage_hostname": {
+                  "default": null,
+                  "description": "Determines whether vpsAdmin sets VPS hostname or not",
+                  "label": "Manage hostname",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Boolean",
+                  "validators": {}
+                },
+                "map_mode": {
+                  "default": "native",
+                  "description": null,
+                  "label": "Map mode",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {
+                    "include": {
+                      "message": "%{value} cannot be used",
+                      "values": [
+                        "native",
+                        "zfs"
+                      ]
+                    }
+                  }
+                },
+                "memory": {
+                  "default": null,
+                  "description": "Minimally 128, maximally 1048576, step size is 1",
+                  "label": "Memory",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "node": {
+                  "choices": {
+                    "help": "/v7.0/nodes?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/nodes"
+                  },
+                  "description": "Node VPS will run on",
+                  "label": "Node",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "node"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "domain_name"
+                },
+                "object_state": {
+                  "default": null,
+                  "description": null,
+                  "label": "Object state",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "String",
+                  "validators": {
+                    "include": {
+                      "message": "%{value} cannot be used",
+                      "values": {
+                        "active": "Active",
+                        "deleted": "Deleted",
+                        "hard_delete": "Hard delete",
+                        "soft_delete": "Soft delete",
+                        "suspended": "Suspended"
+                      }
+                    }
+                  }
+                },
+                "onstartall": {
+                  "default": true,
+                  "description": "Start VPS on start all action?",
+                  "label": "On start all",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Boolean",
+                  "validators": {}
+                },
+                "os_template": {
+                  "choices": {
+                    "help": "/v7.0/os_templates?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/os_templates"
+                  },
+                  "description": null,
+                  "label": "OS template",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "os_template"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "label"
+                },
+                "pool": {
+                  "choices": {
+                    "help": "/v7.0/pools?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/pools"
+                  },
+                  "description": "Storage pool the VPS resides in",
+                  "label": "Pool",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "pool"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "name"
+                },
+                "process_count": {
+                  "default": null,
+                  "description": null,
+                  "label": "Process count",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "remind_after_date": {
+                  "default": null,
+                  "description": "Mail warnings are silenced until this date",
+                  "label": "Remind after",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Datetime",
+                  "validators": {}
+                },
+                "start_menu_timeout": {
+                  "default": null,
+                  "description": "Number of seconds the start menu waits for the user",
+                  "label": "Start menu timeout",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "swap": {
+                  "default": null,
+                  "description": "Minimally 0, maximally 1048576, step size is 1",
+                  "label": "Swap",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "uptime": {
+                  "default": null,
+                  "description": null,
+                  "label": "Uptime",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "used_diskspace": {
+                  "default": null,
+                  "description": "in MB",
+                  "label": "Used disk space",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "used_memory": {
+                  "default": null,
+                  "description": "in MB",
+                  "label": "Used memory",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "used_swap": {
+                  "default": null,
+                  "description": "in MB",
+                  "label": "Used swap",
+                  "nullable": false,
+                  "protected": false,
+                  "required": false,
+                  "type": "Integer",
+                  "validators": {}
+                },
+                "user": {
+                  "choices": {
+                    "help": "/v7.0/users?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/users"
+                  },
+                  "description": "VPS owner",
+                  "label": "User",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "user"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "login"
+                },
+                "user_namespace_map": {
+                  "choices": {
+                    "help": "/v7.0/user_namespace_maps?method=GET",
+                    "method": "GET",
+                    "path": "/v7.0/user_namespace_maps"
+                  },
+                  "description": null,
+                  "label": "UID/GID mapping",
+                  "nullable": false,
+                  "required": null,
+                  "resource": [
+                    "user_namespace_map"
+                  ],
+                  "type": "Resource",
+                  "value": null,
+                  "value_id": "id",
+                  "value_label": "label"
+                }
+              }
+            },
+            "path": "/v7.0/vpses/{vps_id}",
+            "scope": "vps#show"
+          }
+        },
+        "description": "Manage VPS"
+      }
+    }
+  },
+  "status": true,
+  "version": "2.0"
+}

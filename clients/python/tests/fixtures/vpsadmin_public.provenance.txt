@@ -1,0 +1,19 @@
+SUBSET of an unauthenticated public vpsAdmin description, not a full server
+description and not authenticated data.
+
+Capture URL: https://api.vpsfree.cz/?describe=default
+Capture method: OPTIONS (without credentials)
+Capture UTC: 2026-10-19T21:21:05.804385+00:00
+Original body size: 2162219 bytes
+Original body SHA256: 0eff1941670f0a7b344e6c9c8fb67c936c2bcf8f3ce19e1cfcfd1ce880d93fb8
+Derived fixture size: 96929 bytes
+Derived fixture SHA256: afbf9b628e40a83ed6f8b9412e82e1cbc0ee863cd168295f1294d1768cf101cd
+
+Pruning rule: preserve every original envelope field and every response field
+except response.resources. Retain only response.resources.vps and
+response.resources.network_interface, preserving their enclosing fields except
+resources (omitted). Within each retained resource.actions, retain only the
+original index and show actions, including all their original fields. No
+retained values were changed; no fields, aliases or resources were synthesized.
+The complete response.authentication, response.help and response.meta remain.
+Serialization: UTF-8 JSON, sorted keys, two-space indentation, final newline.

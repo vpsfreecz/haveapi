@@ -8,6 +8,10 @@ Installation
  - Node.js - `npm install haveapi-client`
  - bower - `bower install haveapi-client`
 
+The client is authored in TypeScript. The package ships the UMD JavaScript bundle
+at `dist/haveapi-client.js` and generated declarations at `dist/types/haveapi.d.ts`.
+Use it from JavaScript or TypeScript without compiling the library yourself.
+
 Usage
 -----
 On the web:
@@ -27,6 +31,28 @@ remains supported as an alias of `CallbackClient`: both names refer to the same
 constructor, prototype and static helpers. Its runtime constructor name remains
 `Client`.
 
+### AsyncClient
+
+For a Promise-based path request, the API base already includes its version:
+
+```js
+const { AsyncClient } = require('haveapi-client');
+
+async function main() {
+  const api = new AsyncClient('https://api.example.test/v7.0');
+  const result = await api.request({ method: 'GET', path: '/items' });
+  console.log(result.data);
+}
+
+main().catch(console.error);
+```
+
+This request does not need `setup()`. See [async requests and authentication](doc-async-client.md)
+and [async resources and binding](doc-async-resources.md) for description-based
+resource access, authentication, errors and completion waiting.
+
+### CallbackClient
+
 Create a callback client instance:
 
 ```js
@@ -45,7 +71,7 @@ the API is configured with a custom language header. Set the language before
 `setup()` or `authenticate()` so translated validator descriptions are loaded
 from the server.
 
-Before the client can be used, it must be set up:
+Before using callback resource actions, set up the callback client:
 
 ```js
 api.setup(function() {
@@ -267,15 +293,6 @@ api.after('authenticated', function() {
 	console.log("The client is authenticated");
 })
 ```
-
-### AsyncClient
-
-The same package also exports `HaveAPI.AsyncClient`, whose network methods
-return Promises. `HaveAPI.CallbackClient` methods retain their callback API,
-also available through the supported `HaveAPI.Client` alias.
-See [async requests and authentication](doc-async-client.md) for setup, typed
-requests, errors and completion waiting, and [async resources and binding](doc-async-resources.md)
-for action results, identity, save and explicit association loading.
 
 Documentation
 -------------

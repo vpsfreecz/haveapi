@@ -2787,6 +2787,12 @@ function isRecord(value) {
 function own(value, key) {
     return Object.prototype.hasOwnProperty.call(value, key);
 }
+function isApiErrors(value) {
+    return isRecord(value) && Object.keys(value).every(function (key) {
+        var errors = value[key];
+        return Array.isArray(errors) ? errors.every(function (message) { return typeof message === 'string'; }) : isApiErrors(errors);
+    });
+}
 function mergeHeaders() {
     var sources = [];
     for (var _i = 0; _i < arguments.length; _i++) {
@@ -2857,9 +2863,7 @@ function decode(status, text, namespace, metaNamespace) {
     }
     if (!isRecord(parsed) || typeof parsed.status !== 'boolean' ||
         (parsed.message != null && typeof parsed.message !== 'string') ||
-        (parsed.errors != null && (!isRecord(parsed.errors) || Object.keys(parsed.errors).some(function (key) {
-            return !Array.isArray(parsed.errors[key]) || parsed.errors[key].some(function (value) { return typeof value !== 'string'; });
-        }))))
+        (parsed.errors != null && !isApiErrors(parsed.errors)))
         throw new AsyncError('protocol', 'Invalid API response envelope', { httpStatus: status });
     var envelope = parsed;
     var data = envelope.response;

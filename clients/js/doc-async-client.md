@@ -125,6 +125,14 @@ HTTP failure and HaveAPI envelope failure are both checked; HTTP status remains
 available independently of the envelope. Request credentials and headers are
 not attached to errors.
 
+Server `errors` can contain nested parameter maps with arrays of strings at
+their leaves. `ApiErrors` describes this wire shape; local parameter validation
+still produces a flat map of string arrays. The server's public `error!` method
+forwards custom error maps through recursive localization, although standard
+parameter validation produces flat errors. A valid nested rejection retains its
+errors, envelope and response receipt as an `api` failure for both HTTP 200 and
+error statuses. Scalar error leaves and invalid metadata remain protocol errors.
+
 After validating the envelope, payload decoding errors retain a `response`
 receipt. Its `data` is the raw `envelope.response`, or `undefined` if the payload
 is missing. `meta` contains validated metadata or an empty object.

@@ -1,6 +1,9 @@
-import type { ActionDescription, Description, Envelope, HeaderMap, Meta, Params, Values, ValidationErrors } from '../types';
+import type { ActionDescription, Description, Envelope, HeaderMap, Meta, Params, Values } from '../types';
 import type { AsyncError } from './error';
 export type AsyncErrorKind = 'validation' | 'transport' | 'protocol' | 'authentication' | 'api' | 'action-failed' | 'timeout' | 'aborted';
+export interface ApiErrors {
+    [parameter: string]: string[] | ApiErrors;
+}
 export interface RequestSpec {
     method: string;
     path: string;
@@ -16,7 +19,7 @@ export interface RequestSpec {
 export interface RequestResult<T = unknown> {
     data: T;
     meta: Meta;
-    envelope: Envelope;
+    envelope: Envelope<unknown, ApiErrors>;
     httpStatus: number;
 }
 export interface InvocationResult<T = unknown> {
@@ -40,8 +43,8 @@ export interface ActionStateSnapshot {
 export interface AsyncErrorDetails {
     httpStatus?: number;
     response?: RequestResult<unknown>;
-    envelope?: Envelope;
-    errors?: ValidationErrors;
+    envelope?: Envelope<unknown, ApiErrors>;
+    errors?: ApiErrors;
     state?: ActionStateSnapshot;
     cause?: unknown;
     reason?: string;

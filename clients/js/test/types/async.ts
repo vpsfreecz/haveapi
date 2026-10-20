@@ -1,5 +1,5 @@
 import { AsyncClient, AsyncError, AsyncResourceInstance, AsyncResourceList } from '../../dist/types/haveapi';
-import type { InvocationResult, RequestResult, AsyncResource, AsyncAction } from '../../dist/types/haveapi';
+import type { ApiErrors, Envelope, InvocationResult, RequestResult, AsyncResource, AsyncAction } from '../../dist/types/haveapi';
 
 const client = new AsyncClient('https://api.example', { language: 'en' });
 const setup: Promise<void> = client.setup();
@@ -20,6 +20,17 @@ const item: AsyncResourceInstance | undefined = list.itemAt(0);
 for (const member of list.items) member.get('label');
 const error: AsyncError = new AsyncError('protocol', 'bad response');
 const kind: string = error.kind;
+const apiErrors: ApiErrors = {vps: {memory: ['too large']}, name: ['required']};
+const rejected = new AsyncError('api', 'Validation failed', {
+  errors: apiErrors, envelope: {status: false, errors: apiErrors}
+});
+const wireErrors: ApiErrors | null | undefined = (null! as RequestResult).envelope.errors;
+const defaultEnvelope: Envelope = {status: false, errors: {memory: ['too large']}};
+const flatErrors: Record<string, string[]> | null | undefined = defaultEnvelope.errors;
+// @ts-expect-error The callback envelope default retains flat validation errors.
+const nestedCallback: Envelope = {status: false, errors: {vps: {memory: ['too large']}}};
+// @ts-expect-error Error-map leaves are string arrays, never scalar messages.
+const invalidErrors: ApiErrors = {vps: {memory: 'too large'}};
 
 // @ts-expect-error Async actions accept options rather than callbacks.
 action(7, (client: unknown, result: unknown) => {});
@@ -34,4 +45,4 @@ const legacy: void = action();
 // @ts-expect-error Returned objects expose a noncallable then.
 created.then();
 
-void [setup, authenticated, invocation, invoked, read, saved, association, then, item, kind];
+void [setup, authenticated, invocation, invoked, read, saved, association, then, item, kind, rejected, wireErrors, flatErrors];

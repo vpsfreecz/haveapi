@@ -52,4 +52,4 @@ export { AsyncError } from './haveapi/async/error';
 export { AsyncResourceInstance } from './haveapi/async/resource_instance';
 export { AsyncResourceList } from './haveapi/async/resource_list';
 export type { AsyncResource, AsyncAction, AsyncActionOptions } from './haveapi/async/resource';
-export type { RequestSpec, RequestResult, InvocationResult, AsyncResourceContext, AsyncErrorKind, AsyncErrorDetails, AsyncAuthenticationOptions, CompletionOptions, CompletionResult, ActionStateSnapshot } from './haveapi/async/types';
+export type { ApiErrors, RequestSpec, RequestResult, InvocationResult, AsyncResourceContext, AsyncErrorKind, AsyncErrorDetails, AsyncAuthenticationOptions, CompletionOptions, CompletionResult, ActionStateSnapshot } from './haveapi/async/types';

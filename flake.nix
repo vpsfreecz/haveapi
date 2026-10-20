@@ -49,7 +49,7 @@
               label,
               componentDir,
               gemHome,
-              ruby ? pkgs.ruby_3_3,
+              ruby ? pkgs.ruby_3_4,
               packages ? [ ],
               pathSuffix ? "bin",
               installBundler ? "gem install bundler",
@@ -90,7 +90,7 @@
               php83
               php83Packages.composer
               php83Packages.php-cs-fixer
-              ruby_3_3
+              ruby_3_4
               python311
               uv
               ruff
@@ -143,7 +143,7 @@
 
           client-python = pkgs.mkShell {
             name = "haveapi-client-python";
-            packages = [ pkgs.git pkgs.python311 pkgs.uv pkgs.ruby_3_3 pkgs.ruff ];
+            packages = [ pkgs.git pkgs.python311 pkgs.uv pkgs.ruby_3_4 pkgs.ruff ];
             shellHook = ''
               ${promptHook "haveapi:client-python"}
               ${repoRootHook}

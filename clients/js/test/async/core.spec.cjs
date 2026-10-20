@@ -87,6 +87,46 @@ test('API, malformed envelopes/JSON, namespace and origin failures reject with s
   assert.equal(requests.length, count);
 });
 
+for (const status of [200, 422]) {
+  test(`nested application errors retain their rejection receipt at HTTP ${status}`, async () => {
+    const {HaveAPI, requests} = harness(); const api = new HaveAPI.AsyncClient('https://api.example');
+    const body = {status: false, message: 'Validation failed', response: null,
+      errors: {vps: {memory: ['too large'], limits: {disk: ['too small']}}, name: ['required']}};
+    const pending = api.request({method: 'POST', path: '/vpses/123/start'});
+    const checked = assert.rejects(pending, error => {
+      assert.ok(error instanceof HaveAPI.AsyncError);
+      assert.equal(error.kind, 'api');
+      assert.equal(error.httpStatus, status);
+      assert.equal(JSON.stringify(error.envelope), JSON.stringify(body));
+      assert.equal(error.errors, error.envelope.errors);
+      assert.equal(error.response.envelope, error.envelope);
+      assert.equal(error.response.httpStatus, status);
+      assert.equal(error.response.data, null);
+      assert.equal(Object.keys(error.response.meta).length, 0);
+      return true;
+    });
+    requests[0].respond(body, status); await checked;
+    assert.equal(requests.length, 1);
+  });
+}
+
+test('malformed nested error leaves and metadata remain protocol failures', async () => {
+  const {HaveAPI, requests} = harness(); const api = new HaveAPI.AsyncClient('https://api.example');
+  for (const status of [200, 422]) {
+    for (const errors of [{vps: {memory: 'too large'}}, {vps: {memory: [1]}}, {vps: null}, {vps: [{memory: ['bad']}]}]) {
+      const pending = api.request({method: 'POST', path: '/vpses/123/start'});
+      const checked = assert.rejects(pending, error => error.kind === 'protocol' &&
+        error.httpStatus === status && error.envelope === undefined && error.response === undefined);
+      requests[requests.length - 1].respond({status: false, response: null, errors}, status); await checked;
+    }
+    const pending = api.request({method: 'POST', path: '/vpses/123/start'});
+    const checked = assert.rejects(pending, error => error.kind === 'protocol' &&
+      error.httpStatus === status && error.message === 'Invalid response metadata');
+    requests[requests.length - 1].respond({status: false, errors: {vps: {memory: ['bad']}}, response: {_meta: []}}, status);
+    await checked;
+  }
+});
+
 test('transport errors, pre/inflight abort and timeout settle once and release listeners', async () => {
   for (const fail of [{open: true}, {send: true}]) {
     const {HaveAPI} = harness(fail);

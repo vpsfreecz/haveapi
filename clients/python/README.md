@@ -4,6 +4,10 @@
 HaveAPI API using protocol 2.x. It provides synchronous and asynchronous clients
 with the same dynamic interface. Python 3.11 or newer is required.
 
+[vpsAdmin](https://github.com/vpsfreecz/vpsadmin) is the control panel used by
+vpsFree.cz to manage virtual private servers (VPSes). It is HaveAPI's main user,
+so the examples in this README and the `examples/` directory use its API.
+
 Install the package with `uv add haveapi-client` or `pip install haveapi-client`
 once a Python release is available. To try a checkout before publication, run
 `uv add /path/to/haveapi/clients/python` in your application.

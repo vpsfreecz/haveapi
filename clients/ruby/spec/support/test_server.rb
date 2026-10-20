@@ -20,7 +20,7 @@ class ClientTestServer
   def start
     return if @wait_thr
 
-    env = { 'BUNDLE_GEMFILE' => @gemfile }
+    env = { 'BUNDLE_GEMFILE' => @gemfile, 'BUNDLE_LOCKFILE' => "#{@gemfile}.lock" }
     cmd = ['bundle', 'exec', 'ruby', @server_script, '--port', '0']
     @stdin, @stdout, @wait_thr = Open3.popen2e(env, *cmd, chdir: @cwd)
 

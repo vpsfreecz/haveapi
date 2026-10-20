@@ -83,6 +83,11 @@ module HaveAPI
         %w[clients/js/package.json clients/php/composer.json].each do |path|
           raise Error, "Version mismatch in #{path}" unless JSON.parse(File.read(File.join(root, path))).fetch('version') == version
         end
+        lock = JSON.parse(File.read(File.join(root, 'clients/js/package-lock.json')))
+        unless [lock, lock.fetch('packages').fetch('')].all? { |entry| entry.values_at('name', 'version') == ['haveapi-client', version] }
+          raise Error, 'Identity or version mismatch in clients/js/package-lock.json'
+        end
+
         %w[servers/ruby/haveapi.gemspec clients/go/haveapi-go-client.gemspec].each do |path|
           dependency = File.read(File.join(root, path)).match(/add_dependency 'haveapi-client', '([^']+)'/)
           raise Error, "Dependency mismatch in #{path}" unless dependency && dependency[1] == "~> #{version}"
@@ -185,16 +190,7 @@ module HaveAPI
           required = %w[json-schema.html protocol.md create-client.md typed-input-validation.md protocol.png].map { |f| "doc/#{f}" }
           raise Error, 'Server gem is missing shared documentation' unless (required - package.contents).empty?
         end
-        npm = tar_files(File.join(directory, "haveapi-client-#{version}.tgz"), gzip: true)
-        metadata = JSON.parse(npm.fetch('package/package.json').first)
-        repository = metadata.fetch('repository')
-        unless metadata.values_at('name', 'version') == ['haveapi-client', version] && repository.fetch('url') == "https://github.com/#{REPOSITORY}"
-          raise Error, 'Wrong npm identity or publishing repository'
-        end
-
-        bundle = File.binread(File.join(directory, 'haveapi-client.js'))
-        raise Error, 'npm tarball does not contain the built bundle' unless npm.fetch('package/dist/haveapi-client.js').first == bundle
-        raise Error, 'Wrong browser bundle version' unless bundle.include?("Client.Version = '#{version}'")
+        inspect_npm(directory)
 
         php = tar_files(File.join(directory, "haveapi-client-php-#{version}.tar"))
         raise Error, 'Wrong Composer identity' unless JSON.parse(php.fetch('composer.json').first).values_at('name', 'version') == ['haveapi/client', version]
@@ -202,16 +198,69 @@ module HaveAPI
         Release.capture('python', File.join(root, 'utils/release/python_artifacts.py'), directory, version)
       end
 
+      def inspect_npm(directory)
+        npm = tar_files(File.join(directory, "haveapi-client-#{version}.tgz"), gzip: true)
+        metadata = JSON.parse(npm.fetch('package/package.json').first)
+        repository = metadata.fetch('repository')
+        unless metadata.values_at('name', 'version') == ['haveapi-client', version] && repository.fetch('url') == "https://github.com/#{REPOSITORY}"
+          raise Error, 'Wrong npm identity or publishing repository'
+        end
+        unless metadata.values_at('main', 'types') == ['dist/haveapi-client.js', 'dist/types/haveapi.d.ts']
+          raise Error, 'Wrong npm main or types entry'
+        end
+
+        required = %w[README.md doc-async-client.md doc-async-resources.md LICENSE.txt dist/types/haveapi.d.ts]
+        required.each do |name|
+          raise Error, "npm tarball is missing or has empty #{name}" unless npm.has_key?("package/#{name}") && !npm.fetch("package/#{name}").first.strip.empty?
+        end
+        npm.each do |name, (content, _mode)|
+          next unless name.start_with?('package/dist/types/') && name.end_with?('.d.ts')
+
+          raise Error, "Empty npm declaration: #{name}" if content.strip.empty?
+        end
+
+        bundle = File.binread(File.join(directory, 'haveapi-client.js'))
+        raise Error, 'npm tarball does not contain the built bundle' unless npm.fetch('package/dist/haveapi-client.js').first == bundle
+        raise Error, 'Wrong browser bundle version' unless bundle.include?("Client.Version = '#{version}'")
+      end
+
       def smoke_npm(directory)
-        files = tar_files(File.join(directory, "haveapi-client-#{version}.tgz"), gzip: true)
+        inspect_npm(directory)
+        archive = File.expand_path("haveapi-client-#{version}.tgz", directory)
+        compiler = File.join(root, 'clients/js/node_modules/typescript/bin/tsc')
         Dir.mktmpdir('haveapi-npm-') do |tmp|
-          files.each do |name, (content, mode)|
-            path = File.join(tmp, name)
-            FileUtils.mkdir_p(File.dirname(path))
-            File.write(path, content, mode: 'wb', perm: mode)
+          env = { 'NODE_PATH' => nil }
+          File.write(File.join(tmp, 'package.json'), JSON.generate({ name: 'haveapi-release-smoke', private: true }))
+          Release.run(env, 'npm', 'install', '--ignore-scripts', '--no-audit', '--no-fund', archive, chdir: tmp)
+          script = <<~JS
+            const fs = require('fs');
+            const assert = require('assert');
+            assert.strictEqual(fs.realpathSync(require.resolve('haveapi-client')),
+              fs.realpathSync('node_modules/haveapi-client/dist/haveapi-client.js'));
+            const api = require('haveapi-client');
+            assert.strictEqual(api.CallbackClient, api.Client);
+            assert.strictEqual(api.Client.Version, process.argv[1]);
+            new api.CallbackClient('http://localhost');
+            new api.AsyncClient('http://localhost');
+            console.log('Installed npm callback/async exports valid: ' + api.Client.Version);
+          JS
+          Release.run(env, 'node', '-e', script, version, chdir: tmp)
+          FileUtils.cp(File.join(__dir__, 'npm-consumer.ts'), File.join(tmp, 'consumer.ts'))
+          stdout, stderr, status = Open3.capture3(env, 'node', compiler, '--strict', '--noEmit', '--target', 'ES2020', '--module', 'commonjs',
+                                                  '--moduleResolution', 'node', '--lib', 'ES2020,DOM', '--listFiles', 'consumer.ts', chdir: tmp)
+          raise Error, "Installed npm declarations failed to compile:\n#{stdout}#{stderr}" unless status.success?
+
+          files = stdout.lines.map(&:strip)
+          types = File.realpath(File.join(tmp, 'node_modules/haveapi-client/dist/types'))
+          compiler_lib = File.realpath(File.join(root, 'clients/js/node_modules/typescript/lib'))
+          unless files.include?(File.join(types, 'haveapi.d.ts')) && files.all? do |path|
+            actual = File.realpath(File.expand_path(path, tmp))
+            actual == File.join(tmp, 'consumer.ts') || actual.start_with?("#{types}/", "#{compiler_lib}/")
           end
-          script = "const api = require(process.argv[1]); if (api.Client.Version !== process.argv[2]) process.exit(1); new api.Client('http://localhost');"
-          Release.run({ 'NODE_PATH' => File.join(root, 'clients/js/node_modules') }, 'node', '-e', script, File.join(tmp, 'package'), version)
+            raise Error, 'npm smoke resolved types outside the installed package or compiler library'
+          end
+
+          puts 'Installed npm declarations valid (package-name consumer)'
         end
       end
     end

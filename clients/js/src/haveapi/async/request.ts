@@ -3,7 +3,7 @@ import { addParamsToQuery, resolveApiUrl } from '../protocol';
 import { I18n } from '../i18n';
 import { AsyncError, asAsyncError } from './error';
 import type { Credentials, Envelope, HeaderMap, HttpOptions, Language, LegacyXMLHttpRequest, Meta, Values } from '../types';
-import type { RequestResult, RequestSpec } from './types';
+import type { ApiErrors, RequestResult, RequestSpec } from './types';
 
 export interface RequestContext {
 	baseUrl: string;
@@ -18,6 +18,12 @@ export function isRecord(value: unknown): value is Values {
 }
 export function own(value: object, key: PropertyKey): boolean {
 	return Object.prototype.hasOwnProperty.call(value, key);
+}
+function isApiErrors(value: unknown): value is ApiErrors {
+	return isRecord(value) && Object.keys(value).every(key => {
+		const errors = value[key];
+		return Array.isArray(errors) ? errors.every(message => typeof message === 'string') : isApiErrors(errors);
+	});
 }
 export function mergeHeaders(...sources: Array<HeaderMap | undefined>): HeaderMap {
 	const result: HeaderMap = Object.create(null);
@@ -71,10 +77,9 @@ function decode<T>(status: number, text: string, namespace: string | null | unde
 	catch (cause) { throw new AsyncError('protocol', 'Invalid JSON response', {httpStatus: status, cause}); }
 	if (!isRecord(parsed) || typeof parsed.status !== 'boolean' ||
 		(parsed.message != null && typeof parsed.message !== 'string') ||
-		(parsed.errors != null && (!isRecord(parsed.errors) || Object.keys(parsed.errors).some(key =>
-			!Array.isArray((parsed.errors as Values)[key]) || ((parsed.errors as Values)[key] as unknown[]).some(value => typeof value !== 'string')))))
+		(parsed.errors != null && !isApiErrors(parsed.errors)))
 		throw new AsyncError('protocol', 'Invalid API response envelope', {httpStatus: status});
-	const envelope = parsed as unknown as Envelope;
+	const envelope = parsed as unknown as Envelope<unknown, ApiErrors>;
 	let data: unknown = envelope.response;
 	let meta: Meta = {};
 	// Keep the validated envelope receipt even if its payload cannot be decoded.

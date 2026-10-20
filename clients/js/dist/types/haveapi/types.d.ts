@@ -75,11 +75,11 @@ export interface Versions {
     versions: Array<string | number>;
     default: string | number;
 }
-export interface Envelope<T = unknown> {
+export interface Envelope<T = unknown, Errors = ValidationErrors> {
     status: boolean;
     response?: T | null;
     message?: string | null;
-    errors?: ValidationErrors | null;
+    errors?: Errors | null;
     version?: string;
 }
 export interface Credentials {

@@ -19,8 +19,11 @@ All maintained components use the shared version and are released together:
 | Ruby server | RubyGems `haveapi` |
 | Ruby client and CLI | RubyGems `haveapi-client` |
 | Go client generator, implemented in Ruby | RubyGems `haveapi-go-client` |
-| JavaScript client | npm `haveapi-client` and a browser bundle |
+| JavaScript and TypeScript client | One npm `haveapi-client` package with both clients and TypeScript declarations; a JavaScript browser bundle |
 | PHP client | Composer `haveapi/client`, through `vpsfreecz/haveapi-client-php` |
+
+`CallbackClient` (also available as `Client`) and `AsyncClient` share the same
+JavaScript package and version.
 
 The Elixir server and client are unmaintained and excluded from releases.
 Consumers keep their existing package names and installation commands. Release
@@ -80,8 +83,10 @@ Run release commands from the top-level `nix develop` shell.
    tests all maintained components and builds the packages in the locked Nix
    toolchain. It retains `release-<run-id>` as an Actions artifact for 90 days.
    Its manifest records source commit, version, checksums, tool versions and
-   resolved dependency locks. Dependencies are resolved for this build; separate
-   builds are not promised to be byte-identical.
+   resolved dependency locks. JavaScript build dependencies use `npm ci` with the
+   committed lockfile. Other components retain their existing dependency
+   resolution; separate complete release builds are not promised to be
+   byte-identical.
 5. Open the Actions run and inspect its test results, candidate summary and
    artifacts. Click **Review deployments**, select `release`, then **Approve and
    deploy**. This authorizes RubyGems/npm publication and synchronization into
@@ -124,6 +129,25 @@ for the Ruby server, builds three gems, rebuilds and packs JavaScript, and
 archives the tracked PHP subtree. It never uploads packages. Component gems use
 the local Ruby client, so a new shared version need not already exist on RubyGems.
 Do not commit generated server documentation or build artifacts.
+
+The JavaScript packaging step runs gulp before `npm pack`. Gulp compiles the
+TypeScript sources into `dist/haveapi-client.js` and `dist/types`; the npm archive
+ships both client interfaces and their declarations together. The standalone
+browser bundle uses the same JavaScript as the npm package. TypeScript consumers
+resolve the declaration entry through the package's `types` field.
+
+`make version` updates the npm manifest and both root version fields in the
+JavaScript lockfile; release checks require the lock's package identity and
+versions to agree with `VERSION`. Package inspection validates the exact
+`main`/`types` entries, nonempty declarations, README, both async guides and
+`LICENSE.txt`, and checks that the standalone bundle matches the packed one.
+The npm smoke check installs the retained tarball in a temporary consumer with
+install scripts disabled and `NODE_PATH` unset. It imports `haveapi-client` by
+package name, checks `Client === CallbackClient` and the version, constructs
+both callback and async clients, then compiles a strict TypeScript consumer.
+Compilation checks the transitive declarations; the compiler's file list must
+resolve only the consumer, installed package declarations and standard libraries,
+without checkout source or declarations.
 
 The Ruby server packaging specs extract a gem and test its documentation routes.
 They require `make doc`, which `make test` runs automatically. Direct server

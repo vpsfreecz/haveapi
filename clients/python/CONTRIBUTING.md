@@ -24,7 +24,7 @@ run outside Nix after `uv sync --locked`, including in GitHub Actions on Python
 3.11 through 3.15. The lockfile fixes development versions; package dependencies
 keep compatible runtime ranges for consumers.
 
-Ruff is pinned to 0.16.10 to match the native executable in the locked Nixpkgs.
+Ruff is pinned to 0.17.1 to match the native executable in the locked Nixpkgs.
 `run_ruff.py` selects `HAVEAPI_RUFF` in Nix and checks that its version matches
 the installed locked Python distribution. Elsewhere it runs the locked Ruff
 executable. This avoids invoking PyPI's generic Linux ELF on NixOS and preserves

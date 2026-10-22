@@ -32,13 +32,13 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
       - name: Set up Ruby + Bundler cache (servers/ruby)
         if: ${{ inputs.needs-server-gems }}
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@e1bd6146574da5e0795075b5319b300edb30c5b0 # v1.333.0
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
@@ -46,7 +46,7 @@ jobs:
 
       - name: Set up Ruby + Bundler cache
         if: ${{ inputs.rspec-working-directory != 'servers/ruby' }}
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@e1bd6146574da5e0795075b5319b300edb30c5b0 # v1.333.0
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
@@ -54,13 +54,26 @@ jobs:
 
       - name: Set up Go
         if: ${{ inputs.setup-go }}
-        uses: actions/setup-go@v7
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: "stable"
 
       - name: Generate shared server documentation
         if: ${{ inputs.rspec-working-directory == 'servers/ruby' }}
         run: make doc
+
+      - name: Set up Node for rendered TypeScript examples
+        if: ${{ inputs.rspec-working-directory == 'servers/ruby' }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+
+      - name: Prepare public JavaScript declarations
+        if: ${{ inputs.rspec-working-directory == 'servers/ruby' }}
+        working-directory: clients/js
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
 
       - name: Run RSpec
         working-directory: ${{ inputs.rspec-working-directory }}

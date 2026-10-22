@@ -1,7 +1,7 @@
 VERSION=$(shell cat VERSION)
 RUST_ENV=env -u RUBYOPT -u BUNDLE_BIN_PATH -u BUNDLE_LOCKFILE -u BUNDLE_PATH -u BUNDLER_SETUP GEM_HOME="$(CURDIR)/clients/rust/.gems" GEM_PATH="$(CURDIR)/clients/rust/.gems:$$(ruby -e 'puts Gem.default_dir')" BUNDLE_GEMFILE="$(CURDIR)/clients/rust/Gemfile"
 
-.PHONY: doc publish release release-check release-test release-deps release-rust test test-documentation test-documentation-assets test-rust test-rust-unit version
+.PHONY: doc publish release release-check release-test release-deps release-rust test test-documentation test-documentation-assets test-documentation-python test-rust test-rust-unit version
 
 doc:
 	./utils/copydoc.sh servers/ruby
@@ -18,6 +18,7 @@ test: doc
 	cd clients/python && uv run --locked pytest tests/integration
 	$(MAKE) test-rust
 	$(MAKE) test-documentation-assets
+	$(MAKE) test-documentation-python
 
 test-documentation: doc
 	cd clients/js && npm run build
@@ -27,6 +28,10 @@ test-documentation: doc
 test-documentation-assets:
 	node servers/ruby/spec/client_examples/assets/highlighter_test.cjs
 	node servers/ruby/spec/client_examples/assets/tabs_test.cjs
+
+# Requires the locked Python environment prepared by release-deps.
+test-documentation-python:
+	cd servers/ruby && bundle exec rspec test_support/dynamic_protocol_spec.rb test_support/dynamic_python_login_spec.rb
 
 test-rust-unit:
 	cd clients/rust && $(RUST_ENV) bundle exec rspec spec/unit

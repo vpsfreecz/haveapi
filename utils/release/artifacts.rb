@@ -203,7 +203,7 @@ module HaveAPI
           inspect_rust(package) if name == 'haveapi-rust-client'
           next unless name == 'haveapi'
 
-          required = %w[json-schema.html protocol.md create-client.md typed-input-validation.md protocol.png].map { |f| "doc/#{f}" }
+          required = %w[json-schema.html protocol.md create-client.md typed-input-validation.md client-examples.md protocol.png].map { |f| "doc/#{f}" }
           raise Error, 'Server gem is missing shared documentation' unless (required - package.contents).empty?
         end
         inspect_npm(directory)

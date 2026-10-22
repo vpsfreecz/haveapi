@@ -77,9 +77,19 @@ and shared, while filtered contexts are copied per request.
 
 ## Verification
 
-`make test-documentation` runs focused renderer/context/profile/HTML checks and
-local asset checks. Each client also has acceptance commands that check
-executable snippets against installed packages or a generated SDK. These use
+`make test-documentation` checks renderers, contexts, profiles, rendered HTML and
+local assets. Prepare the component bundles and JavaScript development
+dependencies with `make release-deps` first. The target builds the JavaScript
+package before compiling TypeScript examples against its public declarations;
+the Ruby server CI uses the same order.
+
+`make test-documentation-python` additionally checks the Python renderer limits
+against the real request encoder. It requires the locked Python environment
+prepared by `make release-deps` and is included in `make test`. The ordinary
+Ruby renderer checks run without the Python package environment.
+
+Each client also has acceptance commands that check executable snippets against
+installed packages or a generated SDK. These use
 rendered source against disposable fixtures; syntax checks alone do not
 establish that client calls or authentication work. See each client's
 development documentation for its test environment. Highlighter rebuilding is

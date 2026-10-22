@@ -9,7 +9,7 @@ require 'tmpdir'
 
 describe HaveAPI::Server do
   def required_docs
-    %w[json-schema.html protocol.md create-client.md typed-input-validation.md protocol.png]
+    %w[json-schema.html protocol.md create-client.md typed-input-validation.md client-examples.md protocol.png]
   end
 
   before(:context) do
@@ -53,6 +53,13 @@ describe HaveAPI::Server do
       required_docs.each do |name|
         expect(File.read(File.join(dir, 'doc', name))).not_to be_empty
       end
+      %w[
+        lib/haveapi/documentation_context.rb lib/haveapi/documentation_clients.rb
+        lib/haveapi/views/version_page/client_result.erb
+        lib/haveapi/public/js/highlight.pack.js lib/haveapi/public/js/highlight-LICENSE
+      ].each do |name|
+        expect(File.size?(File.join(dir, name))).not_to be_nil
+      end
 
       script = <<~RUBY
         require 'haveapi'
@@ -76,7 +83,7 @@ describe HaveAPI::Server do
         server.use_version(1)
         server.mount('/')
         request = Rack::MockRequest.new(server.app)
-        responses = %w[/doc/json-schema /doc/protocol.md /doc/create-client.md].to_h do |path|
+        responses = %w[/doc/json-schema /doc/protocol.md /doc/create-client.md /doc/client-examples.md /js/highlight-LICENSE].to_h do |path|
           response = request.get(path, 'HTTP_HOST' => 'localhost')
           [path, { status: response.status, type: response.content_type, body: response.body }]
         end
@@ -112,11 +119,13 @@ describe HaveAPI::Server do
       {
         '/doc/json-schema' => 'Envelope',
         '/doc/protocol.md' => 'Protocol definition',
-        '/doc/create-client.md' => 'Client definition'
+        '/doc/create-client.md' => 'Client definition',
+        '/doc/client-examples.md' => 'Client examples',
+        '/js/highlight-LICENSE' => 'Copyright'
       }.each do |path, heading|
         response = result.fetch('responses').fetch(path)
         expect(response.fetch('status')).to eq(200), "Packaged route failed: #{path}"
-        expect(response.fetch('type')).to include('text/html')
+        expect(response.fetch('type')).to include('text/html') unless path == '/js/highlight-LICENSE'
         expect(response.fetch('body')).to include(heading)
       end
     end

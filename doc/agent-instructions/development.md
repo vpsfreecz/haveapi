@@ -13,6 +13,12 @@ repository root unless explicitly stated otherwise.
   `nix develop .#example-ruby-activerecord-auth`. From within the shell,
   standard language tools are used.
 - Sync documentation into server packages with `make doc`.
+- Focused documentation checks: `make test-documentation` builds JavaScript
+  declarations and runs renderer, profile, HTML and local asset checks.
+  `make test-documentation-python` additionally checks renderer limits against
+  the real Python request encoder, using the locked environment prepared by
+  `make release-deps`. The full `make test` includes this supplemental check;
+  standalone Ruby specs do not require the Python package environment.
 - Release tooling checks: `make release-check` and `make release-test` in the
   top-level Nix shell. `make release-deps` installs maintained-component
   dependencies. See [Branches and releases](releases.md) for packaging and

@@ -1,0 +1,358 @@
+require 'haveapi/rust_client'
+require 'date'
+
+module HaveAPI::RustClient
+  # Resolves the complete saved SDK before checking a request's authorized help.
+  # Construction is deliberately limited to the generator's pure validation/IR.
+  class Documentation
+    class Unsupported < StandardError; end
+
+    def initialize(snapshot:, config:)
+      @generator = Generator.new(schema: JSON.parse(Snapshot.canonical(snapshot)), config: JSON.parse(Snapshot.canonical(config)))
+      @snapshot = @generator.schema
+      @import = @generator.config.fetch('crate_name').tr('-', '_')
+      raise Error, 'crate name cannot be imported in Rust' if %w[crate self super].include?(@import)
+
+      @import = "r##{@import}" if Naming::RESERVED.include?(@import)
+      @generator.ir.actions.each { |action| @generator.meta_parameters(action) }
+      freeze_data([@snapshot, @generator.config, @generator.ir.resources, @generator.ir.actions])
+    end
+
+    def resolve(resource_path:, action_name:)
+      @generator.ir.actions.find do |action|
+        action[:resource][:path] == resource_path.map(&:to_s) && action[:name] == action_name.to_s
+      end
+    end
+
+    def render(kind:, context:, mode:, auth_method: nil, auth_description: nil)
+      unsupported!('Unsupported Rust execution mode.') unless %i[async blocking].include?(mode)
+      unsupported!('The Rust SDK targets a different API version.') unless context.version.to_s == @snapshot['api_version']
+
+      source = case kind
+               when :init then program(context, mode, [])
+               when :auth then authentication(context, mode, auth_method, auth_description)
+               when :example then example(context, mode)
+               else unsupported!('Unsupported Rust documentation section.')
+               end
+      { status: :code, code: source.freeze }.freeze
+    rescue Unsupported => e
+      { status: :limitation, reason: e.message.freeze }.freeze
+    end
+
+    private
+
+    def unsupported!(reason)
+      raise Unsupported, reason
+    end
+
+    def freeze_data(value, seen = {}.compare_by_identity)
+      return if seen[value]
+
+      seen[value] = true
+      case value
+      when Hash then value.each do |key, item|
+        freeze_data(key, seen)
+        freeze_data(item, seen)
+      end
+      when Array then value.each { |item| freeze_data(item, seen) }
+      end
+      value.freeze
+    end
+
+    def normalize(value)
+      case value
+      when Hash then value.to_h { |key, item| [key.to_s, normalize(item)] }
+      when Array then value.map { |item| normalize(item) }
+      when Symbol then value.to_s
+      else value
+      end
+    end
+
+    def program(context, mode, body, credentials: [])
+      config = @generator.config
+      dependencies = ["// Cargo.toml: #{config.fetch('crate_name')} = { version = #{literal(config.fetch('crate_version'))}" +
+        (mode == :blocking ? ', features = ["blocking"] }' : ' }')]
+      dependencies << '// Cargo.toml: tokio = { version = "1", features = ["macros", "rt-multi-thread"] }' if mode == :async
+      dependencies << '// Cargo.toml: serde_json = "1"'
+      dependencies << '// Construct, use and drop this blocking client outside async runtime threads.' if mode == :blocking
+      client = mode == :blocking ? "#{@import}::blocking::Client" : "#{@import}::Client"
+      lines = dependencies + ["use #{client};", '']
+      lines << '#[tokio::main]' if mode == :async
+      lines << "#{'async ' if mode == :async}fn main() -> Result<(), Box<dyn std::error::Error>> {"
+      lines << "    let base = std::env::var(\"HAVEAPI_BASE_URL\").unwrap_or_else(|_| #{literal(context.base_url)}.to_owned());"
+      lines << '    let api = Client::builder(&base)'
+      lines.concat(credentials.map { |line| "        #{line}" })
+      lines << '        .build()?;'
+      lines.concat((body.empty? ? ['let _ = &api;'] : body).map { |line| line.empty? ? '' : "    #{line}" })
+      lines.push('    Ok(())', '}', '').join("\n")
+    end
+
+    def authentication(context, mode, method, description)
+      provider = method.to_s
+      live = normalize(context.description).fetch('authentication', {})[provider]
+      saved = @snapshot.fetch('description').fetch('authentication')[provider]
+      unsupported!('This authentication provider is unavailable in the authorized Rust SDK profile.') unless live && saved
+      unsupported!('The authentication description differs from the authorized help.') unless normalize(description) == live
+
+      credentials = case provider
+                    when 'basic'
+                      ['.basic_auth(std::env::var("HAVEAPI_USER")?, std::env::var("HAVEAPI_PASSWORD")?)']
+                    when 'token', 'oauth2'
+                      unless saved['http_header'] == live['http_header']
+                        unsupported!('The Rust SDK authentication header differs from this API.')
+                      end
+                      setter = provider == 'token' ? 'token' : 'oauth2_token'
+                      [".#{setter}(std::env::var(\"HAVEAPI_TOKEN\")?)"]
+                    else unsupported!('This authentication provider is unsupported by the Rust client.')
+                    end
+      body = ['// Existing credentials only. Token acquisition and challenges require explicit advertised actions.',
+              'let _ = &api;']
+      program(context, mode, body, credentials:)
+    end
+
+    def example(context, mode)
+      saved = resolve(resource_path: context.resource_path, action_name: context.action_name)
+      live = authorized_action(context)
+      unsupported!('This action is unavailable in the authorized Rust SDK profile.') unless saved && live
+      sample = normalize(context.sample)
+      unless sample.is_a?(Hash) && (%w[path_params request response errors].any? { |key| !sample[key].nil? } ||
+                                    sample['status'] == false || (sample['http_status'] && sample['http_status'] != 200))
+        unsupported!('This sample has no structured request or response to render.')
+      end
+      compatible_action!(saved, live, context)
+      paths = sample['path_params'] || []
+      unless paths.is_a?(Array) && paths.length == saved[:placeholders].length && paths.all? { |value| valid_path?(value) }
+        unsupported!('The sample path arguments cannot be represented by this Rust SDK.')
+      end
+      inputs = input_lines(saved, live, sample['request'])
+      validate_response!(saved, live, sample['response']) unless sample['response'].nil?
+      bound = saved[:resource][:bound].length
+      call = "api.#{saved[:resource][:module]}(#{paths.take(bound).map { |value| literal(value) }.join(', ')})"
+      call << ".#{saved[:method]}(#{paths.drop(bound).map { |value| literal(value) }.join(', ')})"
+      call << inputs.fetch(:chain)
+      send = mode == :async ? '.send().await' : '.send()'
+      body = inputs.fetch(:before)
+      if sample['status'] == false || (sample['http_status'].is_a?(Integer) && sample['http_status'] >= 400)
+        body += ["match #{call}#{send} {", '    Ok(_) => return Err("expected the documented request to fail".into()),',
+                 '    Err(error) => {', '        let _ = error.http_status();',
+                 '        // Inspect these explicitly; server diagnostics can contain sensitive values.',
+                 '        let _ = (error.server_message(), error.validation_errors());', '    }', '}']
+      else
+        body += ["let response = #{call}#{send}?;", 'let _ = response.http_status;', 'let _ = &response.meta;']
+        body.concat(output_lines(saved, sample['response']))
+      end
+      body << '// Request success or a timeout does not establish completion of a server-side operation.'
+      body << '// Use only the separately documented action-state action; this SDK has no automatic wait helper.'
+      program(context, mode, body, credentials: action_credentials(saved, context))
+    end
+
+    def action_credentials(action, context)
+      return [] if action[:desc]['auth'] == false
+
+      live = normalize(context.description).fetch('authentication', {})
+      saved = @snapshot.fetch('description').fetch('authentication')
+      if live.has_key?('basic') && saved.has_key?('basic')
+        return ['.basic_auth(std::env::var("HAVEAPI_USER")?, std::env::var("HAVEAPI_PASSWORD")?)']
+      end
+
+      %w[token oauth2].each do |provider|
+        next unless live[provider] && saved[provider] && live[provider]['http_header'] == saved[provider]['http_header']
+
+        setter = provider == 'token' ? 'token' : 'oauth2_token'
+        return [".#{setter}(std::env::var(\"HAVEAPI_TOKEN\")?)"]
+      end
+      unsupported!('This action requires authentication unavailable in the authorized Rust SDK profile.')
+    end
+
+    def authorized_action(context)
+      resources = normalize(context.description).fetch('resources', {})
+      resource = nil
+      context.resource_path.each do |name|
+        resource = resources[name.to_s]
+        return nil unless resource
+
+        resources = resource.fetch('resources', {})
+      end
+      resource && resource.fetch('actions', {})[context.action_name.to_s]
+    end
+
+    def compatible_action!(saved, live, context)
+      mount = URI.parse(context.base_url).path
+      mount = '/' if mount.empty?
+      mount += '/' unless mount.end_with?('/')
+      unless live['method'] == saved[:desc]['method'] && live['path'] == mount + saved[:route] &&
+             (live['auth'] == false) == (saved[:desc]['auth'] == false)
+        unsupported!('The Rust SDK route or HTTP method differs from this API action.')
+      end
+      %w[input output].each do |direction|
+        saved_io = saved[direction.to_sym]
+        live_io = live[direction]
+        next if empty_io?(saved_io && saved_io[:desc]) && empty_io?(live_io)
+
+        unless saved_io && live_io && saved_io[:desc]['layout'] == live_io['layout'] &&
+               saved_io[:desc]['namespace'] == live_io['namespace'] && saved_io[:desc]['format'] == live_io['format']
+          unsupported!('The Rust SDK input or output layout differs from this API action.')
+        end
+      end
+      %i[global_input object_input].each do |key|
+        next unless saved[key] && saved[key][:parameters].any? { |parameter| parameter[:desc]['required'] == true }
+
+        unsupported!('This Rust SDK action requires metadata that is absent from the sample.')
+      end
+      %w[global object].each do |role|
+        if live.dig('meta', role, 'input', 'parameters')&.any? { |_name, parameter| parameter['required'] == true }
+          unsupported!('This action requires metadata that is absent from the sample.')
+        end
+      end
+    end
+
+    def empty_io?(io)
+      io.nil? || io == { 'parameters' => {} }
+    end
+
+    def input_lines(saved, live, request)
+      io = saved[:input]
+      if io.nil?
+        unsupported!('This Rust SDK action cannot represent the sample input.') unless request.nil? || request == {}
+        return { before: [], chain: '' }
+      end
+      list = io[:layout].end_with?('_list')
+      unsupported!('Rust GET requests do not support list input.') if list && saved[:desc]['method'] == 'GET'
+      values = if request.nil?
+                 list ? [] : {}
+               else
+                 request
+               end
+      unless list ? values.is_a?(Array) && values.all?(Hash) : values.is_a?(Hash)
+        unsupported!('The sample input does not match the Rust SDK layout.')
+      end
+      objects = list ? values : [values]
+      objects.each { |object| validate_object!(io, live['input'], object, required: true, method: saved[:desc]['method']) }
+      return { before: [], chain: setter_chain(io, values) } unless list
+
+      input = "#{@import}::resources::#{saved[:resource][:module]}::#{saved[:method]}::Input"
+      lines = ['let input = vec![']
+      objects.each do |object|
+        lines << "    #{input} {"
+        object.each do |name, value|
+          parameter = io[:parameters].find { |item| item[:name] == name }
+          value_code = value.nil? ? "#{@import}::InputValue::Null" : "#{@import}::InputValue::Value(#{typed_literal(parameter, value)})"
+          lines << "        #{parameter[:field]}: #{value_code},"
+        end
+        lines << '        ..Default::default()'
+        lines << '    },'
+      end
+      lines << '];'
+      { before: lines, chain: '.input(input)' }
+    end
+
+    def validate_object!(saved_io, live_io, object, required:, method: nil)
+      live_params = live_io && live_io.fetch('parameters', {})
+      object.each do |name, value|
+        parameter = saved_io[:parameters].find { |item| item[:name] == name }
+        live_parameter = live_params && live_params[name]
+        unless parameter && live_parameter && compatible_parameter?(parameter[:desc], live_parameter)
+          unsupported!('A sample parameter is unavailable or has changed in this Rust SDK.')
+        end
+        unless valid_value?(parameter[:desc], value, output: !required)
+          unsupported!('A sample value cannot be represented by this Rust SDK.')
+        end
+        if method == 'GET' && parameter[:desc]['type'] == 'Custom' && (value.is_a?(Hash) || value.is_a?(Array))
+          unsupported!('Rust GET requests do not support nested Custom query values.')
+        end
+      end
+      return unless required
+
+      [saved_io[:desc].fetch('parameters'), live_params || {}].each do |parameters|
+        if parameters.any? { |name, desc| desc['required'] == true && !object.has_key?(name) }
+          unsupported!('The sample omits a required Rust SDK input.')
+        end
+      end
+    end
+
+    def compatible_parameter?(saved, live)
+      %w[type resource value_id value_label].all? { |key| saved[key] == live[key] } &&
+        %w[nullable required].all? { |key| (saved[key] == true) == (live[key] == true) }
+    end
+
+    def valid_value?(desc, value, output: false)
+      return output || desc['nullable'] == true if value.nil?
+
+      case desc['type']
+      when 'String', 'Text' then value.is_a?(String)
+      when 'Datetime' then value.is_a?(String) || value.is_a?(Time) || value.is_a?(DateTime)
+      when 'Integer' then value.is_a?(Integer) && value.between?(-(2**63), (2**63) - 1)
+      when 'Resource'
+        output ? value.is_a?(Hash) : value.is_a?(Integer) && value.between?(0, (2**63) - 1)
+      when 'Float' then value.is_a?(Numeric) && value.real? && value.finite? && value.to_f.finite?
+      when 'Boolean' then [true, false].include?(value)
+      when 'Custom' then json_value?(value)
+      else false
+      end
+    end
+
+    def json_value?(value)
+      case value
+      when Hash then value.all? { |key, item| key.is_a?(String) && json_value?(item) }
+      when Array then value.all? { |item| json_value?(item) }
+      when String, Integer, TrueClass, FalseClass, NilClass then true
+      when Float then value.finite?
+      else false
+      end
+    end
+
+    def valid_path?(value)
+      (value.is_a?(String) || value.is_a?(Integer)) && !value.to_s.empty? && !%w[. ..].include?(value.to_s)
+    end
+
+    def setter_chain(io, object)
+      object.map do |name, value|
+        parameter = io[:parameters].find { |item| item[:name] == name }
+        value.nil? ? ".#{parameter[:field]}_null()" : ".#{parameter[:field]}(#{typed_literal(parameter, value)})"
+      end.join
+    end
+
+    def typed_literal(parameter, value)
+      # Ask the generator for the real type instead of duplicating name/type rules.
+      case @generator.rust_type(parameter)
+      when 'String' then "#{literal(value.respond_to?(:iso8601) ? value.iso8601 : value)}.to_owned()"
+      when 'i64' then value == -(2**63) ? 'i64::MIN' : "#{value}_i64"
+      when 'f64' then "#{value.to_f}_f64"
+      when 'bool' then value.to_s
+      when 'serde_json::Value' then "serde_json::from_str::<serde_json::Value>(#{literal(JSON.generate(value))})?"
+      end
+    end
+
+    def validate_response!(saved, live, response)
+      io = saved[:output]
+      unless io
+        unsupported!('The sample response does not match this Rust SDK.') unless response == {}
+        return
+      end
+      list = io[:layout].end_with?('_list')
+      unless list ? response.is_a?(Array) && response.all?(Hash) : response.is_a?(Hash)
+        unsupported!('The sample response does not match this Rust SDK layout.')
+      end
+      (list ? response : [response]).each { |object| validate_object!(io, live['output'], object, required: false) }
+    end
+
+    def output_lines(action, response)
+      return ['let _ = &response.output;'] unless action[:output] && response
+
+      list = action[:output][:layout].end_with?('_list')
+      names = (list ? response : [response]).flat_map(&:keys).uniq
+      lines = list ? ['for item in &response.output {'] : []
+      names.each do |name|
+        parameter = action[:output][:parameters].find { |item| item[:name] == name }
+        target = list ? 'item' : 'response.output'
+        lines << "#{'    ' if list}let _ = &#{target}.#{parameter[:field]};"
+      end
+      lines << '}' if list
+      lines
+    end
+
+    def literal(value)
+      Naming.literal(value)
+    end
+  end
+end

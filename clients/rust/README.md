@@ -76,3 +76,6 @@ setup and acceptance commands.
 Read [generation and snapshots](docs/generation.md) for configuration, naming,
 metadata fidelity and ownership rules, and [packaging](docs/releasing.md) before
 preparing a generator or generated-client release.
+
+The [server documentation adapter](docs/documentation.md) provides optional
+async and blocking examples for a configured published SDK profile.

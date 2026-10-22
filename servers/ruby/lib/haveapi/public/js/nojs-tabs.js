@@ -3,7 +3,9 @@
 		this.opts = opts;
 
 		var ul = this.createElement(document.createElement('UL'));
+		ul.setAttribute('role', 'tablist');
 		var tabNum = opts.tabs.children.length;
+		if (!tabNum) return;
 
 		for (var i = 0; i < tabNum; i++) {
 			var tab = opts.tabs.children[i];
@@ -50,6 +52,11 @@
 		var a_text = document.createTextNode(this.getTitle(tab));
 
 		a.href = '#' + tab.id;
+		a.id = 'tab-button-' + tab.id;
+		a.setAttribute('role', 'tab');
+		a.setAttribute('aria-controls', tab.id);
+		tab.setAttribute('role', 'tabpanel');
+		tab.setAttribute('aria-labelledby', a.id);
 
 		var that = this;
 
@@ -58,6 +65,18 @@
 
 			if (history.pushState)
 				e.preventDefault();
+		});
+		a.addEventListener('keydown', function (e) {
+			var links = Array.prototype.slice.call(that.opts.tabBar.querySelectorAll('[role="tab"]'));
+			var index = links.indexOf(a);
+			if (e.key === 'ArrowRight') index = (index + 1) % links.length;
+			else if (e.key === 'ArrowLeft') index = (index + links.length - 1) % links.length;
+			else if (e.key === 'Home') index = 0;
+			else if (e.key === 'End') index = links.length - 1;
+			else return;
+			e.preventDefault();
+			links[index].focus();
+			that.switchTab(that.opts.tabs.children[index]);
 		});
 
 		a.appendChild(a_text);
@@ -80,7 +99,7 @@
 
 		if (typeof s === 'string' || s instanceof String) {
 			var el = tab.querySelector(s);
-			var ret = el.innerHTML;
+			var ret = el.textContent;
 			
 			if (this.opts.removeHeading === undefined || this.opts.removeHeading)
 				el.parentElement.removeChild(el);
@@ -167,7 +186,7 @@
 		this.activate([targetTab, targetTab.tabAnchor]);
 		
 		// afterChange
-		if (this.opts.beforeChange !== undefined)
+		if (this.opts.afterChange !== undefined)
 			this.opts.afterChange(targetTab, activeTab);
 	};
 
@@ -177,6 +196,13 @@
 		for (var i = 0; i < len; i++) {
 			elems[i].classList.remove(this.opts.hiddenClass);
 			elems[i].classList.add(this.opts.activeClass);
+			var link = elems[i].querySelector('[role="tab"]');
+			if (link) {
+				link.setAttribute('aria-selected', 'true');
+				link.setAttribute('tabindex', '0');
+			} else if (elems[i].getAttribute('role') === 'tabpanel') {
+				elems[i].setAttribute('aria-hidden', 'false');
+			}
 		}
 	};
 
@@ -185,7 +211,15 @@
 
 		for (var i = 0; i < len; i++) {
 			elems[i].classList.remove(this.opts.activeClass);
-			elems[i].classList.add(this.opts.hiddenClass);
+			if (elems[i].getAttribute('role') === 'tabpanel')
+				elems[i].classList.add(this.opts.hiddenClass);
+			var link = elems[i].querySelector('[role="tab"]');
+			if (link) {
+				link.setAttribute('aria-selected', 'false');
+				link.setAttribute('tabindex', '-1');
+			} else if (elems[i].getAttribute('role') === 'tabpanel') {
+				elems[i].setAttribute('aria-hidden', 'true');
+			}
 		}
 	};
 

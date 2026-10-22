@@ -19,13 +19,21 @@ $(document).ready(function () {
 
 		worker.onmessage = function (e) {
 			currentElement.innerHTML = e.data;
+			currentElement.classList.add('hljs');
 			highlightNext();
+		};
+		worker.onerror = function () {
+			worker.terminate();
+			// The server's escaped source remains readable if the worker fails.
 		};
 
 		highlightNext();
 
 	} else {
-		hljs.initHighlighting();
+		document.querySelectorAll('pre code').forEach(function (element) {
+			if (hljs.getLanguage(element.classList.item(0)))
+				hljs.highlightElement(element);
+		});
 	}
 });
 

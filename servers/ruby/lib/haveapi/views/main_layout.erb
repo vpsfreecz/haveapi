@@ -54,6 +54,17 @@
     .tab-hidden {
       display: none;
     }
+    .nav-tabs {
+      display: flex;
+      flex-wrap: wrap;
+    }
+    .nav-tabs > li {
+      float: none;
+    }
+    .nav-tabs a:focus {
+      outline: 2px solid #337ab7;
+      outline-offset: -2px;
+    }
     pre {
       overflow: auto;
     }

@@ -1,0 +1,12 @@
+{
+  "name": "haveapi-documentation-highlighter",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node build.mjs --check"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "highlight.js": "11.12.0"
+  }
+}

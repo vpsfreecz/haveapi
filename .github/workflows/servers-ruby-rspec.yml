@@ -7,6 +7,7 @@ on:
       - "doc/**"
       - "utils/copydoc.sh"
       - "Makefile"
+      - "utils/highlight/**"
       - ".github/workflows/_ruby-rspec.yml"
       - ".github/workflows/servers-ruby-rspec.yml"
   pull_request:
@@ -15,10 +16,27 @@ on:
       - "doc/**"
       - "utils/copydoc.sh"
       - "Makefile"
+      - "utils/highlight/**"
       - ".github/workflows/_ruby-rspec.yml"
       - ".github/workflows/servers-ruby-rspec.yml"
 
 jobs:
+  documentation-assets:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702 # v31.11.2
+      - name: Verify bundled highlighter and documentation tabs
+        run: |
+          HAVEAPI_RELEASE_TOOLS_ONLY=1 nix develop -c bash -euo pipefail -c '
+            cd utils/highlight
+            npm ci --ignore-scripts --no-audit --no-fund
+            npm run check
+            cd ../..
+            make test-documentation-assets
+          '
   rspec:
     uses: ./.github/workflows/_ruby-rspec.yml
     with:

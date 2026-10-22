@@ -20,7 +20,8 @@ describe HaveAPI::ClientExamples do
         namespace: :widget,
         parameters: {
           name: { type: 'String' },
-          enabled: { type: 'Boolean' }
+          enabled: { type: 'Boolean' },
+          group_by: { type: 'Custom' }
         }
       },
       output: {
@@ -36,7 +37,11 @@ describe HaveAPI::ClientExamples do
   let(:sample) do
     {
       path_params: [101],
-      request: { name: 'documented widget', enabled: true },
+      request: {
+        name: "documented \"widget\" with $value and an apostrophe's backslash \\",
+        enabled: true,
+        group_by: ['vps_id', "owner's $group\\path"]
+      },
       response: { id: 101, name: 'documented widget' },
       status: true,
       message: nil,
@@ -77,6 +82,12 @@ describe HaveAPI::ClientExamples do
     status, output = syntax_check(%w[php -l], "<?php\n#{source}", '.php')
 
     expect(status).to be_success, output
+    expect(source).to include(
+      "'group_by' => ['vps_id', 'owner\\'s $group\\\\path']"
+    )
+    expect(source).to include(
+      "'name' => 'documented \"widget\" with $value and an apostrophe\\'s backslash \\\\'"
+    )
   end
 
   it 'generates valid Ruby' do
@@ -102,8 +113,9 @@ describe HaveAPI::ClientExamples do
     expect(request_lines).to include('Host: api.example.test', 'Content-Type: application/json')
     expect(JSON.parse(request_body)).to eq(
       'widget' => {
-        'name' => 'documented widget',
-        'enabled' => true
+        'name' => "documented \"widget\" with $value and an apostrophe's backslash \\",
+        'enabled' => true,
+        'group_by' => ['vps_id', "owner's $group\\path"]
       }
     )
 

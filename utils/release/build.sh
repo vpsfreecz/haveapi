@@ -15,12 +15,14 @@ if [[ -n $(find dist -mindepth 1 -maxdepth 1 -print -quit) ]]; then
 fi
 
 version=$(cat VERSION)
-for component in clients/ruby servers/ruby clients/go; do
-  (cd "$component" && bundle exec rake build)
-done
-cp "clients/ruby/pkg/haveapi-client-$version.gem" dist/
-cp "servers/ruby/pkg/haveapi-$version.gem" dist/
-cp "clients/go/pkg/haveapi-go-client-$version.gem" dist/
+while read -r name component; do
+  if [[ $component == clients/rust ]]; then
+    make release-rust
+  else
+    (cd "$component" && bundle exec rake build)
+  fi
+  cp "$component/pkg/$name-$version.gem" dist/
+done < <(ruby -r ./utils/release/artifacts -e 'HaveAPI::Release::GEMS.each { |name, path| puts "#{name} #{path}" }')
 
 (cd clients/js && ./node_modules/.bin/gulp)
 (cd clients/js && npm pack --ignore-scripts --pack-destination ../../dist)
@@ -28,3 +30,4 @@ cp clients/js/dist/haveapi-client.js dist/
 git archive --format=tar --output="dist/haveapi-client-php-$version.tar" HEAD:clients/php
 (cd clients/python && uv build --out-dir ../../dist)
 ruby utils/release/cli.rb manifest dist
+ruby utils/release/rust_smoke.rb dist

@@ -14,7 +14,8 @@ module HaveAPI
     GEMS = {
       'haveapi-client' => 'clients/ruby',
       'haveapi' => 'servers/ruby',
-      'haveapi-go-client' => 'clients/go'
+      'haveapi-go-client' => 'clients/go',
+      'haveapi-rust-client' => 'clients/rust'
     }.freeze
     REPOSITORY = 'vpsfreecz/haveapi'.freeze
     PHP_REPOSITORY = 'git@github.com:vpsfreecz/haveapi-client-php.git'.freeze
@@ -72,6 +73,7 @@ module HaveAPI
           'servers/ruby/lib/haveapi/version.rb' => /\bVERSION = '([^']+)'/,
           'clients/ruby/lib/haveapi/client/version.rb' => /\bVERSION = '([^']+)'/,
           'clients/go/lib/haveapi/go_client/version.rb' => /\bVERSION = '([^']+)'/,
+          'clients/rust/lib/haveapi/rust_client/version.rb' => /\bVERSION = '([^']+)'/,
           'clients/js/src/haveapi/client.ts' => /Client\.Version = '([^']+)'/,
           'clients/php/src/Client.php' => /const VERSION = '([^']+)'/,
           'clients/python/pyproject.toml' => /^version = "([^"]+)"/
@@ -88,16 +90,28 @@ module HaveAPI
           raise Error, 'Identity or version mismatch in clients/js/package-lock.json'
         end
 
-        %w[servers/ruby/haveapi.gemspec clients/go/haveapi-go-client.gemspec].each do |path|
+        GEMS.except('haveapi-client').each do |name, component|
+          path = "#{component}/#{name}.gemspec"
           dependency = File.read(File.join(root, path)).match(/add_dependency 'haveapi-client', '([^']+)'/)
           raise Error, "Dependency mismatch in #{path}" unless dependency && dependency[1] == "~> #{version}"
         end
+        check_rust_lock
         notes
         if clean && !Release.capture('git', 'status', '--porcelain', '--untracked-files=no', chdir: root).empty?
           raise Error, 'Release builds require a clean tracked checkout'
         end
 
         check_tag(release_tag) if release_tag
+      end
+
+      def check_rust_lock
+        lock = File.read(File.join(root, 'clients/rust/Gemfile.lock'))
+        packages = %w[haveapi-client haveapi-rust-client].map { |name| [name, version] }
+        unless lock.scan(/^    (haveapi-client|haveapi-rust-client) \(([^)]+)\)$/) == packages &&
+               lock.scan(/^  (haveapi-client|haveapi-rust-client) \(([^)]+)\)$/) == packages &&
+               lock.scan(/^      haveapi-client \(([^)]+)\)$/) == [["~> #{version}"]]
+          raise Error, 'Version or dependency mismatch in clients/rust/Gemfile.lock'
+        end
       end
 
       def check_tag(release_tag)
@@ -126,11 +140,11 @@ module HaveAPI
         File.write(File.join(directory, 'release-notes.md'), notes)
         inspect_packages(directory)
         files = names.to_h { |name| [name, Digest::SHA256.file(File.join(directory, name)).hexdigest] }
-        tools = %w[ruby gem node npm go php composer python uv].to_h do |tool|
+        tools = %w[ruby gem node npm go php composer python uv cargo rustc rustfmt].to_h do |tool|
           flag = tool == 'go' ? 'version' : '--version'
           [tool, Release.capture(tool, flag).strip]
         end
-        lock_paths = %w[Gemfile.lock servers/ruby/Gemfile.lock clients/ruby/Gemfile.lock clients/go/Gemfile.lock clients/js/package-lock.json clients/php/composer.lock clients/python/uv.lock]
+        lock_paths = %w[Gemfile.lock servers/ruby/Gemfile.lock clients/ruby/Gemfile.lock clients/go/Gemfile.lock clients/rust/Gemfile.lock clients/rust/runtime/Cargo.lock clients/js/package-lock.json clients/php/composer.lock clients/python/uv.lock]
         dependency_locks = lock_paths.to_h { |path| [path, File.read(File.join(root, path))] }
         manifest = { schema: 1, source:, version:, tag:, run_id: ENV.fetch('GITHUB_RUN_ID', 'local'), files:, tools:, dependency_locks: }
         File.write(File.join(directory, 'release-manifest.json'), "#{JSON.pretty_generate(manifest)}\n")
@@ -185,6 +199,8 @@ module HaveAPI
 
           dependency = spec.dependencies.find { |d| d.name == 'haveapi-client' }
           raise Error, "Wrong gem dependency: #{name}" unless dependency && dependency.requirement.to_s == "~> #{version}"
+
+          inspect_rust(package) if name == 'haveapi-rust-client'
           next unless name == 'haveapi'
 
           required = %w[json-schema.html protocol.md create-client.md typed-input-validation.md protocol.png].map { |f| "doc/#{f}" }
@@ -196,6 +212,28 @@ module HaveAPI
         raise Error, 'Wrong Composer identity' unless JSON.parse(php.fetch('composer.json').first).values_at('name', 'version') == ['haveapi/client', version]
 
         Release.capture('python', File.join(root, 'utils/release/python_artifacts.py'), directory, version)
+      end
+
+      def inspect_rust(package)
+        component = File.join(root, 'clients/rust')
+        expected = Dir.chdir(component) do
+          Dir['{bin,lib,template}/**/*', 'runtime/src/runtime/**/*', 'README.md', 'docs/*.md', 'LICENSE.txt', 'Gemfile.lock']
+            .select { |path| File.file?(path) }.sort
+        end
+        unless package.contents.sort == expected && package.spec.executables == ['haveapi-rust-client'] &&
+               expected.include?('runtime/src/runtime/mod.rs') && expected.include?('template/mod.rs.erb')
+          raise Error, 'Rust generator gem has missing or unexpected packaged files'
+        end
+
+        Dir.mktmpdir('haveapi-rust-inspect-') do |tmp|
+          package.extract_files(tmp)
+          expected.each do |path|
+            retained = File.join(tmp, path)
+            unless File.file?(retained) && !File.symlink?(retained) && File.binread(retained) == File.binread(File.join(component, path))
+              raise Error, "Rust generator gem differs from source: #{path}"
+            end
+          end
+        end
       end
 
       def inspect_npm(directory)

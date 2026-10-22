@@ -55,6 +55,7 @@
               installBundler ? "gem install bundler",
               bundleInstall ? "bundle install",
               afterInstall ? "",
+              isolateGems ? false,
             }:
             pkgs.mkShell {
               inherit name;
@@ -69,6 +70,7 @@
                 ${promptHook label}
                 ${repoRootHook}
                 export GEM_HOME="${gemHome}"
+                ${pkgs.lib.optionalString isolateGems ''export GEM_PATH="$GEM_HOME:$(ruby -e 'puts Gem.default_dir')"''}
                 export BUNDLE_GEMFILE="$HAVEAPI_REPO_ROOT/${componentDir}/Gemfile"
                 export PATH="$GEM_HOME/${pathSuffix}:$PATH"
                 (cd "$HAVEAPI_REPO_ROOT/${componentDir}" && ${installBundler} && ${bundleInstall})
@@ -94,6 +96,12 @@
               python311
               uv
               ruff
+              cargo
+              rustc
+              rustfmt
+              clippy
+              pkg-config
+              openssl
             ];
 
             shellHook = ''
@@ -172,6 +180,7 @@
             label = "haveapi:client-rust";
             componentDir = "clients/rust";
             gemHome = "$HAVEAPI_REPO_ROOT/clients/rust/.gems";
+            isolateGems = true;
             packages = with pkgs; [ cargo rustc rustfmt clippy pkg-config openssl ];
             installBundler = "gem install --no-document bundler";
             afterInstall = ''

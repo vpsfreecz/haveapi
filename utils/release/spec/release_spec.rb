@@ -1,6 +1,7 @@
 require 'rspec'
 require_relative '../publish'
 require_relative '../workflow'
+require_relative '../rust_smoke'
 
 RSpec.describe HaveAPI::Release do
   def root
@@ -103,6 +104,32 @@ RSpec.describe HaveAPI::Release do
       expect { artifacts.check }.to raise_error(HaveAPI::Release::Error, %r{Version mismatch in clients/js/src/haveapi/client\.ts})
     end
 
+    ['', "module HaveAPI; module RustClient; VERSION = '999.0.0'; end; end"].each do |content|
+      it "rejects #{content.empty? ? 'missing' : 'wrong'} Rust generator version metadata" do
+        allow(File).to receive(:read).and_call_original
+        allow(File).to receive(:read).with(File.join(root, 'clients/rust/lib/haveapi/rust_client/version.rb')).and_return(content)
+        expect { artifacts.check }.to raise_error(HaveAPI::Release::Error, %r{Version mismatch in clients/rust/})
+      end
+    end
+
+    ['', "spec.add_dependency 'haveapi-client', '~> 999.0.0'"].each do |content|
+      it "rejects #{content.empty? ? 'missing' : 'wrong'} Rust generator client dependency" do
+        allow(File).to receive(:read).and_call_original
+        allow(File).to receive(:read).with(File.join(root, 'clients/rust/haveapi-rust-client.gemspec')).and_return(content)
+        expect { artifacts.check }.to raise_error(HaveAPI::Release::Error, %r{Dependency mismatch in clients/rust/})
+      end
+    end
+
+    ['    haveapi-client', '    haveapi-rust-client', '      haveapi-client', '  haveapi-client', '  haveapi-rust-client'].each do |entry|
+      it "rejects a stale Rust dependency lock entry #{entry.strip} at indentation #{entry.index(/\S/)}" do
+        path = File.join(root, 'clients/rust/Gemfile.lock')
+        content = File.read(path).sub(/^#{entry} \([^)]+\)$/, "#{entry} (999.0.0)")
+        allow(File).to receive(:read).and_call_original
+        allow(File).to receive(:read).with(path).and_return(content)
+        expect { artifacts.check }.to raise_error(HaveAPI::Release::Error, %r{mismatch in clients/rust/Gemfile.lock})
+      end
+    end
+
     ['', 'packages'].each do |location|
       %w[name version].each do |field|
         it "rejects mismatched npm lock #{location.empty? ? 'top-level' : 'package root'} #{field}" do
@@ -127,12 +154,19 @@ RSpec.describe HaveAPI::Release do
       path = File.join(copy, 'clients/js/package-lock.json')
       before = File.read(path)
       old_lock = JSON.parse(before)
+      rust_path = File.join(copy, 'clients/rust/Gemfile.lock')
+      rust_before = File.read(rust_path)
+      root_lock_before = File.read(File.join(root, 'Gemfile.lock'))
+      FileUtils.ln_s(File.join(root, 'clients/rust/.gems'), File.join(copy, 'clients/rust/.gems'))
       described_class.capture('make', 'version', 'VERSION=999.0.0', chdir: copy)
       after = File.read(path)
       expected = old_lock.merge('version' => '999.0.0', 'packages' => old_lock.fetch('packages').merge('' => old_lock.fetch('packages').fetch('').merge('version' => '999.0.0')))
       expect(JSON.parse(after)).to eq(expected)
       dependency_start = "\t\t\"node_modules/"
       expect(after[after.index(dependency_start)..]).to eq(before[before.index(dependency_start)..])
+      rust_expected = rust_before.gsub(/^( {2,6}haveapi-(?:rust-)?client \((?:~> )?)[^)]+(\))$/, '\\1999.0.0\\2')
+      expect(File.read(rust_path)).to eq(rust_expected)
+      expect(File.read(File.join(root, 'Gemfile.lock'))).to eq(root_lock_before)
       File.write(File.join(copy, 'CHANGELOG.md'), "# 2099-01-01 - version 999.0.0\n\n## Changed\nDisposable fixture.\n")
       candidate = described_class::Artifacts.new(copy)
       expect { candidate.check }.not_to raise_error
@@ -164,6 +198,26 @@ RSpec.describe HaveAPI::Release do
       expect { artifacts.verify(tmp) }.to raise_error(HaveAPI::Release::Error, /checksum mismatch/)
     end
 
+    it 'retains the fourth gem, Rust tool versions and both dependency locks in the manifest' do
+      fixture_manifest
+      allow(described_class).to receive(:capture).and_call_original
+      %w[ruby gem node npm go php composer python uv cargo rustc rustfmt].each do |tool|
+        allow(described_class).to receive(:capture).with(tool, tool == 'go' ? 'version' : '--version').and_return("#{tool} fixture")
+      end
+      allow(File).to receive(:read).and_call_original
+      %w[Gemfile.lock servers/ruby/Gemfile.lock clients/ruby/Gemfile.lock clients/go/Gemfile.lock clients/rust/Gemfile.lock clients/rust/runtime/Cargo.lock clients/js/package-lock.json clients/php/composer.lock clients/python/uv.lock].each do |path|
+        allow(File).to receive(:read).with(File.join(root, path)).and_return("retained #{path}")
+      end
+      artifacts.write_manifest(tmp)
+      manifest = JSON.parse(File.read(File.join(tmp, 'release-manifest.json')))
+      expect(manifest.fetch('files')).to have_key("haveapi-rust-client-#{artifacts.version}.gem")
+      expect(manifest.fetch('tools')).to include('cargo' => 'cargo fixture', 'rustc' => 'rustc fixture', 'rustfmt' => 'rustfmt fixture')
+      expect(manifest.fetch('dependency_locks')).to include(
+        'clients/rust/Gemfile.lock' => 'retained clients/rust/Gemfile.lock',
+        'clients/rust/runtime/Cargo.lock' => 'retained clients/rust/runtime/Cargo.lock'
+      )
+    end
+
     it 'rejects a manifest from another source commit' do
       manifest = fixture_manifest
       manifest[:source] = 'b' * 40
@@ -192,6 +246,63 @@ RSpec.describe HaveAPI::Release do
       path = File.join(tmp, 'symlink.tar')
       File.open(path, 'wb') { |file| Gem::Package::TarWriter.new(file) { |writer| writer.add_symlink('src', '/tmp', 0o777) } }
       expect { artifacts.tar_files(path) }.to raise_error(HaveAPI::Release::Error, /Unsupported archive/)
+    end
+  end
+
+  describe 'Rust generator gem contract' do
+    def rust_gem(missing: nil, corrupt: nil)
+      component = File.join(root, 'clients/rust')
+      spec = Gem::Specification.load(File.join(component, 'haveapi-rust-client.gemspec')).dup
+      source = File.join(tmp, 'rust-gem')
+      spec.files.each do |path|
+        destination = File.join(source, path)
+        FileUtils.mkdir_p(File.dirname(destination))
+        FileUtils.cp(File.join(component, path), destination)
+      end
+      if missing
+        FileUtils.rm(File.join(source, missing))
+        spec.executables = [] if missing == 'bin/haveapi-rust-client'
+        spec.files -= [missing]
+      end
+      File.write(File.join(source, corrupt), 'corrupt payload') if corrupt
+      path = File.join(tmp, "haveapi-rust-client-#{artifacts.version}.gem")
+      Dir.chdir(source) { Gem::Package.build(spec, false, false, path) }
+      Gem::Package.new(path)
+    end
+
+    it 'accepts source-exact templates, runtime, executable, dependency lock and documentation' do
+      expect { artifacts.inspect_rust(rust_gem) }.not_to raise_error
+    end
+
+    %w[runtime/src/runtime/mod.rs template/mod.rs.erb Gemfile.lock bin/haveapi-rust-client].each do |path|
+      it "rejects missing #{path}" do
+        expect { artifacts.inspect_rust(rust_gem(missing: path)) }.to raise_error(HaveAPI::Release::Error, /missing or unexpected/)
+      end
+    end
+
+    %w[runtime/src/runtime/client.rs template/action.rs.erb].each do |path|
+      it "rejects corrupt #{path}" do
+        expect { artifacts.inspect_rust(rust_gem(corrupt: path)) }.to raise_error(HaveAPI::Release::Error, /differs from source/)
+      end
+    end
+
+    it 'runs offline generation in an extracted artifact with inherited bundle and source paths removed' do
+      rust_gem
+      allow(described_class).to receive(:run) do |env, ruby, flag, library, expression, script, extracted, version, **options|
+        expect(ruby).to eq(RbConfig.ruby)
+        expect([flag, expression]).to eq(['-I', '-e'])
+        expect(library).to eq(File.join(extracted, 'lib'))
+        expect(File.realpath(extracted)).not_to start_with(root)
+        expect(options.fetch(:chdir)).to eq(File.dirname(extracted))
+        expect(env).to include('RUBYOPT' => nil, 'RUBYLIB' => nil)
+        expect(env.fetch('GEM_PATH')).to eq([File.join(root, 'clients/rust/.gems'), Gem.default_dir].join(File::PATH_SEPARATOR))
+        expect(env.fetch('GEM_HOME')).to eq(File.join(root, 'clients/rust/.gems'))
+        ENV.keys.grep(/\ABUNDLE_/).each { |key| expect(env.fetch(key)).to be_nil }
+        expect(version).to eq(artifacts.version)
+        expect(script).to include('schema.json', 'generator::ROOT == extracted', "args + ['--check']", 'wrong copied runtime')
+      end
+      HaveAPI::Release::RustSmoke.run(artifacts, tmp)
+      expect(described_class).to have_received(:run).once
     end
   end
 

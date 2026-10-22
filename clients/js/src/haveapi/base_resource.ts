@@ -7,6 +7,7 @@ export interface BaseResourcePrivate {
 	parent: BaseResource | null;
 	name: string;
 	description: ResourceDescription;
+	actionIndex?: Record<string, Action>;
 }
 
 export interface BaseResource<P extends BaseResourcePrivate = BaseResourcePrivate> {
@@ -72,6 +73,9 @@ BaseResource.prototype.attachResources = function(description: ResourceDescripti
  */
 BaseResource.prototype.attachActions = function(description: ResourceDescription, args: InvocationArgument[]) {
 	this.actions = [];
+	var index: Record<string, Action> = Object.create(null);
+	var aliases: Record<string, Action | null> = Object.create(null);
+	this._private.actionIndex = index;
 
 	for(var a in description.actions) {
 		if (!Client.hasOwn(description.actions, a))
@@ -79,6 +83,7 @@ BaseResource.prototype.attachActions = function(description: ResourceDescription
 
 		var names = [a].concat(description.actions[a].aliases || []);
 		var actionInstance = new Client.Action(this._private.client, this, a, description.actions[a], args);
+		index[a] = actionInstance;
 
 		for(var i = 0; i < names.length; i++) {
 			Client.attachDescriptionMember(
@@ -87,9 +92,20 @@ BaseResource.prototype.attachActions = function(description: ResourceDescription
 				actionInstance,
 				BaseResource.reservedAttachmentNames
 			);
+			if (i > 0 && typeof names[i] === 'string') {
+				var alias = names[i];
+				if (!Client.hasOwn(aliases, alias))
+					aliases[alias] = actionInstance;
+				else if (aliases[alias] !== actionInstance)
+					aliases[alias] = null;
+			}
 		}
 
 		this.actions.push(a);
+	}
+	for (var alias in aliases) {
+		if (!Client.hasOwn(index, alias) && aliases[alias] !== null)
+			index[alias] = aliases[alias]!;
 	}
 };
 

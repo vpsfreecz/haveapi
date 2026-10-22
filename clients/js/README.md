@@ -79,6 +79,36 @@ api.setup(function() {
 });
 ```
 
+Use the public lookup helpers after discovery to access resources and actions
+by their exact names. They also support TypeScript without endpoint-specific
+types:
+
+```ts
+import { CallbackClient } from 'haveapi-client';
+
+const api = new CallbackClient('https://api.example.test/mount/', {version: '2'});
+api.setup((client, ready) => {
+  if (!ready) return;
+  const resource = CallbackClient.findResource(client, ['widget']);
+  const action = CallbackClient.findAction(resource, 'show');
+  action.directInvoke(7, (owner, response) => {
+    if (!response.isOk()) {
+      console.error(response.message(), response.envelope.errors);
+      return;
+    }
+    console.log(response.response(), response.meta());
+  });
+});
+```
+
+`findAction` accepts a resource returned by `findResource` (including a bound
+resource). Canonical action names take priority; aliases resolve only when they
+identify one action. Missing or ambiguous names raise `ProtocolError`. Names
+that collide with JavaScript properties remain accessible through these helpers.
+Existing direct properties and the resource's `actions` name array keep their
+existing behavior. `directInvoke` always supplies a raw `Response`; ordinary
+invocation may return resource instances or lists according to the description.
+
 ### Authentication
 haveapi-client-js supports HTTP basic and token authentication. However, the HTTP basic
 method is by default not allowed by HaveAPI to be used from web browsers.

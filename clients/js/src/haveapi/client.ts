@@ -6,7 +6,7 @@ import type { Provider, AuthenticationOptions, AuthenticationRegistry } from './
 import { Action } from './action';
 import type { ActionConstructor, ActionCall, ActionReply } from './action';
 import type { ActionStateConstructor } from './action_state';
-import type { BaseResourceConstructor } from './base_resource';
+import type { BaseResource, BaseResourceConstructor } from './base_resource';
 import type { Resource, ResourceConstructor } from './resource';
 import type { ResourceInstanceConstructor } from './resource_instance';
 import type { ResourceInstanceListConstructor } from './resource_instance_list';
@@ -78,6 +78,7 @@ export interface ClientConstructor {
 	canAttachDescriptionMember(target: object, name: unknown, reservedNames?: Record<string, boolean>): boolean;
 	attachDescriptionMember(target: object, name: string, value: unknown, reservedNames?: Record<string, boolean>): boolean;
 	findResource(root: {resources: Resource[]}, resourcePath: string[]): Resource;
+	findAction(resource: BaseResource, name: string): Action;
 	normalizeTrustedOrigins(origins?: string | string[] | null): string[];
 	Action: ActionConstructor;
 	ActionState: ActionStateConstructor;
@@ -220,6 +221,14 @@ Client.findResource = function(root, resourcePath) {
 
 Client.normalizeTrustedOrigins = function(origins) {
 	return normalizeTrustedOrigins(origins, message => new Client.Exceptions.ProtocolError(message));
+};
+
+/** Look up canonical names and unambiguous aliases without direct properties. */
+Client.findAction = function(resource, name) {
+	var index = resource._private.actionIndex;
+	if (!index || !Client.hasOwn(index, name))
+		throw new Client.Exceptions.ProtocolError("Action '" + name + "' not found or ambiguous");
+	return index[name];
 };
 
 /**

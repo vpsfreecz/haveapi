@@ -28,6 +28,13 @@ const resourceDescription: ResourceDescription = {
 };
 const resource = new Client.Resource(client, null, 'widgets', resourceDescription, []);
 const bound: Resource = resource(7);
+const discoveredAction: Action = CallbackClient.findAction(CallbackClient.findResource(client, ['widgets']), 'show');
+discoveredAction.directInvoke(7, (owner, response) => {
+  owner.setLanguage(response.isOk() ? 'en' : 'cs');
+  console.log(response.response(), response.meta(), response.envelope.errors);
+});
+// @ts-expect-error Action lookup requires a typed resource, not an endpoint-name cast.
+CallbackClient.findAction(client, 'show');
 const action = new Client.Action(client, bound, 'show', actionDescription);
 const callbackAction = new CallbackClient.Action(callbackClient, bound, 'show', actionDescription);
 const callbackInvokeReturn: void = callbackAction(7, (owner, result) => {

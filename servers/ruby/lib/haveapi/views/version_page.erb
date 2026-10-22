@@ -16,9 +16,13 @@
 </p>
 
 <ul>
-  <li><a href="https://github.com/vpsfreecz/haveapi-client" target="_blank">Ruby library and CLI</a></li>
-  <li><a href="https://github.com/vpsfreecz/haveapi-client-js" target="_blank">JavaScript</a></li>
-  <li><a href="https://github.com/vpsfreecz/haveapi-client-php" target="_blank">PHP</a></li>
+  <li><a href="https://github.com/vpsfreecz/haveapi/tree/master/clients/ruby" target="_blank" rel="noopener">Ruby library and CLI</a></li>
+  <li><a href="https://github.com/vpsfreecz/haveapi/tree/master/clients/js" target="_blank" rel="noopener">JavaScript and TypeScript (callback and async)</a></li>
+  <li><a href="https://github.com/vpsfreecz/haveapi/tree/master/clients/python" target="_blank" rel="noopener">Python (sync and async)</a></li>
+  <% settings.api_server.documentation_client_profiles(@v).each do |language, profile| %>
+    <li><a href="https://github.com/vpsfreecz/haveapi/tree/master/clients/<%= escape_html(language) %>" target="_blank" rel="noopener"><%= language == :go ? 'Go' : 'Rust (async and blocking)' %></a>: <code><%= escape_html(profile.package_name) %></code> <%= escape_html(profile.package_version) %></li>
+  <% end %>
+  <li><a href="https://github.com/vpsfreecz/haveapi/tree/master/clients/php" target="_blank" rel="noopener">PHP</a></li>
   <li>
     <a href="https://github.com/vpsfreecz/haveapi-webui" target="_blank">Generic web interface</a>
     (<a href="https://webui.haveapi.org/v<%= version %>/#<%= urlescape(base_url) %>" target="_blank">connect to this API</a>)
@@ -26,8 +30,9 @@
 </ul>
 
 <p>
-  The code examples found on this page are for HaveAPI v<%= version %>, so be sure
-  to use clients of the same version.
+  These examples target API v<%= escape_html(@v) %>. The framework and dynamic
+  clients share HaveAPI package versions. Generated Go and Rust SDKs use their
+  own package versions and a saved description of the API.
 </p>
 
 <h2>Initialization</h2>
@@ -35,9 +40,9 @@
 <div id="init-tabbar"></div>
 
 <div id="init-examples">
-  <% HaveAPI::ClientExample.clients.each_with_index do |client, i| %>
-    <div id="<%= "init-#{i}" %>">
-      <%= erb :"version_page/client_init", locals: {client: client} %>
+  <% documentation_panels(:init).each do |client, result| %>
+    <div id="<%= escape_html("init-#{client.id}") %>">
+      <%= erb :"version_page/client_init", locals: {client: client, result: result} %>
     </div>
   <% end %>
 </div>

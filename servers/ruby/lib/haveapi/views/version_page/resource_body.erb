@@ -104,16 +104,12 @@
               <div id="<%= "#{baseid}-tabbar" %>"></div>
 
               <div id="<%= "#{baseid}-examples" %>">
-                <% HaveAPI::ClientExample.clients.each_with_index do |client, j| %>
-                  <div id="<%= "#{baseid}-#{j}" %>">
+                <% documentation_panels(:example, resource_path: resource_path, resource: resource_info, action_name: action, action: info, sample: example).each do |client, result| %>
+                  <div id="<%= escape_html("#{baseid}-#{client.id}") %>">
                     <%=
                       erb :"version_page/client_example", locals: {
                         client: client,
-                        r_name: resource_path,
-                        resource: resource_info,
-                        a_name: action,
-                        action: info,
-                        example: example,
+                        result: result,
                       }
                     %>
                   </div>

@@ -71,7 +71,8 @@ describe HaveAPI::ClientExamples do
   end
 
   it 'generates valid JavaScript' do
-    source = HaveAPI::ClientExamples::JsClient.new(*client_args).example(sample)
+    result = HaveAPI::ClientExamples::JsClient.new(*client_args).example(sample)
+    source = result.is_a?(Hash) ? result.fetch(:code) : result
     status, output = syntax_check(%w[node --check], source, '.mjs')
 
     expect(status).to be_success, output

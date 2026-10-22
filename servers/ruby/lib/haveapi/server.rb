@@ -258,13 +258,20 @@ module HaveAPI
           description: @help
         )
         profile = if client
-                    settings.api_server.documentation_client_profiles(@v)[client.code.to_sym]
+                    settings.api_server.documentation_client_profiles(@v)[client.code&.to_sym]
                   end
         @documentation_context.with(profile:, **changes)
       end
 
       def documentation_clients
         HaveAPI::ClientExample.clients.select { |client| client.available?(documentation_context(client)) }
+      end
+
+      def documentation_panels(kind, auth_method: nil, auth_description: nil, **changes)
+        documentation_clients.filter_map do |client|
+          result = client.render(kind, context: documentation_context(client, **changes), auth_method:, auth_description:)
+          [client, result] if result
+        end
       end
 
       def host

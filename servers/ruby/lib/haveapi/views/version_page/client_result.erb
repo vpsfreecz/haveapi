@@ -1,0 +1,5 @@
+<% if result[:status] == :limitation %>
+  <p class="client-limitation"><%= escape_html(result[:reason]) %></p>
+<% else %>
+  <pre><code class="<%= escape_html(client.code) %>"><%= escape_html(result[:code]) %></code></pre>
+<% end %>

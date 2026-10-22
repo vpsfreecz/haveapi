@@ -32,9 +32,9 @@
 <div id="<%= baseid %>-tabbar"></div>
 
 <div id="<%= baseid %>-examples">
-  <% HaveAPI::ClientExample.clients.each_with_index do |client, i| %>
-    <div id="<%= "#{baseid}-#{i}" %>">
-      <%= erb :"version_page/client_auth", locals: {client: client, method: name, desc: info} %>
+  <% documentation_panels(:auth, auth_method: name, auth_description: info).each do |client, result| %>
+    <div id="<%= escape_html("#{baseid}-#{client.id}") %>">
+      <%= erb :"version_page/client_auth", locals: {client: client, result: result} %>
     </div>
   <% end %>
 </div>

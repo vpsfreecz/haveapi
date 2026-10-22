@@ -132,13 +132,17 @@ module HaveAPI
         @initialized = true
       end
 
-      def validate_build
+      def validate_build(path: nil)
         check_build("#{self}.input") do
           input.validate_build
         end
 
         check_build("#{self}.output") do
           output.validate_build
+        end
+
+        check_build("#{self}.examples") do
+          @examples&.validate_build(self, path:)
         end
       end
 

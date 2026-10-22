@@ -1,7 +1,7 @@
 PATH
   remote: ../ruby
   specs:
-    haveapi-client (0.29.0)
+    haveapi-client (0.30.0)
       activesupport (>= 7.0)
       highline (~> 3.1)
       json
@@ -12,8 +12,8 @@ PATH
 PATH
   remote: .
   specs:
-    haveapi-rust-client (0.29.0)
-      haveapi-client (~> 0.29.0)
+    haveapi-rust-client (0.30.0)
+      haveapi-client (~> 0.30.0)
       tomlrb (~> 2.0)
 
 GEM
@@ -152,8 +152,8 @@ CHECKSUMS
   domain_name (0.7.20261007) sha256=0976c6ab837dbde991b433d03acc38fdb91fa8839df31a1ed75ce0318dc0441c
   drb (2.2.3) sha256=0b00d6fdb50995fe4a45dea13663493c841112e4068656854646f418fda13373
   hana (1.3.7) sha256=5425db42d651fea08859811c29d20446f16af196308162894db208cac5ce9b0d
-  haveapi-client (0.29.0)
-  haveapi-rust-client (0.29.0)
+  haveapi-client (0.30.0)
+  haveapi-rust-client (0.30.0)
   highline (3.1.2) sha256=67cbd34d19f6ef11a7ee1d82ffab5d36dfd5b3be861f450fc1716c7125f4bb4a
   http-accept (1.7.0) sha256=c626860682bfbb3b46462f8c39cd470fd7b0584f61b3cc9df5b2e9eb9972a126
   http-cookie (1.1.6) sha256=ba4b82be64de61dc281243dac70e3c382c45142f20268ed9276a3670c93feaa9

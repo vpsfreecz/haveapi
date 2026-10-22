@@ -149,7 +149,7 @@ export const Client = function Client(this: Client, url: string, opts?: ClientOp
 } as unknown as ClientConstructor;
 
 /** @constant HaveAPI.Client.Version */
-Client.Version = '0.29.0';
+Client.Version = '0.30.0';
 
 /** @constant HaveAPI.Client.ProtocolVersion */
 Client.ProtocolVersion = '2.0';

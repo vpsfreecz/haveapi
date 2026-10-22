@@ -17,6 +17,6 @@ Gem::Specification.new do |spec|
   spec.bindir = 'bin'
   spec.executables = ['haveapi-rust-client']
   spec.require_paths = ['lib']
-  spec.add_dependency 'haveapi-client', '~> 0.29.0'
+  spec.add_dependency 'haveapi-client', '~> 0.30.0'
   spec.add_dependency 'tomlrb', '~> 2.0'
 end

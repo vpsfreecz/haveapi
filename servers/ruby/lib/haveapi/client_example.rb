@@ -33,6 +33,47 @@ module HaveAPI
         @order
       end
 
+      def id(value = nil)
+        @id = value.to_s.freeze unless value.nil?
+        return @id if @id
+
+        # Preserve the anchors of the retained built-in formats.
+        { 'RubyClient' => '0', 'PhpClient' => '2', 'RubyCli' => '3', 'Curl' => '5', 'Http' => '6' }[name.to_s.split('::').last] ||
+          name.to_s.gsub('::', '-').downcase
+      end
+
+      def available?(_context)
+        true
+      end
+
+      def render(kind, context:, auth_method: nil, auth_description: nil)
+        arguments = [context.host, context.base_url, context.version]
+        arguments.push(context.resource_path, context.resource, context.action_name, context.action) if kind == :example
+        renderer = new(*arguments)
+        renderer.with_context(context)
+        result = case kind
+                 when :init then renderer.init
+                 when :auth then renderer.auth(auth_method, auth_description)
+                 when :example
+                   if renderer.respond_to?(:example)
+                     renderer.example(context.sample)
+                   else
+                     [renderer.request(context.sample), renderer.response(context.sample)].compact.join("\n\n")
+                   end
+                 else raise ArgumentError, "Unknown client example kind: #{kind}"
+                 end
+        return if result.nil?
+        return { status: :code, code: result.dup.freeze }.freeze if result.is_a?(String)
+
+        if result.is_a?(Hash) && result[:status] == :code && result[:code].is_a?(String)
+          { status: :code, code: result[:code].dup.freeze }.freeze
+        elsif result.is_a?(Hash) && result[:status] == :limitation && result[:reason].is_a?(String)
+          { status: :limitation, reason: result[:reason].dup.freeze }.freeze
+        else
+          raise ArgumentError, 'Invalid client example result'
+        end
+      end
+
       def register(klass)
         @clients ||= []
         @clients << klass
@@ -59,7 +100,7 @@ module HaveAPI
       end
     end
 
-    attr_reader :resource_path, :resource, :action_name, :action, :host, :base_url, :version
+    attr_reader :resource_path, :resource, :action_name, :action, :host, :base_url, :version, :context
 
     def initialize(host, base_url, version, *args)
       @host = host
@@ -71,6 +112,11 @@ module HaveAPI
     def init; end
 
     def auth(method, desc); end
+
+    def with_context(value)
+      @context = value
+      self
+    end
 
     def version_url
       File.join(base_url, "v#{version}", '/')

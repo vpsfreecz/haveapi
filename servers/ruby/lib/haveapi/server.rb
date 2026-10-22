@@ -3,6 +3,7 @@ require 'redcarpet'
 require 'tilt'
 require 'cgi'
 require 'haveapi/hooks'
+require 'haveapi/documentation_clients'
 
 module HaveAPI
   class Server
@@ -250,6 +251,22 @@ module HaveAPI
         "#{scheme}://#{request.env['HTTP_HOST']}"
       end
 
+      def documentation_context(client = nil, **changes)
+        @documentation_context ||= HaveAPI::ClientExample::Context.new(
+          version: @v, host:, base_url: "#{base_url}#{root.end_with?('/') ? root : "#{root}/"}",
+          version_url: "#{base_url}#{root.end_with?('/') ? root : "#{root}/"}v#{@v}/",
+          description: @help
+        )
+        profile = if client
+                    settings.api_server.documentation_client_profiles(@v)[client.code.to_sym]
+                  end
+        @documentation_context.with(profile:, **changes)
+      end
+
+      def documentation_clients
+        HaveAPI::ClientExample.clients.select { |client| client.available?(documentation_context(client)) }
+      end
+
       def host
         request.env['HTTP_HOST'].split(':').first
       end
@@ -312,9 +329,18 @@ module HaveAPI
       @extensions = []
       @action_state_auth = :backend
       @validation_error_http_status = nil
+      @documentation_clients = HaveAPI::ClientExample::Profiles.new
       @default_locale = :en
       self.available_locales = HaveAPI::I18n.available_locales
       self.locale_header = 'Accept-Language'
+    end
+
+    def documentation_clients(version, **profiles)
+      @documentation_clients.register(version, **profiles)
+    end
+
+    def documentation_client_profiles(version)
+      @documentation_clients.for_version(version)
     end
 
     def available_locales=(locales)
@@ -407,6 +433,7 @@ module HaveAPI
     # All routes are mounted under prefix `path`.
     # If no default version is set, the last included version is used.
     def mount(prefix = '/')
+      @documentation_clients.mount(@versions)
       @root = prefix
 
       @sinatra = Sinatra.new do

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
+from typing import Literal
 from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
 from ..exceptions import ProtocolError, ValidationError
@@ -12,8 +13,10 @@ from .input import coerce_input
 from .models import CallContext, Description, InputParams, LayoutSpec, RequestSpec
 
 
-def resolve_url(base_url: str, path: str) -> str:
-    """Resolve an API-relative endpoint while preserving its configured mount."""
+def resolve_url(
+    base_url: str, path: str, *, path_mode: Literal["api", "descriptor"] = "api"
+) -> str:
+    """Resolve discovery under the API base or a described route at its origin."""
     try:
         base = urlsplit(base_url)
         target = urlsplit(path)
@@ -41,8 +44,14 @@ def resolve_url(base_url: str, path: str) -> str:
         or target.fragment
         or any(ord(c) < 32 or ord(c) == 127 for c in path)
         or "\\" in path
+        or path_mode == "descriptor"
+        and not path.startswith("/")
     ):
-        raise ProtocolError("action endpoint must be an API-relative path")
+        raise ProtocolError(
+            "action endpoint must be an origin-root-relative path"
+            if path_mode == "descriptor"
+            else "action endpoint must be an API-relative path"
+        )
     for candidate in (base.path, target.path):
         # Multiple decoding rounds also reject nested encoded traversal.
         checked = candidate
@@ -55,7 +64,11 @@ def resolve_url(base_url: str, path: str) -> str:
             checked = decoded
         if "\\" in checked or checked.startswith("//"):
             raise ProtocolError("unsafe endpoint path")
-    resolved = base.path.rstrip("/") + "/" + target.path.lstrip("/")
+    resolved = (
+        target.path
+        if path_mode == "descriptor"
+        else base.path.rstrip("/") + "/" + target.path.lstrip("/")
+    )
     return urlunsplit((base.scheme, base.netloc, resolved, "", ""))
 
 
@@ -233,14 +246,14 @@ def build_request(
 ) -> RequestSpec:
     # Validate the static endpoint before substituting user data. Encoded slashes
     # within a bound ID are data, and must not be interpreted as path separators.
-    resolve_url(base_url, context.action.path)
+    resolve_url(base_url, context.action.path, path_mode="descriptor")
     path = _bind(context)
     base = urlsplit(base_url)
     url = urlunsplit(
         (
             base.scheme,
             base.netloc,
-            base.path.rstrip("/") + "/" + path.lstrip("/"),
+            path,
             "",
             "",
         )

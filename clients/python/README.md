@@ -44,6 +44,18 @@ description. An authenticated connection refreshes discovery with the selected
 identity, so available actions and parameters reflect server authorization.
 The server still authorizes every request.
 
+The base URL includes the API mount, for example `https://api.example/mount/`.
+Select the API version with the client's `version` argument. Discovery uses that
+mount and version; described action paths already contain their routing prefix
+and resolve from the origin. The client preserves the server's ordinary,
+authentication and action-state routes without repeating the mount or adding
+a version to a global authentication route.
+
+Action destinations must remain within the configured origin and mount before
+credentials are attached. Applications that fabricate or cache API-relative
+action descriptions for a mounted API must refresh them from the server's
+OPTIONS description. Root-mounted APIs keep the same URLs.
+
 `api.vps.list(limit=10)` is shorthand for
 `api.vps.list.call(params={"limit": 10})`. Use `.call()` to pass action metadata,
 explicit path parameters or per-request `RequestOptions`. Input values are

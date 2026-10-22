@@ -52,8 +52,11 @@ def action(path, *, method="GET", fields=None, output="hash", namespace="item"):
     }
 
 
-def description():
-    index = action("/v7.0/items", fields={"limit": "Integer", "meta": "String"})
+def description(*, mount="/mount"):
+    version_root = mount + "/v7.0"
+    index = action(
+        version_root + "/items", fields={"limit": "Integer", "meta": "String"}
+    )
     index["aliases"] = ["list"]
     index["meta"] = {"global": {"input": layout("_meta", {"count": "Boolean"})}}
     token_output = layout(
@@ -78,7 +81,10 @@ def description():
         "revoke": {},
     }.items():
         token_actions[name] = action(
-            f"/v7.0/tokens/{name}", method="POST", fields=fields, namespace="token"
+            f"{version_root}/tokens/{name}",
+            method="POST",
+            fields=fields,
+            namespace="token",
         )
         token_actions[name]["output"] = token_output
     return {
@@ -89,9 +95,9 @@ def description():
                 "item": {
                     "actions": {
                         "index": index,
-                        "show": action("/v7.0/items/{item_id}"),
+                        "show": action(version_root + "/items/{item_id}"),
                         "write": action(
-                            "/v7.0/items",
+                            version_root + "/items",
                             method="POST",
                             fields={
                                 "meta": "String",
@@ -99,19 +105,20 @@ def description():
                                 "class": "String",
                             },
                         ),
-                        "batch": action("/v7.0/batch", method="POST"),
+                        "batch": action(version_root + "/batch", method="POST"),
                     },
                     "resources": {
                         "child": {
                             "actions": {
                                 "show": action(
-                                    "/v7.0/items/{item_id}/children/{child_id}"
+                                    version_root
+                                    + "/items/{item_id}/children/{child_id}"
                                 )
                             }
                         }
                     },
                 },
-                "close": {"actions": {"from": action("/v7.0/collisions")}},
+                "close": {"actions": {"from": action(version_root + "/collisions")}},
             },
             "authentication": {
                 "basic": {},
@@ -168,7 +175,9 @@ def anyio_backend():
     return "asyncio"
 
 
-def make_client(server, asynchronous, **kwargs):
+def make_client(
+    server, asynchronous, *, base_url="https://api.example/mount/", **kwargs
+):
     cls = AsyncClient if asynchronous else Client
     http_cls = httpx.AsyncClient if asynchronous else httpx.Client
     injected = http_cls(
@@ -178,7 +187,7 @@ def make_client(server, asynchronous, **kwargs):
         cookies={"cookie": "no"},
         auth=("injected", "secret"),
     )
-    return cls("https://api.example/mount/", http_client=injected, **kwargs), injected
+    return cls(base_url, http_client=injected, **kwargs), injected
 
 
 async def close(client, injected, asynchronous):
@@ -504,7 +513,7 @@ async def test_get_list_query_preserves_wire_row_order(asynchronous):
     server = Server()
     batch = server.description["response"]["resources"]["item"]["actions"]["batch"]
     batch["method"] = "GET"
-    batch["path"] = "/v7.0/items/{item_id}/batch"
+    batch["path"] = "/mount/v7.0/items/{item_id}/batch"
     batch["input"] = layout("item", {"a": "Integer", "b": "String"}, "hash_list")
     client, injected = make_client(server, asynchronous)
     await resolve(client.connect())
@@ -676,3 +685,203 @@ async def test_async_calls_keep_independent_bindings_and_release_cancellation():
 def test_unsafe_base_url(url, cls):
     with pytest.raises(ValueError):
         cls(url)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("mount", ["", "/mount"])
+@pytest.mark.parametrize("trailing_slash", [False, True])
+@pytest.mark.parametrize("version", [None, "7.0"])
+@pytest.mark.parametrize("token_scope", ["global", "version"])
+async def test_described_token_action_state_flows_preserve_real_mount_paths(
+    asynchronous, mount, trailing_slash, version, token_scope
+):
+    server = Server()
+    server.description = description(mount=mount)
+    root = server.description["response"]
+    token_root = (
+        mount + ("/v7.0" if token_scope == "version" else "") + "/_auth/token/tokens"
+    )
+    token_actions = root["authentication"]["token"]["resources"]["token"]["actions"]
+    for name, spec in token_actions.items():
+        spec["path"] = token_root + ("" if name == "request" else "/" + name)
+    child = root["resources"]["item"]["resources"]["child"]["actions"]["show"]
+    child["path"] = mount + "/v7.0/parents/{parent_id}/children/{widget_id}"
+    root["resources"]["item"]["actions"]["write"]["blocking"] = True
+    state_root = mount + "/v7.0/action_states"
+    root["resources"]["action_state"] = {
+        "actions": {
+            "show": action(state_root + "/{state_id}", namespace="state"),
+            "cancel": action(
+                state_root + "/{state_id}/cancel", method="POST", namespace="state"
+            ),
+        }
+    }
+    discovery = mount + ("/v7.0/" if version else "/")
+
+    def handler(request):
+        if request.method == "OPTIONS":
+            assert request.url.path == discovery
+            assert dict(request.url.params) == (
+                {} if version else {"describe": "default"}
+            )
+            return None
+        path = request.url.path
+        if path in (token_root, token_root + "/totp"):
+            assert "x-test-token" not in request.headers
+            values = json.loads(request.content)["token"]
+            initial = path == token_root
+            assert values == (
+                {"user": "alice", "password": "old"}
+                if initial
+                else {"token": "challenge", "code": "123456"}
+            )
+            return success(
+                {
+                    "complete": not initial,
+                    "token": "challenge" if initial else "final-secret",
+                    "next_action": "totp" if initial else None,
+                    "valid_to": None,
+                },
+                "token",
+            )
+        assert request.headers["x-test-token"] == "final-secret"
+        if path in (token_root + "/renew", token_root + "/revoke"):
+            return success({"valid_to": None}, "token")
+        if path == state_root + "/55":
+            return success(
+                {"finished": True, "status": True, "can_cancel": True}, "state"
+            )
+        if path == state_root + "/55/cancel":
+            return success({"cancelled": True}, "state")
+        if request.method == "POST" and path == mount + "/v7.0/items":
+            return httpx.Response(
+                200,
+                json={
+                    "status": True,
+                    "response": {"item": {"id": 7}, "_meta": {"action_state_id": 55}},
+                },
+            )
+        assert (
+            request.url.raw_path
+            == (mount + "/v7.0/parents/7/children/name%20with%20space%2F%25").encode()
+        )
+        return success()
+
+    server.handler = handler
+    base_url = "https://api.example" + mount + ("/" if trailing_slash else "")
+    client, injected = make_client(
+        server, asynchronous, base_url=base_url, version=version
+    )
+    try:
+        challenge = await resolve(
+            client.begin_token_login({"user": "alice", "password": "old"})
+        )
+        assert challenge.next_action == "totp"
+        assert isinstance(
+            await resolve(challenge.submit({"code": "123456"})), Authenticated
+        )
+        await resolve(client.item[7].child["name with space/%"].show())
+        response = await resolve(client.item.write(meta="real"))
+        assert response.operation is not None
+        assert (await resolve(response.operation.show())).data["finished"]
+        assert (await resolve(response.operation.cancel())).data["cancelled"]
+        await resolve(client.renew_token())
+        await resolve(client.revoke_token())
+        paths = [
+            request.url.path
+            for request in server.requests
+            if request.method != "OPTIONS"
+        ]
+        assert paths == [
+            token_root,
+            token_root + "/totp",
+            mount + "/v7.0/parents/7/children/name with space/%",
+            mount + "/v7.0/items",
+            state_root + "/55",
+            state_root + "/55",
+            state_root + "/55/cancel",
+            token_root + "/renew",
+            token_root + "/revoke",
+        ]
+    finally:
+        await close(client, injected, asynchronous)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/outside/items/{id}",
+        "/mount-other/items/{id}",
+        "v7.0/items/{id}",
+        "//evil.example/mount/{id}",
+        "https://evil.example/mount/{id}",
+        "/mount/../outside/{id}",
+        "/mount/%252e%252e/outside/{id}",
+        "/mount/items/{id}?credential=value",
+        "/mount/items/{id}#fragment",
+        "/mount/items\\{id}",
+    ],
+)
+async def test_unsafe_or_outside_descriptor_rejected_before_auth_headers(
+    asynchronous, path
+):
+    class TrackingAuth:
+        method = "token"
+
+        def __init__(self):
+            self.headers_called = 0
+
+        def headers(self, description):
+            self.headers_called += 1
+            return {"X-Test-Token": "private-credential"}
+
+    server = Server()
+    server.description["response"]["resources"]["item"]["actions"]["show"]["path"] = (
+        path
+    )
+    auth = TrackingAuth()
+    client, injected = make_client(server, asynchronous, auth=auth)
+    try:
+        await resolve(client.connect())
+        before_requests = len(server.requests)
+        before_headers = auth.headers_called
+        with pytest.raises(ProtocolError):
+            await resolve(client.item[7].show())
+        assert len(server.requests) == before_requests
+        assert auth.headers_called == before_headers
+    finally:
+        await close(client, injected, asynchronous)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/outside/tokens",
+        "tokens",
+        "//evil.example/mount/tokens",
+        "https://evil.example/mount/tokens",
+        "/mount/../tokens",
+        "/mount/tokens?credential=value",
+    ],
+)
+async def test_invalid_token_descriptor_sends_no_login_credentials(asynchronous, path):
+    server = Server()
+    provider = server.description["response"]["authentication"]["token"]
+    provider["resources"]["token"]["actions"]["request"]["path"] = path
+    client, injected = make_client(server, asynchronous)
+    try:
+        with pytest.raises(ProtocolError):
+            await resolve(
+                client.begin_token_login(
+                    {"user": "private-user", "password": "private-password"}
+                )
+            )
+        assert len(server.requests) == 1
+        assert server.requests[0].method == "OPTIONS"
+        assert server.requests[0].content == b""
+        assert "authorization" not in server.requests[0].headers
+        assert "x-test-token" not in server.requests[0].headers
+    finally:
+        await close(client, injected, asynchronous)

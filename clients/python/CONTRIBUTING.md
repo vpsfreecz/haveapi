@@ -53,6 +53,13 @@ that unsupported GET shapes fail before action I/O. Run it with
 `uv run --locked pytest tests/integration/test_rack_wire.py`. It launches a Ruby
 parser subprocess and does not start an API server. See the README for the
 lossless GET subset, DELETE JSON encoding and JSON root-object restriction.
+
+`uv run --locked pytest tests/integration/test_mounted_description.py` checks
+real mounted action and token descriptors using `Rack::MockRequest` and the
+shared documentation fixture. It starts no listener, leaves the server's routes
+unchanged, and checks Python URL binding against the resulting OPTIONS response.
+It uses the same Ruby server bundle as the parser-only check.
+
 Install its dependencies from the repository root before running it:
 
 ```sh

@@ -33,7 +33,7 @@ def envelope(
                     "actions": {
                         "send": {
                             "method": method,
-                            "path": "/v1/wire",
+                            "path": "/mounted/v1/wire",
                             "input": {
                                 "layout": layout,
                                 "namespace": namespace,

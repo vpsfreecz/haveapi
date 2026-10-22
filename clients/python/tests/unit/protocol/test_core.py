@@ -26,7 +26,9 @@ from haveapi_client.exceptions import (
 )
 
 
-def description(*, layout="hash", namespace="entry", method="POST", parameters=None):
+def description(
+    *, layout="hash", namespace="entry", method="POST", parameters=None, mount=""
+):
     return parse_description(
         {
             "version": "2.17",
@@ -36,7 +38,8 @@ def description(*, layout="hash", namespace="entry", method="POST", parameters=N
                     "close": {
                         "actions": {
                             "from": {
-                                "path": "/v7/parents/{parent_id}/entries/{entry_id}",
+                                "path": mount
+                                + "/v7/parents/{parent_id}/entries/{entry_id}",
                                 "method": method,
                                 "aliases": ["class"],
                                 "input": {
@@ -159,7 +162,9 @@ def test_alias_ambiguity_and_canonical_precedence():
 
 @pytest.mark.parametrize("layout", ["object", "hash", "object_list", "hash_list"])
 def test_all_layouts_and_global_namespace(layout):
-    desc = description(layout=layout, parameters={"class": {"type": "Integer"}})
+    desc = description(
+        layout=layout, parameters={"class": {"type": "Integer"}}, mount="/mounted/api"
+    )
     params = {"class": "+7"}
     value = [params] if layout.endswith("_list") else params
     request = build_request(
@@ -202,7 +207,7 @@ def test_unwrapped_inputs_omission_null_defaults_and_no_mutation():
     )
     params = {"clear": None}
     request = build_request(
-        desc, context(desc), base_url="https://api.test/mount", params=params
+        desc, context(desc), base_url="https://api.test", params=params
     )
     assert json.loads(request.content) == {"clear": None}
     assert params == {"clear": None}
@@ -220,6 +225,7 @@ def test_unwrapped_inputs_omission_null_defaults_and_no_mutation():
 def test_query_nested_custom_values_repeated_arrays_and_null():
     desc = description(
         method="GET",
+        mount="/base",
         parameters={
             "clear": {"type": "Integer", "nullable": True},
             "extra": {"type": "Custom"},

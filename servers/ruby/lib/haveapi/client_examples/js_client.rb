@@ -1,164 +1,208 @@
-require 'haveapi/client_example'
+require 'haveapi/client_examples/dynamic_helpers'
 
 module HaveAPI::ClientExamples
   class JsClient < HaveAPI::ClientExample
-    label 'JavaScript'
+    include DynamicHelpers
+
+    label 'JavaScript (callback)'
+    id 'javascript-callback'
     code :javascript
     order 10
 
-    def init
-      <<~END
-        import HaveAPI from 'haveapi-client'
-
-        var api = new HaveAPI.Client("#{base_url}", {version: "#{version}"});
-      END
+    def asynchronous?
+      false
     end
 
-    def auth(method, desc)
-      case method
-      when :basic
-        <<~END
-          #{init}
+    def typescript?
+      false
+    end
 
-          api.authenticate("basic", {
-            user: "user",
-            password: "secret"
-          }, function (client, status) {
-            console.log("Authenticated?", status);
-          });
-        END
+    def js_literal(value)
+      value = json_data(value)
+      case value
+      when Hash
+        "{#{value.map { |key, entry| "[#{JSON.generate(key)}]: #{js_literal(entry)}" }.join(', ')}}"
+      when Array
+        "[#{value.map { |entry| js_literal(entry) }.join(', ')}]"
+      when Integer
+        raise Unsupported, 'This sample contains an integer outside JavaScript exact precision.' if value.abs > 9_007_199_254_740_991
 
-      when :token
-        <<~END
-          #{init}
-
-          // Request a new token
-          api.authenticate("token", {
-            #{auth_token_credentials(desc).map { |k, v| "#{k}: \"#{v}\"" }.join(",\n  ")}
-          }, function (client, status) {
-            console.log("Authenticated?", status);
-
-            if (status)
-              console.log("Token is", client.authProvider.token);
-          });
-
-          // Use an existing token
-          api.authenticate("token", {
-            token: "qwertyuiop..."
-          }, function (client, status) {
-            console.log("Authenticated?", status);
-          });
-        END
-
-      when :oauth2
-        <<~END
-          #{init}
-          // The JavaScript client must be configured with OAuth2 access token, it does not
-          // support the authorization procedure to obtain a new access token.
-          var accessToken = {
-            access_token: "the access token"
-          };
-
-          // The client is authenticated immediately, no need for a callback
-          api.authenticate("oauth2", {access_token: accessToken});
-        END
+        value.to_s
+      else
+        JSON.generate(value).gsub("\u2028", '\\u2028').gsub("\u2029", '\\u2029')
       end
+    end
+
+    def client_name
+      asynchronous? ? 'AsyncClient' : 'CallbackClient'
+    end
+
+    def env_helper
+      type = typescript? ? ': string' : ''
+      <<~JS
+        function credential(name#{type})#{type} {
+          const value = env[name];
+          if (value === undefined) throw new Error("Set " + name + " before running this example");
+          return value;
+        }
+      JS
+    end
+
+    def program(body, authentication: nil)
+      imports = "import { #{client_name}#{', AsyncError' if asynchronous?} } from \"haveapi-client\";\n"
+      imports << "import { env } from \"node:process\";\n\n#{env_helper}\n" if authentication
+      declaration = "const api = new #{client_name}(#{js_literal(api_base)}, {version: #{js_literal(api_version)}});\n"
+      if asynchronous?
+        <<~JS
+          #{imports}
+          async function main()#{': Promise<void>' if typescript?} {
+          #{indent(declaration)}  try {
+          #{indent(authentication || "await api.setup();\n", 4)}#{indent(body, 4)}  } catch (error) {
+              if (error instanceof AsyncError) {
+                console.error(error.kind, error.message, error.errors);
+              } else {
+                throw error;
+              }
+            }
+          }
+          main().catch(error => console.error(error));
+        JS
+      else
+        <<~JS
+          #{imports}
+          #{declaration}
+          #{authentication || 'api.setup('}(client, ready) => {
+            if (!ready) {
+              console.error("Discovery or authentication failed");
+              return;
+            }
+            try {
+          #{indent(body, 4)}  } catch (error) {
+              console.error(error);
+            }
+          });
+        JS
+      end
+    end
+
+    def init
+      code_result { program("console.log(\"Discovery complete\");\n") }
+    end
+
+    def action_authentication
+      return nil unless field(current_action, :auth)
+
+      method = %i[token basic oauth2].find { |name| supported_auth?(name) }
+      raise Unsupported, 'This action requires an authentication provider unsupported by this client.' unless method
+
+      options = {
+        token: '{token: credential("HAVEAPI_TOKEN")}',
+        basic: '{user: credential("HAVEAPI_USER"), password: credential("HAVEAPI_PASSWORD")}',
+        oauth2: '{access_token: {access_token: credential("HAVEAPI_ACCESS_TOKEN")}}'
+      }.fetch(method)
+      if asynchronous?
+        "await api.authenticate(#{js_literal(method.to_s)}, #{options});\n"
+      else
+        "api.authenticate(#{js_literal(method.to_s)}, #{options}, "
+      end
+    end
+
+    def auth(method, description)
+      return limitation('This authentication provider is not advertised or supported by this client.') unless supported_auth?(method)
+
+      code_result do
+        options = case method.to_sym
+                  when :basic
+                    '{user: credential("HAVEAPI_USER"), password: credential("HAVEAPI_PASSWORD")}'
+                  when :token
+                    if token_login_fields(description).empty?
+                      '{token: credential("HAVEAPI_TOKEN")}'
+                    else
+                      "env.HAVEAPI_TOKEN !== undefined ? {token: credential(\"HAVEAPI_TOKEN\")} : #{token_login_options(description)}"
+                    end
+                  when :oauth2
+                    '{access_token: {access_token: credential("HAVEAPI_ACCESS_TOKEN")}}'
+                  end
+        authentication = if asynchronous?
+                           "await api.authenticate(#{js_literal(method.to_s)}, #{options});\n"
+                         else
+                           "api.authenticate(#{js_literal(method.to_s)}, #{options}, "
+                         end
+        source = program("console.log(\"Authenticated\");\n", authentication:)
+        if method.to_sym == :oauth2
+          source = "// Use an existing access token; this client does not run an OAuth authorization flow.\n#{source}"
+        elsif method.to_sym == :token && !token_login_fields(description).empty?
+          source = "// Set HAVEAPI_TOKEN, or use login fields; HAVEAPI_AUTH_* and HAVEAPI_CHALLENGE_* contain JSON values.\n#{source}"
+        end
+        source
+      end
+    end
+
+    def token_login_options(description)
+      fields = token_login_fields(description).map do |name, _|
+        "[#{js_literal(name.to_s)}]: JSON.parse(credential(#{js_literal("HAVEAPI_AUTH_#{name}")}))"
+      end
+      challenge = asynchronous? ? 'onChallenge' : 'callback'
+      annotation = typescript? ? ': Record<string, unknown>' : ''
+      fields << <<~JS.strip
+        #{challenge}: (action, parameters) => {
+          const input#{annotation} = Object.create(null);
+          for (const name of Object.keys(parameters)) {
+            if (name !== "token") input[name] = JSON.parse(credential("HAVEAPI_CHALLENGE_" + name));
+          }
+          return input;
+        }
+      JS
+      "{#{fields.join(",\n")}}"
     end
 
     def example(sample)
-      args = []
-
-      args.concat(sample[:path_params]) if sample[:path_params]
-
-      if sample[:request] && !sample[:request].empty?
-        args << JSON.pretty_generate(sample[:request])
-      end
-
-      out = "#{init}\n"
-      out << "api.#{resource_path.join('.')}.#{action_name}"
-      out << '('
-      out << "#{args.join(', ')}, " unless args.empty?
-
-      callback = "function (client, reply) {\n"
-      callback << "  console.log('Response', reply);\n"
-
-      callback << if sample[:status]
-                    response(sample)
-
-                  else
-                    error(sample)
-                  end
-
-      callback << '}'
-
-      out << callback.strip
-      out << ');'
-      out
-    end
-
-    def response(sample)
-      out = ''
-
-      case action[:output][:layout]
-      when :hash
-        out << "  // reply is an instance of HaveAPI.Client.Response\n"
-        out << "  // reply.response() returns an object with output parameters:\n"
-        out << JSON.pretty_generate(sample[:response] || {}).split("\n").map do |v|
-          "  // #{v}"
-        end.join("\n")
-        out << "\n"
-
-      when :hash_list
-        out << "  // reply is an instance of HaveAPI.Client.Response\n"
-        out << "  // reply.response() returns an array of objects:\n"
-        out << JSON.pretty_generate(sample[:response] || []).split("\n").map do |v|
-          "  // #{v}"
-        end.join("\n")
-        out << "\n"
-
-      when :object
-        out << "  // reply is an instance of HaveAPI.Client.ResourceInstance\n"
-
-        (sample[:response] || {}).each do |pn, pv|
-          param = action[:output][:parameters][pn]
-
-          if param[:type] == 'Resource'
-            out << "  // reply.#{pn} = HaveAPI.Client.ResourceInstance("
-            out << "resource: #{param[:resource].join('.')}, "
-
-            out << if pv.is_a?(::Hash)
-                     pv.map { |k, v| "#{k}: #{PP.pp(v, '').strip}" }.join(', ')
-                   else
-                     "id: #{pv}"
-                   end
-
-            out << ")\n"
-
-          elsif param[:type] == 'Custom' && (pv.is_a?(::Hash) || pv.is_a?(::Array))
-            json = JSON.pretty_generate(pv).split("\n").map do |v|
-              "  // #{v}"
-            end.join("\n")
-
-            out << "  // reply.#{pn} = #{json}"
-
-          else
-            out << "  // reply.#{pn} = #{PP.pp(pv, '')}"
-          end
+      code_result do
+        path, request = structured_sample(sample)
+        if request.is_a?(Array)
+          raise Unsupported, 'This JavaScript client accepts object input only; list input cannot be represented without dropping values.'
+        end
+        if !request.nil? && !request.is_a?(Hash)
+          raise Unsupported, 'This JavaScript client requires object input.'
+        end
+        if !asynchronous? && field(field(current_action, :input), :parameters, {}).keys.any? { |name| %w[hasOwnProperty __proto__].include?(name.to_s) }
+          raise Unsupported, 'This callback client cannot safely represent this input parameter name.'
+        end
+        if request && %w[GET OPTIONS].include?(field(current_action, :method).to_s.upcase) && request.values.any? { |value| value.is_a?(Hash) || value.is_a?(Array) }
+          raise Unsupported, 'This JavaScript client cannot preserve nested values in query input.'
         end
 
-      when :object_list
-        out << "  // reply is an instance of HaveAPI.Client.ResourceInstanceList\n"
+        args = path.values.map { |value| js_literal(value) }
+        if asynchronous?
+          resource = current_resource_path.each_with_index.map do |name, index|
+            "#{'api' if index == 0}.resource(#{js_literal(name)})"
+          end.join
+          options = request.nil? ? [] : ["{params: #{js_literal(request)}}"]
+          body = "const result = await #{resource}.action(#{js_literal(current_action_name)})(#{(args + options).join(', ')});\n"
+          body << "console.log(result.value);\nconsole.log(result.response.meta);\n"
+          if field(current_action, :blocking)
+            body << "// Request success alone does not establish operation completion.\n"
+            body << "const completed = await api.waitForCompletion(result, {timeoutMs: 300000});\nconsole.log(completed.state);\n"
+          end
+        else
+          body = "const resource = CallbackClient.findResource(client, #{js_literal(current_resource_path)});\n"
+          body << "const action = CallbackClient.findAction(resource, #{js_literal(current_action_name)});\n"
+          options = request.nil? ? '' : "params: #{js_literal(request)},\n"
+          options << <<~JS
+            onReply: (owner, reply) => {
+              if (!reply.isOk()) {
+                console.error(reply.message(), reply.envelope.errors);
+                return;
+              }
+              console.log(reply.response());
+              console.log(reply.meta());
+            }
+          JS
+          body << "action.directInvoke(#{(args + ["{\n#{indent(options)}}"]).join(', ')});\n"
+          body << "// This prints the initial response; use its action-state metadata to monitor completion.\n" if field(current_action, :blocking)
+        end
+        program(body, authentication: action_authentication)
       end
-
-      out
-    end
-
-    def error(sample)
-      out = ''
-      out << "  // reply.isOk() returns false\n"
-      out << "  // reply.message() returns the error message\n"
-      out << "  // reply.envelope.errors contains parameter errors\n"
-      out
     end
   end
 end

@@ -21,10 +21,8 @@ class ClientTestServer
         $gemfile = $root . '/servers/ruby/Gemfile';
         $script = $root . '/servers/ruby/test_support/client_test_server.rb';
 
-        $cmd = sprintf(
-            'bundle exec ruby %s --port 0 2>&1',
-            escapeshellarg($script)
-        );
+        // Keep the Ruby fixture as the process that stop() signals and reaps.
+        $cmd = ['bundle', 'exec', 'ruby', $script, '--port', '0'];
 
         $env = [];
 
@@ -52,7 +50,7 @@ class ClientTestServer
         $spec = [
             0 => ['pipe', 'r'],
             1 => ['pipe', 'w'],
-            2 => ['pipe', 'w'],
+            2 => ['redirect', 1],
         ];
 
         $this->proc = proc_open($cmd, $spec, $this->pipes, $cwd, $env);
@@ -62,7 +60,6 @@ class ClientTestServer
         }
 
         stream_set_blocking($this->pipes[1], false);
-        stream_set_blocking($this->pipes[2], false);
 
         $this->waitForReady();
         $this->waitForHealth();

@@ -19,6 +19,15 @@ module HaveAPI::GoClient
     # @return [String]
     attr_reader :package
 
+    # Construct from the exact saved API description without contacting a server.
+    # Generation and formatting remain explicit caller operations.
+    def self.from_description(description, dst, opts)
+      generator = allocate
+      generator.send(:configure, dst, opts)
+      generator.instance_variable_set(:@api, ApiVersion.new(description))
+      generator
+    end
+
     # @param url [String] API URL
     # @param dst [String] destination directory
     # @param opts [Hash]
@@ -26,9 +35,7 @@ module HaveAPI::GoClient
     # @option opts [String] :module
     # @option opts [String] :package
     def initialize(url, dst, opts)
-      @dst = dst
-      @module = opts[:module] && go_module_path(opts[:module])
-      @package = go_package_name(opts[:package])
+      configure(dst, opts)
 
       conn = HaveAPI::Client::Communicator.new(url)
       if opts[:basic_user] && opts[:basic_password]
@@ -76,6 +83,12 @@ module HaveAPI::GoClient
     protected
 
     attr_reader :api
+
+    def configure(dst, opts)
+      @dst = dst
+      @module = opts[:module] && go_module_path(opts[:module])
+      @package = go_package_name(opts[:package])
+    end
 
     def i18n_messages
       @i18n_messages ||= YAML.safe_load_file(

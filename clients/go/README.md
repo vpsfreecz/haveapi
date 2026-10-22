@@ -78,3 +78,8 @@ The value is sent in `Accept-Language` by default. Use
 `SetLanguageHeader("X-Language")` when the API is configured with a custom
 language header. Read the configured values with `GetLanguage()` and
 `GetLanguageHeader()`.
+
+## API documentation examples
+
+The Ruby server can render examples against a configured generated Go SDK.
+See [profile configuration, supported samples and verification](docs/documentation.md).

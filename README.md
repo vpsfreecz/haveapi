@@ -37,6 +37,7 @@ Available clients:
 - Python synchronous and asynchronous client at [clients/python](clients/python)
 - JavaScript and TypeScript client at [clients/js](clients/js)
 - Go client generator at [clients/go](clients/go)
+- Rust client generator at [clients/rust](clients/rust)
 - Elixir client at [clients/elixir](clients/elixir) (outdated)
 
 Complex applications can be built on top of these basic clients, e.g.:

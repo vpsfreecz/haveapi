@@ -1,6 +1,7 @@
 import type { Params } from './types';
 export interface UrlOptions {
     actionPath?: boolean;
+    pathMode?: 'api' | 'descriptor';
     trustedOrigins?: string[];
 }
 export declare function normalizeTrustedOrigins(origins: string | string[] | null | undefined, makeError: (message: string) => unknown): string[];

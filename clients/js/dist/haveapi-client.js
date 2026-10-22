@@ -140,11 +140,14 @@ function resolveApiUrl(baseUrl, url, opts, makeError) {
     }
     var base = new URL(baseUrl);
     var resolved;
+    if (base.username || base.password) {
+        throw makeError('Unsafe API URL origin');
+    }
     if (opts.actionPath) {
         if (url[0] != '/' || url[1] == '/' || url.indexOf('@') != -1) {
             throw makeError('Unsafe API action path');
         }
-        resolved = new URL(baseUrl + url);
+        resolved = new URL((opts.pathMode === 'api' ? baseUrl : base.origin) + url);
     }
     else {
         if (url[0] == '/' && url[1] == '/') {
@@ -458,15 +461,30 @@ BaseResource.prototype.attachResources = function (description, args) {
  */
 BaseResource.prototype.attachActions = function (description, args) {
     this.actions = [];
+    var index = Object.create(null);
+    var aliases = Object.create(null);
+    this._private.actionIndex = index;
     for (var a in description.actions) {
         if (!Client.hasOwn(description.actions, a))
             continue;
         var names = [a].concat(description.actions[a].aliases || []);
         var actionInstance = new Client.Action(this._private.client, this, a, description.actions[a], args);
+        index[a] = actionInstance;
         for (var i = 0; i < names.length; i++) {
             Client.attachDescriptionMember(this, names[i], actionInstance, BaseResource.reservedAttachmentNames);
+            if (i > 0 && typeof names[i] === 'string') {
+                var alias = names[i];
+                if (!Client.hasOwn(aliases, alias))
+                    aliases[alias] = actionInstance;
+                else if (aliases[alias] !== actionInstance)
+                    aliases[alias] = null;
+            }
         }
         this.actions.push(a);
+    }
+    for (var alias in aliases) {
+        if (!Client.hasOwn(index, alias) && aliases[alias] !== null)
+            index[alias] = aliases[alias];
     }
 };
 /**
@@ -1572,6 +1590,13 @@ Client.findResource = function (root, resourcePath) {
 };
 Client.normalizeTrustedOrigins = function (origins) {
     return normalizeTrustedOrigins(origins, function (message) { return new Client.Exceptions.ProtocolError(message); });
+};
+/** Look up canonical names and unambiguous aliases without direct properties. */
+Client.findAction = function (resource, name) {
+    var index = resource._private.actionIndex;
+    if (!index || !Client.hasOwn(index, name))
+        throw new Client.Exceptions.ProtocolError("Action '" + name + "' not found or ambiguous");
+    return index[name];
 };
 /**
  * Resolve a URL from an API description and require it to stay on the
@@ -2825,7 +2850,7 @@ function prepare(spec, context) {
         (spec.inputNamespace != null && (typeof spec.inputNamespace !== 'string' || !spec.inputNamespace)) ||
         (spec.outputNamespace != null && (typeof spec.outputNamespace !== 'string' || !spec.outputNamespace)))
         throw new AsyncError('validation', 'Invalid parameter namespace');
-    var url = resolveApiUrl(context.baseUrl, spec.path, { actionPath: true }, function (message) { return new AsyncError('protocol', message); });
+    var url = resolveApiUrl(context.baseUrl, spec.path, { actionPath: true, pathMode: context.pathMode || 'api' }, function (message) { return new AsyncError('protocol', message); });
     var headers;
     try {
         headers = mergeHeaders({ Accept: 'application/json' }, context.headers, I18n.requestHeaders(context.language, context.languageHeader), spec.headers);
@@ -3900,8 +3925,9 @@ var AsyncClient = /** @class */ (function () {
         I18n.assertHeaderName(header);
         this.languageHeader = header;
     };
-    AsyncClient.prototype.requestContext = function (auth, metaNamespace) {
-        return __assign({ baseUrl: this.baseUrl, metaNamespace: metaNamespace, language: this.language, languageHeader: this.languageHeader, headers: Object.assign({}, auth.headers) }, (auth.credentials ? { credentials: Object.assign({}, auth.credentials) } : {}));
+    AsyncClient.prototype.requestContext = function (auth, metaNamespace, pathMode) {
+        if (pathMode === void 0) { pathMode = 'api'; }
+        return __assign({ baseUrl: this.baseUrl, pathMode: pathMode, metaNamespace: metaNamespace, language: this.language, languageHeader: this.languageHeader, headers: Object.assign({}, auth.headers) }, (auth.credentials ? { credentials: Object.assign({}, auth.credentials) } : {}));
     };
     /** Explicit per-request headers override configured auth/language headers. */
     AsyncClient.prototype.request = function (spec) {
@@ -3942,7 +3968,7 @@ var AsyncClient = /** @class */ (function () {
             request: function (spec) {
                 if (_this.generation !== generation)
                     return Promise.reject(new AsyncError('protocol', 'Resource binding belongs to an older client state', { reason: 'stale-binding' }));
-                return request(Object.assign({}, spec, { metaNamespace: description.meta.namespace }), _this.requestContext(auth, description.meta.namespace));
+                return request(Object.assign({}, spec, { metaNamespace: description.meta.namespace }), _this.requestContext(auth, description.meta.namespace, 'descriptor'));
             },
             validateParams: function (action, params) { return validateParams(action, params, _this.language); },
             makeError: function (kind, message, details) { return new AsyncError(kind, message, details); },
@@ -4031,7 +4057,7 @@ var AsyncClient = /** @class */ (function () {
                         _b.label = 2;
                     case 2:
                         description = _a;
-                        return [4 /*yield*/, authenticate(method, snapshot, description, function (spec, state) { return request(spec, _this.requestContext(state, description.meta.namespace)); }, this.language)];
+                        return [4 /*yield*/, authenticate(method, snapshot, description, function (spec, state) { return request(spec, _this.requestContext(state, description.meta.namespace, 'descriptor')); }, this.language)];
                     case 3:
                         candidate = _b.sent();
                         return [4 /*yield*/, this.fetchDescription(candidate)];

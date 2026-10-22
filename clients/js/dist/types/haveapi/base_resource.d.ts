@@ -6,6 +6,7 @@ export interface BaseResourcePrivate {
     parent: BaseResource | null;
     name: string;
     description: ResourceDescription;
+    actionIndex?: Record<string, Action>;
 }
 export interface BaseResource<P extends BaseResourcePrivate = BaseResourcePrivate> {
     _private: P;

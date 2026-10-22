@@ -2,6 +2,7 @@ import type { Credentials, HeaderMap, Language, Values } from '../types';
 import type { RequestResult, RequestSpec } from './types';
 export interface RequestContext {
     baseUrl: string;
+    pathMode?: 'api' | 'descriptor';
     metaNamespace: string;
     language?: Language;
     languageHeader: string;

@@ -39,4 +39,9 @@ See [the Rust client development guide](../../clients/rust/README.md) for the
 locked Ruby component bundle, pinned Rust formatter, generator unit specs and
 separate runtime/integration checks. `make test-rust-unit` is the quick Ruby
 check; `make test-rust` also compiles and exercises generated clients. The Rust
-generator is not added to existing broad release/publication targets.
+generator is included in the top-level release build and publishing workflow.
+`make release-check` checks its shared version and dependency; `make release`
+inspects the retained gem and runs the isolated packaged-generator smoke check.
+`make test` includes the longer `test-rust` target. See
+[Rust packaging](../../clients/rust/docs/releasing.md) for the standalone smoke
+command and generated-client release checks.

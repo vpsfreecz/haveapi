@@ -13,6 +13,7 @@ on:
       - 'flake.lock'
       - 'clients/js/package.json'
       - 'clients/python/**'
+      - 'clients/rust/**'
   pull_request:
     paths:
       - '.github/workflows/release.yml'
@@ -23,6 +24,7 @@ on:
       - 'flake.lock'
       - 'clients/js/package.json'
       - 'clients/python/**'
+      - 'clients/rust/**'
   workflow_dispatch:
 
 # Finish one tagged release before starting another. Branch checks are separate.

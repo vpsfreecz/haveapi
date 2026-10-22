@@ -19,6 +19,7 @@ All maintained components use the shared version and are released together:
 | Ruby server | RubyGems `haveapi` |
 | Ruby client and CLI | RubyGems `haveapi-client` |
 | Go client generator, implemented in Ruby | RubyGems `haveapi-go-client` |
+| Rust client generator, implemented in Ruby | RubyGems `haveapi-rust-client` |
 | JavaScript and TypeScript client | One npm `haveapi-client` package with both clients and TypeScript declarations; a JavaScript browser bundle |
 | PHP client | Composer `haveapi/client`, through `vpsfreecz/haveapi-client-php` |
 | Python client | PyPI `haveapi-client` |
@@ -44,14 +45,27 @@ source revision.
    repository policy. The workflow checks that required reviewers are configured;
    merely naming an environment does not enable approval.
 2. Configure a [RubyGems trusted publisher](https://guides.rubygems.org/trusted-publishing/)
-   for each of the three gems: owner `vpsfreecz`, repository `haveapi`, workflow
-   `release.yml`, environment `release`.
+   for each of the four gems: owner `vpsfreecz`, repository `haveapi`, workflow
+   filename `release.yml`, environment `release`. For a gem that does not exist
+   yet, such as the first `haveapi-rust-client` release, use your account's
+   [pending trusted publishers](https://rubygems.org/profile/oidc/pending_trusted_publishers)
+   page. Enter the gem name and the same GitHub fields; leave the optional
+   Workflow Repository fields blank because the workflow lives in HaveAPI.
+   The first successful upload creates the gem, adds the configuring account as
+   its owner and converts the pending entry into a normal publisher. No manual
+   seed upload or stored RubyGems token is needed.
 3. Configure the [npm trusted publisher](https://docs.npmjs.com/trusted-publishers/)
    for `haveapi-client` with the same owner, repository, workflow and environment.
-   Allow direct `npm publish`. The package's repository URL must identify
+   Allow direct `npm publish`; the default permission for staged publishing does
+   not authorize this workflow's direct upload. A new publisher entry must
+   complete its first successful publication within two days or it expires, so
+   configure it close to the approved release. Confirm an existing entry remains
+   valid. The package's repository URL must identify
    `https://github.com/vpsfreecz/haveapi`. The Nix release shell supplies Node 24;
-   publication checks that npm is at least 11.5.1. Registry access uses OIDC, with
-   no stored RubyGems or npm publishing tokens.
+   npm requires Node 22.14.0 or newer and npm 11.5.1 or newer for trusted
+   publishing. Use GitHub-hosted runners; npm does not support self-hosted runners
+   for this authentication. Registry access uses OIDC, with no stored RubyGems or
+   npm publishing tokens.
 4. Add a write deploy key to `vpsfreecz/haveapi-client-php`. Store its private key
    as environment secret `HAVEAPI_PHP_DEPLOY_KEY` in HaveAPI's `release`
    environment. This credential can push only to that repository. SSH verifies
@@ -64,9 +78,13 @@ source revision.
    disabled or the release environment lacks required reviewers.
 7. Configure a [PyPI trusted publisher](https://docs.pypi.org/trusted-publishers/)
    for project `haveapi-client`: owner `vpsfreecz`, repository `haveapi`, workflow
-   `release.yml`, environment `release`. Before the first upload, confirm control
-   of the project name and use PyPI's pending-publisher setup if needed. A 404
-   from the package JSON endpoint does not establish ownership or availability.
+   `release.yml`, environment `release`. Before the first upload, use the intended
+   initial owner's account Publishing page to add a pending publisher with
+   project name `haveapi-client` and those GitHub fields. The first upload creates
+   the project and converts the publisher; no manual seed upload is needed.
+   A pending entry does not reserve the project name. Confirm the name can still
+   be registered before publication: a 404 from the package JSON endpoint does
+   not establish ownership or availability.
    The official PyPA action exchanges the job's OIDC identity for a short-lived
    upload credential; no PyPI password or API token is configured. TestPyPI needs
    its own publisher configuration.
@@ -78,6 +96,12 @@ installation while publishing credentials are present.
 ## Preparing and publishing a version
 
 Run release commands from the top-level `nix develop` shell.
+
+Before changing versions on a fresh checkout, run
+`nix develop .#client-rust -c true` from the repository root to prepare the
+locked Rust component bundle, then enter the top-level shell. This setup is
+already complete if `make release-deps` has prepared all components.
+`make version` refreshes the Rust lockfile using only that local bundle.
 
 1. Prepare the new major/minor branch or the supported patch branch. Keep its
    source and release metadata changes in separate commits.
@@ -105,13 +129,13 @@ Run release commands from the top-level `nix develop` shell.
    GitHub Release. It validates the PHP mirror and existing registry hashes
    before writing to any registry. The PyPA action uploads missing retained
    Python files, then the helper confirms their PyPI hashes. It pushes the Ruby
-   client before its dependent server and Go-generator gems, publishes the npm
-   tarball and updates the PHP mirror. It
+   client before its dependent server, Go-generator and Rust-generator gems,
+   publishes the npm tarball and updates the PHP mirror. It
    publishes the GitHub Release only after all destinations succeed.
 7. Confirm the workflow's publication receipts and verify that the PHP version
    appears on Packagist. Packagist indexes the mirror asynchronously.
 
-The GitHub Release contains the three gems, npm tarball, browser bundle, PHP
+The GitHub Release contains the four gems, npm tarball, browser bundle, PHP
 source archive, Python wheel and sdist, release notes and manifest. Python uses
 the shared `VERSION`; `make version` updates its pyproject and lockfile, and
 release checks reject a mismatch. No package is rebuilt after approval.
@@ -133,17 +157,35 @@ make release-deps
 make release
 make test
 ruby utils/release/cli.rb smoke-npm dist
+ruby utils/release/rust_smoke.rb dist
 ruby utils/release/cli.rb verify dist
 cd clients/python && uv run --locked python utils/package_smoke.py
 ```
 
 `make release` requires a clean tracked checkout and an empty `dist` directory.
 Move earlier artifacts aside before building. It generates shared documentation
-for the Ruby server, builds three gems, rebuilds and packs JavaScript, and
+for the Ruby server, builds four gems, rebuilds and packs JavaScript,
 archives the tracked PHP subtree, and builds the Python wheel and sdist with uv.
 It never uploads packages. Component gems use the local Ruby client, so a new
 shared version need not already exist on RubyGems.
 Do not commit generated server documentation or build artifacts.
+
+Rust generator packaging includes its executable, templates, dependency lock,
+documentation and embedded runtime source. The private Cargo harness and test
+fixtures are excluded. The manifest records Rust tool versions and dependency
+locks. After writing the manifest, the build runs `rust_smoke.rb` against the
+retained gem in an isolated installation, generates a saved schema fixture and
+checks the copied runtime without loading generator code from the checkout.
+`make test` covers Rust generator unit tests, both runtime feature configurations
+and generated-client protocol acceptance. See the
+[Rust packaging guide](../../clients/rust/docs/releasing.md) for the generated
+crate's independent versioning and compatibility checks.
+
+The Rust runtime is embedded in generated clients; it is not a separately
+published crates.io dependency. The `haveapi-runtime-tests` harness stays private
+at its own version. HaveAPI's release workflow needs no crates.io token or
+publisher registration. A consuming API's generated Rust crate has its own
+release process.
 
 The JavaScript packaging step runs gulp before `npm pack`. Gulp compiles the
 TypeScript sources into `dist/haveapi-client.js` and `dist/types`; the npm archive
@@ -187,8 +229,9 @@ expired. Do not substitute a new build for an accepted package version.
 Each destination is checked before publication. Existing gems must match the
 retained SHA-256; npm must match package identity and tarball integrity. An
 existing PHP tag must contain the same snapshot and HaveAPI source commit. The
-workflow skips only verified matches. Conflicting versions, authentication
-errors and network errors fail visibly. Existing PyPI filenames and SHA-256
+workflow skips only verified matches, including the Rust generator gem.
+Conflicting versions, authentication errors and network errors fail visibly.
+Existing PyPI filenames and SHA-256
 values must match the manifest. Unexpected or changed files stop the release.
 On partial Python publication, only missing original files are staged for the
 PyPA action. The workflow does not use `skip-existing` or rebuild those files.

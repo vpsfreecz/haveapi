@@ -1,6 +1,6 @@
 import type { Params } from './types';
 
-export interface UrlOptions {actionPath?: boolean; trustedOrigins?: string[]}
+export interface UrlOptions {actionPath?: boolean; pathMode?: 'api' | 'descriptor'; trustedOrigins?: string[]}
 
 export function normalizeTrustedOrigins(origins: string | string[] | null | undefined, makeError: (message: string) => unknown) {
 	if (origins === undefined || origins === null)
@@ -51,13 +51,16 @@ export function resolveApiUrl(baseUrl: string, url: string, opts: UrlOptions | u
 
 	var base = new URL(baseUrl);
 	var resolved;
+	if (base.username || base.password) {
+		throw makeError('Unsafe API URL origin');
+	}
 
 	if (opts.actionPath) {
 		if (url[0] != '/' || url[1] == '/' || url.indexOf('@') != -1) {
 			throw makeError('Unsafe API action path');
 		}
 
-		resolved = new URL(baseUrl + url);
+		resolved = new URL((opts.pathMode === 'api' ? baseUrl : base.origin) + url);
 
 	} else {
 		if (url[0] == '/' && url[1] == '/') {

@@ -51,6 +51,15 @@ This request does not need `setup()`. See [async requests and authentication](do
 and [async resources and binding](doc-async-resources.md) for description-based
 resource access, authentication, errors and completion waiting.
 
+For discovery and described actions, configure the API root including its mount,
+such as `https://api.example.test/mount/`, and select the version with
+`{version: '2'}`. The server's advertised action and authentication paths already
+specify the route, including the mount and any version prefix. Clients resolve
+these paths from the origin root.
+Raw `AsyncClient.request` paths remain relative to the configured API base.
+Applications with manually built or cached API-relative descriptors under a
+mounted base must refresh those descriptors from OPTIONS.
+
 ### CallbackClient
 
 Create a callback client instance:

@@ -45,8 +45,8 @@ export class AsyncClient {
 		I18n.assertHeaderName(header);
 		this.languageHeader = header;
 	}
-	private requestContext(auth: AuthenticationState, metaNamespace: string): RequestContext {
-		return {baseUrl: this.baseUrl, metaNamespace, language: this.language, languageHeader: this.languageHeader,
+	private requestContext(auth: AuthenticationState, metaNamespace: string, pathMode: RequestContext['pathMode'] = 'api'): RequestContext {
+		return {baseUrl: this.baseUrl, pathMode, metaNamespace, language: this.language, languageHeader: this.languageHeader,
 			headers: Object.assign({}, auth.headers), ...(auth.credentials ? {credentials: Object.assign({}, auth.credentials)} : {})};
 	}
 	/** Explicit per-request headers override configured auth/language headers. */
@@ -72,7 +72,7 @@ export class AsyncClient {
 			description, metaNamespace: description.meta.namespace, generation,
 			request: <T>(spec: RequestSpec) => {
 				if (this.generation !== generation) return Promise.reject(new AsyncError('protocol', 'Resource binding belongs to an older client state', {reason: 'stale-binding'}));
-				return request<T>(Object.assign({}, spec, {metaNamespace: description.meta.namespace}), this.requestContext(auth, description.meta.namespace));
+				return request<T>(Object.assign({}, spec, {metaNamespace: description.meta.namespace}), this.requestContext(auth, description.meta.namespace, 'descriptor'));
 			},
 			validateParams: (action, params) => validateParams(action, params, this.language),
 			makeError: (kind, message, details) => new AsyncError(kind, message, details),
@@ -129,7 +129,7 @@ export class AsyncClient {
 			const generation = this.generation;
 			const description = this.description || await this.fetchDescription(this.authentication);
 			const candidate = await authenticate(method, snapshot, description,
-				<T>(spec: RequestSpec, state: AuthenticationState) => request<T>(spec, this.requestContext(state, description.meta.namespace)), this.language);
+				<T>(spec: RequestSpec, state: AuthenticationState) => request<T>(spec, this.requestContext(state, description.meta.namespace, 'descriptor')), this.language);
 			const authorized = await this.fetchDescription(candidate);
 			this.publish(authorized, candidate, generation);
 		});

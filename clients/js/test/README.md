@@ -18,6 +18,12 @@ prototypes, metadata, list helpers and attribute descriptors. Hook receiver and
 argument assertions preserve the existing implementation, including its quirks;
 they do not specify the new AsyncClient contract.
 
+`test/compatibility/mounted_paths.spec.cjs` covers callback and async descriptor
+paths, raw requests, discovery, global/versioned token challenges and state
+polling without a listener. The server's
+`spec/client_examples/dynamic_mounted_paths_spec.rb` also feeds actual mounted
+Rack descriptions and token/action replies through the built clients.
+
 The initial 12 cases passed before conversion against the bundle at
 `cb3f39f75e8a63416388d24293f936d1db97162b`, SHA-256
 `3e8fcefe8edf78f6cea635c1bf4312b56c2e05355287153e142d30a9608c6436`.

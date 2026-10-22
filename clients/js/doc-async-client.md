@@ -53,6 +53,14 @@ output namespace. Description-driven calls use the same request pipeline;
 see [Async resources and binding](doc-async-resources.md) for their richer
 `{value, response}` results, save behavior and explicit association loading.
 
+With base `https://api.example/mount/`, a raw request path `/v2/widgets/42`
+requests `https://api.example/mount/v2/widgets/42`. Described resource, token and
+action-state paths are origin-root-relative: the advertised path
+`/mount/v2/widgets/42` requests that exact route at the configured origin.
+Discovery retains the configured mount and selected version. Global token routes
+keep the server's advertised version choice. Neither path form triggers a guessed
+mount/version prefix or a retry at another URL.
+
 Request fields:
 
 - `method` and `path` select the request. Paths are API-relative and retain a

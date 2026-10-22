@@ -160,7 +160,7 @@ describe('HaveAPI JS client path construction', () => {
     ]);
   });
 
-  it('preserves configured API base paths when resolving action paths', () => {
+  it('uses the advertised origin-root action path under a configured API mount', () => {
     const HaveAPI = loadHaveAPI();
     const client = makeClient(HaveAPI, 'https://api.example/api');
     const capturedUrls = [];
@@ -175,7 +175,7 @@ describe('HaveAPI JS client path construction', () => {
       });
     };
 
-    const action = makeAction(HaveAPI, client);
+    const action = makeAction(HaveAPI, client, '/api/v1/users/{user_id}');
 
     action.directInvoke(42, { onReply() {} });
 

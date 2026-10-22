@@ -7,6 +7,7 @@ import type { ApiErrors, RequestResult, RequestSpec } from './types';
 
 export interface RequestContext {
 	baseUrl: string;
+	pathMode?: 'api' | 'descriptor';
 	metaNamespace: string;
 	language?: Language;
 	languageHeader: string;
@@ -51,7 +52,7 @@ function prepare(spec: RequestSpec, context: RequestContext): {http: HttpOptions
 		(spec.inputNamespace != null && (typeof spec.inputNamespace !== 'string' || !spec.inputNamespace)) ||
 		(spec.outputNamespace != null && (typeof spec.outputNamespace !== 'string' || !spec.outputNamespace)))
 		throw new AsyncError('validation', 'Invalid parameter namespace');
-	let url = resolveApiUrl(context.baseUrl, spec.path, {actionPath: true}, message => new AsyncError('protocol', message));
+	let url = resolveApiUrl(context.baseUrl, spec.path, {actionPath: true, pathMode: context.pathMode || 'api'}, message => new AsyncError('protocol', message));
 	let headers: HeaderMap;
 	try { headers = mergeHeaders({Accept: 'application/json'}, context.headers,
 		I18n.requestHeaders(context.language, context.languageHeader), spec.headers); }

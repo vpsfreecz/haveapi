@@ -12,8 +12,9 @@ require_relative '../../test_support/dynamic_documentation_api'
 module DynamicDocumentationAcceptance
   VARIANTS = %w[javascript-callback javascript-async typescript-callback typescript-async python-sync python-async].freeze
 
-  def self.run!(*command, chdir:, env: {})
+  def self.run!(*command, chdir:, env: {}, log_path: nil)
     output, status = Open3.capture2e(env, *command, chdir:)
+    File.write(log_path, output) if log_path
     raise "#{command.first} failed (#{status.exitstatus}):\n#{output}" unless status.success?
 
     output
@@ -103,12 +104,12 @@ module DynamicDocumentationAcceptance
             end
             before = JSON.parse(request("#{base}/__acceptance_receipts"))
             command = panel[:language] == 'python' ? [python, path] : ['node', path]
-            result = run!(*command, chdir: consumer, env:)
+            result = run!(*command, chdir: consumer, env:, log_path: File.join(output, "example-#{index}.log"))
             if panel[:id].start_with?('auth-token-')
-              challenge_result = run!(*command, chdir: consumer, env: env.merge('HAVEAPI_TOKEN' => nil))
+              challenge_result = run!(*command, chdir: consumer, env: env.merge('HAVEAPI_TOKEN' => nil),
+                                                log_path: File.join(output, "example-#{index}-challenge.log"))
               raise "Token challenge did not complete: #{panel[:id]}\n#{challenge_result}" unless challenge_result.include?('Authenticated')
             end
-            File.write(File.join(output, "example-#{index}.log"), result)
             after = JSON.parse(request("#{base}/__acceptance_receipts"))
             if panel[:id].start_with?('example-')
               raise "Rendered action did not execute: #{panel[:id]}\n#{result}" unless after.length == before.length + 1

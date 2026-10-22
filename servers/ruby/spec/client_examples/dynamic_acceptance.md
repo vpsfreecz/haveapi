@@ -64,6 +64,11 @@ values, omission, null, empty strings, false and zero. Output and extracted
 programs remain in the evidence directory. The fixture stops and disposable
 consumer is removed when the operation exits.
 
+Each snippet's output is saved before completion checks, including nonzero
+exits. Token panels have separate `example-N-challenge.log` files for the login
+flow without an existing token. `fixture.log` records request method, path and
+HTTP status; the trace excludes headers, query strings and request bodies.
+
 JavaScript list input and nested GET/OPTIONS query values produce a visible
 limitation; HEAD input retains the client's JSON body behavior. Python GET
 examples use a conservative flat-scalar subset with nonempty, bracket-free

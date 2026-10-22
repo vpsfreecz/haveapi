@@ -9,6 +9,19 @@ module DynamicDocumentationAPI
   end
   User = Struct.new(:login)
 
+  class RequestTrace
+    def initialize(app, output: $stderr)
+      @app = app
+      @output = output
+    end
+
+    def call(env)
+      status, headers, body = @app.call(env)
+      @output.puts("DYNAMIC_DOCUMENTATION_REQUEST #{JSON.generate({ method: env['REQUEST_METHOD'], path: env['PATH_INFO'], status: })}")
+      [status, headers, body]
+    end
+  end
+
   class BasicProvider < HaveAPI::Authentication::Basic::Provider
     protected
 
@@ -148,8 +161,9 @@ if $0 == __FILE__
   require 'rackup'
   server = nil
   trap('TERM') { server&.shutdown }
-  Rackup::Handler::WEBrick.run(DynamicDocumentationAPI.build.app, Host: '127.0.0.1', Port: 0,
-                                                                  AccessLog: [], Logger: WEBrick::Log.new($stderr, WEBrick::Log::WARN)) do |instance|
+  app = DynamicDocumentationAPI::RequestTrace.new(DynamicDocumentationAPI.build.app)
+  Rackup::Handler::WEBrick.run(app, Host: '127.0.0.1', Port: 0,
+                                    AccessLog: [], Logger: WEBrick::Log.new($stderr, WEBrick::Log::WARN)) do |instance|
     server = instance
     puts "DYNAMIC_DOCUMENTATION_READY http://127.0.0.1:#{server.listeners.first.addr[1]}"
     $stdout.flush

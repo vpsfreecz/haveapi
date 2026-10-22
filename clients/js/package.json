@@ -32,6 +32,7 @@
 		"xmlhttprequest": "latest"
 	},
 	"devDependencies": {
+		"@types/node": "^24.19.2",
 		"chai": "latest",
 		"gulp": "latest",
 		"gulp-jsdoc3": "3.0.0",

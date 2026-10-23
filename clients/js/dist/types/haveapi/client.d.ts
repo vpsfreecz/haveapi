@@ -1,7 +1,6 @@
 import './authentication';
 import type { Provider, AuthenticationOptions, AuthenticationRegistry } from './authentication';
-import { Action } from './action';
-import type { ActionConstructor, ActionCall, ActionReply } from './action';
+import type { Action, ActionConstructor, ActionCall, ActionReply } from './action';
 import type { ActionStateConstructor } from './action_state';
 import type { BaseResource, BaseResourceConstructor } from './base_resource';
 import type { Resource, ResourceConstructor } from './resource';

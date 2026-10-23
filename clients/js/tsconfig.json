@@ -9,6 +9,7 @@
 		],
 		"strict": true,
 		"declaration": true,
+		"importHelpers": true,
 		"rootDir": "src",
 		"outDir": "build",
 		"noEmitOnError": true,

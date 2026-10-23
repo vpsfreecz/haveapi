@@ -4,6 +4,35 @@ Run commands from the repository's `nix develop .#client-js` environment.
 The build owner regenerates `dist/haveapi-client.js` and `dist/types` before
 checking converted source. Do not edit those outputs directly.
 
+From `clients/js`, the focused checks are:
+
+```sh
+npm run typecheck
+npm run build
+npm run test:compatibility
+npm run test:async
+npm run test:resources
+npm run test:types
+```
+
+The compatibility suite parses the distributed bundle as ES5 and tests its
+bundled TypeScript helpers with conflicting global helper names. The callback
+client loads without Promise, AbortController or globalThis; async operations
+require their documented modern runtime features. The bundle includes helpers
+from tslib's ES5-compatible ESM entry and its license notice. Installed consumers
+do not need tslib or the build dependencies.
+
+`npm run test:compatibility` also generates documentation in a temporary
+directory and checks the Client, Action and Resource pages, navigation and
+the existing Action `invoke__anchor` link. JSDoc uses its maintained default
+template. The compatibility anchor sits beside the canonical `invoke` heading;
+generation fails if that heading is missing or another element uses the alias.
+Generate the full documentation under `html_doc` with:
+
+```sh
+./node_modules/.bin/gulp doc
+```
+
 The callback compatibility fixture uses Node's built-in test runner and fake XHR
 responses. It needs no API server or additional test dependencies:
 

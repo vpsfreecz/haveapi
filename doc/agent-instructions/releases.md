@@ -176,6 +176,9 @@ fixtures are excluded. The manifest records Rust tool versions and dependency
 locks. After writing the manifest, the build runs `rust_smoke.rb` against the
 retained gem in an isolated installation, generates a saved schema fixture and
 checks the copied runtime without loading generator code from the checkout.
+The retained gem must declare its runtime fiddle dependency. The extracted
+generator smoke activates that exact requirement from the prepared component
+bundle and rejects Ruby default-gem fallback.
 `make test` covers Rust generator unit tests, both runtime feature configurations
 and generated-client protocol acceptance. See the
 [Rust packaging guide](../../clients/rust/docs/releasing.md) for the generated

@@ -250,9 +250,13 @@ RSpec.describe HaveAPI::Release do
   end
 
   describe 'Rust generator gem contract' do
-    def rust_gem(missing: nil, corrupt: nil)
+    def rust_gem(missing: nil, corrupt: nil, fiddle: :declared)
       component = File.join(root, 'clients/rust')
       spec = Gem::Specification.load(File.join(component, 'haveapi-rust-client.gemspec')).dup
+      unless fiddle == :declared
+        spec.dependencies.delete_if { |dependency| dependency.name == 'fiddle' }
+        spec.add_runtime_dependency('fiddle', fiddle) if fiddle
+      end
       source = File.join(tmp, 'rust-gem')
       spec.files.each do |path|
         destination = File.join(source, path)
@@ -274,6 +278,13 @@ RSpec.describe HaveAPI::Release do
       expect { artifacts.inspect_rust(rust_gem) }.not_to raise_error
     end
 
+    [nil, '= 999.0'].each do |requirement|
+      it "rejects #{requirement ? 'mismatched' : 'missing'} retained runtime fiddle dependency" do
+        expect { artifacts.inspect_rust(rust_gem(fiddle: requirement)) }
+          .to raise_error(HaveAPI::Release::Error, /runtime fiddle dependency/)
+      end
+    end
+
     %w[runtime/src/runtime/mod.rs template/mod.rs.erb Gemfile.lock bin/haveapi-rust-client].each do |path|
       it "rejects missing #{path}" do
         expect { artifacts.inspect_rust(rust_gem(missing: path)) }.to raise_error(HaveAPI::Release::Error, /missing or unexpected/)
@@ -288,7 +299,7 @@ RSpec.describe HaveAPI::Release do
 
     it 'runs offline generation in an extracted artifact with inherited bundle and source paths removed' do
       rust_gem
-      allow(described_class).to receive(:run) do |env, ruby, flag, library, expression, script, extracted, version, **options|
+      allow(described_class).to receive(:run) do |env, ruby, flag, library, expression, script, extracted, version, fiddle_requirements, **options|
         expect(ruby).to eq(RbConfig.ruby)
         expect([flag, expression]).to eq(['-I', '-e'])
         expect(library).to eq(File.join(extracted, 'lib'))
@@ -299,6 +310,10 @@ RSpec.describe HaveAPI::Release do
         expect(env.fetch('GEM_HOME')).to eq(File.join(root, 'clients/rust/.gems'))
         ENV.keys.grep(/\ABUNDLE_/).each { |key| expect(env.fetch(key)).to be_nil }
         expect(version).to eq(artifacts.version)
+        requirement = Gem::Specification.load(File.join(root, 'clients/rust/haveapi-rust-client.gemspec'))
+                                        .runtime_dependencies.find { |dependency| dependency.name == 'fiddle' }.requirement
+        expect(JSON.parse(fiddle_requirements)).to eq(requirement.as_list)
+        expect(script).to include("gem 'fiddle', *requirements", '!fiddle.default_gem?', 'satisfied_by?(fiddle.version)')
         expect(script).to include('schema.json', 'generator::ROOT == extracted', "args + ['--check']", 'wrong copied runtime')
       end
       HaveAPI::Release::RustSmoke.run(artifacts, tmp)

@@ -13,6 +13,7 @@ PATH
   remote: .
   specs:
     haveapi-rust-client (0.30.0)
+      fiddle (~> 1.1, >= 1.1.8)
       haveapi-client (~> 0.30.0)
       tomlrb (~> 2.0)
 
@@ -40,6 +41,7 @@ GEM
     diff-lcs (1.6.2)
     domain_name (0.7.20261007)
     drb (2.2.3)
+    fiddle (1.1.8)
     hana (1.3.7)
     highline (3.1.2)
       reline
@@ -151,6 +153,7 @@ CHECKSUMS
   diff-lcs (1.6.2) sha256=9ae0d2cba7d4df3075fe8cd8602a8604993efc0dfa934cff568969efb1909962
   domain_name (0.7.20261007) sha256=0976c6ab837dbde991b433d03acc38fdb91fa8839df31a1ed75ce0318dc0441c
   drb (2.2.3) sha256=0b00d6fdb50995fe4a45dea13663493c841112e4068656854646f418fda13373
+  fiddle (1.1.8) sha256=7fa8ee3627271497f3add5503acdbc3f40b32f610fc1cf49634f083ef3f32eee
   hana (1.3.7) sha256=5425db42d651fea08859811c29d20446f16af196308162894db208cac5ce9b0d
   haveapi-client (0.30.0)
   haveapi-rust-client (0.30.0)

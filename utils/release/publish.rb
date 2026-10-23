@@ -1,69 +1,98 @@
-require 'net/http'
 require 'shellwords'
 require_relative 'artifacts'
+require_relative 'registry_query'
 
 module HaveAPI
   module Release
     class Publisher
-      def initialize(artifacts, directory)
+      def initialize(artifacts, directory, registry: RegistryQuery.new)
         @artifacts = artifacts
         @directory = File.expand_path(directory)
         @manifest = artifacts.verify(@directory)
+        @registry = registry
       end
 
-      def registry_json(url)
-        uri = URI(url)
-        response = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 15, read_timeout: 30) do |http|
-          http.get(uri.request_uri)
-        end
-        return nil if response.code == '404'
+      def gem_present?(name, **options)
+        observe_registry("https://rubygems.org/api/v2/rubygems/#{name}/versions/#{@artifacts.version}.json",
+                         package: "RubyGems #{name}", complete: ->(present) { present }, **options) do |metadata|
+          next false unless metadata
 
-        raise Error, "Registry query failed (HTTP #{response.code})" unless response.is_a?(Net::HTTPSuccess)
-
-        JSON.parse(response.body)
-      end
-
-      def gem_present?(name)
-        metadata = registry_json("https://rubygems.org/api/v2/rubygems/#{name}/versions/#{@artifacts.version}.json")
-        return false unless metadata
-
-        expected = @manifest.fetch('files').fetch("#{name}-#{@artifacts.version}.gem")
-        raise Error, "Existing RubyGems version differs: #{name}" unless metadata.fetch('sha') == expected
-
-        true
-      end
-
-      def npm_present?
-        metadata = registry_json("https://registry.npmjs.org/haveapi-client/#{@artifacts.version}")
-        return false unless metadata
-
-        expected = "sha512-#{Digest::SHA512.file(File.join(@directory, "haveapi-client-#{@artifacts.version}.tgz")).base64digest}"
-        unless metadata.values_at('name', 'version') == ['haveapi-client', @artifacts.version] && metadata.fetch('dist').fetch('integrity').split.include?(expected)
-          raise Error, 'Existing npm version differs'
-        end
-
-        true
-      end
-
-      def pypi_files
-        metadata = registry_json("https://pypi.org/pypi/haveapi-client/#{@artifacts.version}/json")
-        return {} unless metadata
-
-        unless metadata.fetch('info').values_at('name', 'version') == ['haveapi-client', @artifacts.version]
-          raise Error, 'Existing PyPI package identity differs'
-        end
-
-        metadata.fetch('urls').each_with_object({}) do |file, present|
-          name = file.fetch('filename')
-          unless @artifacts.python_names.include?(name) && !present.has_key?(name)
-            raise Error, 'Existing PyPI version has unexpected files'
-          end
-          unless file.fetch('digests').fetch('sha256') == @manifest.fetch('files').fetch(name)
-            raise Error, "Existing PyPI file differs: #{name}"
+          expected = @manifest.fetch('files').fetch("#{name}-#{@artifacts.version}.gem")
+          unless metadata.values_at('name', 'version', 'platform', 'sha') == [name, @artifacts.version, 'ruby', expected]
+            raise Error, "Existing RubyGems version differs: #{name} (identity, platform or checksum)"
           end
 
-          present[name] = true
+          true
         end
+      end
+
+      def npm_present?(**options)
+        observe_registry("https://registry.npmjs.org/haveapi-client/#{@artifacts.version}",
+                         package: 'npm haveapi-client', complete: ->(present) { present }, **options) do |metadata|
+          next false unless metadata
+
+          expected = "sha512-#{Digest::SHA512.file(File.join(@directory, "haveapi-client-#{@artifacts.version}.tgz")).base64digest}"
+          integrity = metadata.fetch('dist').fetch('integrity')
+          unless metadata.values_at('name', 'version') == ['haveapi-client', @artifacts.version] &&
+                 integrity.is_a?(String) && integrity.split.include?(expected)
+            raise Error, 'Existing npm version differs'
+          end
+
+          true
+        end
+      end
+
+      def pypi_files(wait: false, **options)
+        observed = {}
+        missing = ->(files) { @artifacts.python_names - files.keys }
+        result = observe_registry("https://pypi.org/pypi/haveapi-client/#{@artifacts.version}/json",
+                                  package: 'PyPI haveapi-client', missing:, complete: ->(files) { missing.call(files).empty? }, wait:, **options) do |metadata|
+          unless metadata
+            report_pypi_regression(observed, {}) unless wait
+            next {}
+          end
+
+          unless metadata.fetch('info').values_at('name', 'version') == ['haveapi-client', @artifacts.version]
+            raise Error, 'Existing PyPI package identity differs'
+          end
+          raise Error, 'Malformed PyPI file list' unless metadata.fetch('urls').is_a?(Array)
+
+          present = metadata.fetch('urls').each_with_object({}) do |file, files|
+            name = file.fetch('filename')
+            unless @artifacts.python_names.include?(name) && !files.has_key?(name)
+              raise Error, 'Existing PyPI version has unexpected files'
+            end
+            unless file.fetch('digests').fetch('sha256') == @manifest.fetch('files').fetch(name)
+              raise Error, "Existing PyPI file differs: #{name}"
+            end
+
+            files[name] = true
+          end
+          # A later missing view cannot make a validated file eligible for upload.
+          unless wait
+            report_pypi_regression(observed, present)
+            observed.merge!(present)
+          end
+          present
+        end
+        wait ? result : observed
+      end
+
+      def report_pypi_regression(observed, present)
+        return if (observed.keys - present.keys).empty?
+
+        warn "Registry preflight: PyPI haveapi-client #{@artifacts.version} metadata visibility regressed; " \
+             'retaining validated file presence for staging only'
+      end
+
+      def observe_registry(url, package:, phase: 'preflight', **, &validate)
+        @registry.observe(url, package:, phase:, version: @artifacts.version, **, &validate)
+      rescue RegistryQuery::Unconfirmed => e
+        run_id = @manifest['run_id'].to_s
+        run = run_id.match?(/\A\d+\z/) ? "https://github.com/#{REPOSITORY}/actions/runs/#{run_id}" : 'local'
+        raise Error, "#{e.message} Tag: #{@artifacts.tag}; run: #{run}; manifest: #{File.join(@directory, 'release-manifest.json')}"
+      rescue KeyError, TypeError, NoMethodError
+        raise Error, "Malformed registry metadata for #{package} #{@artifacts.version}"
       end
 
       # Stage only missing, previously verified bytes. The official PyPA action
@@ -87,15 +116,6 @@ module HaveAPI
         end
       end
 
-      def confirm
-        12.times do
-          return if yield
-
-          sleep 5
-        end
-        raise Error, 'Publication was not confirmed by the registry; rerun with the retained artifacts'
-      end
-
       def publish_registries
         existing_gems = GEMS.keys.to_h { |name| [name, gem_present?(name)] }
         existing_npm = npm_present?
@@ -105,13 +125,14 @@ module HaveAPI
         GEMS.each_key do |name|
           unless existing_gems.fetch(name)
             Release.run('gem', 'push', File.join(@directory, "#{name}-#{@artifacts.version}.gem"), '--host', 'https://rubygems.org')
-            confirm { gem_present?(name) }
+            remaining = GEMS.keys.drop(GEMS.keys.index(name) + 1) + %w[npm PHP GitHub]
+            gem_present?(name, wait: true, phase: 'post-upload', uploaded: true, later: remaining)
           end
           puts "Confirmed RubyGems: #{name} #{@artifacts.version}"
         end
         unless existing_npm
           Release.run('npm', 'publish', File.join(@directory, "haveapi-client-#{@artifacts.version}.tgz"), '--ignore-scripts', '--access', 'public', '--registry', 'https://registry.npmjs.org')
-          confirm { npm_present? }
+          npm_present?(wait: true, phase: 'post-upload', uploaded: true, later: %w[PHP GitHub])
         end
         puts "Confirmed npm: haveapi-client #{@artifacts.version}"
       end
@@ -215,9 +236,7 @@ module HaveAPI
       def publish
         with_php_mirror do |mirror, transport|
           preflight_php(mirror)
-          unless (@artifacts.python_names - pypi_files.keys).empty?
-            raise Error, 'PyPI publication is incomplete; upload the retained Python artifacts first'
-          end
+          pypi_files(wait: true, phase: 'Python completeness', later: GEMS.keys + %w[npm PHP GitHub])
 
           publish_registries
           sync_php(mirror, transport:)
@@ -275,9 +294,11 @@ module HaveAPI
       end
 
       def finish_github
-        unless GEMS.keys.all? { |name| gem_present?(name) } && npm_present? && (@artifacts.python_names - pypi_files.keys).empty?
-          raise Error, 'Registry publication is incomplete'
-        end
+        deadline = @registry.deadline(600)
+        options = { wait: true, deadline:, phase: 'final validation', later: ['GitHub public completion'] }
+        GEMS.each_key { |name| gem_present?(name, **options) }
+        npm_present?(**options)
+        pypi_files(**options)
 
         Release.run('gh', 'release', 'edit', @artifacts.tag, '--repo', REPOSITORY, '--draft=false') if github_release.fetch('draft')
         puts "Release complete: https://github.com/#{REPOSITORY}/releases/tag/#{@artifacts.tag}"

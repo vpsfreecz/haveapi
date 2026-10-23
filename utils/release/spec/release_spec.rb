@@ -416,7 +416,16 @@ RSpec.describe HaveAPI::Release do
   end
 
   describe 'existing registry versions' do
-    let(:publisher) { HaveAPI::Release::Publisher.new(artifacts, tmp) }
+    let(:clock) { [0.0] }
+    let(:query) do
+      HaveAPI::Release::RegistryQuery.new(clock: -> { clock[0] }, sleeper: ->(seconds) { clock[0] += seconds }, logger: ->(_line) {})
+    end
+    let(:publisher) { HaveAPI::Release::Publisher.new(artifacts, tmp, registry: query) }
+
+    def stub_registry(metadata)
+      response = HaveAPI::Release::RegistryQuery::Response.new(status: metadata ? 200 : 404, data: metadata, headers: {})
+      allow(query).to receive(:read).and_return(response)
+    end
 
     before { fixture_manifest }
 
@@ -430,18 +439,18 @@ RSpec.describe HaveAPI::Release do
     end
 
     it 'accepts only the original Python artifact hashes from PyPI' do
-      allow(publisher).to receive(:registry_json).and_return(pypi_metadata)
+      stub_registry(pypi_metadata)
       expect(publisher.pypi_files.keys).to eq(artifacts.python_names)
       mismatched = pypi_metadata
       mismatched['urls'][0]['digests']['sha256'] = 'different'
-      allow(publisher).to receive(:registry_json).and_return(mismatched)
+      stub_registry(mismatched)
       expect { publisher.pypi_files }.to raise_error(HaveAPI::Release::Error, /PyPI file differs/)
     end
 
     it 'refuses unexpected Python files and duplicate filenames' do
       metadata = pypi_metadata
       metadata['urls'] << metadata['urls'].first
-      allow(publisher).to receive(:registry_json).and_return(metadata)
+      stub_registry(metadata)
       expect { publisher.pypi_files }.to raise_error(HaveAPI::Release::Error, /unexpected files/)
     end
 
@@ -450,7 +459,7 @@ RSpec.describe HaveAPI::Release do
       allow(publisher).to receive(:preflight_php)
       allow(publisher).to receive(:gem_present?)
       allow(publisher).to receive(:npm_present?)
-      allow(publisher).to receive(:registry_json).and_return(pypi_metadata([artifacts.python_names.first]))
+      stub_registry(pypi_metadata([artifacts.python_names.first]))
       allow(ENV).to receive(:fetch).and_call_original
       output = File.join(tmp, 'output')
       allow(ENV).to receive(:fetch).with('GITHUB_OUTPUT').and_return(output)
@@ -465,12 +474,12 @@ RSpec.describe HaveAPI::Release do
     end
 
     it 'does not write registries or the PHP mirror while Python publication is incomplete' do
-      allow(publisher).to receive(:registry_json).and_return(nil)
+      stub_registry(nil)
       allow(publisher).to receive(:with_php_mirror).and_yield('mirror', {})
       allow(publisher).to receive(:preflight_php)
       allow(publisher).to receive(:publish_registries)
       allow(publisher).to receive(:sync_php)
-      expect { publisher.publish }.to raise_error(HaveAPI::Release::Error, /PyPI publication is incomplete/)
+      expect { publisher.publish }.to raise_error(HaveAPI::Release::Error, /Python completeness timed out/)
       expect(publisher).to have_received(:preflight_php).with('mirror')
       expect(publisher).not_to have_received(:publish_registries)
       expect(publisher).not_to have_received(:sync_php)
@@ -478,16 +487,16 @@ RSpec.describe HaveAPI::Release do
 
     it 'accepts a gem only when its registry checksum matches the retained gem' do
       name = "haveapi-client-#{artifacts.version}.gem"
-      allow(publisher).to receive(:registry_json).and_return({ 'sha' => Digest::SHA256.file(File.join(tmp, name)).hexdigest })
+      stub_registry({ 'name' => 'haveapi-client', 'version' => artifacts.version, 'platform' => 'ruby', 'sha' => Digest::SHA256.file(File.join(tmp, name)).hexdigest })
       expect(publisher.gem_present?('haveapi-client')).to be(true)
-      allow(publisher).to receive(:registry_json).and_return({ 'sha' => 'different' })
+      stub_registry({ 'sha' => 'different' })
       expect { publisher.gem_present?('haveapi-client') }.to raise_error(HaveAPI::Release::Error, /differs/)
     end
 
     it 'accepts npm only when identity and tarball integrity match' do
       path = File.join(tmp, "haveapi-client-#{artifacts.version}.tgz")
       metadata = { 'name' => 'haveapi-client', 'version' => artifacts.version, 'dist' => { 'integrity' => "sha512-#{Digest::SHA512.file(path).base64digest}" } }
-      allow(publisher).to receive(:registry_json).and_return(metadata)
+      stub_registry(metadata)
       expect(publisher.npm_present?).to be(true)
       metadata['dist']['integrity'] = 'sha512-different'
       expect { publisher.npm_present? }.to raise_error(HaveAPI::Release::Error, /differs/)

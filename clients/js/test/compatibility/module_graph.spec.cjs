@@ -157,6 +157,7 @@ void [publicList, pending];
       compilerOptions: {
         strict: true, noEmit: true, target: 'ES2015', module: 'commonjs',
         moduleResolution: 'node', lib: ['ES2015', 'DOM'], types: [],
+        ignoreDeprecations: '6.0',
       },
       files: [consumer],
     }));

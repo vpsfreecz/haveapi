@@ -15,6 +15,14 @@ npm run test:resources
 npm run test:types
 ```
 
+TypeScript 6.0.3 supports ES5 output and the existing Node10 resolution algorithm
+(`moduleResolution: "node"`). Both options are deprecated in 6 and removed in 7,
+so the affected build and consumer fixtures set `ignoreDeprecations: "6.0"`.
+The resource and async declaration configs inherit that setting. Strict checks
+and library declaration checking remain enabled. The ES5 parser and type tests
+still check emitted syntax and public declarations. `@types/node` stays on the
+Node 24 line used by the development shell.
+
 The compatibility suite parses the distributed bundle as ES5 and tests its
 bundled TypeScript helpers with conflicting global helper names. The callback
 client loads without Promise, AbortController or globalThis; async operations
@@ -29,6 +37,12 @@ directory and checks the Client, Action and Resource pages, navigation and
 the existing Action `invoke__anchor` link. JSDoc uses its maintained default
 template. The compatibility anchor sits beside the canonical `invoke` heading;
 generation fails if that heading is missing or another element uses the alias.
+`jsdoc_markdown.spec.cjs` uses JSDoc's Markdown renderer with the scoped
+`markdown-it` 15.0.3 and `markdown-it-anchor` 10.0.0 overrides. It checks repeated
+headings across separate renders, inline JSDoc links, fenced code, heading anchors
+and bare-URL behavior. These checks cover the interface between JSDoc and its
+Markdown plugins.
+
 Generate the full documentation under `html_doc` with:
 
 ```sh

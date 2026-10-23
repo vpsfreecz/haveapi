@@ -293,7 +293,8 @@ module HaveAPI
           Release.run(env, 'node', '-e', script, version, chdir: tmp)
           FileUtils.cp(File.join(__dir__, 'npm-consumer.ts'), File.join(tmp, 'consumer.ts'))
           stdout, stderr, status = Open3.capture3(env, 'node', compiler, '--strict', '--noEmit', '--target', 'ES2020', '--module', 'commonjs',
-                                                  '--moduleResolution', 'node', '--lib', 'ES2020,DOM', '--listFiles', 'consumer.ts', chdir: tmp)
+                                                  '--moduleResolution', 'node', '--ignoreDeprecations', '6.0',
+                                                  '--lib', 'ES2020,DOM', '--listFiles', 'consumer.ts', chdir: tmp)
           raise Error, "Installed npm declarations failed to compile:\n#{stdout}#{stderr}" unless status.success?
 
           files = stdout.lines.map(&:strip)

@@ -3,6 +3,7 @@
 		"target": "ES5",
 		"module": "ESNext",
 		"moduleResolution": "node",
+		"ignoreDeprecations": "6.0",
 		"lib": [
 			"ES2015",
 			"DOM"

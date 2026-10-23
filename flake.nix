@@ -102,6 +102,7 @@
               clippy
               pkg-config
               openssl
+              libffi
             ];
 
             shellHook = ''
@@ -185,7 +186,7 @@
             componentDir = "clients/rust";
             gemHome = "$HAVEAPI_REPO_ROOT/clients/rust/.gems";
             isolateGems = true;
-            packages = with pkgs; [ cargo rustc rustfmt clippy pkg-config openssl ];
+            packages = with pkgs; [ cargo rustc rustfmt clippy pkg-config openssl libffi ];
             installBundler = "gem install --no-document bundler";
             afterInstall = ''
               export RUBOCOP_CACHE_ROOT="$HAVEAPI_REPO_ROOT/.rubocop_cache"

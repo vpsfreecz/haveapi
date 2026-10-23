@@ -216,6 +216,14 @@ module HaveAPI
 
       def inspect_rust(package)
         component = File.join(root, 'clients/rust')
+        expected_dependency = Gem::Specification.load(File.join(component, 'haveapi-rust-client.gemspec'))
+                                                .runtime_dependencies.find { |dependency| dependency.name == 'fiddle' }
+        retained_dependencies = package.spec.runtime_dependencies.select { |dependency| dependency.name == 'fiddle' }
+        unless expected_dependency && retained_dependencies.length == 1 &&
+               retained_dependencies.first.requirement == expected_dependency.requirement
+          raise Error, 'Rust generator gem has a missing or mismatched runtime fiddle dependency'
+        end
+
         expected = Dir.chdir(component) do
           Dir['{bin,lib,template}/**/*', 'runtime/src/runtime/**/*', 'README.md', 'docs/*.md', 'LICENSE.txt', 'Gemfile.lock']
             .select { |path| File.file?(path) }.sort

@@ -9,6 +9,7 @@ module HaveAPI
       def self.run(artifacts, directory)
         package = Gem::Package.new(File.join(directory, "haveapi-rust-client-#{artifacts.version}.gem"))
         artifacts.inspect_rust(package)
+        dependency = package.spec.runtime_dependencies.find { |item| item.name == 'fiddle' }
         Dir.mktmpdir('haveapi-rust-smoke-') do |tmp|
           extracted = File.join(tmp, 'gem')
           package.extract_files(extracted)
@@ -18,7 +19,7 @@ module HaveAPI
             'RUBYOPT' => nil, 'RUBYLIB' => nil
           )
           Release.run(env, RbConfig.ruby, '-I', File.join(extracted, 'lib'), '-e', consumer,
-                      extracted, artifacts.version, chdir: tmp)
+                      extracted, artifacts.version, JSON.generate(dependency.requirement.as_list), chdir: tmp)
         end
       end
 
@@ -27,9 +28,16 @@ module HaveAPI
           require 'json'
           require 'open3'
           require 'rbconfig'
+
+          extracted, version, fiddle_requirements = ARGV
+          requirements = JSON.parse(fiddle_requirements)
+          gem 'fiddle', *requirements
           require 'haveapi/rust_client/cli'
 
-          extracted, version = ARGV
+          fiddle = Gem.loaded_specs.fetch('fiddle')
+          unless !fiddle.default_gem? && Gem::Requirement.new(requirements).satisfied_by?(fiddle.version)
+            abort 'Rust generator must load its declared nondefault fiddle dependency'
+          end
           generator = HaveAPI::RustClient::Generator
           abort 'generator loaded outside the extracted artifact' unless generator::ROOT == extracted
           abort 'wrong installed generator version' unless HaveAPI::RustClient::VERSION == version

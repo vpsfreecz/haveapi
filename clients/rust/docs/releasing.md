@@ -27,6 +27,11 @@ ruby utils/release/rust_smoke.rb dist
 ```
 
 The check loads the generator from the package and verifies its copied runtime.
+Fiddle is a runtime gem dependency that provides atomic directory exchange when
+replacing a generated tree. Install the component's locked bundle before
+checking the package. The check must load `fiddle/import` from the installed,
+nondefault gem that satisfies the package's dependency requirement. Loading the
+generator requires Fiddle even when generating a new directory.
 Run the broader generator, runtime and generated-client checks as well.
 `make test-rust-unit` runs the quick generator specs; `make test-rust` covers
 those specs, both runtime feature configurations

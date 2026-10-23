@@ -110,4 +110,40 @@ RSpec.describe HaveAPI::RustClient::Generator do
     expect(File.read(File.join(base, 'none.rs'))).to include('output: None')
     expect(File.read(File.join(base, 'list.rs'))).to include('allow_empty_response: false')
   end
+
+  it 'scopes naming exceptions to resource modules and accessors with double underscores' do
+    schema = snapshot
+    schema['description']['resources']['widget']['resources']['task'] = {
+      'resources' => {}, 'actions' => { 'show' => action(path: '/v1.0/widgets/{widget_id}/tasks/{task_id}', method: 'GET') }
+    }
+    schema['description']['resources']['widget_task'] = {
+      'resources' => {}, 'actions' => { 'show' => action(path: '/v1.0/widget_tasks/{task_id}', method: 'GET') }
+    }
+    schema['description']['authentication']['token'] = {
+      'http_header' => 'X-Token', 'resources' => {
+        'token' => { 'resources' => {}, 'actions' => { 'show' => action(path: '/_auth/token/tokens', method: 'GET') } }
+      }
+    }
+    generator = described_class.new(schema:, config:)
+    generator.generate(output:)
+    before = files
+    generator.generate(output:, check: true)
+    expect(files).to eq(before)
+    modules = File.read(File.join(output, 'resources/mod.rs'))
+    expect(modules).to include("#[allow(non_snake_case)]\npub mod widget__task;")
+    expect(modules).to include("#[allow(non_snake_case)]\npub mod authentication__token__token;")
+    expect(modules).to include('pub mod widget_task;', 'pub mod widget;')
+    expect(modules.scan('#[allow(non_snake_case)]').length).to eq(2)
+    nested = File.read(File.join(output, 'resources/widget__task/mod.rs'))
+    expect(nested).to include("#[allow(non_snake_case)]\n    pub fn widget__task(&self, widget_id: impl ToString)")
+    expect(nested).to match(/pub fn show\(\s*&self,\s*task_id: impl ToString,?\s*\)/)
+    expect(nested.scan('#[allow(non_snake_case)]').length).to eq(1)
+    ordinary = File.read(File.join(output, 'resources/widget_task/mod.rs'))
+    expect(ordinary).to include('pub fn widget_task(&self)')
+    expect(ordinary).not_to include('allow(non_snake_case)')
+    action_source = File.read(File.join(output, 'resources/widget__task/show.rs'))
+    expect(action_source).to include('path: "v1.0/widgets/{widget_id}/tasks/{task_id}"')
+    expect(action_source).not_to include('allow(non_snake_case)')
+    expect(File.read(File.join(output, 'mod.rs'))).not_to include('allow(non_snake_case)', 'allow(warnings)')
+  end
 end

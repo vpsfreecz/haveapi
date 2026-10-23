@@ -1,4 +1,8 @@
 // Generated resource modules. Component boundaries use double underscores.
 <% ir.resources.each do |resource| -%>
+<% if resource[:module].include?('__') -%>
+// Double underscores preserve resource component boundaries in the public API.
+#[allow(non_snake_case)]
+<% end -%>
 pub mod <%= resource[:module] %>;
 <% end -%>

@@ -3,7 +3,8 @@ var gulp = require('gulp'),
 	path = require('path'),
 	spawn = require('child_process').spawn,
 	rollup = require('rollup'),
-	jsdoc = require('gulp-jsdoc3');
+	inputOptions = require('./rollup.config.js').inputOptions,
+	jsdocAliases = require('./jsdoc_aliases.js');
 
 function compile(done) {
 	fs.rmSync('build', { recursive: true, force: true });
@@ -30,7 +31,7 @@ function declarations(directory) {
 }
 
 function bundle() {
-	return rollup.rollup({ input: 'build/haveapi.js' }).then(function(built) {
+	return rollup.rollup(inputOptions()).then(function(built) {
 		return built.generate({
 			format: 'iife',
 			name: 'HaveAPI',
@@ -56,7 +57,11 @@ function bundle() {
 				result.output[0].code +
 				'\nreturn HaveAPI;\n}));\n';
 			fs.mkdirSync('dist', { recursive: true });
-			fs.writeFileSync('dist/haveapi-client.js', wrapper);
+			var helperLicense = fs.readFileSync(path.join(
+				path.dirname(require.resolve('tslib/package.json')), 'LICENSE.txt'
+			), 'utf8').replace(/\r\n/g, '\n');
+			fs.writeFileSync('dist/haveapi-client.js', '/*! Bundled tslib license:\n' +
+				helperLicense + '\n*/\n' + wrapper);
 			return built.close();
 		});
 	}).then(function() {
@@ -67,10 +72,17 @@ function bundle() {
 
 gulp.task('scripts', gulp.series(compile, bundle));
 gulp.task('doc', gulp.series('scripts', function(done) {
-	return gulp.src(['build/**/*.js', 'README.md'], { read: false }).pipe(jsdoc({
-		plugins: ['plugins/markdown'],
-		opts: { destination: 'html_doc' }
-	}, done));
+	var child = spawn(process.execPath, [require.resolve('jsdoc/jsdoc.js'), '-c', 'jsdoc.json'], {
+		stdio: 'inherit'
+	});
+	child.once('error', done);
+	child.once('exit', function(code) {
+		if (code !== 0) return done(new Error('JSDoc generation failed (' + code + ')'));
+		try {
+			jsdocAliases.write('html_doc');
+			done();
+		} catch (error) { done(error); }
+	});
 }));
 gulp.task('watch', function() {
 	return gulp.watch(['src/**/*.ts', 'src/haveapi/i18n_messages.js'], gulp.series('scripts'));

@@ -219,15 +219,48 @@ Publication across registries is not atomic. A failure can leave some packages
 published and others missing. Keep the source tag, original Actions artifacts
 and draft Release. Fix or diagnose the failure before rerunning jobs.
 
+An upload can succeed before its public metadata becomes visible. Preflight
+reads allow up to 60 seconds for temporary read failures. A missing version
+returns after a canonical read and one cache-distinct read of the same exact
+version endpoint. After upload, checks for both Python files and each gem/npm
+confirmation have a ten-minute monotonic deadline. Final destination validation
+shares one ten-minute deadline.
+Only metadata GETs are retried, with bounded backoff and Retry-After handling;
+uploads are never repeated within a confirmation loop. Each request has a total
+deadline covering connection and response reading. Authentication, TLS, schema,
+identity, platform and checksum errors stop immediately.
+
+Metadata requests use `Cache-Control: no-cache`. A missing or valid incomplete
+response permits one additional same-endpoint GET with a nonsecret unique query.
+The extra read can avoid a cached response, but does not guarantee fresh metadata.
+Logs identify the phase, package/version, attempt, elapsed time, HTTP outcome,
+missing filenames and selected cache/retry headers, without response bodies or
+credentials. Timeout messages distinguish accepted uploads awaiting confirmation
+and later destinations that were not attempted.
+
+Python staging remembers files with matching names and hashes for the current
+preflight. If another read returns a missing version or fewer files, previously
+validated files remain ineligible for upload. Combine these observations only
+when choosing which original files to stage. Post-upload and final confirmation
+require one complete, validated response. A withdrawn file leaves confirmation
+pending; it is not uploaded again. A conflict in any response stops the operation.
+
 A rerun uses the original tagged workflow and helpers. If the correction needs
 changes to that source, prepare a new patch version and obtain publication
 authorization for it. Preserve the failed tag and its original artifacts.
 
-Use **Re-run failed jobs** for a failed publishing job. **Re-run all jobs** also
-reuses the original artifact and skips its build/test stage. If an early build
-failed before uploading artifacts, it can retry the build. Once an artifact
-upload has succeeded, a rerun refuses to rebuild if that artifact is missing or
-expired. Do not substitute a new build for an accepted package version.
+Before resuming a failed publishing job, verify that every logged successful
+upload is publicly visible with its original identity and retained artifact hash.
+A missing metadata response, even from the cache-distinct read, does not prove an
+earlier upload failed. Preserve uncertainty and diagnose it before deciding to
+resume; do not reupload blindly, change the tag, replace artifacts or use
+`skip-existing`. A matching existing version is skipped; a conflict stops.
+
+Once these checks support recovery, use **Re-run failed jobs** for the publishing
+job. **Re-run all jobs** also reuses the original artifact and skips its build/test
+stage. If an early build failed before uploading artifacts, it can retry the
+build. Once an artifact upload has succeeded, a rerun refuses to rebuild if
+that artifact is missing or expired. Do not substitute a new build for an accepted package version.
 
 Each destination is checked before publication. Existing gems must match the
 retained SHA-256; npm must match package identity and tarball integrity. An

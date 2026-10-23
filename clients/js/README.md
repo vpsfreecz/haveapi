@@ -337,6 +337,21 @@ Documentation
 -------------
 https://projects.vpsfree.cz/haveapi-client-js/ref/
 
+Development tool compatibility
+------------------------------
+The pinned Node 24 shell builds the client with TypeScript 6.0.3 and Rollup.
+TypeScript 6 supports the bundle's ES5 target; TypeScript 7 removes it. The
+affected build and consumer configs set `ignoreDeprecations: "6.0"` for ES5 and
+`moduleResolution: "node"`, the legacy Node10 resolution algorithm. Strict type
+and declaration checks and an ES5 parser still validate the emitted package.
+The async client's runtime requirements remain unchanged.
+
+JSDoc uses `markdown-it` 15.0.3 and `markdown-it-anchor` 10.0.0 through overrides
+scoped to JSDoc. The compatibility suite checks heading renders, links and
+generated API navigation. These are build tools; package consumers use the
+bundled JavaScript and emitted declarations.
+See [the check commands](test/README.md).
+
 License
 -------
 haveapi-client-js is released under the MIT license.

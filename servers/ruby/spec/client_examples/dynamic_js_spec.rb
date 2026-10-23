@@ -83,6 +83,7 @@ RSpec.describe HaveAPI::ClientExamples::JsClient do
         end
       end
       options = { strict: true, noEmit: true, target: 'ES2020', module: 'ESNext', moduleResolution: 'node',
+                  ignoreDeprecations: '6.0',
                   typeRoots: [File.join(root, 'clients/js/node_modules/@types')], types: ['node'],
                   baseUrl: directory, paths: { 'haveapi-client' => [File.join(root, 'clients/js/dist/types/haveapi')] } }
       config = File.join(directory, 'tsconfig.json')

@@ -1,3 +1,17 @@
+/*! Bundled tslib license:
+Copyright (c) Microsoft Corporation.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+*/
 ;(function(root, factory) {
   if (typeof define === 'function' && define.amd) {
     define([], factory);
@@ -311,6 +325,470 @@ var I18n = {
             return null;
         return normalized.split('-', 1)[0];
     }
+};
+
+/**
+ * Create a new client for the API.
+ * @class Client
+ * @memberof HaveAPI
+ * @param {string} url base URL to the API
+ * @param {Object} opts
+ */
+var Client = function Client(url, opts) {
+    opts = opts || {};
+    var oauth2TrustedOrigins = opts.oauth2TrustedOrigins !== undefined ?
+        opts.oauth2TrustedOrigins : opts.oauth2_trusted_origins;
+    while (url.length > 0) {
+        if (url[url.length - 1] == '/')
+            url = url.substr(0, url.length - 1);
+        else
+            break;
+    }
+    /**
+     * @member {Object} HaveAPI.Client#_private
+     * @protected
+     */
+    this._private = {
+        url: url,
+        version: (opts !== undefined && opts.version !== undefined) ? opts.version : null,
+        description: null,
+        attachedResourceNames: Object.create(null),
+        debug: (opts !== undefined && opts.debug !== undefined) ? opts.debug : 0,
+        oauth2TrustedOrigins: Client.normalizeTrustedOrigins(oauth2TrustedOrigins),
+        language: opts.language !== undefined ? opts.language : null,
+        languageHeader: opts.languageHeader !== undefined ?
+            opts.languageHeader : (opts.language_header || I18n.DEFAULT_LANGUAGE_HEADER),
+    };
+    I18n.requestHeaders(this._private.language, this._private.languageHeader);
+    this._private.hooks = new Client.Hooks(this._private.debug);
+    this._private.http = new Client.Http(this._private.debug);
+    /**
+     * @member {Object} HaveAPI.Client#apiSettings An object containg API settings.
+     */
+    this.apiSettings = null;
+    /**
+     * @member {Array} HaveAPI.Client#resources A list of top-level resources attached to the client.
+     */
+    this.resources = [];
+    /**
+     * @member {Object} HaveAPI.Client#authProvider Selected authentication provider.
+     */
+    this.authProvider = new Client.Authentication.Base();
+};
+/** @constant HaveAPI.Client.Version */
+Client.Version = '0.30.0';
+/** @constant HaveAPI.Client.ProtocolVersion */
+Client.ProtocolVersion = '2.0';
+Client.unsafeAttachmentNames = Object.create(null);
+Client.unsafeAttachmentNames['__proto__'] = true;
+Client.unsafeAttachmentNames['prototype'] = true;
+Client.unsafeAttachmentNames['constructor'] = true;
+/**
+ * @namespace Exceptions
+ * @memberof HaveAPI.Client
+ */
+Client.Exceptions = {};
+Client.hasOwn = function (obj, prop) {
+    return Object.prototype.hasOwnProperty.call(obj, prop);
+};
+Client.canAttachDescriptionMember = function (target, name, reservedNames) {
+    if (typeof (name) !== 'string')
+        return false;
+    if (Client.hasOwn(Client.unsafeAttachmentNames, name))
+        return false;
+    if (reservedNames && Client.hasOwn(reservedNames, name))
+        return false;
+    return !(name in target);
+};
+Client.attachDescriptionMember = function (target, name, value, reservedNames) {
+    if (!Client.canAttachDescriptionMember(target, name, reservedNames))
+        return false;
+    target[name] = value;
+    return true;
+};
+Client.findResource = function (root, resourcePath) {
+    var current = root;
+    var path = [];
+    for (var i = 0; i < resourcePath.length; i++) {
+        var name = resourcePath[i];
+        var found = null;
+        path.push(name);
+        for (var j = 0; j < current.resources.length; j++) {
+            if (current.resources[j].getName() === name) {
+                found = current.resources[j];
+                break;
+            }
+        }
+        if (found === null) {
+            throw new Client.Exceptions.ProtocolError("Associated resource '" + path.join('.') + "' not found");
+        }
+        current = found;
+    }
+    return current;
+};
+Client.normalizeTrustedOrigins = function (origins) {
+    return normalizeTrustedOrigins(origins, function (message) { return new Client.Exceptions.ProtocolError(message); });
+};
+/** Look up canonical names and unambiguous aliases without direct properties. */
+Client.findAction = function (resource, name) {
+    var index = resource._private.actionIndex;
+    if (!index || !Client.hasOwn(index, name))
+        throw new Client.Exceptions.ProtocolError("Action '" + name + "' not found or ambiguous");
+    return index[name];
+};
+/**
+ * Resolve a URL from an API description and require it to stay on the
+ * configured API origin.
+ * @method HaveAPI.Client#sameOriginUrl
+ * @param {String} url URL or path to resolve
+ * @param {Object} opts
+ * @return {String} absolute URL
+ * @private
+ */
+Client.prototype.sameOriginUrl = function (url, opts) {
+    return resolveApiUrl(this._private.url, url, opts, function (message) { return new Client.Exceptions.ProtocolError(message); });
+};
+Client.prototype.oauth2Url = function (url) {
+    return this.sameOriginUrl(url, {
+        trustedOrigins: this._private.oauth2TrustedOrigins
+    });
+};
+/**
+ * Set the language sent to the API server.
+ * @method HaveAPI.Client#setLanguage
+ * @param {String} language value for Accept-Language
+ */
+Client.prototype.setLanguage = function (language) {
+    I18n.requestHeaders(language, this._private.languageHeader);
+    this._private.language = language;
+};
+/**
+ * Set the language HTTP header name.
+ * @method HaveAPI.Client#setLanguageHeader
+ * @param {String} header HTTP header name
+ */
+Client.prototype.setLanguageHeader = function (header) {
+    I18n.assertHeaderName(header);
+    this._private.languageHeader = header;
+};
+Client.prototype.translate = function (key, values) {
+    return I18n.translate(this._private.language, key, values);
+};
+Client.prototype.languageHeaders = function () {
+    return I18n.requestHeaders(this._private.language, this._private.languageHeader);
+};
+Client.prototype.requestHeaders = function (headers) {
+    var ret = {};
+    var languageHeaders = this.languageHeaders();
+    headers = headers || {};
+    for (var name in headers) {
+        if (headers.hasOwnProperty(name))
+            ret[name] = headers[name];
+    }
+    for (var langName in languageHeaders) {
+        if (languageHeaders.hasOwnProperty(langName))
+            ret[langName] = languageHeaders[langName];
+    }
+    return ret;
+};
+/**
+ * @callback HaveAPI.Client~doneCallback
+ * @param {HaveAPI.Client} client
+ * @param {Boolean} status true if the task was successful
+ */
+/**
+ * @callback HaveAPI.Client~replyCallback
+ * @param {HaveAPI.Client} client
+ * @param {HaveAPI.Client.Response} response
+ */
+/**
+ * @callback HaveAPI.Client~versionsCallback
+ * @param {HaveAPI.Client} client
+ * @param {Boolean} status
+ * @param {Object} versions
+ */
+/**
+ * @callback HaveAPI.Client~actionStateCallback
+ * @param {HaveAPI.Client} client
+ * @param {HaveAPI.Client.Response} response
+ * @param {HaveAPI.Client.ActionState} state
+ */
+/**
+ * Action call parameters
+ * @typedef {Object} HaveAPI.Client~ActionCall
+ * @property {Object} params - Input parameters
+ * @property {Object} meta - Input meta parameters
+ * @property {Boolean} block
+ * @property {Integer} blockInterval
+ * @property {Integer} blockUpdateIn
+ * @property {HaveAPI.Client~replyCallback} onReply - called when the API responds
+ * @property {HaveAPI.Client~actionStateCallback} onStateChange - called when the
+ *                                                                action's state changes
+ * @property {HaveAPI.Client~replyCallback} onDone - called when the blocking action finishes
+ */
+/**
+ * Setup resources and actions as properties and functions.
+ * @method HaveAPI.Client#setup
+ * @param {HaveAPI.Client~doneCallback} callback
+ */
+Client.prototype.setup = function (callback) {
+    var that = this;
+    this.fetchDescription(function (status, extract) {
+        var desc = null;
+        try {
+            desc = extract.call();
+        }
+        catch (e) {
+            return callback(that, false);
+        }
+        that._private.description = extract.call();
+        that.createSettings();
+        that.attachResources();
+        callback(that, true);
+        that._private.hooks.invoke('after', 'setup', that, true);
+    });
+};
+/**
+ * Provide the description and setup the client without asking the API.
+ * @method HaveAPI.Client#useDescription
+ * @param {Object} description
+ */
+Client.prototype.useDescription = function (description) {
+    this._private.description = description;
+    this.createSettings();
+    this.attachResources();
+};
+/**
+ * Call a callback with an object with list of available versions
+ * and the default one.
+ * @method HaveAPI.Client#availableVersions
+ * @param {HaveAPI.Client~versionsCallback} callback
+ */
+Client.prototype.availableVersions = function (callback) {
+    var that = this;
+    this.fetchDescription(function (status, extract) {
+        var versions = null;
+        try {
+            versions = extract.call();
+        }
+        catch (e) { }
+        callback(that, status && !(versions === null), versions);
+    }, '/?describe=versions');
+};
+/**
+ * @callback HaveAPI.Client~isCompatibleCallback
+ * @param {mixed} compatible 'compatible', 'imperfect' or false
+ */
+/**
+ * @method HaveAPI.Client#isCompatible
+ * @param {HaveAPI.Client~isCompatibleCallback}
+ */
+Client.prototype.isCompatible = function (callback) {
+    var that = this;
+    this.fetchDescription(function (status, extract) {
+        try {
+            extract.call();
+            if (that._private.protocolVersion == Client.ProtocolVersion)
+                callback('compatible');
+            else
+                callback('imperfect');
+        }
+        catch (e) {
+            if (e instanceof Client.Exceptions.ProtocolError)
+                callback(false);
+            else
+                throw e;
+        }
+    }, '/?describe=versions');
+};
+/**
+ * @callback HaveAPI.Client~descriptionCallback
+ * @param {Boolean} status true if the description was successfuly fetched
+ * @param {function} extract function that attempts to return the description
+ */
+/**
+ * Fetch the description from the API.
+ * @method HaveAPI.Client#fetchDescription
+ * @private
+ * @param {HaveAPI.Client.Http~descriptionCallback} callback
+ * @param {String} path server path to query for
+ */
+Client.prototype.fetchDescription = function (callback, path) {
+    var that = this;
+    var url = this._private.url;
+    if (path === undefined)
+        url += (this._private.version ? "/v" + this._private.version + "/" : "/?describe=default");
+    else
+        url += path;
+    this._private.http.request({
+        method: 'OPTIONS',
+        url: url,
+        credentials: this.authProvider.credentials(),
+        headers: this.requestHeaders(this.authProvider.headers()),
+        queryParameters: this.authProvider.queryParameters(),
+        callback: function (status, response) {
+            callback(status == 200, function () {
+                if (!response)
+                    throw new Client.Exceptions.ProtocolError('Failed to fetch the API description');
+                if (response.version === undefined) {
+                    throw new Client.Exceptions.ProtocolError('Incompatible protocol version: the client uses v' + Client.ProtocolVersion +
+                        ' while the API server uses an unspecified version (pre 1.0)');
+                }
+                that._private.protocolVersion = response.version;
+                if (response.version == Client.ProtocolVersion) {
+                    return response.response;
+                }
+                legacyGlobals.v1 = response.version.split('.');
+                legacyGlobals.v2 = Client.ProtocolVersion.split('.');
+                if (legacyGlobals.v1[0] != legacyGlobals.v2[0]) {
+                    throw new Client.Exceptions.ProtocolError('Incompatible protocol version: the client uses v' + Client.ProtocolVersion +
+                        ' while the API server uses v' + response.version);
+                }
+                console.log('WARNING: The client uses protocol v' + Client.ProtocolVersion +
+                    ' while the API server uses v' + response.version);
+                return response.response;
+            });
+        }
+    });
+};
+/**
+ * Attach API resources from the description to the client.
+ * @method HaveAPI.Client#attachResources
+ * @private
+ */
+Client.prototype.attachResources = function () {
+    // Detach existing resources
+    if (this.resources.length > 0) {
+        this.destroyResources();
+    }
+    this._private.attachedResourceNames = Object.create(null);
+    for (var r in this._private.description.resources) {
+        if (!Client.hasOwn(this._private.description.resources, r))
+            continue;
+        if (this._private.debug > 10)
+            console.log("Attach resource", r);
+        var resource = new Client.Resource(this, null, r, this._private.description.resources[r], []);
+        this.resources.push(resource);
+        if (Client.attachDescriptionMember(this, r, resource))
+            this._private.attachedResourceNames[r] = true;
+    }
+};
+/**
+ * Authenticate using selected authentication method.
+ * It is possible to avoid calling {@link HaveAPI.Client#setup} before authenticate completely,
+ * when it's certain that the client will be used only after it is authenticated. The client
+ * will be then set up more efficiently.
+ * @method HaveAPI.Client#authenticate
+ * @param {string} method name of authentication provider
+ * @param {Object} opts a hash of options that is passed to the authentication provider
+ * @param {HaveAPI.Client~doneCallback} callback called when the authentication is finished
+ * @param {Boolean} reset if false, the client will not be set up again, defaults to true
+ */
+Client.prototype.authenticate = function (method, opts, callback, reset) {
+    var that = this;
+    if (reset === undefined)
+        reset = true;
+    if (!this._private.description) {
+        // The client has not yet been setup.
+        // Fetch the description, do NOT attach the resources, use it only to authenticate.
+        this.fetchDescription(function (status, extract) {
+            that._private.description = extract.call();
+            that.createSettings();
+            that.authenticate(method, opts, callback);
+        });
+        return;
+    }
+    this.authProvider = new legacyGlobals.Authentication.providers[method](this, opts, this._private.description.authentication[method]);
+    this.authProvider.setup(function (c, status) {
+        // Fetch new description, which may be different when authenticated
+        if (status && reset) {
+            that.setup(function (c2, status2) {
+                callback(c2, status2);
+                that._private.hooks.invoke('after', 'authenticated', that, true);
+            });
+        }
+        else {
+            callback(that, status);
+            if (status)
+                that._private.hooks.invoke('after', 'authenticated', that, true);
+        }
+    });
+};
+/**
+ * Logout, destroy the authentication provider.
+ * {@link HaveAPI.Client#setup} must be called if you want to use
+ * the client again.
+ * @method HaveAPI.Client#logout
+ * @param {HaveAPI.Client~doneCallback} callback
+ */
+Client.prototype.logout = function (callback) {
+    var that = this;
+    this.authProvider.logout(function () {
+        that.authProvider = new Client.Authentication.Base();
+        that.destroyResources();
+        that._private.description = null;
+        if (callback !== undefined)
+            callback(that, true);
+    });
+};
+/**
+ * The response is interpreted and if the layout is object or object_list, ResourceInstance
+ * or ResourceInstanceList is returned with the callback.
+ * @method HaveAPI.Client#after
+ * @param {String} event setup or authenticated
+ * @param {HaveAPI.Client~doneCallback} callback
+ */
+Client.prototype.after = function (event, callback) {
+    this._private.hooks.register('after', event, callback);
+};
+/**
+ * Set member apiSettings.
+ * @method HaveAPI.Client#createSettings
+ * @private
+ */
+Client.prototype.createSettings = function () {
+    this.apiSettings = {
+        meta: this._private.description.meta
+    };
+};
+/**
+ * Detach resources from the client.
+ * @method HaveAPI.Client#destroyResources
+ * @private
+ */
+Client.prototype.destroyResources = function () {
+    while (this.resources.length > 0) {
+        var resource = this.resources.shift();
+        var name = resource.getName();
+        if (this._private.attachedResourceNames[name]
+            && this[name] === resource) {
+            delete this[name];
+        }
+    }
+    this._private.attachedResourceNames = Object.create(null);
+};
+/**
+ * Return true if the parameters should be sent as a query parameters,
+ * which is the case for GET and OPTIONS methods.
+ * @method HaveAPI.Client#sendAsQueryParams
+ * @param {String} method HTTP method
+ * @return {Boolean}
+ * @private
+ */
+Client.prototype.sendAsQueryParams = function (method) {
+    return ['GET', 'OPTIONS'].indexOf(method) != -1;
+};
+/**
+ * Add URL encoded parameters to URL.
+ * Note that this method does not support object_list or hash_list layouts.
+ * @method HaveAPI.Client#addParamsToQuery
+ * @param {String} url
+ * @param {String} namespace
+ * @param {Object} params
+ * @private
+ */
+Client.prototype.addParamsToQuery = function (url, namespace, params, paramDesc) {
+    return addParamsToQuery(url, namespace, params);
 };
 
 /**
@@ -1490,577 +1968,6 @@ Action.waitForCompletion = function (opts) {
 };
 
 /**
- * Create a new client for the API.
- * @class Client
- * @memberof HaveAPI
- * @param {string} url base URL to the API
- * @param {Object} opts
- */
-var Client = function Client(url, opts) {
-    opts = opts || {};
-    var oauth2TrustedOrigins = opts.oauth2TrustedOrigins !== undefined ?
-        opts.oauth2TrustedOrigins : opts.oauth2_trusted_origins;
-    while (url.length > 0) {
-        if (url[url.length - 1] == '/')
-            url = url.substr(0, url.length - 1);
-        else
-            break;
-    }
-    /**
-     * @member {Object} HaveAPI.Client#_private
-     * @protected
-     */
-    this._private = {
-        url: url,
-        version: (opts !== undefined && opts.version !== undefined) ? opts.version : null,
-        description: null,
-        attachedResourceNames: Object.create(null),
-        debug: (opts !== undefined && opts.debug !== undefined) ? opts.debug : 0,
-        oauth2TrustedOrigins: Client.normalizeTrustedOrigins(oauth2TrustedOrigins),
-        language: opts.language !== undefined ? opts.language : null,
-        languageHeader: opts.languageHeader !== undefined ?
-            opts.languageHeader : (opts.language_header || I18n.DEFAULT_LANGUAGE_HEADER),
-    };
-    I18n.requestHeaders(this._private.language, this._private.languageHeader);
-    this._private.hooks = new Client.Hooks(this._private.debug);
-    this._private.http = new Client.Http(this._private.debug);
-    /**
-     * @member {Object} HaveAPI.Client#apiSettings An object containg API settings.
-     */
-    this.apiSettings = null;
-    /**
-     * @member {Array} HaveAPI.Client#resources A list of top-level resources attached to the client.
-     */
-    this.resources = [];
-    /**
-     * @member {Object} HaveAPI.Client#authProvider Selected authentication provider.
-     */
-    this.authProvider = new Client.Authentication.Base();
-};
-/** @constant HaveAPI.Client.Version */
-Client.Version = '0.30.0';
-/** @constant HaveAPI.Client.ProtocolVersion */
-Client.ProtocolVersion = '2.0';
-Client.unsafeAttachmentNames = Object.create(null);
-Client.unsafeAttachmentNames['__proto__'] = true;
-Client.unsafeAttachmentNames['prototype'] = true;
-Client.unsafeAttachmentNames['constructor'] = true;
-/**
- * @namespace Exceptions
- * @memberof HaveAPI.Client
- */
-Client.Exceptions = {};
-Client.hasOwn = function (obj, prop) {
-    return Object.prototype.hasOwnProperty.call(obj, prop);
-};
-Client.canAttachDescriptionMember = function (target, name, reservedNames) {
-    if (typeof (name) !== 'string')
-        return false;
-    if (Client.hasOwn(Client.unsafeAttachmentNames, name))
-        return false;
-    if (reservedNames && Client.hasOwn(reservedNames, name))
-        return false;
-    return !(name in target);
-};
-Client.attachDescriptionMember = function (target, name, value, reservedNames) {
-    if (!Client.canAttachDescriptionMember(target, name, reservedNames))
-        return false;
-    target[name] = value;
-    return true;
-};
-Client.findResource = function (root, resourcePath) {
-    var current = root;
-    var path = [];
-    for (var i = 0; i < resourcePath.length; i++) {
-        var name = resourcePath[i];
-        var found = null;
-        path.push(name);
-        for (var j = 0; j < current.resources.length; j++) {
-            if (current.resources[j].getName() === name) {
-                found = current.resources[j];
-                break;
-            }
-        }
-        if (found === null) {
-            throw new Client.Exceptions.ProtocolError("Associated resource '" + path.join('.') + "' not found");
-        }
-        current = found;
-    }
-    return current;
-};
-Client.normalizeTrustedOrigins = function (origins) {
-    return normalizeTrustedOrigins(origins, function (message) { return new Client.Exceptions.ProtocolError(message); });
-};
-/** Look up canonical names and unambiguous aliases without direct properties. */
-Client.findAction = function (resource, name) {
-    var index = resource._private.actionIndex;
-    if (!index || !Client.hasOwn(index, name))
-        throw new Client.Exceptions.ProtocolError("Action '" + name + "' not found or ambiguous");
-    return index[name];
-};
-/**
- * Resolve a URL from an API description and require it to stay on the
- * configured API origin.
- * @method HaveAPI.Client#sameOriginUrl
- * @param {String} url URL or path to resolve
- * @param {Object} opts
- * @return {String} absolute URL
- * @private
- */
-Client.prototype.sameOriginUrl = function (url, opts) {
-    return resolveApiUrl(this._private.url, url, opts, function (message) { return new Client.Exceptions.ProtocolError(message); });
-};
-Client.prototype.oauth2Url = function (url) {
-    return this.sameOriginUrl(url, {
-        trustedOrigins: this._private.oauth2TrustedOrigins
-    });
-};
-/**
- * Set the language sent to the API server.
- * @method HaveAPI.Client#setLanguage
- * @param {String} language value for Accept-Language
- */
-Client.prototype.setLanguage = function (language) {
-    I18n.requestHeaders(language, this._private.languageHeader);
-    this._private.language = language;
-};
-/**
- * Set the language HTTP header name.
- * @method HaveAPI.Client#setLanguageHeader
- * @param {String} header HTTP header name
- */
-Client.prototype.setLanguageHeader = function (header) {
-    I18n.assertHeaderName(header);
-    this._private.languageHeader = header;
-};
-Client.prototype.translate = function (key, values) {
-    return I18n.translate(this._private.language, key, values);
-};
-Client.prototype.languageHeaders = function () {
-    return I18n.requestHeaders(this._private.language, this._private.languageHeader);
-};
-Client.prototype.requestHeaders = function (headers) {
-    var ret = {};
-    var languageHeaders = this.languageHeaders();
-    headers = headers || {};
-    for (var name in headers) {
-        if (headers.hasOwnProperty(name))
-            ret[name] = headers[name];
-    }
-    for (var langName in languageHeaders) {
-        if (languageHeaders.hasOwnProperty(langName))
-            ret[langName] = languageHeaders[langName];
-    }
-    return ret;
-};
-/**
- * @callback HaveAPI.Client~doneCallback
- * @param {HaveAPI.Client} client
- * @param {Boolean} status true if the task was successful
- */
-/**
- * @callback HaveAPI.Client~replyCallback
- * @param {HaveAPI.Client} client
- * @param {HaveAPI.Client.Response} response
- */
-/**
- * @callback HaveAPI.Client~versionsCallback
- * @param {HaveAPI.Client} client
- * @param {Boolean} status
- * @param {Object} versions
- */
-/**
- * @callback HaveAPI.Client~actionStateCallback
- * @param {HaveAPI.Client} client
- * @param {HaveAPI.Client.Response} response
- * @param {HaveAPI.Client.ActionState} state
- */
-/**
- * Action call parameters
- * @typedef {Object} HaveAPI.Client~ActionCall
- * @property {Object} params - Input parameters
- * @property {Object} meta - Input meta parameters
- * @property {Boolean} block
- * @property {Integer} blockInterval
- * @property {Integer} blockUpdateIn
- * @property {HaveAPI.Client~replyCallback} onReply - called when the API responds
- * @property {HaveAPI.Client~actionStateCallback} onStateChange - called when the
- *                                                                action's state changes
- * @property {HaveAPI.Client~replyCallback} onDone - called when the blocking action finishes
- */
-/**
- * Setup resources and actions as properties and functions.
- * @method HaveAPI.Client#setup
- * @param {HaveAPI.Client~doneCallback} callback
- */
-Client.prototype.setup = function (callback) {
-    var that = this;
-    this.fetchDescription(function (status, extract) {
-        var desc = null;
-        try {
-            desc = extract.call();
-        }
-        catch (e) {
-            return callback(that, false);
-        }
-        that._private.description = extract.call();
-        that.createSettings();
-        that.attachResources();
-        callback(that, true);
-        that._private.hooks.invoke('after', 'setup', that, true);
-    });
-};
-/**
- * Provide the description and setup the client without asking the API.
- * @method HaveAPI.Client#useDescription
- * @param {Object} description
- */
-Client.prototype.useDescription = function (description) {
-    this._private.description = description;
-    this.createSettings();
-    this.attachResources();
-};
-/**
- * Call a callback with an object with list of available versions
- * and the default one.
- * @method HaveAPI.Client#availableVersions
- * @param {HaveAPI.Client~versionsCallback} callback
- */
-Client.prototype.availableVersions = function (callback) {
-    var that = this;
-    this.fetchDescription(function (status, extract) {
-        var versions = null;
-        try {
-            versions = extract.call();
-        }
-        catch (e) { }
-        callback(that, status && !(versions === null), versions);
-    }, '/?describe=versions');
-};
-/**
- * @callback HaveAPI.Client~isCompatibleCallback
- * @param {mixed} compatible 'compatible', 'imperfect' or false
- */
-/**
- * @method HaveAPI.Client#isCompatible
- * @param {HaveAPI.Client~isCompatibleCallback}
- */
-Client.prototype.isCompatible = function (callback) {
-    var that = this;
-    this.fetchDescription(function (status, extract) {
-        try {
-            extract.call();
-            if (that._private.protocolVersion == Client.ProtocolVersion)
-                callback('compatible');
-            else
-                callback('imperfect');
-        }
-        catch (e) {
-            if (e instanceof Client.Exceptions.ProtocolError)
-                callback(false);
-            else
-                throw e;
-        }
-    }, '/?describe=versions');
-};
-/**
- * @callback HaveAPI.Client~descriptionCallback
- * @param {Boolean} status true if the description was successfuly fetched
- * @param {function} extract function that attempts to return the description
- */
-/**
- * Fetch the description from the API.
- * @method HaveAPI.Client#fetchDescription
- * @private
- * @param {HaveAPI.Client.Http~descriptionCallback} callback
- * @param {String} path server path to query for
- */
-Client.prototype.fetchDescription = function (callback, path) {
-    var that = this;
-    var url = this._private.url;
-    if (path === undefined)
-        url += (this._private.version ? "/v" + this._private.version + "/" : "/?describe=default");
-    else
-        url += path;
-    this._private.http.request({
-        method: 'OPTIONS',
-        url: url,
-        credentials: this.authProvider.credentials(),
-        headers: this.requestHeaders(this.authProvider.headers()),
-        queryParameters: this.authProvider.queryParameters(),
-        callback: function (status, response) {
-            callback(status == 200, function () {
-                if (!response)
-                    throw new Client.Exceptions.ProtocolError('Failed to fetch the API description');
-                if (response.version === undefined) {
-                    throw new Client.Exceptions.ProtocolError('Incompatible protocol version: the client uses v' + Client.ProtocolVersion +
-                        ' while the API server uses an unspecified version (pre 1.0)');
-                }
-                that._private.protocolVersion = response.version;
-                if (response.version == Client.ProtocolVersion) {
-                    return response.response;
-                }
-                legacyGlobals.v1 = response.version.split('.');
-                legacyGlobals.v2 = Client.ProtocolVersion.split('.');
-                if (legacyGlobals.v1[0] != legacyGlobals.v2[0]) {
-                    throw new Client.Exceptions.ProtocolError('Incompatible protocol version: the client uses v' + Client.ProtocolVersion +
-                        ' while the API server uses v' + response.version);
-                }
-                console.log('WARNING: The client uses protocol v' + Client.ProtocolVersion +
-                    ' while the API server uses v' + response.version);
-                return response.response;
-            });
-        }
-    });
-};
-/**
- * Attach API resources from the description to the client.
- * @method HaveAPI.Client#attachResources
- * @private
- */
-Client.prototype.attachResources = function () {
-    // Detach existing resources
-    if (this.resources.length > 0) {
-        this.destroyResources();
-    }
-    this._private.attachedResourceNames = Object.create(null);
-    for (var r in this._private.description.resources) {
-        if (!Client.hasOwn(this._private.description.resources, r))
-            continue;
-        if (this._private.debug > 10)
-            console.log("Attach resource", r);
-        var resource = new Client.Resource(this, null, r, this._private.description.resources[r], []);
-        this.resources.push(resource);
-        if (Client.attachDescriptionMember(this, r, resource))
-            this._private.attachedResourceNames[r] = true;
-    }
-};
-/**
- * Authenticate using selected authentication method.
- * It is possible to avoid calling {@link HaveAPI.Client#setup} before authenticate completely,
- * when it's certain that the client will be used only after it is authenticated. The client
- * will be then set up more efficiently.
- * @method HaveAPI.Client#authenticate
- * @param {string} method name of authentication provider
- * @param {Object} opts a hash of options that is passed to the authentication provider
- * @param {HaveAPI.Client~doneCallback} callback called when the authentication is finished
- * @param {Boolean} reset if false, the client will not be set up again, defaults to true
- */
-Client.prototype.authenticate = function (method, opts, callback, reset) {
-    var that = this;
-    if (reset === undefined)
-        reset = true;
-    if (!this._private.description) {
-        // The client has not yet been setup.
-        // Fetch the description, do NOT attach the resources, use it only to authenticate.
-        this.fetchDescription(function (status, extract) {
-            that._private.description = extract.call();
-            that.createSettings();
-            that.authenticate(method, opts, callback);
-        });
-        return;
-    }
-    this.authProvider = new legacyGlobals.Authentication.providers[method](this, opts, this._private.description.authentication[method]);
-    this.authProvider.setup(function (c, status) {
-        // Fetch new description, which may be different when authenticated
-        if (status && reset) {
-            that.setup(function (c2, status2) {
-                callback(c2, status2);
-                that._private.hooks.invoke('after', 'authenticated', that, true);
-            });
-        }
-        else {
-            callback(that, status);
-            if (status)
-                that._private.hooks.invoke('after', 'authenticated', that, true);
-        }
-    });
-};
-/**
- * Logout, destroy the authentication provider.
- * {@link HaveAPI.Client#setup} must be called if you want to use
- * the client again.
- * @method HaveAPI.Client#logout
- * @param {HaveAPI.Client~doneCallback} callback
- */
-Client.prototype.logout = function (callback) {
-    var that = this;
-    this.authProvider.logout(function () {
-        that.authProvider = new Client.Authentication.Base();
-        that.destroyResources();
-        that._private.description = null;
-        if (callback !== undefined)
-            callback(that, true);
-    });
-};
-/**
- * Always calls the callback with {@link HaveAPI.Client.Response} object. It does
- * not interpret the response.
- * @method HaveAPI.Client#directInvoke
- * @param {HaveAPI.Client.Action} action
- * @param {HaveAPI.Client~ActionCall} opts
- */
-Client.prototype.directInvoke = function (action, opts) {
-    var path = opts.path === undefined ? action.preparedPath : opts.path;
-    if (this._private.debug > 5)
-        console.log("Executing", action, "with opts", opts, "at", path);
-    var that = this;
-    opts.block === undefined ? true : opts.block;
-    var url = this.sameOriginUrl(path, { actionPath: true });
-    var httpOpts = {
-        method: action.httpMethod(),
-        url: url,
-        credentials: this.authProvider.credentials(),
-        headers: this.requestHeaders(this.authProvider.headers()),
-        queryParameters: this.authProvider.queryParameters(),
-        callback: function (status, response) {
-            var res = new Client.Response(action, response);
-            if (opts.onReply !== undefined)
-                opts.onReply(that, res);
-            if (action.description.blocking && res.meta().action_state_id && opts.block) {
-                if (opts.onStateChange || opts.onDone) {
-                    Action.waitForCompletion({
-                        id: res.meta().action_state_id,
-                        client: that,
-                        reply: res,
-                        blockInterval: opts.blockInterval,
-                        blockUpdateIn: opts.blockUpdateIn,
-                        onStateChange: opts.onStateChange,
-                        onDone: opts.onDone
-                    });
-                }
-            }
-        }
-    };
-    var paramsInQuery = this.sendAsQueryParams(httpOpts.method);
-    var metaNs = this.apiSettings.meta.namespace;
-    if (paramsInQuery) {
-        httpOpts.url = this.addParamsToQuery(httpOpts.url, action.namespace('input'), opts.params, action.description.input ? action.description.input.parameters : null);
-        if (opts.meta) {
-            httpOpts.url = this.addParamsToQuery(httpOpts.url, metaNs, opts.meta);
-        }
-    }
-    else {
-        var scopedParams = {};
-        var ns = action.namespace('input');
-        if (ns)
-            scopedParams[ns] = opts.params;
-        if (opts.meta)
-            scopedParams[metaNs] = opts.meta;
-        httpOpts.params = scopedParams;
-    }
-    try {
-        this._private.http.request(httpOpts);
-    }
-    finally {
-        action.preparedPath = null;
-    }
-};
-/**
- * The response is interpreted and if the layout is object or object_list, ResourceInstance
- * or ResourceInstanceList is returned with the callback.
- * @method HaveAPI.Client#invoke
- * @param {HaveAPI.Client.Action} action
- * @param {HaveAPI.Client~ActionCall} opts
- */
-Client.prototype.invoke = function (action, opts) {
-    var that = this;
-    var origOnReply = opts.onReply;
-    var origOnBlock = opts.block === undefined ? true : opts.block;
-    opts.onReply = function (status, response) {
-        if (!origOnReply && (!action.description.blocking || (!opts.onStateUpdate && !opts.onDone)))
-            return;
-        var responseObject;
-        switch (action.layout('output')) {
-            case 'object':
-                responseObject = new Client.ResourceInstance(that, action.resource._private.parent, action, response);
-                break;
-            case 'object_list':
-                responseObject = new Client.ResourceInstanceList(that, action, response);
-                break;
-            default:
-                responseObject = response;
-        }
-        if (origOnReply)
-            origOnReply(that, responseObject);
-        if (action.description.blocking && response.meta().action_state_id && origOnBlock) {
-            if (opts.onStateChange || opts.onDone) {
-                Action.waitForCompletion({
-                    id: response.meta().action_state_id,
-                    client: that,
-                    reply: responseObject,
-                    blockInterval: opts.blockInterval,
-                    blockUpdateIn: opts.blockUpdateIn,
-                    onStateChange: opts.onStateChange,
-                    onDone: opts.onDone
-                });
-            }
-        }
-    };
-    opts.block = false;
-    this.directInvoke(action, opts);
-};
-/**
- * The response is interpreted and if the layout is object or object_list, ResourceInstance
- * or ResourceInstanceList is returned with the callback.
- * @method HaveAPI.Client#after
- * @param {String} event setup or authenticated
- * @param {HaveAPI.Client~doneCallback} callback
- */
-Client.prototype.after = function (event, callback) {
-    this._private.hooks.register('after', event, callback);
-};
-/**
- * Set member apiSettings.
- * @method HaveAPI.Client#createSettings
- * @private
- */
-Client.prototype.createSettings = function () {
-    this.apiSettings = {
-        meta: this._private.description.meta
-    };
-};
-/**
- * Detach resources from the client.
- * @method HaveAPI.Client#destroyResources
- * @private
- */
-Client.prototype.destroyResources = function () {
-    while (this.resources.length > 0) {
-        var resource = this.resources.shift();
-        var name = resource.getName();
-        if (this._private.attachedResourceNames[name]
-            && this[name] === resource) {
-            delete this[name];
-        }
-    }
-    this._private.attachedResourceNames = Object.create(null);
-};
-/**
- * Return true if the parameters should be sent as a query parameters,
- * which is the case for GET and OPTIONS methods.
- * @method HaveAPI.Client#sendAsQueryParams
- * @param {String} method HTTP method
- * @return {Boolean}
- * @private
- */
-Client.prototype.sendAsQueryParams = function (method) {
-    return ['GET', 'OPTIONS'].indexOf(method) != -1;
-};
-/**
- * Add URL encoded parameters to URL.
- * Note that this method does not support object_list or hash_list layouts.
- * @method HaveAPI.Client#addParamsToQuery
- * @param {String} url
- * @param {String} namespace
- * @param {Object} params
- * @private
- */
-Client.prototype.addParamsToQuery = function (url, namespace, params, paramDesc) {
-    return addParamsToQuery(url, namespace, params);
-};
-
-/**
  * @class Base
  * @classdesc Base class for all authentication providers. They do not have to inherit
  *            it directly, but must implement all necessary methods.
@@ -2668,6 +2575,114 @@ ResourceInstanceList.prototype.last = function () {
     return this.items[this.length - 1];
 };
 
+/**
+ * Always calls the callback with {@link HaveAPI.Client.Response} object. It does
+ * not interpret the response.
+ * @method HaveAPI.Client#directInvoke
+ * @param {HaveAPI.Client.Action} action
+ * @param {HaveAPI.Client~ActionCall} opts
+ */
+Client.prototype.directInvoke = function (action, opts) {
+    var path = opts.path === undefined ? action.preparedPath : opts.path;
+    if (this._private.debug > 5)
+        console.log("Executing", action, "with opts", opts, "at", path);
+    var that = this;
+    opts.block === undefined ? true : opts.block;
+    var url = this.sameOriginUrl(path, { actionPath: true });
+    var httpOpts = {
+        method: action.httpMethod(),
+        url: url,
+        credentials: this.authProvider.credentials(),
+        headers: this.requestHeaders(this.authProvider.headers()),
+        queryParameters: this.authProvider.queryParameters(),
+        callback: function (status, response) {
+            var res = new Client.Response(action, response);
+            if (opts.onReply !== undefined)
+                opts.onReply(that, res);
+            if (action.description.blocking && res.meta().action_state_id && opts.block) {
+                if (opts.onStateChange || opts.onDone) {
+                    Action.waitForCompletion({
+                        id: res.meta().action_state_id,
+                        client: that,
+                        reply: res,
+                        blockInterval: opts.blockInterval,
+                        blockUpdateIn: opts.blockUpdateIn,
+                        onStateChange: opts.onStateChange,
+                        onDone: opts.onDone
+                    });
+                }
+            }
+        }
+    };
+    var paramsInQuery = this.sendAsQueryParams(httpOpts.method);
+    var metaNs = this.apiSettings.meta.namespace;
+    if (paramsInQuery) {
+        httpOpts.url = this.addParamsToQuery(httpOpts.url, action.namespace('input'), opts.params, action.description.input ? action.description.input.parameters : null);
+        if (opts.meta) {
+            httpOpts.url = this.addParamsToQuery(httpOpts.url, metaNs, opts.meta);
+        }
+    }
+    else {
+        var scopedParams = {};
+        var ns = action.namespace('input');
+        if (ns)
+            scopedParams[ns] = opts.params;
+        if (opts.meta)
+            scopedParams[metaNs] = opts.meta;
+        httpOpts.params = scopedParams;
+    }
+    try {
+        this._private.http.request(httpOpts);
+    }
+    finally {
+        action.preparedPath = null;
+    }
+};
+/**
+ * The response is interpreted and if the layout is object or object_list, ResourceInstance
+ * or ResourceInstanceList is returned with the callback.
+ * @method HaveAPI.Client#invoke
+ * @param {HaveAPI.Client.Action} action
+ * @param {HaveAPI.Client~ActionCall} opts
+ */
+Client.prototype.invoke = function (action, opts) {
+    var that = this;
+    var origOnReply = opts.onReply;
+    var origOnBlock = opts.block === undefined ? true : opts.block;
+    opts.onReply = function (status, response) {
+        if (!origOnReply && (!action.description.blocking || (!opts.onStateUpdate && !opts.onDone)))
+            return;
+        var responseObject;
+        switch (action.layout('output')) {
+            case 'object':
+                responseObject = new Client.ResourceInstance(that, action.resource._private.parent, action, response);
+                break;
+            case 'object_list':
+                responseObject = new Client.ResourceInstanceList(that, action, response);
+                break;
+            default:
+                responseObject = response;
+        }
+        if (origOnReply)
+            origOnReply(that, responseObject);
+        if (action.description.blocking && response.meta().action_state_id && origOnBlock) {
+            if (opts.onStateChange || opts.onDone) {
+                Action.waitForCompletion({
+                    id: response.meta().action_state_id,
+                    client: that,
+                    reply: responseObject,
+                    blockInterval: opts.blockInterval,
+                    blockUpdateIn: opts.blockUpdateIn,
+                    onStateChange: opts.onStateChange,
+                    onDone: opts.onDone
+                });
+            }
+        }
+    };
+    opts.block = false;
+    this.directInvoke(action, opts);
+};
+
 /** These intentionally retain the legacy plain exception prototypes. */
 Client.Exceptions.ProtocolError = function (msg) {
     this.name = 'ProtocolError';
@@ -2758,21 +2773,91 @@ Validator.validators.present = function (opts, value) {
     return true;
 };
 
-var __extends = (undefined && undefined.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
+/******************************************************************************
+Copyright (c) Microsoft Corporation.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+***************************************************************************** */
+/* global Reflect, Promise, SuppressedError, Symbol, Iterator */
+
+var extendStatics = function(d, b) {
+  extendStatics = Object.setPrototypeOf ||
+      ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+      function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+  return extendStatics(d, b);
+};
+
+function __extends(d, b) {
+  if (typeof b !== "function" && b !== null)
+      throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+  extendStatics(d, b);
+  function __() { this.constructor = d; }
+  d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+}
+
+var __assign = function() {
+  __assign = Object.assign || function __assign(t) {
+      for (var s, i = 1, n = arguments.length; i < n; i++) {
+          s = arguments[i];
+          for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
+      }
+      return t;
+  };
+  return __assign.apply(this, arguments);
+};
+
+function __awaiter(thisArg, _arguments, P, generator) {
+  function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+  return new (P || (P = Promise))(function (resolve, reject) {
+      function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+      function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+      function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+      step((generator = generator.apply(thisArg, _arguments || [])).next());
+  });
+}
+
+function __generator(thisArg, body) {
+  var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+  return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+  function verb(n) { return function (v) { return step([n, v]); }; }
+  function step(op) {
+      if (f) throw new TypeError("Generator is already executing.");
+      while (g && (g = 0, op[0] && (_ = 0)), _) try {
+          if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+          if (y = 0, t) op = [op[0] & 2, t.value];
+          switch (op[0]) {
+              case 0: case 1: t = op; break;
+              case 4: _.label++; return { value: op[1], done: false };
+              case 5: _.label++; y = op[1]; op = [0]; continue;
+              case 7: op = _.ops.pop(); _.trys.pop(); continue;
+              default:
+                  if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                  if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                  if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                  if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                  if (t[2]) _.ops.pop();
+                  _.trys.pop(); continue;
+          }
+          op = body.call(thisArg, _);
+      } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+      if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+  }
+}
+
+typeof SuppressedError === "function" ? SuppressedError : function (error, suppressed, message) {
+  var e = new Error(message);
+  return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
+};
+
 var AsyncError = /** @class */ (function (_super) {
     __extends(AsyncError, _super);
     function AsyncError(kind, message, details) {
@@ -2795,17 +2880,6 @@ function asAsyncError(error, kind) {
     return error instanceof AsyncError ? error : new AsyncError(kind, error instanceof Error ? error.message : String(error), { cause: error });
 }
 
-var __assign$4 = (undefined && undefined.__assign) || function () {
-    __assign$4 = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign$4.apply(this, arguments);
-};
 function isRecord(value) {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -2902,7 +2976,7 @@ function decode(status, text, namespace, metaNamespace) {
         result.meta = meta;
     }
     if (status < 200 || status >= 300 || !envelope.status)
-        throw new AsyncError('api', envelope.message || 'API request failed', __assign$4({ httpStatus: status, envelope: envelope, response: result }, (envelope.errors ? { errors: envelope.errors } : {})));
+        throw new AsyncError('api', envelope.message || 'API request failed', __assign({ httpStatus: status, envelope: envelope, response: result }, (envelope.errors ? { errors: envelope.errors } : {})));
     if (!own(envelope, 'response'))
         throw new AsyncError('protocol', 'Missing response payload', { httpStatus: status, envelope: envelope, response: result });
     if (namespace != null) {
@@ -2982,42 +3056,6 @@ function request(spec, context) {
     });
 }
 
-var __awaiter$2 = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator$2 = (undefined && undefined.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
-    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (g && (g = 0, op[0] && (_ = 0)), _) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
 var dictionaries = {
     create: function () { return Object.create(null); },
     owns: function (target, key) { return Object.prototype.hasOwnProperty.call(target, key); }
@@ -3114,9 +3152,9 @@ function authenticationHeader(description, token) {
     return _a = {}, _a[description.http_header] = token, _a;
 }
 function authenticate(method, options, description, send, language) {
-    return __awaiter$2(this, void 0, void 0, function () {
+    return __awaiter(this, void 0, void 0, function () {
         var provider, resource, actionName, input, initialAction, _loop_1, state_1;
-        return __generator$2(this, function (_a) {
+        return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     if (!isRecord(options) || !own(description.authentication, method))
@@ -3152,7 +3190,7 @@ function authenticate(method, options, description, send, language) {
                     });
                     _loop_1 = function () {
                         var action, result, data, challenge, parameters, answer, cause_1;
-                        return __generator$2(this, function (_b) {
+                        return __generator(this, function (_b) {
                             switch (_b.label) {
                                 case 0:
                                     if (!own(resource.actions, actionName))
@@ -3212,60 +3250,13 @@ function authenticate(method, options, description, send, language) {
     });
 }
 
-var __assign$3 = (undefined && undefined.__assign) || function () {
-    __assign$3 = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign$3.apply(this, arguments);
-};
-var __awaiter$1 = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator$1 = (undefined && undefined.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
-    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (g && (g = 0, op[0] && (_ = 0)), _) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
 function stateSnapshot(data) {
     if (!isRecord(data) || typeof data.id !== 'number' || !Number.isInteger(data.id) ||
         typeof data.finished !== 'boolean' || typeof data.status !== 'boolean' ||
         typeof data.current !== 'number' || !Number.isFinite(data.current) ||
         typeof data.total !== 'number' || !Number.isFinite(data.total) || typeof data.can_cancel !== 'boolean')
         throw new AsyncError('protocol', 'Invalid action state');
-    return __assign$3(__assign$3(__assign$3(__assign$3({ id: data.id, finished: data.finished, status: data.status, canCancel: data.can_cancel }, (typeof data.label === 'string' ? { label: data.label } : {})), { progress: __assign$3({ current: data.current, total: data.total }, (typeof data.unit === 'string' ? { unit: data.unit } : {})) }), (typeof data.created_at === 'string' || data.created_at === null ? { createdAt: data.created_at } : {})), (typeof data.updated_at === 'string' || data.updated_at === null ? { updatedAt: data.updated_at } : {}));
+    return __assign(__assign(__assign(__assign({ id: data.id, finished: data.finished, status: data.status, canCancel: data.can_cancel }, (typeof data.label === 'string' ? { label: data.label } : {})), { progress: __assign({ current: data.current, total: data.total }, (typeof data.unit === 'string' ? { unit: data.unit } : {})) }), (typeof data.created_at === 'string' || data.created_at === null ? { createdAt: data.created_at } : {})), (typeof data.updated_at === 'string' || data.updated_at === null ? { updatedAt: data.updated_at } : {}));
 }
 function actionPath(action, id) {
     var remaining = true;
@@ -3278,9 +3269,9 @@ function actionPath(action, id) {
     return path;
 }
 function waitForCompletion(result, record, options) {
-    return __awaiter$1(this, void 0, void 0, function () {
+    return __awaiter(this, void 0, void 0, function () {
         var resources, resource, controller, timedOut, state, abort, timer, started, action, remaining, params, reply, error_1, failure;
-        return __generator$1(this, function (_a) {
+        return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     if (!record)
@@ -3360,239 +3351,6 @@ function waitForCompletion(result, record, options) {
     });
 }
 
-var __assign$2 = (undefined && undefined.__assign) || function () {
-    __assign$2 = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign$2.apply(this, arguments);
-};
-/** Fields are local. Association I/O is available only through loadAssociation. */
-var AsyncResourceInstance = /** @class */ (function () {
-    function AsyncResourceInstance(context, path, attributes, ids, persistent) {
-        if (ids === void 0) { ids = []; }
-        if (persistent === void 0) { persistent = true; }
-        this.associations = Object.create(null);
-        this.attributeNames = Object.create(null);
-        this.installedNames = Object.create(null);
-        this.saving = false;
-        this.context = context;
-        this.resourcePath = Object.freeze(path.slice());
-        this.description = lookupResource(context, this.resourcePath);
-        this.attributes = snapshotAttributes(context, attributes);
-        this.ids = Object.freeze(ids.slice());
-        this.persistent = persistent;
-        nonThenable(this);
-        this.installMembers();
-    }
-    AsyncResourceInstance.prototype.getName = function () { return this.resourcePath[this.resourcePath.length - 1]; };
-    AsyncResourceInstance.prototype.get = function (name) { return this.attributes[name]; };
-    AsyncResourceInstance.prototype.set = function (name, value) {
-        Object.defineProperty(this.attributes, name, { value: value, writable: true, enumerable: true, configurable: true });
-        delete this.associations[name];
-        this.installAttribute(name);
-    };
-    AsyncResourceInstance.prototype.isPersistent = function () { return this.persistent; };
-    AsyncResourceInstance.prototype.action = function (name) { return createAction(this.context, this.resourcePath, name, this.ids); };
-    AsyncResourceInstance.prototype.resource = function (name) { return createResource(this.context, this.resourcePath.concat(name), this.ids); };
-    AsyncResourceInstance.prototype.installAttribute = function (name) {
-        var _this = this;
-        if (name === this.context.metaNamespace || hasOwn(this.attributeNames, name))
-            return;
-        if (name === '__proto__' || name === 'constructor' || name === 'prototype' || name in this)
-            return;
-        this.attributeNames[name] = true;
-        Object.defineProperty(this, name, { enumerable: true, configurable: true,
-            get: function () { return _this.attributes[name]; }, set: function (value) { return _this.set(name, value); } });
-    };
-    AsyncResourceInstance.prototype.installMembers = function () {
-        for (var _i = 0, _a = Object.keys(this.installedNames); _i < _a.length; _i++) {
-            var name_1 = _a[_i];
-            delete this[name_1];
-            delete this.installedNames[name_1];
-        }
-        for (var _b = 0, _c = Object.keys(this.description.resources); _b < _c.length; _b++) {
-            var name_2 = _c[_b];
-            if (!(name_2 in this) && name_2 !== '__proto__' && name_2 !== 'prototype') {
-                attachMember(this, name_2, this.resource(name_2));
-                this.installedNames[name_2] = true;
-            }
-        }
-        for (var _d = 0, _e = Object.keys(this.description.actions); _d < _e.length; _d++) {
-            var name_3 = _e[_d];
-            var action = this.action(name_3);
-            for (var _f = 0, _g = [name_3].concat(this.description.actions[name_3].aliases || []); _f < _g.length; _f++) {
-                var alias = _g[_f];
-                if (!(alias in this) && alias !== '__proto__' && alias !== 'prototype') {
-                    attachMember(this, alias, action);
-                    this.installedNames[alias] = true;
-                }
-            }
-        }
-        for (var _h = 0, _j = Object.keys(this.attributes); _h < _j.length; _h++) {
-            var name_4 = _j[_h];
-            this.installAttribute(name_4);
-        }
-    };
-    AsyncResourceInstance.prototype.submittedParams = function (action) {
-        var params = Object.create(null);
-        if (action.input) {
-            for (var _i = 0, _a = Object.keys(action.input.parameters); _i < _a.length; _i++) {
-                var name_5 = _a[_i];
-                if (hasOwn(this.attributes, name_5))
-                    params[name_5] = this.attributes[name_5];
-            }
-        }
-        // The action synchronously converts described Resource values and then
-        // snapshots the submitted payload before validation or request dispatch.
-        return params;
-    };
-    AsyncResourceInstance.prototype.save = function (options) {
-        var _this = this;
-        if (options === void 0) { options = {}; }
-        if (this.acceptedUnbound)
-            return Promise.reject(this.acceptedUnbound);
-        if (this.saving)
-            return Promise.reject(this.context.makeError('protocol', 'A save is already in progress'));
-        this.saving = true;
-        try {
-            var name_6 = this.persistent ? 'update' : 'create';
-            var action_1 = lookupAction(this.context, this.resourcePath, name_6);
-            var params = this.submittedParams(action_1);
-            return this.action(name_6)(__assign$2(__assign$2({}, options), { params: params })).then(function (result) {
-                var saved = result.value;
-                if (!(saved instanceof AsyncResourceInstance))
-                    throw _this.context.makeError('protocol', 'Save requires an object response', { response: result.response });
-                // Validate identity and member binding before publishing any state.
-                var returned = pathParams(_this.context, result.response.meta);
-                var ids = returned === undefined && _this.persistent ? _this.ids : returned || [];
-                var update = _this.description.actions.update;
-                if (update) {
-                    try {
-                        resolvePath(_this.context, update.path, ids);
-                    }
-                    catch (error) {
-                        throw protocolFailure(_this.context, error, result.response);
-                    }
-                }
-                _this.attributes = snapshotAttributes(_this.context, saved.attributes);
-                _this.ids = Object.freeze(ids.slice());
-                _this.persistent = true;
-                for (var _i = 0, _a = Object.keys(_this.associations); _i < _a.length; _i++) {
-                    var name_7 = _a[_i];
-                    delete _this.associations[name_7];
-                }
-                _this.installMembers();
-                return _this.context.recordInvocation(_this, result.response, action_1);
-            }).then(function (result) { _this.saving = false; return result; }, function (error) {
-                _this.saving = false;
-                var failure = protocolFailure(_this.context, error);
-                var response = failure.response;
-                if (!_this.persistent && response && response.envelope.status === true && response.httpStatus >= 200 && response.httpStatus < 300) {
-                    _this.acceptedUnbound = _this.context.makeError('protocol', 'Create succeeded, but its response is unusable. Fetch the created resource before further writes.', { response: response, envelope: response.envelope, httpStatus: response.httpStatus, cause: failure, reason: 'accepted-unbound' });
-                    throw _this.acceptedUnbound;
-                }
-                throw failure;
-            });
-        }
-        catch (error) {
-            this.saving = false;
-            return Promise.reject(protocolFailure(this.context, error));
-        }
-    };
-    AsyncResourceInstance.prototype.associationDescription = function (name) {
-        for (var _i = 0, _a = Object.keys(this.description.actions); _i < _a.length; _i++) {
-            var action = _a[_i];
-            var output = this.description.actions[action].output;
-            if (output && hasOwn(output.parameters, name) && output.parameters[name].type === 'Resource')
-                return output.parameters[name];
-        }
-        throw this.context.makeError('protocol', 'Unknown association ' + name);
-    };
-    AsyncResourceInstance.prototype.loadAssociation = function (name, options) {
-        var _this = this;
-        if (options === void 0) { options = {}; }
-        try {
-            var description = this.associationDescription(name);
-            if (!description.resource)
-                throw this.context.makeError('protocol', 'Association has no resource path');
-            if (hasOwn(this.associations, name))
-                return Promise.resolve({ value: this.associations[name], response: null });
-            var raw_1 = this.attributes[name];
-            if (!raw_1 || typeof raw_1 !== 'object' || Array.isArray(raw_1))
-                throw this.context.makeError('protocol', 'Malformed association value');
-            var value = raw_1;
-            var meta = value[this.context.metaNamespace] || {};
-            if (typeof meta !== 'object' || Array.isArray(meta))
-                throw this.context.makeError('protocol', 'Malformed association metadata');
-            var ids = pathParams(this.context, meta) || [];
-            if (meta.resolved === true) {
-                var associated = new AsyncResourceInstance(this.context, description.resource, value, ids, true);
-                this.associations[name] = associated;
-                return Promise.resolve({ value: associated, response: null });
-            }
-            return createAction(this.context, description.resource, 'show', ids)(options).then(function (result) {
-                if (!(result.value instanceof AsyncResourceInstance))
-                    throw _this.context.makeError('protocol', 'Association load requires an object response', { response: result.response });
-                // A field replaced while the request was in flight owns its newer value.
-                if (_this.attributes[name] === raw_1)
-                    _this.associations[name] = result.value;
-                return { value: result.value, response: result.response };
-            });
-        }
-        catch (error) {
-            return Promise.reject(protocolFailure(this.context, error));
-        }
-    };
-    return AsyncResourceInstance;
-}());
-
-/** Local list operations never issue a request or return callback-owned objects. */
-var AsyncResourceList = /** @class */ (function () {
-    function AsyncResourceList(context, path, response) {
-        var _this = this;
-        if (!Array.isArray(response.data))
-            throw context.makeError('protocol', 'Expected an object-list response', { response: response });
-        var items = response.data.map(function (value) {
-            if (!value || typeof value !== 'object' || Array.isArray(value))
-                throw context.makeError('protocol', 'Malformed object-list item', { response: response });
-            var data = snapshotValues(context, value);
-            var meta = hasOwn(data, context.metaNamespace) ? data[context.metaNamespace] : {};
-            if (!meta || typeof meta !== 'object' || Array.isArray(meta))
-                throw context.makeError('protocol', 'Malformed object metadata', { response: response });
-            return new AsyncResourceInstance(context, path, data, pathParams(context, meta) || [], true);
-        });
-        this.items = Object.freeze(items);
-        this.length = items.length;
-        items.forEach(function (item, index) { return Object.defineProperty(_this, String(index), { value: item, enumerable: true }); });
-        this.totalCount = response.meta.total_count;
-        nonThenable(this);
-        // Resolve Symbol only when an async list is constructed. Legacy-only
-        // bundle loading retains its original runtime requirements.
-        Object.defineProperty(this, Symbol.iterator, { value: function () { return _this.items[Symbol.iterator](); } });
-    }
-    AsyncResourceList.prototype.itemAt = function (index) { return this.items[index]; };
-    AsyncResourceList.prototype.first = function () { return this.items[0] || null; };
-    AsyncResourceList.prototype.last = function () { return this.items[this.length - 1] || null; };
-    AsyncResourceList.prototype.each = function (fn) { this.items.forEach(fn); };
-    return AsyncResourceList;
-}());
-
-var __assign$1 = (undefined && undefined.__assign) || function () {
-    __assign$1 = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign$1.apply(this, arguments);
-};
 function hasOwn(value, name) {
     return Object.prototype.hasOwnProperty.call(value, name);
 }
@@ -3700,7 +3458,7 @@ function prepareOptions(context, args) {
                 if (hasOwn(supplied, key) && (!supplied[key] || typeof supplied[key] !== 'object' || Array.isArray(supplied[key])))
                     throw context.makeError('protocol', 'Malformed action ' + key);
             }
-            options = __assign$1({}, supplied);
+            options = __assign({}, supplied);
         }
         else {
             if (typeof argument !== 'string' && typeof argument !== 'number')
@@ -3790,7 +3548,7 @@ function createAction(context, path, name, ids) {
                 metaNamespace: context.metaNamespace,
                 params: context.validateParams(description, normalizeParams(context, description, options.params)),
                 meta: options.meta ? snapshotValues(context, options.meta) : undefined,
-                headers: options.headers ? __assign$1({}, options.headers) : undefined,
+                headers: options.headers ? __assign({}, options.headers) : undefined,
                 signal: options.signal,
                 timeoutMs: options.timeoutMs,
             };
@@ -3848,54 +3606,216 @@ function createResource(context, path, ids) {
     }
     return callable;
 }
-
-var __assign = (undefined && undefined.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (undefined && undefined.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
-    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (g && (g = 0, op[0] && (_ = 0)), _) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+/** Fields are local. Association I/O is available only through loadAssociation. */
+var AsyncResourceInstance = /** @class */ (function () {
+    function AsyncResourceInstance(context, path, attributes, ids, persistent) {
+        if (ids === void 0) { ids = []; }
+        if (persistent === void 0) { persistent = true; }
+        this.associations = Object.create(null);
+        this.attributeNames = Object.create(null);
+        this.installedNames = Object.create(null);
+        this.saving = false;
+        this.context = context;
+        this.resourcePath = Object.freeze(path.slice());
+        this.description = lookupResource(context, this.resourcePath);
+        this.attributes = snapshotAttributes(context, attributes);
+        this.ids = Object.freeze(ids.slice());
+        this.persistent = persistent;
+        nonThenable(this);
+        this.installMembers();
     }
-};
+    AsyncResourceInstance.prototype.getName = function () { return this.resourcePath[this.resourcePath.length - 1]; };
+    AsyncResourceInstance.prototype.get = function (name) { return this.attributes[name]; };
+    AsyncResourceInstance.prototype.set = function (name, value) {
+        Object.defineProperty(this.attributes, name, { value: value, writable: true, enumerable: true, configurable: true });
+        delete this.associations[name];
+        this.installAttribute(name);
+    };
+    AsyncResourceInstance.prototype.isPersistent = function () { return this.persistent; };
+    AsyncResourceInstance.prototype.action = function (name) { return createAction(this.context, this.resourcePath, name, this.ids); };
+    AsyncResourceInstance.prototype.resource = function (name) { return createResource(this.context, this.resourcePath.concat(name), this.ids); };
+    AsyncResourceInstance.prototype.installAttribute = function (name) {
+        var _this = this;
+        if (name === this.context.metaNamespace || hasOwn(this.attributeNames, name))
+            return;
+        if (name === '__proto__' || name === 'constructor' || name === 'prototype' || name in this)
+            return;
+        this.attributeNames[name] = true;
+        Object.defineProperty(this, name, { enumerable: true, configurable: true,
+            get: function () { return _this.attributes[name]; }, set: function (value) { return _this.set(name, value); } });
+    };
+    AsyncResourceInstance.prototype.installMembers = function () {
+        for (var _i = 0, _a = Object.keys(this.installedNames); _i < _a.length; _i++) {
+            var name_4 = _a[_i];
+            delete this[name_4];
+            delete this.installedNames[name_4];
+        }
+        for (var _b = 0, _c = Object.keys(this.description.resources); _b < _c.length; _b++) {
+            var name_5 = _c[_b];
+            if (!(name_5 in this) && name_5 !== '__proto__' && name_5 !== 'prototype') {
+                attachMember(this, name_5, this.resource(name_5));
+                this.installedNames[name_5] = true;
+            }
+        }
+        for (var _d = 0, _e = Object.keys(this.description.actions); _d < _e.length; _d++) {
+            var name_6 = _e[_d];
+            var action = this.action(name_6);
+            for (var _f = 0, _g = [name_6].concat(this.description.actions[name_6].aliases || []); _f < _g.length; _f++) {
+                var alias = _g[_f];
+                if (!(alias in this) && alias !== '__proto__' && alias !== 'prototype') {
+                    attachMember(this, alias, action);
+                    this.installedNames[alias] = true;
+                }
+            }
+        }
+        for (var _h = 0, _j = Object.keys(this.attributes); _h < _j.length; _h++) {
+            var name_7 = _j[_h];
+            this.installAttribute(name_7);
+        }
+    };
+    AsyncResourceInstance.prototype.submittedParams = function (action) {
+        var params = Object.create(null);
+        if (action.input) {
+            for (var _i = 0, _a = Object.keys(action.input.parameters); _i < _a.length; _i++) {
+                var name_8 = _a[_i];
+                if (hasOwn(this.attributes, name_8))
+                    params[name_8] = this.attributes[name_8];
+            }
+        }
+        // The action synchronously converts described Resource values and then
+        // snapshots the submitted payload before validation or request dispatch.
+        return params;
+    };
+    AsyncResourceInstance.prototype.save = function (options) {
+        var _this = this;
+        if (options === void 0) { options = {}; }
+        if (this.acceptedUnbound)
+            return Promise.reject(this.acceptedUnbound);
+        if (this.saving)
+            return Promise.reject(this.context.makeError('protocol', 'A save is already in progress'));
+        this.saving = true;
+        try {
+            var name_9 = this.persistent ? 'update' : 'create';
+            var action_1 = lookupAction(this.context, this.resourcePath, name_9);
+            var params = this.submittedParams(action_1);
+            return this.action(name_9)(__assign(__assign({}, options), { params: params })).then(function (result) {
+                var saved = result.value;
+                if (!(saved instanceof AsyncResourceInstance))
+                    throw _this.context.makeError('protocol', 'Save requires an object response', { response: result.response });
+                // Validate identity and member binding before publishing any state.
+                var returned = pathParams(_this.context, result.response.meta);
+                var ids = returned === undefined && _this.persistent ? _this.ids : returned || [];
+                var update = _this.description.actions.update;
+                if (update) {
+                    try {
+                        resolvePath(_this.context, update.path, ids);
+                    }
+                    catch (error) {
+                        throw protocolFailure(_this.context, error, result.response);
+                    }
+                }
+                _this.attributes = snapshotAttributes(_this.context, saved.attributes);
+                _this.ids = Object.freeze(ids.slice());
+                _this.persistent = true;
+                for (var _i = 0, _a = Object.keys(_this.associations); _i < _a.length; _i++) {
+                    var name_10 = _a[_i];
+                    delete _this.associations[name_10];
+                }
+                _this.installMembers();
+                return _this.context.recordInvocation(_this, result.response, action_1);
+            }).then(function (result) { _this.saving = false; return result; }, function (error) {
+                _this.saving = false;
+                var failure = protocolFailure(_this.context, error);
+                var response = failure.response;
+                if (!_this.persistent && response && response.envelope.status === true && response.httpStatus >= 200 && response.httpStatus < 300) {
+                    _this.acceptedUnbound = _this.context.makeError('protocol', 'Create succeeded, but its response is unusable. Fetch the created resource before further writes.', { response: response, envelope: response.envelope, httpStatus: response.httpStatus, cause: failure, reason: 'accepted-unbound' });
+                    throw _this.acceptedUnbound;
+                }
+                throw failure;
+            });
+        }
+        catch (error) {
+            this.saving = false;
+            return Promise.reject(protocolFailure(this.context, error));
+        }
+    };
+    AsyncResourceInstance.prototype.associationDescription = function (name) {
+        for (var _i = 0, _a = Object.keys(this.description.actions); _i < _a.length; _i++) {
+            var action = _a[_i];
+            var output = this.description.actions[action].output;
+            if (output && hasOwn(output.parameters, name) && output.parameters[name].type === 'Resource')
+                return output.parameters[name];
+        }
+        throw this.context.makeError('protocol', 'Unknown association ' + name);
+    };
+    AsyncResourceInstance.prototype.loadAssociation = function (name, options) {
+        var _this = this;
+        if (options === void 0) { options = {}; }
+        try {
+            var description = this.associationDescription(name);
+            if (!description.resource)
+                throw this.context.makeError('protocol', 'Association has no resource path');
+            if (hasOwn(this.associations, name))
+                return Promise.resolve({ value: this.associations[name], response: null });
+            var raw_1 = this.attributes[name];
+            if (!raw_1 || typeof raw_1 !== 'object' || Array.isArray(raw_1))
+                throw this.context.makeError('protocol', 'Malformed association value');
+            var value = raw_1;
+            var meta = value[this.context.metaNamespace] || {};
+            if (typeof meta !== 'object' || Array.isArray(meta))
+                throw this.context.makeError('protocol', 'Malformed association metadata');
+            var ids = pathParams(this.context, meta) || [];
+            if (meta.resolved === true) {
+                var associated = new AsyncResourceInstance(this.context, description.resource, value, ids, true);
+                this.associations[name] = associated;
+                return Promise.resolve({ value: associated, response: null });
+            }
+            return createAction(this.context, description.resource, 'show', ids)(options).then(function (result) {
+                if (!(result.value instanceof AsyncResourceInstance))
+                    throw _this.context.makeError('protocol', 'Association load requires an object response', { response: result.response });
+                // A field replaced while the request was in flight owns its newer value.
+                if (_this.attributes[name] === raw_1)
+                    _this.associations[name] = result.value;
+                return { value: result.value, response: result.response };
+            });
+        }
+        catch (error) {
+            return Promise.reject(protocolFailure(this.context, error));
+        }
+    };
+    return AsyncResourceInstance;
+}());
+/** Local list operations never issue a request or return callback-owned objects. */
+var AsyncResourceList = /** @class */ (function () {
+    function AsyncResourceList(context, path, response) {
+        var _this = this;
+        if (!Array.isArray(response.data))
+            throw context.makeError('protocol', 'Expected an object-list response', { response: response });
+        var items = response.data.map(function (value) {
+            if (!value || typeof value !== 'object' || Array.isArray(value))
+                throw context.makeError('protocol', 'Malformed object-list item', { response: response });
+            var data = snapshotValues(context, value);
+            var meta = hasOwn(data, context.metaNamespace) ? data[context.metaNamespace] : {};
+            if (!meta || typeof meta !== 'object' || Array.isArray(meta))
+                throw context.makeError('protocol', 'Malformed object metadata', { response: response });
+            return new AsyncResourceInstance(context, path, data, pathParams(context, meta) || [], true);
+        });
+        this.items = Object.freeze(items);
+        this.length = items.length;
+        items.forEach(function (item, index) { return Object.defineProperty(_this, String(index), { value: item, enumerable: true }); });
+        this.totalCount = response.meta.total_count;
+        nonThenable(this);
+        // Resolve Symbol only when an async list is constructed. Legacy-only
+        // bundle loading retains its original runtime requirements.
+        Object.defineProperty(this, Symbol.iterator, { value: function () { return _this.items[Symbol.iterator](); } });
+    }
+    AsyncResourceList.prototype.itemAt = function (index) { return this.items[index]; };
+    AsyncResourceList.prototype.first = function () { return this.items[0] || null; };
+    AsyncResourceList.prototype.last = function () { return this.items[this.length - 1] || null; };
+    AsyncResourceList.prototype.each = function (fn) { this.items.forEach(fn); };
+    return AsyncResourceList;
+}());
+
 var AsyncClient = /** @class */ (function () {
     function AsyncClient(url, options) {
         if (options === void 0) { options = {}; }

@@ -1,4 +1,5 @@
 import { Client } from './haveapi/client';
+import './haveapi/client_invocation';
 import './haveapi/exceptions';
 import './haveapi/validators/accept';
 import './haveapi/validators/confirm';

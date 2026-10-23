@@ -20,7 +20,9 @@ bundled TypeScript helpers with conflicting global helper names. The callback
 client loads without Promise, AbortController or globalThis; async operations
 require their documented modern runtime features. The bundle includes helpers
 from tslib's ES5-compatible ESM entry and its license notice. Installed consumers
-do not need tslib or the build dependencies.
+do not need tslib or the build dependencies. The dependency-graph check uses the
+build's Rollup input configuration and rejects circular dependencies and
+top-level `this` rewrites. Normal builds report warnings without filtering them.
 
 `npm run test:compatibility` also generates documentation in a temporary
 directory and checks the Client, Action and Resource pages, navigation and

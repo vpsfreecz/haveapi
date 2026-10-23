@@ -6,7 +6,11 @@
     "outDir": "tmp/async-resources",
     "declaration": false
   },
-  "files": ["../src/haveapi/async/resource.ts"],
+  "files": [
+    "../src/haveapi/async/resource.ts",
+    "../src/haveapi/async/resource_instance.ts",
+    "../src/haveapi/async/resource_list.ts"
+  ],
   "include": [],
   "exclude": []
 }

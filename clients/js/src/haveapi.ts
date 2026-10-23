@@ -14,6 +14,7 @@ import { ResourceInstance } from './haveapi/resource_instance';
 import { ResourceInstanceList } from './haveapi/resource_instance_list';
 import { Response } from './haveapi/response';
 import { LocalResponse } from './haveapi/local_response';
+import './haveapi/client_invocation';
 import './haveapi/exceptions';
 import './haveapi/validators/accept';
 import './haveapi/validators/confirm';

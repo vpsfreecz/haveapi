@@ -107,16 +107,38 @@ module RustClientIntegration
           generator.generate(output: generated)
           generator.generate(output: generated, check: true)
 
-          # Fresh server per mount, shared generated request/response assertions
-          # in both execution modes. Cargo's exit status is the acceptance gate.
-          ok = system(
-            { 'HAVEAPI_TEST_BASE_URL' => url },
-            'cargo', 'test', '--manifest-path', File.join(dir, 'Cargo.toml'),
-            '--all-features', '--', '--test-threads=1'
-          )
-          raise "Generated fixture acceptance failed at mount #{mount}" unless ok
+          if ENV['HAVEAPI_RUST_NAME_LINT'] == '1'
+            lint_generated_names(dir)
+          else
+            # Fresh server per mount, shared generated request/response assertions
+            # in both execution modes. Cargo's exit status is the acceptance gate.
+            ok = system(
+              { 'HAVEAPI_TEST_BASE_URL' => url },
+              'cargo', 'test', '--manifest-path', File.join(dir, 'Cargo.toml'),
+              '--all-features', '--', '--test-threads=1'
+            )
+            raise "Generated fixture acceptance failed at mount #{mount}" unless ok
+          end
         end
       end
+    end
+  end
+
+  def lint_generated_names(dir)
+    msrv_cargo = ENV.fetch('HAVEAPI_RUST_MSRV_CARGO')
+    msrv_rustc = ENV.fetch('HAVEAPI_RUST_MSRV_RUSTC')
+    output, status = Open3.capture2(msrv_rustc, '--version')
+    raise 'Rust name lint MSRV compiler must be 1.95' unless status.success? && output.start_with?('rustc 1.95.')
+    if %w[RUSTC RUSTC_WRAPPER RUSTC_WORKSPACE_WRAPPER].any? { |key| !ENV.fetch(key, '').empty? }
+      raise 'Unset inherited compiler overrides before checking generated names'
+    end
+
+    manifest = File.join(dir, 'Cargo.toml')
+    raise 'Unable to lock generated name fixture' unless system('cargo', 'generate-lockfile', '--manifest-path', manifest)
+
+    [['cargo', {}], [msrv_cargo, { 'RUSTC' => msrv_rustc }]].each do |cargo, env|
+      ok = system(env, cargo, 'rustc', '--locked', '--manifest-path', manifest, '--lib', '--all-features', '--', '-D', 'non_snake_case')
+      raise 'Generated resource names fail the scoped naming lint' unless ok
     end
   end
 end

@@ -97,11 +97,14 @@ installation while publishing credentials are present.
 
 Run release commands from the top-level `nix develop` shell.
 
-Before changing versions on a fresh checkout, run
-`nix develop .#client-rust -c true` from the repository root to prepare the
-locked Rust component bundle, then enter the top-level shell. This setup is
-already complete if `make release-deps` has prepared all components.
-`make version` refreshes the Rust lockfile using only that local bundle.
+Library dependency locks are local build inputs and are not tracked in Git.
+Before changing versions on a fresh checkout, prepare the Rust component with
+`nix develop .#client-rust -c true`, then enter the top-level shell and run
+`npm install --no-audit --no-fund` in `clients/js` and `uv sync` in
+`clients/python`. `make release-deps` also prepares these inputs for a complete
+release build. Keep the resulting local locks for subsequent locked checks.
+`make version` updates their local package versions using the prepared Rust
+bundle and native uv resolver; external dependency records must stay unchanged.
 
 1. Prepare the new major/minor branch or the supported patch branch. Keep its
    source and release metadata changes in separate commits.
@@ -116,10 +119,10 @@ already complete if `make release-deps` has prepared all components.
    tests all maintained components and builds the packages in the locked Nix
    toolchain. It retains `release-<run-id>` as an Actions artifact for 90 days.
    Its manifest records source commit, version, checksums, tool versions and
-   resolved dependency locks. JavaScript build dependencies use `npm ci` with the
-   committed lockfile. Other components retain their existing dependency
-   resolution; separate complete release builds are not promised to be
-   byte-identical.
+   resolved dependency locks. Library dependencies are resolved during explicit
+   preparation with npm, uv and Bundler, then reused for checks and packaging.
+   Fresh checkouts can resolve different compatible dependency versions;
+   separate complete release builds are not promised to be byte-identical.
 5. Open the Actions run and inspect its test results, candidate summary and
    artifacts. Click **Review deployments**, select `release`, then **Approve and
    deploy**. This authorizes RubyGems/npm/PyPI publication and synchronization into
@@ -151,9 +154,9 @@ enter the release environment or write to registries or the PHP repository.
 For local verification in the top-level Nix shell:
 
 ```sh
+make release-deps
 make release-check
 make release-test
-make release-deps
 make release
 make test
 ruby utils/release/cli.rb smoke-npm dist
@@ -163,6 +166,10 @@ cd clients/python && uv run --locked python utils/package_smoke.py
 ```
 
 `make release` requires a clean tracked checkout and an empty `dist` directory.
+Prepare dependencies with `make release-deps` before these checks on a fresh
+checkout. Source-only `ruby utils/release/cli.rb check-clean` works before
+preparation; `make release-check`, package building and manifest creation also
+require `check-inputs` to pass for the actual local library locks.
 Move earlier artifacts aside before building. It generates shared documentation
 for the Ruby server, builds four gems, rebuilds and packs JavaScript,
 archives the tracked PHP subtree, and builds the Python wheel and sdist with uv.
@@ -172,17 +179,20 @@ Do not commit generated server documentation or build artifacts.
 
 Rust generator packaging includes its executable, templates, dependency lock,
 documentation and embedded runtime source. The private Cargo harness and test
-fixtures are excluded. The manifest records Rust tool versions and dependency
-locks. After writing the manifest, the build runs `rust_smoke.rb` against the
-retained gem in an isolated installation, generates a saved schema fixture and
-checks the copied runtime without loading generator code from the checkout.
-The retained gem must declare its runtime fiddle dependency. The extracted
-generator smoke activates that exact requirement from the prepared component
-bundle and rejects Ruby default-gem fallback.
-`make test` covers Rust generator unit tests, both runtime feature configurations
-and generated-client protocol acceptance. See the
-[Rust packaging guide](../../clients/rust/docs/releasing.md) for the generated
-crate's independent versioning and compatibility checks.
+fixtures are excluded. The manifest records Rust tool versions and all nine
+actual dependency lock texts, including ignored library locks. The generator
+gem must contain its prepared Ruby lock. Tools-only restoration verifies those
+packaged bytes against the original manifest without requiring or resolving a
+local library lock. After writing the manifest, the build runs `rust_smoke.rb`
+against the retained gem in an isolated installation, generates a saved schema
+fixture and checks the copied runtime without loading generator code from the
+checkout. The retained gem must declare its runtime fiddle dependency. The
+extracted generator smoke activates that exact requirement from the prepared
+component bundle and rejects Ruby default-gem fallback. `make test` covers Rust
+generator unit tests, both runtime feature configurations and generated-client
+protocol acceptance. See the [Rust packaging
+guide](../../clients/rust/docs/releasing.md) for the generated crate's
+independent versioning and compatibility checks.
 
 The Rust runtime is embedded in generated clients; it is not a separately
 published crates.io dependency. The `haveapi-runtime-tests` harness stays private
@@ -197,9 +207,9 @@ browser bundle uses the same JavaScript as the npm package. TypeScript consumers
 resolve the declaration entry through the package's `types` field.
 
 `make version` updates the npm manifest and both root version fields in the
-JavaScript lockfile; release checks require the lock's package identity and
-versions to agree with `VERSION`. Package inspection validates the exact
-`main`/`types` entries, nonempty declarations, README, both async guides and
+ignored JavaScript lockfile; prepared-input checks require the lock's package
+identity and versions to agree with `VERSION`. Package inspection validates the
+exact `main`/`types` entries, nonempty declarations, README, both async guides and
 `LICENSE.txt`, and checks that the standalone bundle matches the packed one.
 The npm smoke check installs the retained tarball in a temporary consumer with
 install scripts disabled and `NODE_PATH` unset. It imports `haveapi-client` by

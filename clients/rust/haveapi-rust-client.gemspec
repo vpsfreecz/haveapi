@@ -11,8 +11,10 @@ Gem::Specification.new do |spec|
   spec.license = 'MIT'
   spec.required_ruby_version = '>= 3.2'
   spec.files = Dir.chdir(__dir__) do
-    Dir['{bin,lib,template}/**/*', 'runtime/src/runtime/**/*', 'README.md', 'docs/*.md', 'LICENSE.txt', 'Gemfile.lock']
-      .select { |path| File.file?(path) }.sort
+    files = Dir['{bin,lib,template}/**/*', 'runtime/src/runtime/**/*', 'README.md', 'docs/*.md', 'LICENSE.txt']
+            .select { |path| File.file?(path) }
+    # RubyGems must reject a build without the prepared provenance input.
+    (files + ['Gemfile.lock']).sort
   end
   spec.bindir = 'bin'
   spec.executables = ['haveapi-rust-client']

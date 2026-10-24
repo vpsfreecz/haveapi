@@ -4,7 +4,17 @@ Run commands from the repository's `nix develop .#client-js` environment.
 The build owner regenerates `dist/haveapi-client.js` and `dist/types` before
 checking converted source. Do not edit those outputs directly.
 
-From `clients/js`, the focused checks are:
+From `clients/js`, prepare dependencies first:
+
+```sh
+npm install --no-audit --no-fund
+```
+
+This creates or reuses the ignored local `package-lock.json`. Run the build and
+checks against that prepared resolution without installing dependencies between
+them. The compatibility suite also inspects this local dependency graph.
+
+The focused checks are:
 
 ```sh
 npm run typecheck

@@ -1,5 +1,5 @@
 VERSION=$(shell cat VERSION)
-RUST_ENV=env -u RUBYOPT -u BUNDLE_BIN_PATH -u BUNDLE_LOCKFILE -u BUNDLE_PATH -u BUNDLER_SETUP GEM_HOME="$(CURDIR)/clients/rust/.gems" GEM_PATH="$(CURDIR)/clients/rust/.gems:$$(ruby -e 'puts Gem.default_dir')" BUNDLE_GEMFILE="$(CURDIR)/clients/rust/Gemfile"
+RUST_ENV=env -u RUBYOPT -u RUBYLIB -u BUNDLE_BIN_PATH -u BUNDLE_LOCKFILE -u BUNDLE_PATH -u BUNDLE_FROZEN -u BUNDLER_SETUP GEM_HOME="$(CURDIR)/clients/rust/.gems" GEM_PATH="$(CURDIR)/clients/rust/.gems:$$(ruby -e 'puts Gem.default_dir')" BUNDLE_GEMFILE="$(CURDIR)/clients/rust/Gemfile"
 
 .PHONY: doc publish release release-check release-test release-deps release-rust test test-documentation test-documentation-assets test-documentation-python test-rust test-rust-unit version
 
@@ -47,15 +47,16 @@ release-deps:
 	cd clients/ruby && bundle install
 	cd clients/go && bundle install
 	cd clients/rust && $(RUST_ENV) gem install --no-document bundler
-	cd clients/rust && $(RUST_ENV) BUNDLE_FROZEN=true bundle install
-	cd clients/js && npm ci --no-audit --no-fund
+	cd clients/rust && $(RUST_ENV) bundle install
+	cd clients/js && npm install --no-audit --no-fund
 	cd utils/highlight && npm ci --ignore-scripts --no-audit --no-fund
 	cd utils/highlight && npm run check
 	cd clients/php && composer install --no-interaction --prefer-dist
-	cd clients/python && uv sync --locked
+	cd clients/python && uv sync
 
 release-check:
 	ruby utils/release/cli.rb check
+	ruby utils/release/cli.rb check-inputs
 
 release-test:
 	bundle exec rspec utils/release/spec
@@ -72,6 +73,7 @@ publish:
 	@exit 1
 
 version:
+	@ruby utils/release/cli.rb check-inputs
 	@echo "$(VERSION)" > VERSION
 	@sed -ri "s/ VERSION = '[^']+'/ VERSION = '$(VERSION)'/" servers/ruby/lib/haveapi/version.rb
 	@sed -ri "s/ VERSION = '[^']+'/ VERSION = '$(VERSION)'/" clients/ruby/lib/haveapi/client/version.rb

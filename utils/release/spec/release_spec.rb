@@ -23,6 +23,21 @@ RSpec.describe HaveAPI::Release do
     git(directory, '-c', 'user.name=Release Test', '-c', 'user.email=release@example.invalid', 'commit', '-F', path)
   end
 
+  def copy_source(directory, prepared: false)
+    paths = git(root, 'ls-files', '-z').split("\0")
+    paths += %w[clients/js/package-lock.json clients/python/uv.lock clients/rust/Gemfile.lock] if prepared
+    paths.uniq.each do |name|
+      destination = File.join(directory, name)
+      FileUtils.mkdir_p(File.dirname(destination))
+      FileUtils.cp(File.join(root, name), destination)
+    end
+  end
+
+  def python_lock(path)
+    JSON.parse(described_class.capture('python', '-c',
+                                       'import json,sys,tomllib; print(json.dumps(tomllib.load(open(sys.argv[1], "rb"))))', path))
+  end
+
   def tar(path, files)
     File.open(path, 'wb') do |file|
       Gem::Package::TarWriter.new(file) do |writer|
@@ -87,6 +102,7 @@ RSpec.describe HaveAPI::Release do
     artifacts.names.each { |name| File.write(File.join(tmp, name), name) }
     manifest = {
       schema: 1, source: artifacts.source, version: artifacts.version, tag: artifacts.tag,
+      dependency_locks: described_class::Artifacts::LOCK_PATHS.to_h { |path| [path, path == 'clients/rust/Gemfile.lock' ? File.read(File.join(root, path)) : "retained #{path}"] },
       run_id: ENV.fetch('GITHUB_RUN_ID', 'local'), files: artifacts.names.to_h { |name| [name, Digest::SHA256.file(File.join(tmp, name)).hexdigest] }
     }
     File.write(File.join(tmp, 'release-manifest.json'), JSON.generate(manifest))
@@ -126,7 +142,7 @@ RSpec.describe HaveAPI::Release do
         content = File.read(path).sub(/^#{entry} \([^)]+\)$/, "#{entry} (999.0.0)")
         allow(File).to receive(:read).and_call_original
         allow(File).to receive(:read).with(path).and_return(content)
-        expect { artifacts.check }.to raise_error(HaveAPI::Release::Error, %r{mismatch in clients/rust/Gemfile.lock})
+        expect { artifacts.check_inputs }.to raise_error(HaveAPI::Release::Error, %r{mismatch in clients/rust/Gemfile.lock})
       end
     end
 
@@ -139,24 +155,27 @@ RSpec.describe HaveAPI::Release do
           entry[field] = 'wrong'
           allow(File).to receive(:read).and_call_original
           allow(File).to receive(:read).with(path).and_return(JSON.generate(lock))
-          expect { artifacts.check }.to raise_error(HaveAPI::Release::Error, %r{mismatch in clients/js/package-lock})
+          expect { artifacts.check_inputs }.to raise_error(HaveAPI::Release::Error, %r{mismatch in clients/js/package-lock})
         end
       end
     end
 
-    it 'updates both npm lock roots without changing any nested dependency bytes in a disposable version bump' do
+    it 'updates local versions while preserving all external graphs in a real disposable version bump' do
       copy = File.join(tmp, 'source')
-      git(root, 'ls-files', '-z').split("\0").each do |name|
-        destination = File.join(copy, name)
-        FileUtils.mkdir_p(File.dirname(destination))
-        FileUtils.cp(File.join(root, name), destination)
-      end
+      copy_source(copy, prepared: true)
       path = File.join(copy, 'clients/js/package-lock.json')
       before = File.read(path)
       old_lock = JSON.parse(before)
       rust_path = File.join(copy, 'clients/rust/Gemfile.lock')
       rust_before = File.read(rust_path)
-      root_lock_before = File.read(File.join(root, 'Gemfile.lock'))
+      source_locks = %w[Gemfile.lock clients/js/package-lock.json clients/python/uv.lock clients/rust/Gemfile.lock].to_h do |name|
+        source_path = File.join(root, name)
+        [source_path, File.file?(source_path) ? File.binread(source_path) : nil]
+      end
+      parent_lock = ENV.fetch('BUNDLE_LOCKFILE', nil)
+      source_locks[parent_lock] = File.binread(parent_lock) if parent_lock
+      python_path = File.join(copy, 'clients/python/uv.lock')
+      python_before = python_lock(python_path)
       FileUtils.ln_s(File.join(root, 'clients/rust/.gems'), File.join(copy, 'clients/rust/.gems'))
       described_class.capture('make', 'version', 'VERSION=999.0.0', chdir: copy)
       after = File.read(path)
@@ -166,13 +185,71 @@ RSpec.describe HaveAPI::Release do
       expect(after[after.index(dependency_start)..]).to eq(before[before.index(dependency_start)..])
       rust_expected = rust_before.gsub(/^( {2,6}haveapi-(?:rust-)?client \((?:~> )?)[^)]+(\))$/, '\\1999.0.0\\2')
       expect(File.read(rust_path)).to eq(rust_expected)
-      expect(File.read(File.join(root, 'Gemfile.lock'))).to eq(root_lock_before)
+      python_expected = JSON.parse(JSON.generate(python_before))
+      project = python_expected.fetch('package').select { |entry| entry['name'] == 'haveapi-client' }
+      expect(project.length).to eq(1)
+      expect(project.first.fetch('source')).to eq('editable' => '.')
+      project.first['version'] = '999.0.0'
+      expect(python_lock(python_path)).to eq(python_expected)
+      source_locks.each do |name, bytes|
+        expect(File.file?(name) ? File.binread(name) : nil).to eq(bytes)
+      end
       File.write(File.join(copy, 'CHANGELOG.md'), "# 2099-01-01 - version 999.0.0\n\n## Changed\nDisposable fixture.\n")
       candidate = described_class::Artifacts.new(copy)
       expect { candidate.check }.not_to raise_error
+      expect { candidate.check_inputs }.not_to raise_error
       expected['packages']['']['version'] = artifacts.version
       File.write(path, JSON.generate(expected))
-      expect { candidate.check }.to raise_error(HaveAPI::Release::Error, %r{mismatch in clients/js/package-lock})
+      expect { candidate.check_inputs }.to raise_error(HaveAPI::Release::Error, %r{mismatch in clients/js/package-lock})
+    end
+
+    it 'checks clean authored source without any local library locks' do
+      copy = File.join(tmp, 'cold-source')
+      copy_source(copy)
+      %w[clients/js/package-lock.json clients/python/uv.lock clients/rust/Gemfile.lock].each do |path|
+        expect(File.exist?(File.join(copy, path))).to be(false)
+      end
+      git(copy, 'init', '-q')
+      git(copy, 'add', '.')
+      commit(copy, 'Fixture source')
+      candidate = described_class::Artifacts.new(copy)
+      expect { candidate.check(clean: true) }.not_to raise_error
+      expect { candidate.check_inputs }.to raise_error(Errno::ENOENT)
+    end
+
+    %w[clients/js/package-lock.json clients/python/uv.lock clients/rust/Gemfile.lock].each do |missing|
+      it "rejects missing prepared #{missing}" do
+        copy = File.join(tmp, 'prepared-source')
+        copy_source(copy, prepared: true)
+        FileUtils.rm(File.join(copy, missing))
+        expect { described_class::Artifacts.new(copy).check_inputs }.to raise_error(Errno::ENOENT, /#{Regexp.escape(missing)}/)
+      end
+    end
+
+    ['null', '[]', '{}', '{'].each do |content|
+      it "rejects malformed prepared npm lock #{content.inspect}" do
+        allow(File).to receive(:read).and_call_original
+        allow(File).to receive(:read).with(File.join(root, 'clients/js/package-lock.json')).and_return(content)
+        expect { artifacts.check_inputs }.to raise_error(content == '{' ? JSON::ParserError : HaveAPI::Release::Error)
+      end
+    end
+
+    [nil, {}, [], { 'wrong' => 'lock' }].each do |locks|
+      it "rejects missing or malformed retained lock evidence #{locks.inspect}" do
+        manifest = fixture_manifest
+        manifest[:dependency_locks] = locks
+        File.write(File.join(tmp, 'release-manifest.json'), JSON.generate(manifest))
+        expect { artifacts.verify(tmp) }.to raise_error(HaveAPI::Release::Error, /retained dependency locks/)
+      end
+    end
+
+    [nil, '', 'invalid lock', 123].each do |lock|
+      it "rejects malformed retained Rust lock #{lock.inspect}" do
+        manifest = fixture_manifest
+        manifest[:dependency_locks]['clients/rust/Gemfile.lock'] = lock
+        File.write(File.join(tmp, 'release-manifest.json'), JSON.generate(manifest))
+        expect { artifacts.verify(tmp) }.to raise_error(HaveAPI::Release::Error)
+      end
     end
 
     it 'rejects a version tag that differs from VERSION' do
@@ -198,22 +275,23 @@ RSpec.describe HaveAPI::Release do
       expect { artifacts.verify(tmp) }.to raise_error(HaveAPI::Release::Error, /checksum mismatch/)
     end
 
-    it 'retains the fourth gem, Rust tool versions and both dependency locks in the manifest' do
+    it 'retains all nine actual dependency locks and Rust tool versions in the manifest' do
       fixture_manifest
       allow(described_class).to receive(:capture).and_call_original
       %w[ruby gem node npm go php composer python uv cargo rustc rustfmt].each do |tool|
         allow(described_class).to receive(:capture).with(tool, tool == 'go' ? 'version' : '--version').and_return("#{tool} fixture")
       end
       allow(File).to receive(:read).and_call_original
-      %w[Gemfile.lock servers/ruby/Gemfile.lock clients/ruby/Gemfile.lock clients/go/Gemfile.lock clients/rust/Gemfile.lock clients/rust/runtime/Cargo.lock clients/js/package-lock.json clients/php/composer.lock clients/python/uv.lock].each do |path|
+      described_class::Artifacts::LOCK_PATHS.reject { |path| %w[clients/rust/Gemfile.lock clients/js/package-lock.json clients/python/uv.lock].include?(path) }.each do |path|
         allow(File).to receive(:read).with(File.join(root, path)).and_return("retained #{path}")
       end
       artifacts.write_manifest(tmp)
       manifest = JSON.parse(File.read(File.join(tmp, 'release-manifest.json')))
       expect(manifest.fetch('files')).to have_key("haveapi-rust-client-#{artifacts.version}.gem")
       expect(manifest.fetch('tools')).to include('cargo' => 'cargo fixture', 'rustc' => 'rustc fixture', 'rustfmt' => 'rustfmt fixture')
+      expect(manifest.fetch('dependency_locks').keys.sort).to eq(described_class::Artifacts::LOCK_PATHS.sort)
       expect(manifest.fetch('dependency_locks')).to include(
-        'clients/rust/Gemfile.lock' => 'retained clients/rust/Gemfile.lock',
+        'clients/rust/Gemfile.lock' => File.read(File.join(root, 'clients/rust/Gemfile.lock')),
         'clients/rust/runtime/Cargo.lock' => 'retained clients/rust/runtime/Cargo.lock'
       )
     end
@@ -295,6 +373,26 @@ RSpec.describe HaveAPI::Release do
       it "rejects corrupt #{path}" do
         expect { artifacts.inspect_rust(rust_gem(corrupt: path)) }.to raise_error(HaveAPI::Release::Error, /differs from source/)
       end
+    end
+
+    it 'verifies the original packaged Rust lock in a cold tools-only source checkout' do
+      manifest = fixture_manifest
+      package = rust_gem
+      name = "haveapi-rust-client-#{artifacts.version}.gem"
+      manifest[:files][name] = Digest::SHA256.file(File.join(tmp, name)).hexdigest
+      File.write(File.join(tmp, 'release-manifest.json'), JSON.generate(manifest))
+      copy = File.join(tmp, 'restore-source')
+      copy_source(copy)
+      candidate = described_class::Artifacts.new(copy)
+      allow(candidate).to receive(:source).and_return(artifacts.source)
+      allow(candidate).to receive(:inspect_packages) do |_directory, rust_lock:|
+        candidate.inspect_rust(package, rust_lock:)
+      end
+      expect { candidate.verify(tmp) }.not_to raise_error
+      expect(File.exist?(File.join(copy, 'clients/rust/Gemfile.lock'))).to be(false)
+      manifest[:dependency_locks]['clients/rust/Gemfile.lock'] += "\n# conflicting retained input\n"
+      File.write(File.join(tmp, 'release-manifest.json'), JSON.generate(manifest))
+      expect { candidate.verify(tmp) }.to raise_error(HaveAPI::Release::Error, /differs from source: Gemfile.lock/)
     end
 
     it 'runs offline generation in an extracted artifact with inherited bundle and source paths removed' do

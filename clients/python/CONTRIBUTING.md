@@ -5,9 +5,14 @@ Enter the repository's declared shell from the HaveAPI root:
 ```sh
 nix develop .#client-python
 cd clients/python
-uv sync --locked
+uv sync
 ./utils/check.sh
 ```
+
+`uv sync` prepares the environment and an ignored local `uv.lock` from
+`pyproject.toml`. This library does not track its dependency lock in Git. The
+checks use `--locked` to preserve that prepared resolution; run `uv sync` again
+after changing the dependency declarations.
 
 The common check runs formatting, lint, strict source typing and unit tests.
 Run an individual check with:
@@ -20,9 +25,10 @@ uv run --locked pytest tests/unit
 ```
 
 Drop `--check` from the format command to apply formatting. The same commands
-run outside Nix after `uv sync --locked`, including in GitHub Actions on Python
-3.11 through 3.15. The lockfile fixes development versions; package dependencies
-keep compatible runtime ranges for consumers.
+run outside Nix after `uv sync`, including in GitHub Actions on Python 3.11
+through 3.15. Each checkout resolves compatible development dependencies into
+its local lock; package dependencies keep compatible runtime ranges for
+consumers. Separate checkouts can resolve different versions.
 
 Ruff is pinned to 0.17.1 to match the native executable in the locked Nixpkgs.
 `run_ruff.py` selects `HAVEAPI_RUFF` in Nix and checks that its version matches
@@ -41,7 +47,10 @@ The repository uses Overcommit. From the top-level `nix develop` shell, install
 hooks with `bundle exec overcommit --install`. Inspect changed configuration or
 custom hooks before signing with `bundle exec overcommit --sign` and
 `bundle exec overcommit --sign pre_commit`. Python changes run the shared Ruff
-entrypoint; existing Ruby, PHP and translation hooks remain enabled.
+entrypoint against the prepared environment. Run `uv sync` in `clients/python`
+before committing Python changes; hooks keep their locked checks and do not
+prepare a missing or mismatched lock. Existing Ruby, PHP and translation hooks
+remain enabled.
 
 The generic integration suite starts the real Ruby HaveAPI test server on an
 ephemeral loopback port, waits for readiness and health, resets fixture state
@@ -86,5 +95,6 @@ are removed after each scenario.
 
 Python follows the repository's shared `VERSION`. Use root
 `make version VERSION=X.Y.Z` for an authorized release preparation; it updates
-pyproject and uv.lock with the other maintained clients. See the repository
+pyproject and the prepared local uv.lock with the other maintained clients.
+See the repository
 [release procedure](../../doc/agent-instructions/releases.md).

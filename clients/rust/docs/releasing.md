@@ -1,7 +1,7 @@
 # Packaging the Rust generator and generated clients
 
 The Ruby gem is `haveapi-rust-client` and follows HaveAPI's shared VERSION.
-`make version` updates its version, client dependency and tracked generator lock
+`make version` updates its version, client dependency and prepared local Ruby lock
 alongside existing components. The top-level release build includes this gem,
 and the protected publishing job uploads it after `haveapi-client`. Configure
 its RubyGems publisher before release; a new gem can use a pending publisher
@@ -12,8 +12,17 @@ registry setup, approval, retained artifacts and recovery.
 Prepare its package from `clients/rust` in the component Nix shell:
 
 ```sh
+bundle install
 bundle exec rake build
 ```
+
+The Ruby generator is a library: its Gemfile.lock is ignored by Git and records
+the dependencies resolved by ordinary Bundler preparation. Keep that lock fixed
+through the build and checks. Packaging requires it and includes its exact bytes
+in the gem for generation provenance; RubyGems dependency ranges remain the
+consumer installation contract. A fresh resolution may differ, so retain the
+actual lock and original artifacts rather than claiming commit-only
+reproducibility.
 
 The gem includes Ruby/ERB sources, the executable, documentation, Ruby dependency
 lock and maintained runtime source. It excludes the private Cargo harness and
@@ -28,7 +37,7 @@ ruby utils/release/rust_smoke.rb dist
 
 The check loads the generator from the package and verifies its copied runtime.
 Fiddle is a runtime gem dependency that provides atomic directory exchange when
-replacing a generated tree. Install the component's locked bundle before
+replacing a generated tree. Prepare the component bundle before
 checking the package. The check must load `fiddle/import` from the installed,
 nondefault gem that satisfies the package's dependency requirement. Loading the
 generator requires Fiddle even when generating a new directory.
@@ -40,7 +49,8 @@ Rust target. Publishing a new gem version requires separate authorization and
 approval in the protected release environment; `make publish` exits without
 publishing.
 
-Generated Rust crates have their own SemVer and Cargo.lock. Their API-version
+Generated Rust crates have their own SemVer. Do not track Cargo.lock for a
+generated library; applications may track it. Their API-version
 constant and schema digest identify the target independently of the crate
 version. Adding required input, changing public types or removing actions can
 require a breaking crate release; increasing the MSRV is a deliberate release
@@ -49,7 +59,8 @@ through optional fields and open string values.
 
 The embedded runtime has no separate registry release. Its `haveapi-runtime-tests`
 Cargo package is a private development harness with `publish = false`, not an
-artifact of HaveAPI's shared version. No crates.io token is needed to release
+artifact of HaveAPI's shared version. Its tracked Cargo.lock is retained.
+No crates.io token is needed to release
 the generator gem. Publish a generated crate through its consuming project's
 own release procedure and registry identity.
 

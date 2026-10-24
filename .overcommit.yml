@@ -6,7 +6,6 @@ PreCommit:
     include:
       - 'clients/python/**/*.py'
       - 'clients/python/pyproject.toml'
-      - 'clients/python/uv.lock'
       - 'utils/release/**/*.py'
   HaveapiI18n:
     enabled: true

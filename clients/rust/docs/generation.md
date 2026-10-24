@@ -54,6 +54,10 @@ Acquisition timestamps, raw capture hashes, the source revision, resolved
 Ruby/Cargo locks and exact Rust toolchain belong in separate provenance.
 The generated ownership manifest records schema, runtime and generator-source
 digests, Ruby lock digest, configuration and the owned file inventory.
+The Ruby lock digest identifies the prepared lock shipped with the generator
+gem, or its local source-tree lock. It does not describe every dependency in a
+consumer's executing bundle. Prepare the source-tree lock with `bundle install`
+before generation and keep its bytes with the generation evidence.
 
 ## Configuration and crate scaffold
 
@@ -78,7 +82,9 @@ that differs from the configuration.
 It declares serde 1 with derive, serde_json 1, url 2.5, and reqwest 0.13.5 with
 `default-features = false` and `features = ["json", "rustls"]`. Features are
 `default = []` and `blocking = ["reqwest/blocking"]`. Tokio 1 with macros and
-rt-multi-thread supports tests/examples. Commit the consuming crate's Cargo.lock.
+rt-multi-thread supports tests/examples. Do not track Cargo.lock for a generated
+library. Applications and private test harnesses may track their lockfiles;
+retain their resolved inputs as verification evidence.
 Regeneration checks these requirements when the output is `src/generated`
 inside an existing crate. It reports mismatches and never replaces Cargo.toml
 or other handwritten package files.

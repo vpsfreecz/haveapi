@@ -25,8 +25,9 @@ test('distributed UMD payload parses as ES5 and bundles its licensed helpers', (
   declarations(path.join(root, 'dist/types'));
 });
 
-test('locked tooling removes the obsolete wrapper chain without adding runtime helpers', () => {
+test('prepared tooling excludes obsolete wrappers without adding runtime helpers', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json')));
+  // Inspect the local lock produced by dependency preparation.
   const lock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json')));
   assert.equal(manifest.dependencies.tslib, undefined);
   assert.equal(manifest.devDependencies.tslib, '2.8.1');

@@ -339,6 +339,17 @@ https://projects.vpsfree.cz/haveapi-client-js/ref/
 
 Development tool compatibility
 ------------------------------
+Prepare build and test dependencies from `clients/js` in the repository's
+`nix develop .#client-js` environment:
+
+```sh
+npm install --no-audit --no-fund
+```
+
+The library's `package-lock.json` is local and ignored. Keep that prepared
+resolution for the build and its checks. Fresh preparation can select different
+compatible dependency versions within the constraints in `package.json`.
+
 The pinned Node 24 shell builds the client with TypeScript 6.0.3 and Rollup.
 TypeScript 6 supports the bundle's ES5 target; TypeScript 7 removes it. The
 affected build and consumer configs set `ignoreDeprecations: "6.0"` for ES5 and

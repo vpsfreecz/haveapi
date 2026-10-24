@@ -24,9 +24,13 @@ bundle exec rspec spec/unit
 bundle exec rubocop lib bin spec/unit spec/spec_helper.rb haveapi-rust-client.gemspec
 ```
 
-The component shell installs the dependencies frozen in the tracked
-`clients/rust/Gemfile.lock`. Use its Ruby interpreter with those gems; native
-gems installed by this shell cannot be loaded by a different ambient Ruby.
+The component shell runs `bundle install` for this library's dependency ranges
+and creates an ignored local `clients/rust/Gemfile.lock`. Keep that prepared
+resolution unchanged while building and checking a candidate, and retain the
+lock with its build evidence. Fresh resolutions can select different compatible
+dependencies; the source commit alone does not fix the Ruby dependency graph.
+Use the shell's Ruby interpreter with those gems; native gems installed by this
+shell cannot be loaded by a different ambient Ruby.
 The root Git hooks also need the root shell's dependencies: prepare them with
 `nix develop --command true` before committing, then commit with the declared
 Overcommit hooks enabled. Do not install gems concurrently in the same gem home.

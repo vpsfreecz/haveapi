@@ -8,7 +8,10 @@ need_cmd() {
 }
 
 short_rev() {
-  jq -r '.nodes.nixpkgs.locked.rev' flake.lock | cut -c1-11
+  nix shell "$CONFCTL_FLAKE" -c confctl inputs ls --json nixpkgs | jq -er '
+    map(select(.input == "nixpkgs"))
+    | if length == 1 then .[0].rev | select(type == "string" and length > 0) else empty end
+  '
 }
 
 need_cmd git
@@ -23,9 +26,11 @@ if ! git diff --quiet -- flake.lock || ! git diff --cached --quiet -- flake.lock
   exit 1
 fi
 
+: "${CONFCTL_FLAKE:?Set CONFCTL_FLAKE to the pinned confctl CI package}"
+
 old_rev=$(short_rev)
 
-nix flake update nixpkgs
+nix shell "$CONFCTL_FLAKE" -c confctl inputs update --forward-only nixpkgs
 
 new_rev=$(short_rev)
 
@@ -46,5 +51,5 @@ fi
 msg_file=$(mktemp)
 trap 'rm -f "$msg_file"' EXIT
 
-printf 'flake: nixpkgs %s -> %s\n' "$old_rev" "$new_rev" > "$msg_file"
+printf 'flake: nixpkgs %.11s -> %.11s\n' "$old_rev" "$new_rev" > "$msg_file"
 git commit -F "$msg_file"

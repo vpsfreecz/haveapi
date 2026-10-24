@@ -15,6 +15,46 @@ RSpec.describe HaveAPI::GoClient::Documentation do
     adapter.render(kind: :example, context:, mode: :sync)
   end
 
+  it 'leaves an omitted module version unresolved and prints the Go latest selector' do
+    unversioned = described_class.new(description:, import_path: 'example.test/sdk/client')
+    expect(unversioned).to be_frozen
+    expect(unversioned.instance_variable_get(:@module_version)).to be_nil
+    expect(unversioned.render(kind: :init, context:, mode: :sync).fetch(:code)).to start_with("// go get example.test/sdk/client@latest\n")
+    expect(unversioned.render(kind: :example, context:, mode: :sync).fetch(:code)).to eq(
+      render.fetch(:code).sub('@v1.2.3', '@latest')
+    )
+  end
+
+  it 'treats an explicit nil version as omission without changing the canonical model' do
+    unversioned = described_class.new(description:, import_path: 'example.test/sdk/client', module_version: nil)
+    resolved = unversioned.resolve(resource_path: %w[client child], action_name: 'perform')
+    expect(resolved.action.go_member_names).to eq(adapter.resolve(resource_path: %w[client child], action_name: 'perform').action.go_member_names)
+    expect(unversioned.render(kind: :example, context:, mode: :sync).fetch(:code)).to include('client "example.test/sdk/client"', 'api.Client.Child.ClientAction.Prepare()')
+  end
+
+  it 'still rejects hostile imports when the module version is omitted' do
+    expect do
+      described_class.new(description:, import_path: "example.test/sdk/client\npackage injected")
+    end.to raise_error(ArgumentError, 'invalid Go SDK import path or module version')
+  end
+
+  it 'retains explicit version selectors and copies configuration strings' do
+    version = +'v2.3.4-rc.1+build.7'
+    path = +'example.test/sdk/v2/client'
+    pinned = described_class.new(description:, import_path: path, module_version: version)
+    version.replace('v9.9.9')
+    path.replace('other.test/sdk/client')
+    expect(pinned.render(kind: :init, context:, mode: :sync).fetch(:code)).to start_with("// go get example.test/sdk/v2/client@v2.3.4-rc.1+build.7\n")
+  end
+
+  ['', 'latest', '1.2.3', "v1.2.3\npackage injected", false, 7].each do |invalid|
+    it "rejects a supplied invalid module version #{invalid.inspect}" do
+      expect do
+        described_class.new(description:, import_path: 'example.test/sdk/client', module_version: invalid)
+      end.to raise_error(ArgumentError, 'invalid Go SDK import path or module version')
+    end
+  end
+
   it 'resolves canonical generator members and aliases without generator or serving I/O' do
     allow(HaveAPI::GoClient::Generator).to receive(:new).and_call_original
     allow(HaveAPI::GoClient::Generator).to receive(:allocate).and_call_original
@@ -259,6 +299,36 @@ RSpec.describe HaveAPI::GoClient::Documentation do
     expect(render[:code]).to include('fmt.Println(response.Output.Owner == nil)')
     sample[:response][:owner] = 9
     expect(render).to include(status: :limitation, reason: /requires an object/)
+  end
+
+  it 'matches live Resource identifier symbols against a saved JSON contract' do
+    action[:output][:parameters][:owner] = { type: 'Resource', resource: ['owner'], value_id: :id, value_label: :label, nullable: true }
+    sample[:response][:owner] = { id: 9 }
+    saved = JSON.parse(JSON.generate(description))
+    json_adapter = described_class.new(description: saved, import_path: 'example.test/sdk/client', module_version: 'v1.2.3')
+    result = json_adapter.render(kind: :example, context:, mode: :sync)
+
+    expect(result[:status]).to eq(:code)
+    expect(result[:code]).to include('fmt.Println(response.Output.Owner.Id)')
+    expect(result[:code]).not_to include('Owner.Label')
+    expect(result[:code]).to eq(render.fetch(:code))
+  end
+
+  {
+    value_id: ['other', nil, false, 7, [], {}],
+    value_label: ['other', nil, false, 7, [], {}],
+    type: [:Resource], nullable: [false], resource: [[:owner]]
+  }.each do |key, values|
+    values.each do |value|
+      it "rejects a changed or invalid live Resource contract #{key}: #{value.inspect}" do
+        action[:output][:parameters][:owner] = { type: 'Resource', resource: ['owner'], value_id: 'id', value_label: 'label', nullable: true }
+        sample[:response][:owner] = { id: 9 }
+        adapter
+        action[:output][:parameters][:owner][key] = value
+
+        expect(render).to include(status: :limitation, reason: 'This response field does not match the configured Go SDK.')
+      end
+    end
   end
 
   it 'does not print associated fields missing from another documented list row' do

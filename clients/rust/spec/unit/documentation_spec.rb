@@ -192,6 +192,153 @@ describe HaveAPI::RustClient::Documentation do
     expect(render[:status]).to eq(:limitation)
   end
 
+  def keyed(value, depth = 0, mixed: false)
+    case value
+    when Hash
+      value.to_h do |key, item|
+        [mixed && depth.odd? ? key.to_s : key.to_sym, keyed(item, depth + 1, mixed:)]
+      end
+    when Array then value.map { |item| keyed(item, depth + 1, mixed:) }
+    else value
+    end
+  end
+
+  %i[async blocking].each do |mode|
+    it "preserves #{mode} output with symbol and mixed authorized keys" do
+      schema['description']['authentication']['token'] = { 'http_header' => 'X-Token' }
+      expected = render(mode)
+      original = context.description
+      [false, true].each do |mixed|
+        context.description = keyed(original, mixed:)
+        expect(render(mode)).to eq(expected)
+        context.description[:authentication] = { token: { http_header: :'X-Token' } }
+        expect(render(mode)[:code]).to include('.token(')
+      end
+    end
+
+    [true, false].each do |symbol_last|
+      it "uses last-inserted colliding keys at every #{mode} lookup level (symbol last: #{symbol_last})" do
+        expected = render(mode)
+        target = context.description['resources']['widget']['actions']['update']
+        collision = lambda do |name, value|
+          entries = [[name.to_s, nil], [name.to_sym, value]]
+          entries.reverse! unless symbol_last
+          entries[0][1] = nil
+          entries[1][1] = value
+          entries.to_h
+        end
+        resource = collision.call('actions', collision.call('update', target))
+        resource.merge!(collision.call('resources', {}))
+        context.description = collision.call('resources', collision.call('widget', resource))
+        context.description.merge!(collision.call('authentication', collision.call('basic', {})))
+        expect(render(mode)).to eq(expected)
+
+        actions = resource.values.find { |value| value.is_a?(Hash) && value.values.include?(target) }
+        actions[actions.keys.last] = nil
+        expect(render(mode)[:status]).to eq(:limitation)
+      end
+    end
+  end
+
+  it 'checks the entire advertised provider description and sees changes on every render' do
+    schema['description']['authentication']['token'] = { 'http_header' => 'X-Token' }
+    context.description = Marshal.load(Marshal.dump(schema['description']))
+    context.description['authentication']['token']['resources'] = { 'login' => { 'description' => 'visible' } }
+    supplied = keyed(context.description['authentication']['token'])
+    adapter.freeze
+    expect(render(:async, :auth, auth_method: :token, auth_description: supplied)[:status]).to eq(:code)
+    supplied[:resources][:login][:description] = 'different'
+    expect(render(:async, :auth, auth_method: :token, auth_description: supplied))
+      .to include(status: :limitation, reason: 'The authentication description differs from the authorized help.')
+    supplied[:resources][:login][:description] = 'visible'
+    context.description['authentication']['token']['http_header'] = 'X-Other'
+    supplied[:http_header] = 'X-Other'
+    expect(render(:blocking, :auth, auth_method: :token, auth_description: supplied))
+      .to include(status: :limitation, reason: 'The Rust SDK authentication header differs from this API.')
+    context.description['authentication'].delete('token')
+    expect(render(:async, :auth, auth_method: :token, auth_description: supplied)[:status]).to eq(:limitation)
+  end
+
+  [true, false].each do |symbol_last|
+    it "preserves provider/header collision order (symbol last: #{symbol_last})" do
+      schema['description']['authentication']['token'] = { 'http_header' => 'X-Token' }
+      context.description = Marshal.load(Marshal.dump(schema['description']))
+      context.description['authentication'].delete('basic')
+      entries = [%w[http_header wrong], %i[http_header X-Token]]
+      entries.reverse! unless symbol_last
+      entries[0][1] = 'wrong'
+      entries[1][1] = :'X-Token'
+      provider = entries.to_h
+      providers = [['token', nil], [:token, provider]]
+      providers.reverse! unless symbol_last
+      providers[0][1] = nil
+      providers[1][1] = provider
+      context.description['authentication'] = providers.to_h
+      expect(render[:code]).to include('.token(')
+      expect(render(:async, :auth, auth_method: :token, auth_description: { http_header: 'X-Token' })[:status]).to eq(:code)
+      provider[provider.keys.last] = 'wrong'
+      expect(render[:status]).to eq(:limitation)
+    end
+  end
+
+  it 'preserves basic key presence, token/oauth2 preference and public action behavior' do
+    auth = schema['description']['authentication']
+    auth['token'] = { 'http_header' => 'X-Token' }
+    auth['oauth2'] = { 'http_header' => 'Authorization' }
+    context.description = Marshal.load(Marshal.dump(schema['description']))
+    live = context.description['authentication']
+    live['basic'] = nil
+    expect(render[:code]).to include('.basic_auth(')
+    live['basic'] = false
+    expect(render[:code]).to include('.basic_auth(')
+    live.delete('basic')
+    expect(render[:code]).to include('.token(')
+    live['token']['http_header'] = 'wrong'
+    expect(render[:code]).to include('.oauth2_token(')
+    live.delete('oauth2')
+    expect(render[:status]).to eq(:limitation)
+    schema['description']['resources']['widget']['actions']['update']['auth'] = false
+    context.description['resources']['widget']['actions']['update']['auth'] = false
+    context.description['authentication'] = nil
+    public_adapter = described_class.new(snapshot: schema, config:)
+    expect(public_adapter.render(kind: :example, context:, mode: :async)[:status]).to eq(:code)
+  end
+
+  it 'does not retain privileged descriptions, hidden samples or mutable duck-context decisions' do
+    target = schema['description']['resources']['widget']['actions']['update']
+    target['input']['parameters']['private'] = parameter(default: 'private-default')
+    admin = context_type.new(**context.to_h, description: Marshal.load(Marshal.dump(schema['description'])))
+    admin.sample = { path_params: [1], request: { private: 'private-value' }, status: true }
+    member = context_type.new(**context.to_h, description: Marshal.load(Marshal.dump(schema['description'])))
+    member.description['resources']['widget']['actions']['update']['input']['parameters'].delete('private')
+    adapter.freeze
+    %i[async blocking].each do |mode|
+      admin_result = adapter.render(kind: :example, context: admin, mode:)
+      expect(admin_result[:code]).to include('private-value')
+      member_result = adapter.render(kind: :example, context: member, mode:)
+      expect(member_result[:status]).to eq(:code)
+      expect(member_result.inspect).not_to include('private', 'private-value', 'private-default')
+      expect(adapter.render(kind: :example, context: admin, mode:)).to eq(admin_result)
+      member.sample[:request][:name] = 'fresh-member-value'
+      expect(adapter.render(kind: :example, context: member, mode:)[:code]).to include('fresh-member-value')
+      member.description['resources']['widget']['actions']['update']['input']['parameters']['name']['type'] = 'Integer'
+      expect(adapter.render(kind: :example, context: member, mode:)[:status]).to eq(:limitation)
+      member.description['resources']['widget']['actions']['update']['input']['parameters']['name']['type'] = 'String'
+      member.description['resources']['widget']['actions'].clear
+      expect(adapter.render(kind: :example, context: member, mode:)[:status]).to eq(:limitation)
+      member.description = Marshal.load(Marshal.dump(context.description))
+      member.description['resources']['widget']['actions']['update']['input']['parameters'].delete('private')
+    end
+  end
+
+  it 'does not authorize malformed selected resource, action or provider shapes' do
+    context.description = { 'resources' => { 'widget' => [] }, 'authentication' => { 'basic' => [] } }
+    expect(render[:status]).to eq(:limitation)
+    expect(render(:async, :auth, auth_method: :basic, auth_description: [])[:status]).to eq(:limitation)
+    context.description['resources']['widget'] = { 'actions' => { 'update' => 'invalid' } }
+    expect(render[:status]).to eq(:limitation)
+  end
+
   %i[async blocking].product(%w[object object_list]).each do |mode, layout|
     context "with #{mode} #{layout} Float input" do
       before do

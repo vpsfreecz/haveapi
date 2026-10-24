@@ -2,24 +2,72 @@ require 'haveapi/rust_client'
 require 'date'
 
 module HaveAPI::RustClient
-  # Resolves the complete saved SDK before checking a request's authorized help.
-  # Construction is deliberately limited to the generator's pure validation/IR.
+  # Resolves the complete SDK model before checking a request's authorized help.
   class Documentation
+    include Model
+
     class Unsupported < StandardError; end
 
-    def initialize(snapshot:, config:)
-      @generator = Generator.new(schema: JSON.parse(Snapshot.canonical(snapshot)), config: JSON.parse(Snapshot.canonical(config)))
-      @snapshot = @generator.schema
-      @import = @generator.config.fetch('crate_name').tr('-', '_')
+    def self.from_description(description:, api_version:, protocol_version:, mount_path:,
+                              crate_name:, crate_version: nil, source: nil)
+      # Snapshot validation needs a structural origin; requests use context URLs.
+      snapshot = Snapshot.from_description(
+        description: JSON.parse(JSON.generate(description)), api_version:, protocol_version:, mount_path:,
+        source_url: "https://haveapi.invalid#{mount_path}v#{api_version}/", profile: 'server-documentation'
+      )
+      from_snapshot(snapshot:, crate_name:, crate_version:, source:)
+    end
+
+    def self.from_snapshot(snapshot:, crate_name:, crate_version: nil, source: nil)
+      new(snapshot:, crate_name:, crate_version:, source:)
+    end
+
+    def self.validate_source(source)
+      return nil if source.nil?
+      raise Error, 'invalid Rust SDK source' unless source.is_a?(Hash) && source.length == 2
+
+      values = source.to_h { |key, value| [key.to_s, value] }
+      url, revision = values.values_at('git', 'rev')
+      unless values.keys.sort == %w[git rev] && url.is_a?(String) && !url.match?(/[\x00-\x20\x7f]/) &&
+             revision.is_a?(String) && revision.match?(/\A[0-9a-fA-F]{40}\z/)
+        raise Error, 'invalid Rust SDK source'
+      end
+
+      uri = URI.parse(url)
+      unless uri.is_a?(URI::HTTPS) && uri.host && !uri.host.empty? &&
+             uri.userinfo.nil? && uri.query.nil? && uri.fragment.nil?
+        raise Error, 'invalid Rust SDK source'
+      end
+
+      values.transform_values { |value| value.dup.freeze }.freeze
+    rescue URI::InvalidURIError
+      raise Error, 'invalid Rust SDK source'
+    end
+
+    def initialize(snapshot:, config: nil, crate_name: nil, crate_version: nil, source: nil)
+      if config
+        raise Error, 'conflicting Rust SDK package settings' unless crate_name.nil? && crate_version.nil?
+
+        config = JSON.parse(Snapshot.canonical(config))
+        Generator.validate_config(config)
+        crate_name, crate_version = config.values_at('crate_name', 'crate_version')
+      end
+      Model.validate_package(crate_name:, crate_version:)
+      @crate_name = crate_name.dup
+      @crate_version = crate_version&.dup
+      @source = self.class.validate_source(source)
+      @snapshot = Snapshot.validate(JSON.parse(Snapshot.canonical(snapshot)))
+      @ir = IR.new(@snapshot)
+      @import = @crate_name.tr('-', '_')
       raise Error, 'crate name cannot be imported in Rust' if %w[crate self super].include?(@import)
 
       @import = "r##{@import}" if Naming::RESERVED.include?(@import)
-      @generator.ir.actions.each { |action| @generator.meta_parameters(action) }
-      freeze_data([@snapshot, @generator.config, @generator.ir.resources, @generator.ir.actions])
+      @ir.actions.each { |action| meta_parameters(action) }
+      freeze_data([@snapshot, @crate_name, @crate_version, @source, @import, @ir.resources, @ir.actions])
     end
 
     def resolve(resource_path:, action_name:)
-      @generator.ir.actions.find do |action|
+      @ir.actions.find do |action|
         action[:resource][:path] == resource_path.map(&:to_s) && action[:name] == action_name.to_s
       end
     end
@@ -69,11 +117,9 @@ module HaveAPI::RustClient
     end
 
     def program(context, mode, body, credentials: [])
-      config = @generator.config
-      dependencies = ["// Cargo.toml: #{config.fetch('crate_name')} = { version = #{literal(config.fetch('crate_version'))}" +
-        (mode == :blocking ? ', features = ["blocking"] }' : ' }')]
-      dependencies << '// Cargo.toml: tokio = { version = "1", features = ["macros", "rt-multi-thread"] }' if mode == :async
-      dependencies << '// Cargo.toml: serde_json = "1"'
+      dependencies = dependency_lines(mode)
+      dependencies << '// cargo add tokio --features macros,rt-multi-thread' if mode == :async
+      dependencies << '// cargo add serde_json'
       dependencies << '// Construct, use and drop this blocking client outside async runtime threads.' if mode == :blocking
       client = mode == :blocking ? "#{@import}::blocking::Client" : "#{@import}::Client"
       lines = dependencies + ["use #{client};", '']
@@ -85,6 +131,17 @@ module HaveAPI::RustClient
       lines << '        .build()?;'
       lines.concat((body.empty? ? ['let _ = &api;'] : body).map { |line| line.empty? ? '' : "    #{line}" })
       lines.push('    Ok(())', '}', '').join("\n")
+    end
+
+    def dependency_lines(mode)
+      unless @source || @crate_version
+        return ["// cargo add #{@crate_name}#{' --features blocking' if mode == :blocking}"]
+      end
+
+      fields = @source ? %w[git rev].map { |key| "#{key} = #{JSON.generate(@source.fetch(key))}" } : []
+      fields << "version = #{JSON.generate(@crate_version)}" if @crate_version
+      fields << 'features = ["blocking"]' if mode == :blocking
+      ["// Cargo.toml: #{@crate_name} = { #{fields.join(', ')} }"]
     end
 
     def authentication(context, mode, method, description)
@@ -313,8 +370,7 @@ module HaveAPI::RustClient
     end
 
     def typed_literal(parameter, value)
-      # Ask the generator for the real type instead of duplicating name/type rules.
-      case @generator.rust_type(parameter)
+      case rust_type(parameter)
       when 'String' then "#{literal(value.respond_to?(:iso8601) ? value.iso8601 : value)}.to_owned()"
       when 'i64' then value == -(2**63) ? 'i64::MIN' : "#{value}_i64"
       when 'f64' then "#{value.to_f}_f64"

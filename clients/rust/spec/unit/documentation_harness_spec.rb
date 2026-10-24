@@ -62,6 +62,18 @@ describe RustDocumentationAcceptance do
       .to include('null', 'omitted', 'list', 'nested', 'failure', 'state')
   end
 
+  it 'keeps real renderer output for legacy, unversioned snapshot and Git profile installation forms' do
+    sources = described_class.profile_initializations(renderer, context, snapshot: schema, config:)
+    expect(sources.keys).to eq(%w[legacy_profile saved_profile git_profile git_versioned_profile])
+    expect(sources.fetch('legacy_profile')).to eq(renderer.render(:init, context:).fetch(:code))
+    expect(sources.fetch('saved_profile')).to start_with("// cargo add fixture-client\n")
+    expect(sources.fetch('git_profile')).to include('git = "https://example.test/documentation-fixture"', "rev = \"#{'a' * 40}\"")
+    expect(sources.fetch('git_profile')).not_to include('version =')
+    expect(sources.fetch('git_versioned_profile')).to include('version = "0.1.0"')
+    expect(sources.values).to all(include('use fixture_client::Client;', 'https://example.test/'))
+    sources.each_value { |source| expect(source).not_to include('haveapi.invalid', 'version = "latest"') }
+  end
+
   it 'retains per-mount fixture inputs, owned generated source and emitted programs without build artifacts' do
     Dir.mktmpdir('rust-documentation-evidence-') do |directory|
       root = File.join(directory, 'crate')

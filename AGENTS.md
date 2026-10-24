@@ -31,6 +31,9 @@ top-level Nix development shell.
 - Client sources mirror their language: JS sources in `clients/js/src` build into `clients/js/dist`; Ruby/Go/PHP client libraries are under their respective folders with gem/composer metadata.
 - `templates/` holds starter projects; `dist/` is for build artifacts; `utils/` contains helper scripts (e.g., doc sync).
 
+Do not track dependency lockfiles for library components in Git. Application
+lockfiles may be tracked.
+
 ## Coding Style & Naming Conventions
 - Ruby code follows the repo `.rubocop.yml` (2-space indent, relaxed metrics); run `bundle exec rubocop` in the relevant Ruby component before submitting.
 - Keep generated outputs (`dist/`, `pkg/`, `html_doc/`) build-only—edit source files in `lib/`, `src/`, `doc/`, or templates instead.

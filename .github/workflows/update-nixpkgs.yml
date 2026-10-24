@@ -9,6 +9,10 @@ concurrency:
   group: update-nixpkgs-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  CONFCTL_FLAKE: github:vpsfreecz/confctl/bdaed19e901237e05bd0a779f368e76cb311143f#confctl
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 jobs:
   update:
     name: Update nixpkgs
@@ -18,12 +22,13 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          ref: ${{ github.ref_name }}
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@31.11.3
 
       - name: Install jq
         shell: bash
@@ -32,6 +37,11 @@ jobs:
             sudo apt-get update
             sudo apt-get install --yes jq
           fi
+
+      - name: Save lock baseline
+        run: |
+          cp flake.lock "$RUNNER_TEMP/flake-update-baseline.lock"
+          echo "UPDATE_OLD_LOCK=$RUNNER_TEMP/flake-update-baseline.lock" >> "$GITHUB_ENV"
 
       - name: Configure git author
         shell: bash
@@ -57,4 +67,8 @@ jobs:
         if: steps.update.outputs.committed == 'true'
         shell: bash
         run: |
-          git push origin HEAD:${{ github.ref_name }}
+          final_lock="$RUNNER_TEMP/flake-update-final.lock"
+          git show HEAD:flake.lock > "$final_lock"
+          nix shell "$CONFCTL_FLAKE" -c confctl inputs check-update \
+            --old-lock "$UPDATE_OLD_LOCK" --new-lock "$final_lock"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

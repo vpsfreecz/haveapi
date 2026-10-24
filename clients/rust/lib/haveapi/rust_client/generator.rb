@@ -7,10 +7,26 @@ require 'tomlrb'
 
 module HaveAPI::RustClient
   class Generator
+    include Model
+
     ROOT = File.expand_path('../../..', __dir__)
     CONFIG_KEYS = %w[crate_name crate_version license edition rust_version rustfmt_version].freeze
     OWNER_FILE = '.haveapi-generated.json'.freeze
     attr_reader :schema, :config, :ir
+
+    def self.validate_config(config)
+      unless config.is_a?(Hash) && config.keys.sort == CONFIG_KEYS.sort
+        raise Error, 'generator config keys do not match supported contract'
+      end
+
+      Model.validate_package(crate_name: config['crate_name'], crate_version: config['crate_version'], required_version: true)
+      unless config['license'] == 'MIT' && config['edition'] == '2024' && config['rust_version'] == '1.95' &&
+             config['rustfmt_version'].is_a?(String) && !config['rustfmt_version'].empty?
+        raise Error, 'unsupported license, Rust edition/MSRV or formatter configuration'
+      end
+
+      nil
+    end
 
     def initialize(schema:, config:)
       @schema = Snapshot.validate(schema)
@@ -69,15 +85,7 @@ module HaveAPI::RustClient
     private
 
     def validate_config
-      raise Error, 'generator config keys do not match supported contract' unless config.keys.sort == CONFIG_KEYS.sort
-      unless config['crate_name'].is_a?(String) && config['crate_name'].match?(/\A[a-z][a-z0-9_-]*\z/) &&
-             config['crate_version'].is_a?(String) && config['crate_version'].match?(/\A\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?\z/)
-        raise Error, 'invalid crate name/version'
-      end
-      unless config['license'] == 'MIT' && config['edition'] == '2024' && config['rust_version'] == '1.95' &&
-             config['rustfmt_version'].is_a?(String) && !config['rustfmt_version'].empty?
-        raise Error, 'unsupported license, Rust edition/MSRV or formatter configuration'
-      end
+      self.class.validate_config(config)
     end
 
     def validate_manifest(output)
@@ -260,16 +268,6 @@ module HaveAPI::RustClient
       value.split('_').map(&:capitalize).join
     end
 
-    def rust_type(parameter, output: false)
-      case parameter[:desc].fetch('type')
-      when 'String', 'Text', 'Datetime' then 'String'
-      when 'Integer', 'Resource' then output && parameter[:desc]['type'] == 'Resource' ? 'runtime::Association' : 'i64'
-      when 'Float' then 'f64'
-      when 'Boolean' then 'bool'
-      when 'Custom' then 'serde_json::Value'
-      end
-    end
-
     def input_type(action)
       return '()' unless action[:input]
 
@@ -280,17 +278,6 @@ module HaveAPI::RustClient
       return '()' unless action[:output]
 
       action[:output][:layout].end_with?('_list') ? 'Vec<Output>' : 'Output'
-    end
-
-    def meta_parameters(action)
-      values = [action[:global_output]]
-      values << action[:object_output] if action[:output] && !action[:output][:layout].end_with?('_list')
-      fields = values.compact.flat_map { |io| io[:parameters] }
-      fields.group_by { |field| field[:name] }.map do |name, matches|
-        raise Error, "inconsistent metadata field #{name}" if matches.map { |field| field[:desc] }.uniq.length > 1
-
-        matches.first
-      end.sort_by { |field| field[:name] }
     end
 
     def parameter_specs(io)

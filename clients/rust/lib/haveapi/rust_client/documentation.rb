@@ -116,6 +116,11 @@ module HaveAPI::RustClient
       end
     end
 
+    # Match normalize's last-insertion key semantics without visiting descendants.
+    def normalized_members(value)
+      value.is_a?(Hash) ? value.to_h { |key, item| [key.to_s, item] } : {}
+    end
+
     def program(context, mode, body, credentials: [])
       dependencies = dependency_lines(mode)
       dependencies << '// cargo add tokio --features macros,rt-multi-thread' if mode == :async
@@ -146,9 +151,13 @@ module HaveAPI::RustClient
 
     def authentication(context, mode, method, description)
       provider = method.to_s
-      live = normalize(context.description).fetch('authentication', {})[provider]
+      providers = normalized_members(context.description)['authentication']
+      live = normalized_members(providers)[provider]
       saved = @snapshot.fetch('description').fetch('authentication')[provider]
-      unsupported!('This authentication provider is unavailable in the authorized Rust SDK profile.') unless live && saved
+      unless live.is_a?(Hash) && saved
+        unsupported!('This authentication provider is unavailable in the authorized Rust SDK profile.')
+      end
+      live = normalize(live)
       unsupported!('The authentication description differs from the authorized help.') unless normalize(description) == live
 
       credentials = case provider
@@ -206,14 +215,16 @@ module HaveAPI::RustClient
     def action_credentials(action, context)
       return [] if action[:desc]['auth'] == false
 
-      live = normalize(context.description).fetch('authentication', {})
+      live = normalized_members(normalized_members(context.description)['authentication'])
       saved = @snapshot.fetch('description').fetch('authentication')
       if live.has_key?('basic') && saved.has_key?('basic')
         return ['.basic_auth(std::env::var("HAVEAPI_USER")?, std::env::var("HAVEAPI_PASSWORD")?)']
       end
 
       %w[token oauth2].each do |provider|
-        next unless live[provider] && saved[provider] && live[provider]['http_header'] == saved[provider]['http_header']
+        advertised = live[provider]
+        next unless advertised.is_a?(Hash) && saved[provider]
+        next unless normalize(normalized_members(advertised)['http_header']) == saved[provider]['http_header']
 
         setter = provider == 'token' ? 'token' : 'oauth2_token'
         return [".#{setter}(std::env::var(\"HAVEAPI_TOKEN\")?)"]
@@ -222,15 +233,16 @@ module HaveAPI::RustClient
     end
 
     def authorized_action(context)
-      resources = normalize(context.description).fetch('resources', {})
+      resources = normalized_members(context.description)['resources']
       resource = nil
       context.resource_path.each do |name|
-        resource = resources[name.to_s]
-        return nil unless resource
+        resource = normalized_members(resources)[name.to_s]
+        return nil unless resource.is_a?(Hash)
 
-        resources = resource.fetch('resources', {})
+        resources = normalized_members(resource)['resources']
       end
-      resource && resource.fetch('actions', {})[context.action_name.to_s]
+      action = normalized_members(normalized_members(resource)['actions'])[context.action_name.to_s]
+      normalize(action) if action.is_a?(Hash)
     end
 
     def compatible_action!(saved, live, context)

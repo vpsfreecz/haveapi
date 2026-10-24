@@ -3,6 +3,7 @@ require_relative 'documentation_acceptance'
 
 class GoDocumentationBuildCheck
   def self.run!
+    GoDocumentationAcceptance.check_environment!
     Dir.mktmpdir('haveapi-go-documentation-build-') do |root|
       # Own this invalid ancestor marker; never rely on or alter ambient Git state.
       Dir.mkdir(File.join(root, '.git'))

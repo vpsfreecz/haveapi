@@ -622,6 +622,11 @@ module HaveAPI
       end
 
       call_hooks_for(:post_mount, args: [self, @sinatra])
+      @documentation_clients.finalize(self)
+    rescue StandardError
+      @documentation_clients.abort_mount
+      @sinatra = nil
+      raise
     end
 
     def mount_version(prefix, v)

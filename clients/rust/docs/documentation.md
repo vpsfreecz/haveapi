@@ -1,41 +1,100 @@
 # Rust examples in server documentation
 
-The optional `HaveAPI::RustClient::Documentation` adapter maps a published Rust
-SDK's saved snapshot and TOML configuration to server documentation. It uses the same
-Snapshot validation, complete IR, naming scopes and types as the generator.
-Construction and rendering make no network requests and run no generator, compiler
-or formatter. The server loads its trusted local files at startup.
-
-An API operator installs the matching `haveapi-rust-client` gem and configures a
-profile before mounting the server:
+The optional `HaveAPI::RustClient::Documentation` adapter uses the generator's
+Snapshot validation, IR and naming rules to map a configured SDK to server
+examples. It makes no network requests and runs no generator, compiler or
+formatter during construction or rendering. Install `haveapi-rust-client`
+alongside the server, then register a profile before mounting:
 
 ```ruby
-api.documentation_clients(
-  '1.0',
+api.documentation_clients('1.0', rust: { crate_name: 'widget-client' })
+api.mount('/api/')
+```
+
+`generator_version` defaults to the server's `HaveAPI::VERSION` and must match
+the installed generator gem. An explicit value requires the installed generator
+to report that version; it never downloads one. The SDK's version and API version
+are independent of that generator version. Imports replace crate-name hyphens
+with underscores and use the generator's reserved-name rules.
+
+`crate_version` is optional. When omitted or nil, registry examples show
+`cargo add widget-client` (or `cargo add widget-client --features blocking`).
+Cargo chooses a compatible release according to its resolver, manifest,
+toolchain and existing lockfile. The server does not resolve it and never emits
+`version = "latest"`. To control version selection, supply a version such as
+`crate_version: '1.2.3'`. Its Cargo version-requirement semantics remain intact;
+it does not silently become an exact `=` constraint. Separate Tokio/serde_json
+requirements are still shown.
+
+Unpublished SDKs can use an explicit Git source instead of a registry release:
+
+```ruby
+api.documentation_clients('7.0',
   rust: {
-    snapshot_path: '/srv/api/sdk/schema/api-1.0.json',
-    generator_config_path: '/srv/api/sdk/generator.toml',
-    generator_version: HaveAPI::RustClient::VERSION
+    crate_name: 'vpsadmin-client',
+    source: {
+      git: 'https://github.com/vpsfreecz/vpsadmin-rust-client',
+      rev: 'ff876abe17e3301da62c1b6afbda055ec89db9d2'
+    }
   }
 )
 ```
 
-Use the exact generator version that produced the published SDK. The profile's
-package name and package version come from `crate_name` and `crate_version` in
-that SDK's existing [generator config](generation.md). They are independent of
-the API and HaveAPI package versions. Rust imports normalize crate-name hyphens
-to underscores. Configure a profile only for an SDK that users can install; the
-examples do not publish or generate that package.
+The emitted Cargo dependency contains that `git` and full `rev`; an explicitly
+supplied crate version additionally constrains the source package. Blocking
+examples add `features = ["blocking"]`. Only absolute HTTPS URLs without
+credentials/query/fragment/control characters and 40-hex revisions are accepted.
+Branches, tags, paths and custom registries are rejected. The server never
+fetches this repository or publishes the crate. Configuring its name or source
+does not establish that the SDK matches an API surface.
 
-The server hides both Rust variants when that API version has no Rust profile.
-Invalid configured profiles fail at startup. A configured profile can still serve examples after unrelated additions to the
-live API. Each rendered sample must match the saved route,
-HTTP method, input and output layouts, and the contracts of the parameters it
-uses. The adapter
-checks the full SDK map against the current user's filtered help and sample;
-it never recomputes names from a reduced schema or prints hidden saved defaults.
-An unavailable action, changed parameter or unsupported value produces a short
-limitation in place of code. Filesystem paths remain outside rendered output.
+At the end of mount, the server builds the adapter from the complete selected
+API version, including authentication routes and changes from post-mount hooks.
+The private structural copy excludes examples, prose and parameter defaults,
+while retaining canonical sibling names, ancestor paths and types. Requests use
+their own authorized help. Automatic mode assumes that the SDK matches the
+current generation contract; its package name or version alone cannot prove
+that. An older SDK can lack actions or use different names after additions or
+route changes.
+
+For an older or subset SDK, use the optional
+`snapshot_path: '/srv/api/sdk/schema/api-1.0.json'` with inline crate identity.
+The legacy `generator_config_path: '/srv/api/sdk/generator.toml'` is also retained
+as an alternative to inline `crate_name`/`crate_version`. It validates the full
+existing [generator configuration](generation.md) and may use either automatic
+schema or a saved snapshot. Do not mix the two identity forms. Saved file paths
+must be trusted absolute local paths; files are loaded during registration.
+Inline documentation does not need license, formatter or compiler packaging
+settings. An older pinned generator can use a suitable legacy file profile;
+automatic/inline mode requires the new factory interface and rejects missing
+support at startup.
+
+The server hides both Rust variants when no profile exists for that API version.
+Invalid profiles and actual generator-version mismatches fail startup. Adapter
+initialization occurs only once per mount and publishes no partial profiles on
+failure. Request-local authorized descriptions still control visible actions,
+fields and samples, including across users and locales. For saved models, each
+sample must match its route, method, layouts and supplied parameter contracts.
+Unavailable or stale samples produce a limitation. Private schema, hidden
+defaults, local paths and initialization diagnostics never enter rendered output.
+See the [server profile guide](../../../doc/client-examples.md) for compatibility
+and rollback requirements.
+
+The pure in-memory factories use the same resolve/render interface as legacy
+`Documentation.new(snapshot:, config:)`:
+
+```ruby
+adapter = HaveAPI::RustClient::Documentation.from_description(
+  description: full_description, api_version: '1.0',
+  protocol_version: HaveAPI::PROTOCOL_VERSION, mount_path: '/api/',
+  crate_name: 'widget-client', crate_version: nil, source: nil
+)
+# Or use Documentation.from_snapshot(snapshot:, crate_name:, crate_version: nil, source: nil).
+```
+
+Their internal structural URL is not an SDK provenance source or emitted request
+URL. Requests use the real server context. Actual SDK generation still requires
+its full versioned packaging configuration; these factories do not relax it.
 
 Both variants show a complete program and Cargo dependency comments. Async
 programs use Tokio and `.send().await?`. Blocking programs enable the SDK's
@@ -46,12 +105,11 @@ mounted root. Authenticated actions use advertised existing credentials from
 invent an OAuth acquisition flow or automatically follow token challenges.
 
 Object setters preserve null, zero, false and empty strings, and leave omitted
-fields unset.
-Lists use generated `Input` structs with `InputValue` fields and
+fields unset. Lists use generated `Input` structs with `InputValue` fields and
 `..Default::default()` for omitted values. GET lists and nested Custom query
-values produce limitations. The example DSL has no metadata input channel, so actions requiring metadata
-show a limitation. Responses expose
-`output`, typed `meta` and `http_status`. Fields accessed in examples must occur
+values produce limitations. The example DSL has no metadata input channel, so
+actions requiring metadata show a limitation. Responses expose `output`, typed
+`meta` and `http_status`. Fields accessed in examples must occur
 in the authorized sample. Rust provides explicit action-state calls rather
 than an automatic operation-wait helper. Request success and timeouts do not
 establish whether a server-side operation finished or was rolled back.

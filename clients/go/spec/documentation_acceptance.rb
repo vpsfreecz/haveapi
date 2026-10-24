@@ -59,6 +59,7 @@ class GoDocumentationAcceptance
         generator_version: Gem.loaded_specs.fetch('haveapi-go-client').version.to_s
       })
       profiles.mount(['7'])
+      profiles.finalize(nil)
       raise 'configured Go profile is unavailable' unless profiles.for_version('7').fetch(:go).language == :go
     end
   end
@@ -125,6 +126,7 @@ class GoDocumentationAcceptance
       generator_version: HaveAPI::GoClient::VERSION
     })
     profiles.mount(['7'])
+    profiles.finalize(nil)
     @profile = profiles.for_version('7').fetch(:go)
     FileUtils.mkdir_p(File.join(dir, 'consumer'))
     FileUtils.mkdir_p(File.join(dir, 'bin'))

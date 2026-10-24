@@ -20,7 +20,7 @@
   <li><a href="https://github.com/vpsfreecz/haveapi/tree/master/clients/js" target="_blank" rel="noopener">JavaScript and TypeScript (callback and async)</a></li>
   <li><a href="https://github.com/vpsfreecz/haveapi/tree/master/clients/python" target="_blank" rel="noopener">Python (sync and async)</a></li>
   <% settings.api_server.documentation_client_profiles(@v).each do |language, profile| %>
-    <li><a href="https://github.com/vpsfreecz/haveapi/tree/master/clients/<%= escape_html(language) %>" target="_blank" rel="noopener"><%= language == :go ? 'Go' : 'Rust (async and blocking)' %></a>: <code><%= escape_html(profile.package_name) %></code> <%= escape_html(profile.package_version) %></li>
+    <li><a href="https://github.com/vpsfreecz/haveapi/tree/master/clients/<%= escape_html(language) %>" target="_blank" rel="noopener"><%= language == :go ? 'Go' : 'Rust (async and blocking)' %></a>: <code><%= escape_html(profile.package_name) %></code><% if profile.package_version %> <%= escape_html(profile.package_version) %><% end %></li>
   <% end %>
   <li><a href="https://github.com/vpsfreecz/haveapi/tree/master/clients/php" target="_blank" rel="noopener">PHP</a></li>
   <li>
@@ -32,7 +32,7 @@
 <p>
   These examples target API v<%= escape_html(@v) %>. The framework and dynamic
   clients share HaveAPI package versions. Generated Go and Rust SDKs use their
-  own package versions and a saved description of the API.
+  own package versions. Their configured SDKs are expected to match this API.
 </p>
 
 <h2>Initialization</h2>

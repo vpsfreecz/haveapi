@@ -79,4 +79,14 @@ describe HaveAPI::ClientExample do
     expect(selected.description[:resources]).to have_key('widget')
     expect(selected.sample[:response]).to eq(name: 'documented widget')
   end
+
+  it 'prints a package identity without inventing an omitted version and escapes it once' do
+    profile = HaveAPI::ClientExample::Profile.new(language: :go, package_name: 'example.test/<client>&', package_version: nil, adapter: Object.new)
+    allow(app.settings.api_server).to receive(:documentation_client_profiles).and_return({ go: profile })
+    allow(HaveAPI::ClientExamples::GoClient).to receive(:render).and_return({ status: :code, code: 'example' })
+    get '/v1/'
+    expect(last_response.status).to eq(200)
+    expect(last_response.body).to include('<code>example.test/&lt;client&gt;&amp;</code></li>')
+    expect(last_response.body).not_to include('example.test/<client>', '&amp;lt;', 'version = "latest"')
+  end
 end

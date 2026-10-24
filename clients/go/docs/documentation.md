@@ -1,52 +1,70 @@
 # Generated API documentation examples
 
-The Ruby server can show Go examples for a configured generated SDK. The SDK's
-module version is independent of the HaveAPI gem version and API version.
-Install the `haveapi-go-client` gem at the exact generator version used for the
-SDK, alongside the server gem. Configure the profile before mounting the API:
+The Ruby server can show Go examples for a configured generated SDK. Install the
+optional `haveapi-go-client` generator gem alongside the server gem. Register the
+profile before mounting the API:
 
 ```ruby
-api.documentation_clients(
-  '7',
-  go: {
-    import_path: 'example.org/widget-sdk/v2/client',
-    module_version: 'v2.3.4',
-    description_path: '/etc/widget-api/sdk-v7.json',
-    generator_version: '0.30.0'
-  }
+api.documentation_clients('7',
+  go: { import_path: 'example.org/widget-sdk/v2/client' }
 )
+api.mount('/api/')
 ```
 
-`import_path` identifies the published SDK package, including its package
-subdirectory. Examples import it with the explicit alias `client`. The local
-absolute JSON file must contain the complete description used to generate that
-SDK, including sibling resources, aliases and authentication descriptions.
-Retain this file with the SDK release; do not create it from a filtered public
-documentation page. The Go description has no API-version field. The configuration's version key
-binds the retained description to that API version.
-Keep the description private because it can include privileged API information.
+`import_path` identifies the SDK package, including its package subdirectory.
+Examples use the explicit import alias `client`. `generator_version` defaults
+to the server's `HaveAPI::VERSION` and must match the installed generator gem.
+An explicit value requires the installed generator to report that version. It
+does not select the SDK version or download a generator.
 
-A missing profile hides the Go overview entry and all Go example panels. An
-invalid profile or a missing or mismatched generator gem fails configuration.
-The server loads the file and constructs the adapter during configuration. HTML
-requests do not read files, fetch API descriptions, generate source, invoke Go
-or write an SDK. Removing the profile disables Go examples without changing API
-behavior or existing clients.
+`module_version` is optional. Omission or nil renders
+`go get example.org/widget-sdk/v2/client@latest`; `module_version: 'v2.3.4'`
+selects that version instead. Go resolves latest by its normal rules and existing
+module configuration still applies. Latest can change over time. The server
+never queries a package registry or claims to have resolved the installed SDK.
+
+At the end of mount, the server builds one private structural model per
+configured API version from the complete declaration, including authentication
+routes and changes from post-mount hooks. The copy excludes prose, examples and
+parameter defaults; canonical names still include every sibling and ancestor.
+Requests use the current user's authorized help and samples. The configured SDK
+is expected to match this generation contract. Its package name or version does
+not prove that match; older SDKs can lack actions or use different collision names.
+
+For an older or deliberately restricted SDK, add
+`description_path: '/etc/widget-api/sdk-v7.json'`. This optional trusted absolute
+JSON file contains the complete description used to generate that SDK, including
+siblings, aliases and authentication descriptions. Retain it with the SDK; do
+not reconstruct it from a filtered documentation page. The description has no
+API-version field, so the profile's version key binds it to the selected version.
+Keep saved descriptions private because they can contain privileged information.
+The prior explicit `module_version`/`description_path`/`generator_version` form
+remains supported.
+
+A missing profile hides Go everywhere. Unknown fields, invalid profiles, missing
+files and actual generator-version mismatches fail startup. Saved descriptions
+are loaded during registration; automatic adapters are initialized at the end of
+mount. No profiles are published when mount fails. HTML requests read no files,
+fetch no descriptions and run no generator, compiler or formatter. Removing the
+profile changes documentation availability without changing API wire behavior.
+See the [server profile guide](../../../doc/client-examples.md) for configuration,
+compatibility assumptions and rollback requirements.
 
 ## Mapping and supported samples
 
 `HaveAPI::GoClient::Documentation` constructs the generator's `ApiVersion` from
-the full saved description. Resource and action members, including aliases and
-collision suffixes, come from the generator's existing name allocator. The
-current user's filtered server description controls which samples and fields
-can appear. A saved SDK can lag unrelated server additions. Each rendered sample
-must still match its route, input and output layouts, and supplied field contracts.
+the complete private description, whether automatic or saved. Resource and
+action members, including aliases and collision suffixes, come from the
+generator's existing name allocator. The current user's filtered server
+description controls which samples and fields can appear. A saved SDK description
+can lag unrelated server additions. Each rendered sample must still match its
+route, input and output layouts, and supplied field contracts.
 Unsupported or stale samples show a short limitation instead of incomplete code.
 
 Programs initialize the client with the API origin. Saved action paths include
 the mounted root and selected `/vVERSION/` segment. Ordered sample path arguments
-become the generated `SetPathParamInt` or `SetPathParamString` calls. Object/hash input uses
-`NewInput().SelectParameters()` before setters; this preserves omitted fields,
+become the generated `SetPathParamInt` or `SetPathParamString` calls. Object/hash
+input uses `NewInput().SelectParameters()` before setters; this preserves omitted fields,
 explicit zero, false and empty strings. Nullable fields use `SetFIELDNil(true)`.
 An empty request selects no fields. A missing request leaves input unallocated.
 
@@ -78,9 +96,9 @@ The documentation adapter accepts loaded data and returns frozen plain results:
 
 ```ruby
 adapter = HaveAPI::GoClient::Documentation.new(
-  description: saved_description,
+  description: full_description,
   import_path: 'example.org/widget-sdk/v2/client',
-  module_version: 'v2.3.4'
+  module_version: nil # Optional; use 'v2.3.4' to select a version.
 )
 resolved = adapter.resolve(resource_path: %w[widget], action_name: 'update')
 result = adapter.render(kind: :example, context: context, mode: :sync)
@@ -91,7 +109,8 @@ adapter does not depend on the server gem. Results have either
 `{status: :code, code: source}` or `{status: :limitation, reason: text}`. Renderers
 return source/plain text; the server template escapes HTML once.
 
-For SDK fixtures or an already captured schema, use the offline constructor. It preserves the ordinary URL constructor's generation options:
+For SDK fixtures or an already captured schema, use the offline constructor.
+It preserves the ordinary URL constructor's generation options:
 
 ```ruby
 generator = HaveAPI::GoClient::Generator.from_description(

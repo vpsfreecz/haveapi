@@ -39,9 +39,19 @@ repository root unless explicitly stated otherwise.
   [Python contributor guidance](../../clients/python/CONTRIBUTING.md).
 - `nixpkgs` is updated weekly by the `update nixpkgs` GitHub workflow.
   For an on-demand update, prefer triggering that workflow manually. For a
-  local update, run `./utils/update-nixpkgs.sh`, review the generated commit,
-  and push it. The commit subject must be
+  local update, set `CONFCTL_FLAKE` to the immutable package reference in
+  `.github/workflows/update-nixpkgs.yml`, then run `./utils/update-nixpkgs.sh`
+  and review its generated commit.
+  The helper uses confctl's forward-only guard; a rejection or unavailable
+  ancestry evidence stops the update. The workflow saves the original lock
+  outside the checkout and checks the final lock again before its ordinary
+  non-force push. If the target branch advances, rerun from its new baseline;
+  do not rebase an old generated lock update. The commit subject must be
   `flake: nixpkgs <oldrev11> -> <newrev11>`.
+  The workflow saves confctl's Git mirrors in `~/.cache/confctl` even when an
+  update is rejected. Every update checks ancestry, whether the cache was
+  restored or freshly cloned.
+  See the [shared guard contract](https://github.com/vpsfreecz/confctl/blob/822c0e35dbe2549111912f539116b4225dfd3035/docs/flake-inputs.md#guarded-automated-updates) for supported sources and failure behavior.
 
 ## Rust generator and runtime
 

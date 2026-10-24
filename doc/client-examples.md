@@ -161,8 +161,20 @@ Existing renderer positional constructors and `init`, `auth(method, desc)` and
 The registry binds a request-local `HaveAPI::ClientExample::Context` through
 `with_context`. It holds the selected version, URLs including the API mount,
 the filtered description, and the current resource, action and sample.
-`context.with(...)` creates another frozen copy without freezing the server's
-shared description.
+Construction copies and freezes Hash, Array and String data without freezing
+the caller's containers. Each request owns its description snapshot.
+`context.with(...)` creates a distinct frozen context, sharing unchanged fields
+by identity and normalizing only explicitly supplied fields. A shallow-frozen
+input container still needs copying; explicitly supplying an existing owned Hash,
+Array or String also copies it. Renderers must treat context-owned data as
+read-only.
+
+The profile is a shared reference; registered profiles and their adapters are
+frozen separately. Other object types retain their existing reference semantics,
+so context construction is not an arbitrary-object deep-freezing contract.
+Subclasses of `Context` continue deriving through their constructors, preserving
+custom initialization and extra keywords; the sharing optimization applies to
+the exact base class.
 
 Renderers may return a String or nil through their existing methods. New
 renderers return either `{status: :code, code: source}` or
@@ -175,7 +187,10 @@ Generated-client adapters belong to their generator gems and consume context
 readers without depending on the server gem. They resolve names using the
 complete private generator model and never run a compiler, formatter or generator
 in an HTML request. Keep adapter rendering read-only: configured adapters are frozen
-and shared, while filtered contexts are copied per request.
+and shared, while authorized description snapshots belong to individual requests.
+Derived contexts within one request share unchanged owned data. Supplying a
+resource, action or sample still copies that supplied subtree, so a resource with
+many actions can remain costly to render.
 
 ## Verification
 
@@ -189,6 +204,96 @@ the Ruby server CI uses the same order.
 against the real request encoder. It requires the locked Python environment
 prepared by `make release-deps` and is included in `make test`. The ordinary
 Ruby renderer checks run without the Python package environment.
+
+Deterministic context and HTML regressions run in the ordinary server suite.
+They check description sharing, allocation growth and isolation between users
+without a wall-clock threshold. The Rust adapter suite separately checks that
+normalization avoids unrelated description descendants.
+
+### Documentation benchmark
+
+Prepare the server bundle in its declared Nix environment, then run the opt-in
+harness from the repository root:
+
+```sh
+nix develop .#server-ruby --command bash -c \
+  'make --no-print-directory benchmark-documentation > /tmp/documentation.json'
+```
+
+The target synchronizes shared documentation before running the harness. Standard
+output is JSON; shell/dependency preparation happens before the redirected command.
+No network server, database, generated SDK compilation or formatter is involved.
+The synthetic fixture uses Basic users `admin` and `member`, both with the local
+test password `fixture-only`.
+
+Defaults measure two shapes with eight ordinary actions each: eight resources
+with one action, and one resource with eight actions. Each ordinary action also
+has a privileged sample; the first resource has an additional admin-only action.
+Context lanes derive a prepared parent with a changed profile or a constant small
+sample. The HTML lane performs one real Rack request per trial, with all available
+dynamic renderer panels. Use a minimal smoke run or a larger repeated campaign:
+
+```sh
+make benchmark-documentation \
+  BENCHMARK_DOCUMENTATION_ARGS='--shape resources --size 1 --warmup 0 --trials 1 --iterations 1'
+make benchmark-documentation \
+  BENCHMARK_DOCUMENTATION_ARGS='--shape both --size 64 --samples 2 --parameters 8 --warmup 2 --trials 7 --iterations 500' \
+  > /tmp/documentation-large.json
+```
+
+Run these `make` commands inside the prepared shell. `--shape custom --resources
+N --actions N` controls both dimensions independently; `--lanes context` isolates
+derivation and `--lanes html` isolates requests. `--user member` selects restricted
+help. `--help` lists all options. `--rust` enables the fixture's matching Rust
+profile, includes both Rust variants in HTML, and adds separate async/blocking
+action and authentication adapter lanes. It requires the optional generator's
+Ruby dependencies to be available; ordinary benchmark runs need none of them.
+Prepare both component environments using `nix develop .#server-ruby` and
+`nix develop .#client-rust`. The server bundle alone does not activate the Rust
+dependencies. In the top-level Nix shell, combine the prepared local gem stores:
+
+```sh
+env -u RUBYOPT -u RUBYLIB -u BUNDLE_BIN_PATH -u BUNDLE_GEMFILE \
+  -u BUNDLE_LOCKFILE -u BUNDLE_PATH -u BUNDLE_FROZEN -u BUNDLER_SETUP \
+  GEM_PATH="$PWD/.gems:$PWD/clients/rust/.gems:$(ruby -e 'puts Gem.default_dir')" \
+  make benchmark-documentation BENCHMARK_DOCUMENTATION_RUBY=ruby \
+  BENCHMARK_DOCUMENTATION_ARGS='--rust --shape both --size 8 --warmup 1 --trials 3 --iterations 100' \
+  > /tmp/documentation-rust.json
+```
+
+This command runs outside Bundler and records the gem versions actually
+activated. Retain that list alongside both component locks and use the same
+prepared inputs for both revisions. Missing optional dependencies fail the run;
+Rust lanes are never silently omitted. See the
+[Rust adapter guide](../clients/rust/docs/documentation.md#verification).
+
+Every lane reports each trial and the median wall seconds, process CPU seconds
+and allocated objects, with the operation count per trial. Wall time uses a
+monotonic clock. A full GC runs before each trial, outside its timer; GC triggered
+by the measured work remains included. Mount/profile construction has separate
+setup metrics. Ownership construction, description selection, warmups, output
+validation, hashing and JSON serialization are outside lane measurements.
+Reports include fixture dimensions, renderer IDs, profile mode, Ruby runtime,
+host, Git HEAD/status/diff digest, loaded source digests, dependency versions and
+available lockfile/harness/fixture digests. HTML and Rust outputs include status, bytes and
+SHA-256; failed or missing output causes a nonzero exit.
+
+For a before/after comparison, retain one exact harness and fixture and point
+them at each implementation with `--source-root /absolute/checkout`. Set up
+equivalent dependencies and runtime first. An explicit `--source-revision LABEL`
+can supplement the detected HEAD and is required for an exported source tree.
+Retain exact heads, commands, raw JSON, lock/input identities and host identity.
+Compare dimensions, renderer modes, statuses, bytes and body digests before
+comparing medians. Context `description_shared` deliberately distinguishes the
+old copying implementation. Investigate any output difference; record exact
+volatile-field normalization if needed rather than silently dropping mismatches.
+
+These measurements describe the synthetic workload on the recorded host. They
+do not establish production latency. There is no default CI timing gate; stable
+dedicated runners and measured variance are needed before choosing latency
+budgets. Ownership, traversal and allocation regressions cover this failure
+class, while concentrated-resource costs and other future regressions still
+need representative measurements.
 
 Each client also has acceptance commands that check executable snippets against
 installed packages or a generated SDK. These use

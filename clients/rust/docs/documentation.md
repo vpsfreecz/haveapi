@@ -80,6 +80,20 @@ defaults, local paths and initialization diagnostics never enter rendered output
 See the [server profile guide](../../../doc/client-examples.md) for compatibility
 and rollback requirements.
 
+The adapter selects the action or advertised authentication provider from the
+current authorized description before normalizing that subtree. The private
+saved model resolves SDK names; it cannot establish authorization. Authentication
+still compares the complete supplied provider description with authorized help,
+and action rendering validates live routes and supplied parameter contracts.
+Symbol/string keys retain last-insertion collision behavior. No authorized
+description or rendering decision is cached across contexts or users.
+
+Normalization avoids unrelated resource descendants. Ancestor map lookup and
+saved-model action resolution can still depend on sibling/action counts. This
+does not make the complete render operation constant-time. Server context
+derivation shares unchanged owned data, while explicitly supplied resources,
+actions and samples still cross its copying boundary.
+
 The pure in-memory factories use the same resolve/render interface as legacy
 `Documentation.new(snapshot:, config:)`:
 
@@ -120,10 +134,20 @@ The pure adapter specs and server renderer bridge specs run before compilation:
 
 ```sh
 nix develop .#client-rust --command bash -c \
-  'cd clients/rust && bundle exec rspec spec/unit/documentation_spec.rb spec/unit/documentation_harness_spec.rb'
+  'cd clients/rust && bundle exec rspec spec/unit/documentation_spec.rb spec/unit/documentation_performance_spec.rb spec/unit/documentation_harness_spec.rb'
 nix develop .#server-ruby --command bash -c \
   'cd servers/ruby && bundle exec rspec spec/client_examples/rust_client_spec.rb'
 ```
+
+The performance unit specs count normalization work around real renders and
+check output/authorization parity as unrelated resource trees grow. They use no
+wall-clock budget. The opt-in [documentation benchmark](../../../doc/client-examples.md#documentation-benchmark)
+adds timing and allocation evidence. With server and Rust generator Ruby
+dependencies prepared, pass `--rust` through `BENCHMARK_DOCUMENTATION_ARGS` to
+include a matching profile in HTML and measure async/blocking adapter action and
+authentication rendering separately. These lanes do not generate or compile an
+SDK. Compare the same fixture, runtime, dependency inputs and output digests
+against both implementation revisions before claiming a measured improvement.
 
 The acceptance runner extracts actual `RustAsyncClient.render` and
 `RustBlockingClient.render` source. It generates a matching temporary fixture

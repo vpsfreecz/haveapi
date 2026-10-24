@@ -23,12 +23,31 @@ module RustDocumentationAcceptance
     result.fetch(:code)
   end
 
-  def write_examples(root, context)
+  def profile_initializations(renderer, context, snapshot:, config:)
+    documentation = HaveAPI::RustClient::Documentation
+    # Installation metadata is inspected here; these programs compile against
+    # the generated fixture below, not an installed or fetched Git repository.
+    git = { git: 'https://example.test/documentation-fixture', rev: 'a' * 40 }
+    variants = {
+      'legacy_profile' => documentation.new(snapshot:, config:),
+      'saved_profile' => documentation.from_snapshot(snapshot:, crate_name: config.fetch('crate_name')),
+      'git_profile' => documentation.from_snapshot(snapshot:, crate_name: config.fetch('crate_name'), source: git),
+      'git_versioned_profile' => documentation.from_snapshot(snapshot:, crate_name: config.fetch('crate_name'),
+                                                             crate_version: config.fetch('crate_version'), source: git)
+    }
+    variants.transform_values do |adapter|
+      profile = Struct.new(:language, :adapter).new(:rust, adapter.freeze).freeze
+      source(renderer, :init, context.with(profile:))
+    end
+  end
+
+  def write_examples(root, context, snapshot:, config:)
     examples = File.join(root, 'examples')
     FileUtils.mkdir_p(examples)
     names = []
     { async: HaveAPI::ClientExamples::RustAsyncClient, blocking: HaveAPI::ClientExamples::RustBlockingClient }.each do |mode, renderer|
       variants = { 'init' => source(renderer, :init, context) }
+      variants.merge!(profile_initializations(renderer, context, snapshot:, config:))
       index = nil
       RustDocumentationCases.cases.each do |entry|
         current = RustDocumentationCases.context_for(context, entry)
@@ -133,15 +152,18 @@ module RustDocumentationAcceptance
           File.write(File.join(root, 'src/lib.rs'), "mod generated;\npub use generated::*;\n")
           File.write(File.join(root, 'Cargo.toml'), generator.manifest_requirements)
           generator.generate(output: File.join(root, 'src/generated'))
-          adapter = HaveAPI::RustClient::Documentation.new(snapshot:, config:).freeze
+          adapter = HaveAPI::RustClient::Documentation.from_description(
+            description: snapshot.fetch('description'), api_version: '1.0', protocol_version: '2.0', mount_path: mount,
+            crate_name: config.fetch('crate_name')
+          ).freeze
           profile = Struct.new(:language, :package_name, :package_version, :adapter).new(
-            :rust, config.fetch('crate_name'), config.fetch('crate_version'), adapter
+            :rust, config.fetch('crate_name'), nil, adapter
           ).freeze
           context = HaveAPI::ClientExample::Context.new(
             version: '1.0', host: '127.0.0.1', base_url:, version_url: "#{base_url}v1.0/",
             description: snapshot.fetch('description'), profile:
           )
-          names = write_examples(root, context)
+          names = write_examples(root, context, snapshot:, config:)
           env = { 'HAVEAPI_BASE_URL' => base_url, 'HAVEAPI_USER' => 'admin', 'HAVEAPI_PASSWORD' => 'pass',
                   'HAVEAPI_TOKEN' => 'oauth-user' }
           # Obtain the deterministic existing token through the real fixture's

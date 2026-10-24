@@ -13,6 +13,9 @@ begin
   when 'check', 'check-clean'
     artifacts.check(clean: command == 'check-clean', release_tag: argument)
     puts "Release metadata valid: #{artifacts.version}"
+  when 'check-inputs'
+    artifacts.check_inputs
+    puts "Prepared release inputs valid: #{artifacts.version}"
   when 'manifest'
     artifacts.write_manifest(argument || 'dist')
   when 'verify'

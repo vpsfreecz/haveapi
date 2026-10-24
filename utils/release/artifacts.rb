@@ -32,6 +32,13 @@ module HaveAPI
     end
 
     class Artifacts
+      LOCK_PATHS = %w[
+        Gemfile.lock servers/ruby/Gemfile.lock clients/ruby/Gemfile.lock
+        clients/go/Gemfile.lock clients/rust/Gemfile.lock
+        clients/rust/runtime/Cargo.lock clients/js/package-lock.json
+        clients/php/composer.lock clients/python/uv.lock
+      ].freeze
+
       attr_reader :root, :version
 
       def initialize(root)
@@ -85,17 +92,11 @@ module HaveAPI
         %w[clients/js/package.json clients/php/composer.json].each do |path|
           raise Error, "Version mismatch in #{path}" unless JSON.parse(File.read(File.join(root, path))).fetch('version') == version
         end
-        lock = JSON.parse(File.read(File.join(root, 'clients/js/package-lock.json')))
-        unless [lock, lock.fetch('packages').fetch('')].all? { |entry| entry.values_at('name', 'version') == ['haveapi-client', version] }
-          raise Error, 'Identity or version mismatch in clients/js/package-lock.json'
-        end
-
         GEMS.except('haveapi-client').each do |name, component|
           path = "#{component}/#{name}.gemspec"
           dependency = File.read(File.join(root, path)).match(/add_dependency 'haveapi-client', '([^']+)'/)
           raise Error, "Dependency mismatch in #{path}" unless dependency && dependency[1] == "~> #{version}"
         end
-        check_rust_lock
         notes
         if clean && !Release.capture('git', 'status', '--porcelain', '--untracked-files=no', chdir: root).empty?
           raise Error, 'Release builds require a clean tracked checkout'
@@ -104,10 +105,30 @@ module HaveAPI
         check_tag(release_tag) if release_tag
       end
 
-      def check_rust_lock
-        lock = File.read(File.join(root, 'clients/rust/Gemfile.lock'))
+      def check_inputs
+        locks = %w[clients/js/package-lock.json clients/python/uv.lock clients/rust/Gemfile.lock].to_h do |path|
+          [path, read_lock(path)]
+        end
+        lock = JSON.parse(locks.fetch('clients/js/package-lock.json'))
+        unless lock.is_a?(Hash) && lock['packages'].is_a?(Hash) &&
+               [lock, lock['packages']['']].all? { |entry| entry.is_a?(Hash) && entry.values_at('name', 'version') == ['haveapi-client', version] }
+          raise Error, 'Identity or version mismatch in clients/js/package-lock.json'
+        end
+
+        check_rust_lock(locks.fetch('clients/rust/Gemfile.lock'))
+      end
+
+      def read_lock(path)
+        text = File.read(File.join(root, path))
+        raise Error, "Empty prepared dependency lock: #{path}" if text.strip.empty?
+
+        text
+      end
+
+      def check_rust_lock(lock)
         packages = %w[haveapi-client haveapi-rust-client].map { |name| [name, version] }
-        unless lock.scan(/^    (haveapi-client|haveapi-rust-client) \(([^)]+)\)$/) == packages &&
+        unless lock.is_a?(String) && !lock.strip.empty? &&
+               lock.scan(/^    (haveapi-client|haveapi-rust-client) \(([^)]+)\)$/) == packages &&
                lock.scan(/^  (haveapi-client|haveapi-rust-client) \(([^)]+)\)$/) == packages &&
                lock.scan(/^      haveapi-client \(([^)]+)\)$/) == [["~> #{version}"]]
           raise Error, 'Version or dependency mismatch in clients/rust/Gemfile.lock'
@@ -136,16 +157,16 @@ module HaveAPI
       end
 
       def write_manifest(directory)
+        check_inputs
+        dependency_locks = LOCK_PATHS.to_h { |path| [path, read_lock(path)] }
         directory = File.expand_path(directory)
         File.write(File.join(directory, 'release-notes.md'), notes)
-        inspect_packages(directory)
+        inspect_packages(directory, rust_lock: dependency_locks.fetch('clients/rust/Gemfile.lock'))
         files = names.to_h { |name| [name, Digest::SHA256.file(File.join(directory, name)).hexdigest] }
         tools = %w[ruby gem node npm go php composer python uv cargo rustc rustfmt].to_h do |tool|
           flag = tool == 'go' ? 'version' : '--version'
           [tool, Release.capture(tool, flag).strip]
         end
-        lock_paths = %w[Gemfile.lock servers/ruby/Gemfile.lock clients/ruby/Gemfile.lock clients/go/Gemfile.lock clients/rust/Gemfile.lock clients/rust/runtime/Cargo.lock clients/js/package-lock.json clients/php/composer.lock clients/python/uv.lock]
-        dependency_locks = lock_paths.to_h { |path| [path, File.read(File.join(root, path))] }
         manifest = { schema: 1, source:, version:, tag:, run_id: ENV.fetch('GITHUB_RUN_ID', 'local'), files:, tools:, dependency_locks: }
         File.write(File.join(directory, 'release-manifest.json'), "#{JSON.pretty_generate(manifest)}\n")
       end
@@ -165,7 +186,14 @@ module HaveAPI
           path = File.join(directory, name)
           raise Error, "Artifact checksum mismatch: #{name}" unless File.file?(path) && !File.symlink?(path) && Digest::SHA256.file(path).hexdigest == digest
         end
-        inspect_packages(directory)
+        locks = manifest['dependency_locks']
+        unless locks.is_a?(Hash) && locks.keys.sort == LOCK_PATHS.sort &&
+               locks.values.all? { |text| text.is_a?(String) && !text.strip.empty? }
+          raise Error, 'Missing or malformed retained dependency locks'
+        end
+
+        check_rust_lock(locks.fetch('clients/rust/Gemfile.lock'))
+        inspect_packages(directory, rust_lock: locks.fetch('clients/rust/Gemfile.lock'))
         manifest
       end
 
@@ -190,7 +218,7 @@ module HaveAPI
         files
       end
 
-      def inspect_packages(directory)
+      def inspect_packages(directory, rust_lock: read_lock('clients/rust/Gemfile.lock'))
         GEMS.each_key do |name|
           package = Gem::Package.new(File.join(directory, "#{name}-#{version}.gem"))
           spec = package.spec
@@ -200,7 +228,7 @@ module HaveAPI
           dependency = spec.dependencies.find { |d| d.name == 'haveapi-client' }
           raise Error, "Wrong gem dependency: #{name}" unless dependency && dependency.requirement.to_s == "~> #{version}"
 
-          inspect_rust(package) if name == 'haveapi-rust-client'
+          inspect_rust(package, rust_lock:) if name == 'haveapi-rust-client'
           next unless name == 'haveapi'
 
           required = %w[json-schema.html protocol.md create-client.md typed-input-validation.md client-examples.md protocol.png].map { |f| "doc/#{f}" }
@@ -214,7 +242,8 @@ module HaveAPI
         Release.capture('python', File.join(root, 'utils/release/python_artifacts.py'), directory, version)
       end
 
-      def inspect_rust(package)
+      def inspect_rust(package, rust_lock: read_lock('clients/rust/Gemfile.lock'))
+        check_rust_lock(rust_lock)
         component = File.join(root, 'clients/rust')
         expected_dependency = Gem::Specification.load(File.join(component, 'haveapi-rust-client.gemspec'))
                                                 .runtime_dependencies.find { |dependency| dependency.name == 'fiddle' }
@@ -225,9 +254,10 @@ module HaveAPI
         end
 
         expected = Dir.chdir(component) do
-          Dir['{bin,lib,template}/**/*', 'runtime/src/runtime/**/*', 'README.md', 'docs/*.md', 'LICENSE.txt', 'Gemfile.lock']
+          Dir['{bin,lib,template}/**/*', 'runtime/src/runtime/**/*', 'README.md', 'docs/*.md', 'LICENSE.txt']
             .select { |path| File.file?(path) }.sort
         end
+        expected = (expected + ['Gemfile.lock']).sort
         unless package.contents.sort == expected && package.spec.executables == ['haveapi-rust-client'] &&
                expected.include?('runtime/src/runtime/mod.rs') && expected.include?('template/mod.rs.erb')
           raise Error, 'Rust generator gem has missing or unexpected packaged files'
@@ -237,7 +267,8 @@ module HaveAPI
           package.extract_files(tmp)
           expected.each do |path|
             retained = File.join(tmp, path)
-            unless File.file?(retained) && !File.symlink?(retained) && File.binread(retained) == File.binread(File.join(component, path))
+            original = path == 'Gemfile.lock' ? rust_lock : File.binread(File.join(component, path))
+            unless File.file?(retained) && !File.symlink?(retained) && File.binread(retained) == original
               raise Error, "Rust generator gem differs from source: #{path}"
             end
           end

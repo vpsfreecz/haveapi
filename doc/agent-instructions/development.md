@@ -21,8 +21,12 @@ repository root unless explicitly stated otherwise.
   standalone Ruby specs do not require the Python package environment.
 - Release tooling checks: `make release-check` and `make release-test` in the
   top-level Nix shell. `make release-deps` installs maintained-component
-  dependencies. See [Branches and releases](releases.md) for packaging and
-  GitHub Actions publication.
+  dependencies and creates ignored local library locks. Prepare these inputs
+  before versioning or running locked checks. `ruby utils/release/cli.rb
+  check-clean` checks authored release metadata without requiring local locks;
+  `check-inputs` validates prepared library inputs. See
+  [Branches and releases](releases.md) for packaging and GitHub Actions
+  publication.
 - Run `make doc` before Ruby server specs. They check shared documentation and
   build/extract a real server gem to exercise the packaged documentation routes.
 - Run the full suite from repo root with `make test` (install deps first or use `nix develop`; this starts local test servers and needs permission to bind localhost ports).
@@ -42,8 +46,8 @@ repository root unless explicitly stated otherwise.
 ## Rust generator and runtime
 
 See [the Rust client development guide](../../clients/rust/README.md) for the
-locked Ruby component bundle, pinned Rust formatter, generator unit specs and
-separate runtime/integration checks. `make test-rust-unit` is the quick Ruby
+locally resolved Ruby component bundle, pinned Rust formatter, generator unit
+specs and separate runtime/integration checks. `make test-rust-unit` is the quick Ruby
 check; `make test-rust` also compiles and exercises generated clients. The Rust
 generator is included in the top-level release build and publishing workflow.
 `make release-check` checks its shared version and dependency; `make release`

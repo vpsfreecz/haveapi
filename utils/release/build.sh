@@ -7,6 +7,7 @@ if [[ ${HAVEAPI_DEV_SHELL:-} != haveapi ]]; then
 fi
 
 ruby utils/release/cli.rb check-clean
+ruby utils/release/cli.rb check-inputs
 make doc
 mkdir -p dist
 if [[ -n $(find dist -mindepth 1 -maxdepth 1 -print -quit) ]]; then

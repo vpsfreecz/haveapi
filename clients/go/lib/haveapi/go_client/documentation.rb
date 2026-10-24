@@ -4,7 +4,7 @@ require 'haveapi/go_client'
 require 'haveapi/go_client/utils'
 
 module HaveAPI::GoClient
-  # Pure adapter over the complete schema used to generate a published SDK.
+  # Pure adapter over a complete description matching the configured SDK.
   # Never reconstruct names from a user's reduced documentation description.
   class Documentation
     include Utils
@@ -15,15 +15,15 @@ module HaveAPI::GoClient
     PARAMETER_CONTRACT = %i[type nullable resource value_id value_label].freeze
     INPUT_MEMBERS = %w[SelectParameters UnselectParameters AnySelected].freeze
 
-    def initialize(description:, import_path:, module_version:)
+    def initialize(description:, import_path:, module_version: nil)
       unless import_path.is_a?(String) && import_path.match?(%r{\A[A-Za-z0-9][A-Za-z0-9._~/-]*\z}) \
           && import_path.split('/').none? { |part| ['', '.', '..'].include?(part) } \
-          && module_version.is_a?(String) && module_version.match?(/\Av\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?\z/)
+          && (module_version.nil? || (module_version.is_a?(String) && module_version.match?(/\Av\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?\z/)))
         raise ArgumentError, 'invalid Go SDK import path or module version'
       end
 
       @import_path = import_path.dup.freeze
-      @module_version = module_version.dup.freeze
+      @module_version = module_version&.dup&.freeze
       @description = copy(description)
       validate_description
       @api = ApiVersion.new(@description)
@@ -433,7 +433,7 @@ module HaveAPI::GoClient
       origin = URI.parse(context.base_url)
       origin.path = ''
       origin.query = origin.fragment = nil
-      header = ["// go get #{@import_path}@#{@module_version}", 'package main', '', 'import (']
+      header = ["// go get #{@import_path}@#{@module_version || 'latest'}", 'package main', '', 'import (']
       imports.each { |name| header << "  #{go_string_literal(name)}" }
       header << "  client #{go_string_literal(@import_path)}"
       header.push(')', '', 'func main() {', "  api := client.New(#{go_string_literal(origin.to_s)})")
@@ -457,7 +457,14 @@ module HaveAPI::GoClient
     end
 
     def parameter_contract(desc)
-      PARAMETER_CONTRACT.map { |key| desc[key] }
+      PARAMETER_CONTRACT.map do |key|
+        value = desc[key]
+        if %i[value_id value_label].include?(key) && (value.is_a?(String) || value.is_a?(Symbol))
+          value.to_s
+        else
+          value
+        end
+      end
     end
 
     def visible_action(description, path, name)

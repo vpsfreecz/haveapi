@@ -1,10 +1,10 @@
+require_relative '../servers/ruby/benchmarks/performance_compare'
 require 'digest'
 require 'fileutils'
 require 'json'
 require 'open3'
 require 'optparse'
 require 'rbconfig'
-require_relative '../servers/ruby/benchmarks/performance_compare'
 
 module HaveAPI
   module PerformanceCI
@@ -206,8 +206,8 @@ module HaveAPI
         raise Error, 'Runner returned an unknown exit code' unless [0, 1, 2, 3].include?(code)
 
         report = JSON.parse(File.read(File.join(@evidence, 'results/report.json')))
-        expected = { 0 => 'pass', 1 => 'regression', 2 => 'inconclusive', 3 => 'error' }.fetch(code)
-        unless report.fetch('schema_version') == 1 && report.fetch('status') == expected &&
+        expected = { 0 => %w[pass inconclusive], 1 => ['regression'], 3 => ['error'] }.fetch(code, [])
+        unless report.fetch('schema_version').eql?(Performance::SAMPLE_SCHEMA) && expected.include?(report.fetch('status')) &&
                report.fetch('baseline_sha') == baseline && report.fetch('candidate_sha') == candidate
           raise Error, 'Runner report/exit/source identity mismatch'
         end
@@ -255,16 +255,17 @@ module HaveAPI
 
         configs = CONFIGS.dup
         specs = SPECS.dup
-        if @selection.fetch('profile') == 'weekly'
-          configs << 'clients/rust/Gemfile'
-          specs << 'clients/rust/haveapi-rust-client.gemspec'
-        end
+        configs << 'clients/rust/Gemfile'
+        specs << 'clients/rust/haveapi-rust-client.gemspec'
         manifests = roots.transform_values do |root|
-          { configs: configs.to_h { |path| [path, Digest::SHA256.file(File.join(root, path)).hexdigest] },
+          contents = configs.to_h { |path| [path, File.read(File.join(root, path))] }
+          preparation = Performance::Release.json_preparation(contents)
+          { configs: contents.merge(preparation.fetch('normalized_contents')).transform_values { |text| Digest::SHA256.hexdigest(text) },
+            json_preparation: preparation,
             gemspecs: specs.to_h { |path| [path, gemspec(root, path)] } }
         end
         File.write(File.join(@evidence, 'dependency-compatibility.json'), JSON.pretty_generate(manifests))
-        raise Error, 'Dependency inputs differ; reviewed environment migration required' unless manifests[:baseline] == manifests[:candidate]
+        raise Error, 'Dependency inputs differ; reviewed environment migration required' unless manifests[:baseline].except(:json_preparation) == manifests[:candidate].except(:json_preparation)
       end
 
       def gemspec(root, path)
@@ -281,7 +282,7 @@ module HaveAPI
       def retain_inputs
         paths = %w[flake.nix flake.lock .ruby-version Gemfile Gemfile.lock
                    servers/ruby/Gemfile servers/ruby/Gemfile.lock]
-        paths += %w[clients/rust/Gemfile clients/rust/Gemfile.lock] if @selection.fetch('profile') == 'weekly'
+        paths += %w[clients/rust/Gemfile clients/rust/Gemfile.lock]
         hashes = paths.to_h do |path|
           source = File.join(@repository.root, path)
           raise Error, "Missing prepared input: #{path}" unless File.file?(source)

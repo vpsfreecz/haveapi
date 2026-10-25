@@ -97,7 +97,17 @@ module HaveAPI
           raise ArgumentError, 'Invalid operation index' unless index.is_a?(Integer) && index >= 0
           raise 'Operation was not called' if @next_operation.nil? || index >= @next_operation
           raise 'Unexpected HTTP status' unless response.status == 200
+          raise 'Unexpected content type' unless response['content-type']&.start_with?('application/json')
 
+          validate_counts!(@state.operations.fetch(index))
+          # Only the owning measurement may reuse body-only work. Index,
+          # response metadata and execution/authorization checks always run.
+          return yield(-> { validate_body!(response) }) if block_given?
+
+          validate_body!(response)
+        end
+
+        def validate_body!(response)
           identity = HaveAPI::Performance::Identity.json(response)
           body = identity.fetch(:canonical_body)
           unless body.keys.sort == %w[errors message response status]
@@ -119,7 +129,6 @@ module HaveAPI
             end
           end
 
-          validate_counts!(@state.operations.fetch(index))
           identity
         end
 

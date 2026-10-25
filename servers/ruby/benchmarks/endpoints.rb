@@ -1,3 +1,4 @@
+require_relative 'performance_compare'
 require 'base64'
 require 'fileutils'
 require 'etc'
@@ -5,12 +6,21 @@ require 'open3'
 require 'optparse'
 require 'rbconfig'
 require 'socket'
-require_relative 'performance_compare'
+require 'io/wait'
 
 module HaveAPI
   module Performance
     ROOT = File.expand_path('../../..', __dir__)
     FIXTURE_PATHS = %w[performance_endpoint_fixture.rb performance_sqlite_fixture.rb documentation_performance_fixture.rb].freeze
+
+    class WorkerTimeout < ContractError
+      attr_reader :details
+
+      def initialize(details)
+        @details = details
+        super("#{details[:kind]}: #{details[:source_sha]} #{details[:workload]} #{details[:phase]} exceeded #{details[:limit_seconds]}s")
+      end
+    end
 
     class DocumentationScenario
       # Only benchmark processes install this observer. It does not change the
@@ -25,9 +35,10 @@ module HaveAPI
 
       def self.cases(profile:)
         quick = %w[docs.options docs.html_resources docs.html_actions].map { |id| { id:, dimensions: { size: 8 } } }
-        return quick if profile == 'quick'
+        complex = Performance.complex_cases(profile).map { |spec| JSON.parse(JSON.generate(spec), symbolize_names: true) }
+        return quick + complex if profile == 'quick'
 
-        quick + %w[docs.options docs.html_resources docs.html_actions].product(%w[admin member]).map do |id, user|
+        quick + complex + %w[docs.options docs.html_resources docs.html_actions].product(%w[admin member]).map do |id, user|
           { id:, dimensions: { size: 16, user: } }
         end + %w[rust.async_example rust.async_auth rust.blocking_example rust.blocking_auth].map do |id|
           { id:, dimensions: { size: 16, user: 'admin' } }
@@ -37,10 +48,15 @@ module HaveAPI
       def initialize(spec)
         @id = spec.fetch(:id)
         dimensions = spec.fetch(:dimensions)
-        size = dimensions.fetch(:size)
+        size = dimensions.fetch(:size, 1)
         @user = dimensions.fetch(:user, 'admin')
         resources, actions = @id == 'docs.html_actions' ? [1, size] : [size, 1]
-        @server = DocumentationPerformanceFixture.build(resource_count: resources, actions_per_resource: actions, rust: @id.start_with?('rust.'))
+        @server = DocumentationPerformanceFixture.build(resource_count: dimensions.fetch(:resources, resources),
+                                                        actions_per_resource: dimensions.fetch(:actions, actions),
+                                                        samples_per_action: dimensions.fetch(:samples, 1),
+                                                        parameters_per_action: dimensions.fetch(:parameters, 2),
+                                                        rust: @id.start_with?('rust.') || @id == 'docs.html_rust')
+        @dimensions = dimensions
         Authorization.prepend(AuthorizationObserver) unless Authorization.ancestors.include?(AuthorizationObserver)
         @request = Rack::MockRequest.new(@server.app)
         @headers = { 'HTTP_HOST' => 'example.test', 'HTTP_ACCEPT_LANGUAGE' => 'en',
@@ -72,9 +88,31 @@ module HaveAPI
       end
 
       def validate!(response, index:)
-        @operations.fetch(index)
+        unless index.is_a?(Integer) && index >= 0 && index < @index
+          raise ContractError, 'Invalid or uncalled documentation operation index'
+        end
         raise ContractError, 'Documentation response failed' unless response.status == 200
 
+        content_type = @id.start_with?('rust.') || @id == 'docs.options' ? 'application/json' : 'text/html'
+        raise ContractError, 'Documentation content type differs' unless response['content-type']&.start_with?(content_type)
+
+        authorizations = if @id.start_with?('rust.')
+                           0
+                         elsif @id == 'docs.html_rust'
+                           (@dimensions.fetch(:resources) * @dimensions.fetch(:actions)) + 1
+                         else
+                           @dimensions.fetch(:size) + 1
+                         end
+        unless @operations.fetch(index) == { queries: 0, authorizations:, executions: 0 }
+          raise ContractError, 'Documentation operation counters differ'
+        end
+
+        return yield(-> { validate_body!(response) }) if block_given?
+
+        validate_body!(response)
+      end
+
+      def validate_body!(response)
         if @id.start_with?('rust.')
           value = JSON.parse(response.body)
           raise ContractError, 'Rust code missing' unless value['status'] == 'code' && value['code'].is_a?(String) && !value['code'].empty?
@@ -95,8 +133,31 @@ module HaveAPI
           raise ContractError, 'Documentation authorization mismatch'
         end
 
+        if @id == 'docs.html_rust'
+          actions = @dimensions.fetch(:resources) * @dimensions.fetch(:actions)
+          unless response.body.include?('init-rust-async') && response.body.include?('init-rust-blocking') &&
+                 response.body.include?("example-resource#{@dimensions.fetch(:resources) - 1}-action3-1")
+            raise ContractError, 'Full Rust documentation page missing panels/actions/examples'
+          end
+
+          markers = %w[ADMIN_ONLY_ACTION ADMIN_ONLY_DEFAULT ADMIN_ONLY_REQUEST ADMIN_ONLY_RESPONSE ADMIN_ONLY_ACTION_SAMPLE admin_field admin_only]
+          unless markers.all? { |marker| response.body.include?(marker) == (@user == 'admin') }
+            raise ContractError, 'Full Rust documentation authorization mismatch'
+          end
+
+          examples = response.body.scan(/id="example-resource\d+-(?:action\d+|admin_only)-\d+-examples"/).uniq.length
+          expected_examples = (actions * (@dimensions.fetch(:samples) + (@user == 'admin' ? 1 : 0))) + (@user == 'admin' ? 1 : 0)
+          unless examples == expected_examples && response.body.include?('documentation_performance_client')
+            raise ContractError, 'Full Rust documentation example inventory mismatch'
+          end
+
+          @page = { actual_examples: examples, resources: @dimensions.fetch(:resources), actions: actions + (@user == 'admin' ? 1 : 0),
+                    public_examples: actions * @dimensions.fetch(:samples), user: @user }
+        end
         { http_status: 200, envelope_status: nil, body_bytes: response.body.bytesize,
-          body_sha256: Digest::SHA256.hexdigest(response.body), canonical_sha256: Digest::SHA256.hexdigest(response.body) }
+          body_sha256: Digest::SHA256.hexdigest(response.body), canonical_sha256: Digest::SHA256.hexdigest(response.body) }.tap do |identity|
+          identity[:page] = @page if @page
+        end
       end
 
       def counters
@@ -145,22 +206,29 @@ module HaveAPI
         require 'haveapi'
         require 'haveapi/client'
         require 'rack/mock'
-        require 'haveapi/rust_client/documentation' if @request.fetch('profile') == 'weekly'
         FIXTURE_PATHS.each { |name| require File.join(ROOT, 'servers/ruby/test_support', name) }
-        load_seconds = monotonic - started
         inventory = self.class.inventory(@request.fetch('profile'))
+        require 'haveapi/rust_client/documentation' if inventory.any? { |spec| spec[:id].start_with?('rust.') || spec[:id] == 'docs.html_rust' }
+        load_seconds = monotonic - started
         order = @request.fetch('workload_order', 'forward')
         raise ContractError, 'Unknown workload order' unless %w[forward reverse].include?(order)
 
         selected = order == 'reverse' ? inventory.reverse : inventory
         results = selected.map do |spec|
-          @current_workload = spec.fetch(:id)
+          @current_workload = Identity.key(JSON.parse(JSON.generate(spec)))
+          @phase = 'build'
+          progress('setup')
           count = @request.fetch('counts').fetch(Identity.key(JSON.parse(JSON.generate(spec))), 1)
           build_started = monotonic
           scenario = self.class.build(spec)
           stages = { build_seconds: monotonic - build_started }
           begin
-            stages[:warmups] = Array.new(2) { measure(scenario, count).fetch(:stages) }
+            warmup_count = @request.fetch('warmup_counts', {}).fetch(@current_workload, 0)
+            stages[:warmups] = Array.new(warmup_count == 0 ? 0 : 2) do |index|
+              @phase = "warmup-#{index}"
+              measure(scenario, warmup_count).fetch(:stages).merge(operations: warmup_count)
+            end
+            @phase = 'measured'
             result = measure(scenario, count)
             stages[:measured] = result.delete(:stages)
           ensure
@@ -170,7 +238,7 @@ module HaveAPI
           end
           result.merge(spec).merge(stages:)
         end
-        { schema_version: 1, inventory:, cases: results, source: source_identity(source), environment: environment,
+        { schema_version: SAMPLE_SCHEMA, inventory:, cases: results, source: source_identity(source), environment: environment,
           inputs: @request['release_versions'] ? self.class.inputs(source, @request.fetch('profile'), release: true) : self.class.inputs(source, @request.fetch('profile')),
           fixture_sha256: self.class.fixture_hashes,
           runtime_policy: policy, workload_order: order, host: host_identity,
@@ -200,13 +268,14 @@ module HaveAPI
       end
 
       def measure(scenario, iterations)
-        raise ContractError, 'Invalid worker iteration count' unless iterations.is_a?(Integer) && iterations.between?(1, 2000)
+        raise ContractError, 'Invalid worker iteration count' unless iterations.is_a?(Integer) && iterations.between?(1, MAX_ITERATIONS)
 
         reset_started = monotonic
         responses = Array.new(iterations)
         scenario.reset!(iterations:)
         GC.start
         reset_gc_seconds = monotonic - reset_started
+        progress('request', iterations:)
         allocated = GC.stat(:total_allocated_objects)
         cpu = Process.clock_gettime(Process::CLOCK_PROCESS_CPUTIME_ID)
         wall = Process.clock_gettime(Process::CLOCK_MONOTONIC)
@@ -214,46 +283,80 @@ module HaveAPI
         wall = Process.clock_gettime(Process::CLOCK_MONOTONIC) - wall
         cpu = Process.clock_gettime(Process::CLOCK_PROCESS_CPUTIME_ID) - cpu
         allocations = GC.stat(:total_allocated_objects) - allocated
+        progress('setup')
         validation_started = monotonic
         bodies = {}
-        outputs = responses.each_with_index.map do |response, index|
-          identity = scenario.validate!(response, index:)
-          identity = identity.transform_keys(&:to_s)
+        proofs = {}
+        outputs = {}
+        responses.each_with_index do |response, index|
           raw_digest = Digest::SHA256.hexdigest(response.body)
+          proof = proofs[raw_digest]
+          if proof && proof.fetch(:body) != response.body
+            raise ContractError, 'Raw output digest collision'
+          end
+
+          # The fixture still checks this operation's index/status/headers and
+          # counters. Only its body-only semantic validator can be reused.
+          validated = scenario.validate!(response, index:) do |validate_body|
+            proof ? proof.fetch(:validation) : validate_body.call
+          end
+          identity = validated.transform_keys(&:to_s)
           unless identity.fetch('body_sha256') == raw_digest && identity.fetch('body_bytes') == response.body.bytesize &&
                  identity.fetch('http_status') == response.status
             raise ContractError, 'Fixture output identity is incorrect'
           end
 
+          if proof && validated.equal?(proof.fetch(:validation))
+            outputs.fetch(raw_digest)['count'] += 1
+            next
+          end
+
           canonical = identity.delete('canonical_body')
-          if canonical && !identity.has_key?('canonical_sha256')
+          unless canonical.nil?
             canonical = Identity.canonical(canonical)
-            identity['canonical_sha256'] = Digest::SHA256.hexdigest(JSON.generate(canonical))
+            digest = Digest::SHA256.hexdigest(JSON.generate(canonical))
+            unless Identity.canonical(Identity.parse(response.body)) == canonical &&
+                   (!identity.has_key?('canonical_sha256') || identity['canonical_sha256'] == digest)
+              raise ContractError, 'Fixture raw/canonical output differs'
+            end
+
+            identity['canonical_sha256'] = digest
           end
           raise ContractError, 'Missing canonical identity' unless identity.has_key?('canonical_sha256')
 
           if @request['release_versions'] && scenario.is_a?(DocumentationScenario) &&
-             @current_workload.to_s.start_with?('docs.html_')
+             @current_workload.to_s.include?('docs.html_')
             own = File.read(File.join(@request.fetch('source_root'), 'VERSION')).strip
             normalized = Release.html(response.body, own)
             identity['canonical_sha256'] = Digest::SHA256.hexdigest(normalized)
             identity['comparison'] = { 'kind' => 'own-webui-href', 'own_version' => own }
           end
 
-          if bodies.has_key?(raw_digest) && bodies[raw_digest][:body] != response.body
-            raise ContractError, 'Raw output digest collision'
+          if proof && (identity != proof.fetch(:output) || canonical != bodies.fetch(raw_digest).fetch(:canonical_body))
+            raise ContractError, 'Fixture body proof changed'
           end
 
-          bodies[raw_digest] ||= { body: response.body, canonical_body: canonical }
-          identity
+          bodies[raw_digest] ||= { body: response.body.dup.freeze, canonical_body: Identity.snapshot(canonical) }.freeze
+          proofs[raw_digest] ||= { body: bodies.fetch(raw_digest).fetch(:body), validation: Identity.snapshot(validated),
+                                   output: Identity.snapshot(identity) }.freeze
+          outputs[raw_digest] ||= proofs.fetch(raw_digest).fetch(:output).merge('count' => 0)
+          outputs.fetch(raw_digest)['count'] += 1
         end
-        counters = scenario.counters
-        unless counters.fetch(:operations).length == iterations
+        records = scenario.counters.fetch(:operations)
+        unless records.length == iterations
           raise ContractError, 'Missing per-operation counters'
         end
 
+        record = records.first
+        unless record.keys.map(&:to_s).sort == COUNTERS.sort && record.values.all? { |value| value.is_a?(Integer) && value >= 0 } &&
+               records.all? { |operation| operation == record }
+          raise ContractError, 'Operation counters are not uniform and valid'
+        end
+
+        counters = { operations: iterations, record: record.dup }
+
         { operations: iterations, wall_seconds: wall / iterations, cpu_seconds: cpu / iterations,
-          allocated_objects: allocations.to_f / iterations, outputs:, bodies:, counters:,
+          allocated_objects: allocations.to_f / iterations, outputs: outputs.values, bodies:, counters:,
           stages: { reset_gc_seconds:, request_seconds: wall, validation_seconds: monotonic - validation_started } }
       end
 
@@ -263,17 +366,28 @@ module HaveAPI
         paths.to_h { |path| [path, Digest::SHA256.file(File.join(ROOT, path)).hexdigest] }
       end
 
+      # One notification at each batch boundary, outside measured allocations.
+      # A 30s batch watchdog also bounds every individual request in that batch.
+      def progress(state, iterations: nil)
+        return unless @request['progress_fd']
+
+        @progress ||= IO.for_fd(@request.fetch('progress_fd'), autoclose: false)
+        @progress.syswrite("#{JSON.generate(state:, workload: @current_workload, phase: @phase, iterations:)}\n")
+      end
+
       def self.inputs(source, profile, release: false)
-        paths = %w[flake.lock servers/ruby/Gemfile servers/ruby/haveapi.gemspec clients/ruby/Gemfile clients/ruby/haveapi-client.gemspec]
-        paths += %w[clients/rust/Gemfile clients/rust/haveapi-rust-client.gemspec] if profile == 'weekly'
-        manifests = paths.to_h do |path|
+        paths = %w[Gemfile flake.lock servers/ruby/Gemfile servers/ruby/haveapi.gemspec clients/ruby/Gemfile clients/ruby/haveapi-client.gemspec]
+        paths += %w[clients/rust/Gemfile clients/rust/haveapi-rust-client.gemspec]
+        raw_manifests = paths.to_h do |path|
           target = File.join(source, path)
           raise ContractError, "Missing dependency input #{target}" unless File.file?(target)
 
-          [path, Digest::SHA256.file(target).hexdigest]
+          [path, File.read(target)]
         end
+        preparation = Release.json_preparation(raw_manifests)
+        manifests = raw_manifests.merge(preparation.fetch('normalized_contents')).transform_values { |text| Digest::SHA256.hexdigest(text) }
         lock_paths = %w[Gemfile.lock servers/ruby/Gemfile.lock]
-        lock_paths << 'clients/rust/Gemfile.lock' if profile == 'weekly'
+        lock_paths << 'clients/rust/Gemfile.lock'
         locks = lock_paths.to_h do |path|
           target = File.join(ROOT, path)
           raise ContractError, "Missing resolved lock #{target}" unless File.file?(target)
@@ -284,12 +398,12 @@ module HaveAPI
           contents = Release.paths(profile).to_h { |path| [path, File.read(File.join(source, path))] }
           receipt = Release.capture(contents)
           versions = [HaveAPI::VERSION, HaveAPI::Client::VERSION]
-          versions << HaveAPI::RustClient::VERSION if profile == 'weekly'
+          versions << HaveAPI::RustClient::VERSION
           raise ContractError, 'Wrong loaded local package version' unless versions.all? { |version| version == receipt.fetch('own_version') }
 
           return { manifests: receipt.fetch('normalized_sha256'), locks:, release_versions: receipt }
         end
-        { manifests:, locks: }
+        { manifests:, locks:, json_preparation: preparation }
       end
 
       def environment
@@ -304,7 +418,7 @@ module HaveAPI
                     'servers/ruby/lib/haveapi/action.rb' => Action.instance_method(:exec),
                     'servers/ruby/lib/haveapi/model_adapters/active_record.rb' => ModelAdapters::ActiveRecord.method(:handle?),
                     'clients/ruby/lib/haveapi/client/client.rb' => Client::Client.instance_method(:initialize) }
-        if @request['profile'] == 'weekly'
+        if HaveAPI.const_defined?(:RustClient)
           methods['clients/rust/lib/haveapi/rust_client/documentation.rb'] = RustClient::Documentation.instance_method(:render)
         end
         methods.each do |path, method|
@@ -321,7 +435,7 @@ module HaveAPI
     end
 
     class CLI
-      EXIT_CODES = { 'pass' => 0, 'regression' => 1, 'inconclusive' => 2, 'error' => 3 }.freeze
+      EXIT_CODES = { 'pass' => 0, 'regression' => 1, 'inconclusive' => 0, 'error' => 3 }.freeze
 
       def initialize(argv)
         @argv = argv.dup
@@ -353,7 +467,8 @@ module HaveAPI
         puts JSON.generate(status: report.fetch('status'), report: File.join(@output, 'report.json'))
         EXIT_CODES.fetch(report.fetch('status'))
       rescue StandardError, LoadError => e
-        report = { schema_version: 1, status: 'error', error: { class: e.class.name, message: e.message } }
+        report = { schema_version: SAMPLE_SCHEMA, status: 'error', error: { class: e.class.name, message: e.message } }
+        report[:error][:details] = e.details if e.is_a?(WorkerTimeout)
         %i[baseline_sha candidate_sha profile].each { |key| report[key] = @options[key] if @options.has_key?(key) }
         report[:harness_sha256] = Identity.digest(Worker.fixture_hashes) if FIXTURE_PATHS.all? { |name| File.file?(File.join(ROOT, 'servers/ruby/test_support', name)) }
         File.write(File.join(@output, 'report.json'), JSON.pretty_generate(report)) if @output && File.directory?(@output)
@@ -444,15 +559,33 @@ module HaveAPI
         pilot = child('baseline', {}, 'pilot')
         inventory = pilot.fetch('inventory')
         counts = pilot.fetch('cases').to_h do |item|
-          count = (0.150 / item.fetch('wall_seconds')).ceil.clamp(1, 2000)
+          count = (policy.fetch(:target) / item.fetch('wall_seconds')).ceil.clamp(1, MAX_ITERATIONS)
           [Identity.key(item), count]
         end
+        warmup_counts = pilot.fetch('cases').to_h do |item|
+          count = item.fetch('wall_seconds') >= policy.fetch(:target) ? 0 : (0.100 / item.fetch('wall_seconds')).ceil.clamp(1, counts.fetch(Identity.key(item)))
+          [Identity.key(item), count]
+        end
+        @warmup_counts = warmup_counts
+        calibration = child('baseline', counts, 'calibration')
+        adjusted = false
+        calibration.fetch('cases').each do |item|
+          key = Identity.key(item)
+          duration = item.fetch('wall_seconds') * counts.fetch(key)
+          next if warmup_counts.fetch(key) == 0 || duration >= policy.fetch(:adequate) || counts.fetch(key) == MAX_ITERATIONS
+
+          counts[key] = (counts.fetch(key) * policy.fetch(:target) / duration).ceil.clamp(1, MAX_ITERATIONS)
+          adjusted = true
+        end
+        calibration = child('baseline', counts, 'calibration-adjusted') if adjusted
         cases = inventory.map do |spec|
-          observed = pilot['cases'].find { |item| Identity.key(item) == Identity.key(spec) }
+          observed = calibration.fetch('cases').find { |item| Identity.key(item) == Identity.key(spec) }
           count = counts.fetch(Identity.key(spec))
+          duration = observed.fetch('wall_seconds') * count
           spec.merge('iterations' => count, 'pilot' => observed.merge('selected_iterations' => count,
-                                                                      'target_seconds' => 0.150, 'estimated_target_reached' => observed['wall_seconds'] * count >= 0.150),
-                     'self_pairs' => [], 'pairs' => [])
+                                                                      'warmup_iterations' => warmup_counts.fetch(Identity.key(spec)), 'target_seconds' => policy.fetch(:target),
+                                                                      'baseline_batch_seconds' => duration, 'adequate_signal' => duration >= policy.fetch(:adequate),
+                                                                      'capped' => count == MAX_ITERATIONS, 'calibration_adjusted' => adjusted), 'self_pairs' => [], 'pairs' => [])
         end
         policy[:self_pairs].times do |index|
           workload_order = index.even? ? 'forward' : 'reverse'
@@ -468,7 +601,7 @@ module HaveAPI
           candidate = observations.fetch(order.index('candidate'))
           append_pair(cases, 'pairs', order, baseline, candidate, workload_order)
         end
-        { 'schema_version' => 1, 'profile' => @options[:profile], 'baseline_sha' => @options[:baseline_sha],
+        { 'schema_version' => SAMPLE_SCHEMA, 'profile' => @options[:profile], 'baseline_sha' => @options[:baseline_sha],
           'candidate_sha' => @options[:candidate_sha], 'harness_sha256' => Identity.digest(Worker.fixture_hashes),
           'fixture_sha256' => Worker.fixture_hashes, 'budget_sha256' => digest, 'sources' => @sources,
           'environment' => @common.fetch('environment'), 'inputs' => @common.fetch('inputs'), 'release_lineage' => @release_lineage,
@@ -489,17 +622,18 @@ module HaveAPI
 
       def child(role, counts, label, workload_order = 'forward')
         request = { source_root: File.realpath(@options.fetch(:"#{role}_root")), source_sha: @options.fetch(:"#{role}_sha"),
-                    profile: @options[:profile], workload_order:, counts:, release_versions: !@release_lineage.nil? }
+                    profile: @options[:profile], workload_order:, counts:, warmup_counts: @warmup_counts || {}, release_versions: !@release_lineage.nil? }
         env = ENV.keys.grep(/\ABUNDLE|\ABUNDLER|\ARUBY(?:OPT|LIB)\z/).to_h { |key| [key, nil] }
         env.merge!('LC_ALL' => 'C.UTF-8', 'LANG' => 'C.UTF-8', 'TZ' => 'UTC', 'RUBY_YJIT_ENABLE' => '0', 'RACK_ENV' => 'test')
         process_started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        output, errors, status = Open3.capture3(env, RbConfig.ruby, '--disable-yjit', __FILE__, 'worker', stdin_data: JSON.generate(request))
+        output, errors, status = capture_worker(env, request, label)
         process_wall_seconds = Process.clock_gettime(Process::CLOCK_MONOTONIC) - process_started
         File.write(File.join(@output, "#{label}.stderr.log"), errors)
         File.write(File.join(@output, "#{label}.json"), output)
         raise ContractError, "Worker failed #{label} (#{status.exitstatus}): #{errors.lines.last}" unless status.success?
 
         result = JSON.parse(output)
+        raise ContractError, 'Unsupported worker sample schema' unless result.fetch('schema_version').eql?(SAMPLE_SCHEMA)
         raise ContractError, 'Worker source identity mismatch' unless result.fetch('source').fetch('root') == request[:source_root] && result['source']['sha'] == request[:source_sha]
         raise ContractError, 'Worker fixture graph mismatch' unless result.fetch('fixture_sha256') == Worker.fixture_hashes
 
@@ -514,6 +648,8 @@ module HaveAPI
           Release.validate_inputs(inputs, @sources.fetch(role), @options.fetch(:profile))
         elsif inputs.has_key?('release_versions')
           raise ContractError, 'Unproven own-version normalization'
+        else
+          Release.validate_json_preparation(inputs, @sources.fetch(role))
         end
         common = result.slice('environment', 'inventory', 'fixture_sha256').merge('inputs' => Release.graph(inputs))
         @common ||= common
@@ -524,6 +660,68 @@ module HaveAPI
                                             'workload_order', 'stages', 'serialization_seconds').merge('process_wall_seconds' => process_wall_seconds)
         result.fetch('cases').each { |item| item['observation'] = label }
         result
+      end
+
+      def worker_command
+        [RbConfig.ruby, '--disable-yjit', __FILE__, 'worker']
+      end
+
+      def capture_worker(env, request, label)
+        reader, writer = IO.pipe
+        request = request.merge(progress_fd: writer.fileno)
+        output = errors = ''
+        status = nil
+        Open3.popen3(env, *worker_command, writer.fileno => writer, pgroup: true) do |input, stdout, stderr, waiter|
+          writer.close
+          out_thread = Thread.new { stdout.read }
+          err_thread = Thread.new { stderr.read }
+          begin
+            input.write(JSON.generate(request))
+            input.close
+            event = { 'state' => 'setup' }
+            File.open(File.join(@output, "#{label}.progress.jsonl"), 'w') do |log|
+              loop do
+                limit = event.fetch('state') == 'request' ? REQUEST_LIMIT_SECONDS : SETUP_LIMIT_SECONDS
+                unless reader.wait_readable(limit)
+                  raise WorkerTimeout.new(kind: event['state'] == 'request' ? 'request_batch_timeout' : 'worker_setup_timeout',
+                                          source_sha: request.fetch(:source_sha), workload: event['workload'],
+                                          phase: "#{label}/#{event['phase']}", limit_seconds: limit)
+                end
+                line = reader.gets
+                break unless line
+
+                log.write(line)
+                log.flush
+                event = JSON.parse(line)
+                raise ContractError, 'Invalid worker progress' unless %w[request setup].include?(event.fetch('state'))
+              end
+            end
+            unless waiter.join(SETUP_LIMIT_SECONDS)
+              raise WorkerTimeout.new(kind: 'worker_setup_timeout', source_sha: request.fetch(:source_sha),
+                                      workload: event['workload'], phase: "#{label}/serialization", limit_seconds: SETUP_LIMIT_SECONDS)
+            end
+            status = waiter.value
+          ensure
+            unless waiter.join(0)
+              begin
+                Process.kill('TERM', -waiter.pid)
+                waiter.join(0.2)
+                Process.kill('KILL', -waiter.pid)
+              rescue Errno::ESRCH
+                # The owned process group has exited.
+              end
+              waiter.value
+            end
+            output = out_thread.value
+            errors = err_thread.value
+            File.write(File.join(@output, "#{label}.stderr.log"), errors)
+            File.write(File.join(@output, "#{label}.json"), output)
+          end
+        end
+        [output, errors, status]
+      ensure
+        reader&.close unless reader&.closed?
+        writer&.close unless writer&.closed?
       end
     end
   end

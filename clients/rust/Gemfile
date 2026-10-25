@@ -4,6 +4,7 @@ gemspec
 gem 'haveapi-client', path: '../ruby'
 
 group :development, :test do
+  gem 'json', '= 2.21.2'
   gem 'rake'
   gem 'rspec'
   gem 'rubocop', '~> 1.85.0'

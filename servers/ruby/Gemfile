@@ -4,6 +4,7 @@ gemspec
 gem 'haveapi-client', path: '../../clients/ruby'
 
 group :test do
+  gem 'json', '= 2.21.2'
   gem 'rack-test'
   gem 'rackup'
   gem 'rspec'

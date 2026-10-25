@@ -1,6 +1,7 @@
 source 'https://rubygems.org'
 
 group :development do
+  gem 'json', '= 2.21.2'
   gem 'overcommit'
   gem 'rake'
   gem 'rspec'

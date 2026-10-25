@@ -17,10 +17,10 @@ every future performance characteristic.
 
 Use the repository's Nix environments and prepare dependencies before running
 measurements. `nix develop .#server-ruby` prepares the server bundle; the top-level
-`nix develop` prepares contributor tools. Weekly Rust examples also need the
-Ruby dependencies from `nix develop .#client-rust`. SDK generation, Cargo and
-formatting are outside these measurements. Resolved component lockfiles remain
-local library inputs and must not be committed.
+`nix develop` prepares contributor tools. Both profiles render full Rust-enabled
+pages and need the Ruby dependencies from `nix develop .#client-rust`. SDK
+generation, Cargo and formatting are outside these measurements. Resolved
+component lockfiles remain local library inputs and must not be committed.
 
 Run deterministic specs in the prepared top-level shell:
 
@@ -58,11 +58,17 @@ make performance-compare \
 
 The commands invoke `servers/ruby/benchmarks/endpoints.rb run` and `compare`
 directly. `run` retains `samples.json`, `report.json` and process diagnostics.
-`compare` reads the same versioned samples format. Exit codes are 0 for pass,
-1 for regression, 2 for inconclusive and 3 for errors, including missing workload,
-wrong responses, inputs or provenance. Every nonzero exit blocks CI. Keep failed
-evidence and diagnose it before deciding whether another run is justified; there
-is no automatic retry or baseline update.
+`compare` reads compact samples format version 2; unsupported versions are
+rejected without conversion. Historical evidence remains attributable to its
+recorded implementation. `report.json` contains source/profile identity,
+overall outcome and per-workload results, without raw samples or response bodies.
+Exit codes are 0 for a pass
+or an inconclusive timing result, 1 for a regression and 3 for errors, including
+missing workloads, wrong responses, inputs or provenance. An inconclusive report
+remains explicitly inconclusive; a successful process exit does not establish a
+measured performance pass. Deterministic failures and regressions block CI.
+Keep the original evidence and diagnose failures or insufficient timing signal;
+there is no automatic retry loop or baseline update.
 
 ## Timing and work gates
 
@@ -74,21 +80,69 @@ page size 32 over up to 10,000 SQLite rows, documentation shapes at size 16 and
 Rust async/blocking action/authentication examples. An output of 1,024 rows uses
 an unpaginated relation; it is not an invalid request above the pagination limit.
 
-A baseline pilot selects 1–2,000 requests targeting 150 ms per batch and records
-when the cap cannot reach that target. Both revisions use the same count.
-Two warmup batches precede measured work. Quick uses three baseline/self pairs
-and nine baseline/candidate pairs; weekly uses five and fifteen. Candidate order
-alternates to reduce order effects. Setup, mount, schema, seeds, token issuance,
-reset, response parsing/digests and counter checks stay outside the timed loop.
-GC remains enabled, including collections triggered by measured work.
+Both profiles also render complete Rust-enabled HTML pages for admin and member
+users. Quick uses 16 resources; weekly uses 32. Each resource has four actions,
+two samples per action and four parameters. These cases validate the full page,
+Rust panels, authorization boundaries and operation counts. They use relative
+allocation and deterministic checks without inventing fixed-reference allocation
+ceilings for the new shapes. Existing calibrated workload budgets remain intact.
 
-Each wall and process-CPU metric is checked separately per request. A meaningful
-slowdown exceeds both 20% and 0.20 ms. The noise allowance is the maximum of
-observed baseline/self differences, 5% of baseline median and 0.05 ms. Quick
-requires eight of nine pairs on the passing side of the allowance; weekly
-requires fourteen of fifteen. Consistent slowdowns fail; disagreement is
-inconclusive and also blocks. This agreement rule is not a statistical confidence
-interval. High noise does not widen the accepted performance budget.
+These shapes exercise complete pages with several megabytes of HTML, so a
+single request provides substantial measurement work. The weekly shape doubles
+the resource count. Actual batch durations and output sizes belong in each
+run's evidence; these synthetic shapes do not define production latency targets.
+
+| Measurement policy | Quick | Weekly |
+| --- | --- | --- |
+| Baseline request work per batch | 1 second | 2 seconds |
+| Minimum adequate observed batch | 750 ms | 1.5 seconds |
+| Baseline/self pairs | 3 | 3 |
+| Baseline/candidate pairs | 5 | 7 |
+| Required agreement | 4 of 5 | 6 of 7 |
+| Relative wall/CPU regression budget | 20% | 10% |
+| Minimum detectable batch increase | 50 ms | 50 ms |
+
+A baseline pilot selects a common count of 1–100,000 requests for both revisions.
+One bounded calibration adjustment can increase an undersized baseline batch.
+Reports retain observed duration, chosen count, adjustment and any cap limitation;
+a capped batch below the adequacy threshold is insufficient timing evidence.
+Cheap workloads have two warmup batches of about 100 ms each, outside the
+measurement. If the baseline pilot already meets the profile's work target with
+one expensive request, both revisions use count 1 and no extra request warmups.
+That case measures the first complete request after equivalent fixture setup;
+the candidate cannot choose a different warmup policy.
+
+Wall and process CPU time are compared separately after normalization per request.
+The minimum detectable increase is the larger of the profile's relative budget
+and 50 ms divided by the common request count. Paired baseline/self observations
+retain the measured noise. A consistent increase beyond the budget and noise
+fails. Reports distinguish ordinary variation from insufficient timing signal.
+Inconclusive timing remains labeled as such; it does not trigger automatic
+workflow retries. The agreement rules are engineering thresholds, not statistical
+confidence levels.
+
+Candidate order alternates. Setup, mount, schema, seeds, token issuance, reset,
+response parsing/digests and counter checks stay outside the timed loop. GC
+remains enabled, including collections triggered by measured requests. A
+30-second watchdog surrounds each request batch, including pilot and warmups.
+This also bounds every individual request without instrumenting the cheap request
+loop. It is supplementary runaway protection, not a regression budget. Setup has
+a separate 120-second timeout. Supervision records source, workload and phase and terminates
+and reaps stuck workers.
+
+Within each measurement or warmup, the worker validates each distinct raw body
+once for that scenario and retains an immutable proof of its parsed values and
+output semantics. Every operation still checks the raw digest and exact bytes,
+HTTP status and content type, called index, and execution/authorization/query
+records. A hash collision cannot reuse a proof. Proofs are discarded at the
+sample boundary and never shared between users, scenarios or source revisions.
+Samples retain metrics, one uniform validated counter record with its operation
+count, and distinct response examples with occurrence counts and raw bodies.
+Replay checks those counts, counters, examples and raw/canonical identities,
+including comparison mode, verified own version and source/environment/inputs.
+It compares response occurrence totals across paired samples; it does not retain
+request order or independently reprove each live authorization/counter check.
+The compact artifact is a summary, not an execution transcript.
 
 Allocation growth above baseline median plus the larger of 10% or 32 objects
 per request fails. Additional fixed-reference ceilings use measured accepted
@@ -96,7 +150,26 @@ counts with 25% headroom plus 32 objects/request. Exact SQL query and required
 authorization counts prevent a fast but incomplete operation from passing.
 Scaling bounds reflect actual output work; growing responses need not allocate
 a constant amount. Budget changes require measured justification and review.
-Missing or uncalibrated budgets fail rather than disabling the gate.
+Missing or uncalibrated budgets for the existing calibrated workloads fail rather
+than disabling the gate.
+
+Both profiles use the already recorded weekly Rust dependency closure as their
+expected runtime identity. Quick includes the Rust manifests, gemspec, resolved
+lock and actually loaded dependencies too. Baseline and candidate must match
+that environment exactly; unavailable or changed identities fail. The shared
+comparison entry point activates the recorded native JSON 2.21.2 before its
+first require, including in unbundled workers. A newer visible or already loaded
+JSON must not silently replace that dependency; a missing or conflicting version
+fails during activation. Historical
+quick allocation calibration and all existing reference/budget bytes are retained
+unchanged, without claiming that the original quick calibration loaded Rust.
+
+The root, Ruby server and Rust generator development Gemfiles declare JSON
+2.21.2 so fresh setup installs the recorded native dependency. Comparisons
+accept only that exact declaration change in these three files. They retain
+the original manifest contents, hashes and declaration evidence, then compare
+normalized contents. Replay verifies the transformation from the retained raw
+inputs. Other dependency requirements and manifest contents must match.
 
 ## GitHub workflow and baseline selection
 
@@ -148,37 +221,43 @@ Unrelated quick baselines still fail. Maintenance feature selection records both
 the captured default and release heads; missing release refs fail closed.
 
 These verified maintenance comparisons reuse the candidate's prepared environment
-for both sources. They normalize only the shared `0.30.x` patch identity, matching
+for both sources. In addition to the JSON preparation rule above, they normalize
+the shared `0.30.x` patch identity, matching
 local Ruby component VERSION assignments and exactly synchronized internal
-`haveapi-client` requirements. All other bytes in dependency manifests, gemspecs,
+`haveapi-client` requirements. All remaining bytes in dependency manifests, gemspecs,
 Ruby requirements and flake inputs must match, as must the resolved third-party
 runtime graph and retained lock bytes. Raw manifest contents and hashes remain
 bound to each verified source tree alongside their normalized hashes. Replay
 recomputes the transformation and rejects missing, inconsistent or changed inputs.
-Ordinary master comparisons keep their exact input matching.
 
 The HTML comparison may normalize the own-version segment of the documentation
-templates' `https://webui.haveapi.org/v<own-version>/#...` anchor hrefs. Validation
-runs after the timed loop. Complete raw bodies, byte counts and hashes remain in
+templates' `https://webui.haveapi.org/v<own-version>/#...` anchor hrefs and
+the version in the exact framework-generated HaveAPI footer. The footer must
+occur once and match the verified source's own VERSION; literal examples, other
+footer text and URLs remain exact. Validation runs after the timed loop. Complete raw bodies, byte counts and hashes remain in
 the samples, together with the normalized comparison digest and source version.
 Replay checks these again from the raw body. The exception applies only to the
-two HTML documentation workloads on the proven maintenance lineage. JSON/API
+HTML documentation workloads on the proven maintenance lineage. JSON/API
 values, other URLs and hosts, example code, authorization markers, panels and all
 other output remain exact. A version change cannot hide a response difference.
 
 The workflow uses ephemeral GitHub-hosted Ubuntu workers, `contents: read`,
 disabled checkout credential persistence, ordinary `pull_request` events and no
 secrets, publication context or PR comments. The comparison job has a hard
-10-minute quick limit and 30-minute weekly limit. Quick targets 5–10 minutes;
-a timeout blocks and needs diagnosis. Superseded runs are cancelled only within
+15-minute quick limit and 45-minute weekly limit. Measured page sizes and sample
+counts must leave room for preparation, ordinary workloads and evidence
+validation within those limits. Actual hosted campaign duration requires its own
+run receipt; the page probe alone does not prove it. A timeout blocks and needs
+diagnosis. Superseded runs are cancelled only within
 the same event/branch or PR concurrency group.
 
 Success, regression, inconclusive and preparation-failure artifacts are retained
 for 30 days. They include event selection, exact SHAs and source trees/archive
 hashes, matched dependency manifests, resolved locks, runtime/input graphs, raw
 samples, reports, process diagnostics and runner exit. The aggregate rejects
-failed, cancelled or unexpectedly skipped required work; it cannot turn missing
-reports or an inconclusive result into a pass.
+failed, cancelled or unexpectedly skipped required work and requires the retained
+report. A completed comparison can retain inconclusive timing diagnostics while
+its deterministic checks pass; the report keeps that distinction visible.
 Repository rules determine whether this aggregate check is required for merging;
 the workflow does not change branch protection or repository permissions.
 

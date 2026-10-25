@@ -96,15 +96,24 @@ module HaveAPI
           unless index.is_a?(Integer) && index >= 0 && index < @index
             raise ArgumentError, 'Invalid or uncalled SQLite operation index'
           end
+          unless response.status == 200 && response['content-type']&.start_with?('application/json')
+            raise 'Unexpected SQLite HTTP/envelope status'
+          end
+          raise 'Unexpected SQLite operation counters' unless @operations.fetch(index) == expected_counters
 
+          return yield(-> { validate_body!(response) }) if block_given?
+
+          validate_body!(response)
+        end
+
+        def validate_body!(response)
           identity = HaveAPI::Performance::Identity.json(response)
           body = identity.fetch(:canonical_body)
-          unless response.status == 200 && body['status'] == true && body['message'].nil? && body['errors'].nil? &&
-                 body.keys.sort == %w[errors message response status] && response['content-type']&.start_with?('application/json')
+          unless body['status'] == true && body['message'].nil? && body['errors'].nil? &&
+                 body.keys.sort == %w[errors message response status]
             raise 'Unexpected SQLite HTTP/envelope status'
           end
           raise 'Unexpected SQLite response rows or values' unless body['response'] == expected_response
-          raise 'Unexpected SQLite operation counters' unless @operations.fetch(index) == expected_counters
 
           identity
         end

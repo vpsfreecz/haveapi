@@ -10,17 +10,18 @@ module PerformanceSamples
     body = JSON.generate(status: true, response: { zero:, no: false, empty: '', null: nil })
     digest = Digest::SHA256.hexdigest(body)
     output = { 'http_status' => 200, 'envelope_status' => true, 'body_bytes' => body.bytesize,
-               'body_sha256' => digest, 'canonical_sha256' => identity.digest(JSON.parse(body)) }
-    sample = { 'operations' => 1, 'wall_seconds' => 0.001, 'cpu_seconds' => 0.001, 'allocated_objects' => 100,
+               'body_sha256' => digest, 'canonical_sha256' => identity.digest(JSON.parse(body)), 'count' => 1 }
+    sample = { 'operations' => 1, 'wall_seconds' => 2.0, 'cpu_seconds' => 2.0, 'allocated_objects' => 100,
                'outputs' => [output], 'bodies' => { digest => { 'body' => body, 'canonical_body' => JSON.parse(body) } },
-               'counters' => { 'operations' => [{ 'queries' => 0, 'authorizations' => 1, 'executions' => 1 }] } }
+               'counters' => { 'operations' => 1, 'record' => { 'queries' => 0, 'authorizations' => 1, 'executions' => 1 } } }
     spec = { 'id' => 'api.public_get', 'dimensions' => {} }
     environment = { 'ruby' => { 'version' => 'controlled-detector-trace' }, 'gems' => { 'test' => 'controlled' } }
     fixtures = { 'controlled' => 'f' * 64 }
-    inputs = { 'locks' => { 'Gemfile.lock' => 'a' * 64 }, 'manifests' => { 'Gemfile' => 'b' * 64 } }
+    preparation = HaveAPI::Performance::Release.json_preparation(HaveAPI::Performance::Release::JSON_GEMFILES.to_h { |path| [path, "source 'https://rubygems.org'\n"] })
+    inputs = { 'locks' => { 'Gemfile.lock' => 'a' * 64 }, 'manifests' => preparation.fetch('normalized_sha256'), 'json_preparation' => preparation }
     sources = %w[baseline candidate].each_with_index.to_h do |role, index|
       [role, { 'root' => "/controlled/#{role}", 'sha' => index == 0 ? baseline_sha : 'b' * 40,
-               'tree' => 'c' * 40, 'tracked_files' => 1, 'files_sha256' => { 'server.rb' => 'd' * 64 } }]
+               'tree' => 'c' * 40, 'tracked_files' => 1, 'files_sha256' => { 'server.rb' => 'd' * 64 }.merge(preparation.fetch('raw_sha256')) }]
     end
     observations = sources.flat_map do |role, source|
       %w[forward reverse].map do |order|
@@ -42,18 +43,30 @@ module PerformanceSamples
         'baseline' => sample.merge('observation' => index.even? ? 'baseline' : 'baseline-reverse'),
         'candidate' => sample.merge('observation' => "#{self_pair ? 'baseline' : 'candidate'}#{'-reverse' unless index.even?}") }
     end
-    budget = { 'schema_version' => 1, 'reference_sha' => HaveAPI::Performance::REFERENCE, 'environment' => { profile => environment },
+    budget = { 'schema_version' => 1, 'reference_sha' => HaveAPI::Performance::REFERENCE, 'environment' => { profile => environment, 'weekly' => environment },
                'calibration' => { profile => { 'source_sha' => HaveAPI::Performance::REFERENCE, 'raw_sha256' => 'f' * 64,
                                                'warmup_batches' => 2, 'iterations' => 1, 'fixture_sha256' => fixtures, 'inputs' => inputs } },
                'profiles' => { profile => [spec.merge('reference_allocations' => 100, 'allocation_ceiling' => 157,
-                                                      'counters' => sample['counters']['operations'].first)] } }
+                                                      'counters' => sample['counters']['record'])] } }
     budget_json = JSON.generate(budget)
-    samples = { 'schema_version' => 1, 'profile' => profile, 'baseline_sha' => baseline_sha, 'candidate_sha' => 'b' * 40,
+    samples = { 'schema_version' => HaveAPI::Performance::SAMPLE_SCHEMA, 'profile' => profile, 'baseline_sha' => baseline_sha, 'candidate_sha' => 'b' * 40,
                 'harness_sha256' => 'e' * 64, 'fixture_sha256' => fixtures,
                 'budget_sha256' => Digest::SHA256.hexdigest(budget_json), 'environment' => environment,
-                'inputs' => inputs, 'sources' => sources, 'observations' => observations, 'inventory' => [spec],
+                'inputs' => HaveAPI::Performance::Release.graph(inputs), 'sources' => sources, 'observations' => observations, 'inventory' => [spec],
                 'cases' => [spec.merge('iterations' => 1, 'self_pairs' => Array.new(policy[:self_pairs]) { |i| pair.call(i, true) },
                                        'pairs' => Array.new(policy[:pairs]) { |i| pair.call(i, false) })] }
+    HaveAPI::Performance.complex_cases(profile).each do |complex|
+      samples['inventory'] << complex
+      entry = Marshal.load(Marshal.dump(samples['cases'].first.merge(complex)))
+      (entry['self_pairs'] + entry['pairs']).each do |pair|
+        %w[baseline candidate].each do |role|
+          record = pair[role]['counters']['record']
+          record['executions'] = 0
+          record['authorizations'] = (complex['dimensions']['resources'] * complex['dimensions']['actions']) + 1
+        end
+      end
+      samples['cases'] << entry
+    end
     [JSON.parse(JSON.generate(samples)), budget_json]
   end
 end

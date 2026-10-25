@@ -33,7 +33,7 @@ jobs:
   performance:
     name: Compare endpoint performance
     runs-on: ubuntu-24.04
-    timeout-minutes: ${{ (github.event_name == 'schedule' || inputs.profile == 'weekly') && 30 || 10 }}
+    timeout-minutes: ${{ (github.event_name == 'schedule' || inputs.profile == 'weekly') && 45 || 15 }}
     outputs:
       outcome: ${{ steps.completion.outputs.outcome }}
     steps:
@@ -89,8 +89,8 @@ jobs:
           nix develop --command true > "$PERFORMANCE_EVIDENCE/setup-tools.log" 2>&1
           nix develop .#server-ruby --command true > "$PERFORMANCE_EVIDENCE/setup-server.log" 2>&1
 
-      - name: Prepare optional Rust dependencies
-        if: steps.resolve.outputs.relevant == 'true' && steps.resolve.outputs.profile == 'weekly'
+      - name: Prepare Rust documentation dependencies
+        if: steps.resolve.outputs.relevant == 'true'
         run: nix develop .#client-rust --command true > "$PERFORMANCE_EVIDENCE/setup-rust.log" 2>&1
 
       - name: Run paired sources with one dependency environment

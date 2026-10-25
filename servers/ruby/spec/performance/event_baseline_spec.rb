@@ -206,7 +206,7 @@ RSpec.describe HaveAPI::PerformanceCI do
     end
   end
 
-  [0, 1, 2, 3].each do |code|
+  [0, 1, 3].each do |code|
     it "preserves actual runner exit #{code} with a matching report" do
       Dir.mktmpdir('haveapi-runner-wrapper-') do |directory|
         checkout = File.join(directory, 'checkout')
@@ -217,7 +217,7 @@ RSpec.describe HaveAPI::PerformanceCI do
           output = ARGV.fetch(ARGV.index('--output') + 1)
           FileUtils.mkdir_p(output)
           File.write(File.join(output, 'report.json'), JSON.generate(
-            schema_version: 1, status: '#{{ 0 => 'pass', 1 => 'regression', 2 => 'inconclusive', 3 => 'error' }.fetch(code)}',
+            schema_version: #{HaveAPI::Performance::SAMPLE_SCHEMA}, status: '#{{ 0 => 'pass', 1 => 'regression', 2 => 'inconclusive', 3 => 'error' }.fetch(code)}',
             baseline_sha: '#{base}', candidate_sha: '#{candidate}'
           ))
           exit #{code}
@@ -265,7 +265,7 @@ RSpec.describe HaveAPI::PerformanceCI do
     expect(workflow.fetch('permissions')).to eq('contents' => 'read')
     job = workflow.fetch('jobs').fetch('performance')
     expect(job.fetch('runs-on')).to eq('ubuntu-24.04')
-    expect(job.fetch('timeout-minutes')).to include('30', '10')
+    expect(job.fetch('timeout-minutes')).to include('45', '15')
     gate = workflow.fetch('jobs').fetch('gate')
     expect(gate).to include('name' => 'Performance gate', 'needs' => 'performance', 'if' => 'always()')
     expect(gate.fetch('steps').first.fetch('run')).to include('test "$PERFORMANCE_RESULT" = success')

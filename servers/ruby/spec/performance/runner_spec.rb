@@ -4,6 +4,8 @@ require 'tmpdir'
 require 'fileutils'
 require_relative '../../benchmarks/endpoints'
 require_relative 'support/samples'
+require_relative '../../test_support/performance_endpoint_fixture'
+require_relative '../../test_support/documentation_performance_fixture'
 
 describe HaveAPI::Performance::Worker do
   def live_worker(control, rack_env: 'development')
@@ -40,12 +42,13 @@ describe HaveAPI::Performance::Worker do
     root = File.expand_path('../../../..', __dir__)
     expect(clean['inputs']['manifests']).to eq('servers/ruby/Gemfile' => Digest::SHA256.file(File.join(root, 'servers/ruby/Gemfile')).hexdigest)
     expect(clean['inputs']['locks']).to eq('servers/ruby/Gemfile.lock' => Digest::SHA256.file(File.join(root, 'servers/ruby/Gemfile.lock')).hexdigest)
-    expect(clean['cases'].first['outputs'].length).to eq(3)
+    expect(clean['cases'].first['outputs'].length).to eq(1)
+    expect(clean['cases'].first['outputs'].first['count']).to eq(3)
     expect(fault['cases'].first['allocated_objects']).to be > clean['cases'].first['allocated_objects'] + 4000
     expect(fault['source']['loaded_sources'].keys).to include('servers/ruby/lib/haveapi/server.rb',
                                                               'servers/ruby/lib/haveapi/model_adapters/active_record.rb',
                                                               'clients/ruby/lib/haveapi/client/client.rb')
-    # Replay the live worker's complete per-operation records through the real
+    # Replay the live worker's validated compact summary through the real
     # comparator CLI. Timing traces are controlled here; the allocation fault is
     # measured in the isolated process rather than manufactured arithmetic.
     samples, budget_json = PerformanceSamples.fixture
@@ -91,9 +94,7 @@ describe HaveAPI::Performance::Worker do
       expect(code).to eq(0), result.inspect
       expect(result['runtime_policy']).to eq(HaveAPI::Performance::RUNTIME_POLICY)
       expect(result['host'].values).to all(be_a(String))
-      expect(result['cases'].first['counters']['operations']).to eq(Array.new(3) do
-        { 'queries' => 1, 'authorizations' => 1, 'executions' => 1 }
-      end)
+      expect(result['cases'].first['counters']).to eq('operations' => 3, 'record' => { 'queries' => 1, 'authorizations' => 1, 'executions' => 1 })
     end
   end
 
@@ -139,43 +140,311 @@ describe HaveAPI::Performance::Worker do
     expect(result[:operations]).to eq(4)
   end
 
-  it 'normalizes source proofs before direct run comparison and preserves replay composition' do
-    samples, budget_json = PerformanceSamples.fixture
-    budgets = JSON.parse(budget_json)
-    Dir.mktmpdir('haveapi-run-composition-') do |directory|
-      policy = File.join(directory, 'budgets.json')
-      output = File.join(directory, 'result')
-      File.write(policy, budget_json)
-      %w[baseline candidate].each do |role|
-        root = File.join(directory, role)
-        Dir.mkdir(root)
-        samples['sources'][role]['root'] = root
+  it 'reuses immutable body proof within a sample while checking every operation and resetting between samples' do
+    scenario = HaveAPI::PerformanceFixtures::Endpoints.build(id: 'api.list', dimensions: { rows: 32 })
+    responses = []
+    allow(scenario).to(receive(:call).and_wrap_original { |call| call.call.tap { |response| responses << response } })
+    allow(scenario).to receive(:validate!).and_call_original
+    allow(scenario).to receive(:validate_body!).and_call_original
+    worker = described_class.new({})
+    result = worker.measure(scenario, 8)
+    expect(scenario).to have_received(:validate!).exactly(8).times
+    expect(scenario).to have_received(:validate_body!).once
+    expect(result[:bodies].length).to eq(1)
+    expect(result[:outputs].length).to eq(1)
+    expect(result[:outputs].first['count']).to eq(8)
+    expect(result[:counters]).to eq(operations: 8, record: { queries: 0, authorizations: 1, executions: 1 })
+    retained = result[:bodies].values.first
+    original = retained[:body].dup
+    responses.first.body.replace('changed after validation')
+    expect(retained[:body]).to eq(original)
+    expect { retained[:canonical_body]['response']['probe'].first['count'] = 9 }.to raise_error(FrozenError)
+    following = worker.measure(scenario, 3)
+    expect(following[:outputs].length).to eq(result[:outputs].length)
+    expect(following[:outputs].first['count']).to eq(3)
+    expect(scenario).to have_received(:validate_body!).twice
+  ensure
+    scenario&.close
+  end
+
+  it 'rejects later changed bodies, metadata, collisions and execution records despite an earlier valid body' do
+    %w[body status header collision counter].each do |fault|
+      scenario = HaveAPI::PerformanceFixtures::Endpoints.build(id: 'api.basic_get', dimensions: {})
+      scenario.reset!(iterations: 1)
+      valid = scenario.call
+      digest = Digest::SHA256.hexdigest(valid.body)
+      broken = valid.body.sub('"count":0', '"count":"wrong"')
+      calls = 0
+      allow(scenario).to receive(:call).and_wrap_original do |call|
+        response = call.call
+        calls += 1
+        next response unless calls == 3
+
+        case fault
+        when 'body', 'collision' then Rack::MockResponse.new(200, response.headers, broken)
+        when 'status' then Rack::MockResponse.new(403, response.headers, response.body)
+        when 'header' then Rack::MockResponse.new(200, { 'content-type' => 'text/plain' }, response.body)
+        else
+          scenario.instance_variable_get(:@state).operations[2][:executions] = 0
+          response
+        end
       end
-      cli = HaveAPI::Performance::CLI.new(['run', '--baseline-root', samples['sources']['baseline']['root'],
-                                           '--baseline-sha', samples['baseline_sha'],
-                                           '--candidate-root', samples['sources']['candidate']['root'],
-                                           '--candidate-sha', samples['candidate_sha'], '--budgets', policy, '--output', output])
-      # Control source verification and worker replies, retaining the real run
-      # assembly, child protocol validation, direct comparator and report path.
-      allow(cli).to receive_messages(git: '', ancestor?: true)
+      if fault == 'collision'
+        allow(Digest::SHA256).to receive(:hexdigest).and_call_original
+        allow(Digest::SHA256).to receive(:hexdigest).with(broken).and_return(digest)
+      end
+      expect { described_class.new({}).measure(scenario, 3) }.to raise_error(StandardError)
+      scenario.close
+    end
+  end
+
+  it 'does not reuse proof across authorization roles or trust a forged first canonical body' do
+    admin = HaveAPI::PerformanceFixtures::Endpoints.build(id: 'api.list', dimensions: { rows: 1, user: 'admin' })
+    member = HaveAPI::PerformanceFixtures::Endpoints.build(id: 'api.list', dimensions: { rows: 1, user: 'member' })
+    worker = described_class.new({})
+    administrative = worker.measure(admin, 2)
+    body = administrative[:bodies].values.first.fetch(:body)
+    allow(member).to receive(:call).and_wrap_original do |call|
+      response = call.call
+      Rack::MockResponse.new(200, response.headers, body)
+    end
+    expect { worker.measure(member, 2) }.to raise_error(/Unexpected output/)
+    allow(admin).to receive(:validate_body!).and_wrap_original do |validate, response|
+      validate.call(response).tap { |identity| identity[:canonical_body]['response']['probe'].first['count'] = 3 }
+    end
+    expect { worker.measure(admin, 2) }.to raise_error(HaveAPI::Performance::ContractError, %r{raw/canonical})
+    expect { worker.measure(admin, 100_001) }.to raise_error(HaveAPI::Performance::ContractError, /iteration/)
+  ensure
+    admin&.close
+    member&.close
+  end
+
+  it 'keeps documentation body proofs within their user/sample and checks uncalled indexes and auth every time' do
+    admin = HaveAPI::Performance::DocumentationScenario.new(id: 'docs.html_resources', dimensions: { size: 1, user: 'admin' })
+    member = HaveAPI::Performance::DocumentationScenario.new(id: 'docs.html_resources', dimensions: { size: 1, user: 'member' })
+    worker = described_class.new({})
+    [admin, member].each do |scenario|
+      allow(scenario).to receive(:validate_body!).and_call_original
+      worker.measure(scenario, 2)
+      expect(scenario).to have_received(:validate_body!).once
+    end
+    member.reset!(iterations: 2)
+    response = member.call
+    expect { member.validate!(response, index: 1) { raise 'uncalled body proof' } }.to raise_error(HaveAPI::Performance::ContractError, /uncalled/)
+    member.instance_variable_get(:@operations).first[:authorizations] = 0
+    expect { member.validate!(response, index: 0) { raise 'unchecked counter' } }.to raise_error(HaveAPI::Performance::ContractError, /counters/)
+    administrative = worker.measure(admin, 1)[:bodies].values.first[:body]
+    allow(member).to receive(:call).and_wrap_original do |call|
+      response = call.call
+      Rack::MockResponse.new(200, response.headers, administrative)
+    end
+    expect { worker.measure(member, 2) }.to raise_error(HaveAPI::Performance::ContractError, /authorization/)
+  ensure
+    admin&.close
+    member&.close
+  end
+
+  it 'selects shared counts above twenty thousand with one adjustment and retains cap inadequacy' do
+    [false, true].each do |under_cap|
+      pilot_seconds = under_cap ? 0.000001 : 0.000025
+      samples, = PerformanceSamples.fixture
+      cli = HaveAPI::Performance::CLI.new(['run', '--baseline-root', '/controlled/baseline', '--baseline-sha', samples['baseline_sha'],
+                                           '--candidate-root', '/controlled/candidate', '--candidate-sha', samples['candidate_sha'],
+                                           '--budgets', '/unused', '--output', '/unused'])
+      cli.send(:parse)
+      allow(cli).to receive(:verify_source) { |role| samples['sources'].fetch(role) }
+      allow(cli).to receive(:ancestor?).and_return(true)
       allow(HaveAPI::Performance::Release).to receive(:lineage).and_return(nil)
-      allow(cli).to receive(:verify_source) { |role| samples['sources'].fetch(role).transform_keys(&:to_sym) }
-      allow(Open3).to receive(:capture3) do |*_arguments, stdin_data:|
-        request = JSON.parse(stdin_data)
-        role = samples['sources'].find { |_name, source| source['sha'] == request['source_sha'] }.first
-        source = samples['sources'].fetch(role).merge('loaded_sources' => { 'server.rb' => 'd' * 64 })
-        observation = samples['observations'].fetch(role).merge('source' => source, 'fixture_sha256' => described_class.fixture_hashes,
-                                                                'workload_order' => request['workload_order'])
-        item = samples['cases'].first['pairs'].first.fetch(role).merge(samples['inventory'].first)
-        item = item.merge('wall_seconds' => 0.150) if request['counts'].empty?
-        result = observation.merge('inventory' => samples['inventory'], 'cases' => [item])
-        [JSON.generate(result), '', instance_double(Process::Status, success?: true)]
+      requests = []
+      item = samples['inventory'].first
+      key = HaveAPI::Performance::Identity.key(item)
+      allow(cli).to receive(:child) do |role, counts, label, *_order|
+        requests << [role, counts.dup, label]
+        cli.instance_variable_set(:@common, samples.slice('environment', 'inputs'))
+        duration = if label == 'pilot'
+                     pilot_seconds
+                   elsif label == 'calibration-adjusted'
+                     0.000009
+                   else
+                     0.00001
+                   end
+        duration = 0.000001 if under_cap
+        duration = 0.9 if role == 'candidate'
+        { 'inventory' => [item], 'cases' => [item.merge('wall_seconds' => duration)] }
       end
-      expect(cli.execute).to eq(0)
-      retained = JSON.parse(File.read(File.join(output, 'samples.json')))
-      expect(retained['sources']).to eq(samples['sources'])
-      report = HaveAPI::Performance::Comparator.new(retained, budgets, budget_sha256: Digest::SHA256.hexdigest(budget_json)).compare
-      expect(report['status']).to eq('pass')
+      result = cli.send(:run_samples, samples['budget_sha256'])['cases'].first
+      expect(result['iterations']).to eq(100_000)
+      expect(result['pilot']['capped']).to be(true)
+      expect(result['pilot']['adequate_signal']).to eq(!under_cap)
+      expect(requests.count { |request| request.last == 'calibration-adjusted' }).to eq(under_cap ? 0 : 1)
+      requests.reject { |request| %w[pilot calibration].include?(request.last) }.each do |_role, counts, _label|
+        expect(counts.fetch(key)).to eq(100_000)
+      end
+    end
+  end
+
+  it 'detects a live repeated-operation slowdown well below tenfold with per-request normalization' do
+    scenario_class = Class.new do
+      def initialize(delay)
+        @delay = delay
+      end
+
+      def reset!(iterations:)
+        @iterations = iterations
+      end
+
+      def call
+        sleep @delay
+        Rack::MockResponse.new(200, {}, JSON.generate(status: true, response: { zero: 0, no: false, empty: '', null: nil }))
+      end
+
+      def validate!(response, index:)
+        HaveAPI::Performance::Identity.json(response)
+      end
+
+      def counters
+        { operations: Array.new(@iterations) { { queries: 0, authorizations: 1, executions: 1 } } }
+      end
+    end
+    measured = [0.003, 0.0045].map do |delay|
+      JSON.parse(JSON.generate(described_class.new({}).measure(scenario_class.new(delay), 256)))
+    end
+    samples, json = PerformanceSamples.fixture
+    item = samples['cases'].first
+    item['iterations'] = 256
+    (item['self_pairs'] + item['pairs']).each_with_index do |pair, index|
+      %w[baseline candidate].each do |role|
+        observation = pair[role]['observation']
+        trace = measured[index < item['self_pairs'].length || role == 'baseline' ? 0 : 1]
+        pair[role] = trace.merge('observation' => observation)
+      end
+    end
+    budget = JSON.parse(json)
+    allocations = measured.first.fetch('allocated_objects')
+    budget['profiles']['quick'].first.merge!('reference_allocations' => allocations,
+                                             'allocation_ceiling' => (allocations * 1.25).ceil + 32)
+    json = JSON.generate(budget)
+    samples['budget_sha256'] = Digest::SHA256.hexdigest(json)
+    report = HaveAPI::Performance::Comparator.new(samples, budget, budget_sha256: samples['budget_sha256']).compare
+    expect(report['status']).to eq('regression')
+    expect(report['cases'].first['timing']['wall_seconds']['classification']).to eq('regression')
+    expect(measured.first['stages']['request_seconds']).to be >= 0.75
+    expect(measured.last['wall_seconds'] / measured.first['wall_seconds']).to be_between(1.20, 3.0)
+    warn JSON.generate(control: 'live repeated slowdown', operations: 256,
+                       baseline_batch_seconds: measured.first['stages']['request_seconds'],
+                       candidate_batch_seconds: measured.last['stages']['request_seconds'])
+  end
+
+  [false, true].each do |expensive|
+    it "preserves source/replay composition and common #{expensive ? 'expensive' : 'cheap'} count/warmup policy" do
+      samples, budget_json = PerformanceSamples.fixture
+      budgets = JSON.parse(budget_json)
+      Dir.mktmpdir('haveapi-run-composition-') do |directory|
+        policy = File.join(directory, 'budgets.json')
+        output = File.join(directory, 'result')
+        File.write(policy, budget_json)
+        %w[baseline candidate].each do |role|
+          root = File.join(directory, role)
+          Dir.mkdir(root)
+          samples['sources'][role]['root'] = root
+        end
+        cli = HaveAPI::Performance::CLI.new(['run', '--baseline-root', samples['sources']['baseline']['root'],
+                                             '--baseline-sha', samples['baseline_sha'],
+                                             '--candidate-root', samples['sources']['candidate']['root'],
+                                             '--candidate-sha', samples['candidate_sha'], '--budgets', policy, '--output', output])
+        # Control source verification and worker replies, retaining the real run
+        # assembly, child protocol validation, direct comparator and report path.
+        allow(cli).to receive_messages(git: '', ancestor?: true)
+        allow(HaveAPI::Performance::Release).to receive(:lineage).and_return(nil)
+        allow(cli).to receive(:verify_source) { |role| samples['sources'].fetch(role).transform_keys(&:to_sym) }
+        requests = []
+        allow(cli).to receive(:capture_worker) do |_environment, worker_request, label|
+          request = JSON.parse(JSON.generate(worker_request))
+          requests << [label, request]
+          role = samples['sources'].find { |_name, source| source['sha'] == request['source_sha'] }.first
+          source = samples['sources'].fetch(role).merge('loaded_sources' => { 'server.rb' => 'd' * 64 })
+          observation = samples['observations'].fetch(role).merge('source' => source, 'fixture_sha256' => described_class.fixture_hashes,
+                                                                  'workload_order' => request['workload_order'])
+          items = samples['cases'].map do |entry|
+            count = request['counts'].fetch(HaveAPI::Performance::Identity.key(entry), 1)
+            sample = entry['pairs'].first.fetch(role)
+            sample.merge(entry.slice('id', 'dimensions')).merge('operations' => count,
+                                                                'outputs' => sample['outputs'].map { |example| example.merge('count' => count) },
+                                                                'counters' => { 'operations' => count, 'record' => sample['counters']['record'] },
+                                                                'wall_seconds' => if expensive
+                                                                                    2.0
+                                                                                  else
+                                                                                    (label == 'pilot' ? 0.9 : 0.25)
+                                                                                  end, 'cpu_seconds' => if expensive
+                                                                                                          2.0
+                                                                                                        else
+                                                                                                          (label == 'pilot' ? 0.9 : 0.25)
+                                                                                                        end)
+          end
+          result = observation.merge('schema_version' => HaveAPI::Performance::SAMPLE_SCHEMA, 'inventory' => samples['inventory'], 'cases' => items)
+          [JSON.generate(result), '', instance_double(Process::Status, success?: true)]
+        end
+        expect(cli.execute).to eq(0)
+        retained = JSON.parse(File.read(File.join(output, 'samples.json')))
+        expect(retained['sources']).to eq(samples['sources'])
+        report = HaveAPI::Performance::Comparator.new(retained, budgets, budget_sha256: Digest::SHA256.hexdigest(budget_json)).compare
+        expect(report['status']).to eq('pass')
+        expect(requests.map(&:first).count('calibration-adjusted')).to eq(expensive ? 0 : 1)
+        expect(retained['cases'].map { |item| item['iterations'] }).to all(eq(expensive ? 1 : 4))
+        expect(retained['cases'].map { |item| item['pilot']['baseline_batch_seconds'] }).to all(eq(expensive ? 2.0 : 1.0))
+        requests.each do |label, request|
+          next if %w[pilot calibration].include?(label)
+
+          expect(request['counts'].values).to all(eq(expensive ? 1 : 4))
+          expect(request['warmup_counts'].values).to all(eq(expensive ? 0 : 1))
+        end
+      end
+    end
+  end
+
+  it 'terminates and reaps stalled API, SQLite and documentation batches with source and phase diagnostics' do
+    stub_const('HaveAPI::Performance::REQUEST_LIMIT_SECONDS', 0.05)
+    %w[api.public_get sqlite.page docs.html_rust].zip(%w[pilot warmup-0 measured]).each do |workload, phase|
+      Dir.mktmpdir('haveapi-watchdog-') do |directory|
+        cli = HaveAPI::Performance::CLI.new([])
+        cli.instance_variable_set(:@output, directory)
+        program = <<~RUBY
+          require 'json'
+          request = JSON.parse(STDIN.read)
+          progress = IO.for_fd(request.fetch('progress_fd'))
+          STDOUT.sync = STDERR.sync = true
+          puts Process.pid
+          warn 'before stalled request'
+          progress.puts(JSON.generate(state: 'request', workload: #{workload.inspect}, phase: #{phase.inspect}))
+          progress.flush
+          sleep 10
+        RUBY
+        allow(cli).to receive(:worker_command).and_return([RbConfig.ruby, '-e', program])
+        expect do
+          cli.send(:capture_worker, {}, { source_sha: 'a' * 40 }, 'controlled')
+        end.to raise_error(HaveAPI::Performance::WorkerTimeout) { |error|
+          expect(error.details).to include(kind: 'request_batch_timeout', workload:, source_sha: 'a' * 40, limit_seconds: 0.05)
+          expect(error.details[:phase]).to include(phase)
+        }
+        pid = File.read(File.join(directory, 'controlled.json')).to_i
+        expect(pid).to be > 0
+        expect { Process.kill(0, pid) }.to raise_error(Errno::ESRCH)
+        expect(File.read(File.join(directory, 'controlled.stderr.log'))).to include('before stalled request')
+      end
+    end
+  end
+
+  it 'distinguishes a worker setup timeout from request work' do
+    stub_const('HaveAPI::Performance::SETUP_LIMIT_SECONDS', 0.05)
+    Dir.mktmpdir('haveapi-setup-watchdog-') do |directory|
+      cli = HaveAPI::Performance::CLI.new([])
+      cli.instance_variable_set(:@output, directory)
+      allow(cli).to receive(:worker_command).and_return([RbConfig.ruby, '-e', 'sleep 10'])
+      expect do
+        cli.send(:capture_worker, {}, { source_sha: 'a' * 40 }, 'setup-control')
+      end.to raise_error(HaveAPI::Performance::WorkerTimeout) { |error|
+        expect(error.details[:kind]).to eq('worker_setup_timeout')
+      }
     end
   end
 

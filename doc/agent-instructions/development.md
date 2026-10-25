@@ -31,9 +31,13 @@ repository root unless explicitly stated otherwise.
   before changing fixtures, budgets or the performance workflow. `make
   test-performance` runs deterministic contracts; `make performance` and
   `make performance-compare` invoke the paired runner and replay classifier.
-  Quick/weekly CI blocks regressions, inconclusive timing and input/response
-  errors. Keep exact source SHAs, matched dependency graphs and resolved locks
-  with evidence; never update the fixed reference or budgets automatically.
+  Both profiles need the prepared Rust Ruby bundle for complete documentation
+  pages. Quick/weekly batches target one/two seconds of baseline request work,
+  with 20%/10% regression budgets and deterministic input/response gates.
+  Inconclusive timing stays diagnostic and is not a measured pass; do not retry
+  automatically until it becomes green. Keep exact source SHAs, matched
+  dependency graphs and resolved locks with evidence; never update the fixed
+  reference or budgets automatically.
 - Release tooling checks: `make release-check` and `make release-test` in the
   top-level Nix shell. `make release-deps` installs maintained-component
   dependencies and creates ignored local library locks. Prepare these inputs

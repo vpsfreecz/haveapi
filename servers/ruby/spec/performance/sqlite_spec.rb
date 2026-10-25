@@ -1,5 +1,6 @@
 require 'spec_helper'
 require_relative '../../test_support/performance_sqlite_fixture'
+require_relative '../../benchmarks/endpoints'
 
 describe HaveAPI::PerformanceFixtures::SQLite do
   def with_scenario(id: 'sqlite.includes', **dimensions)
@@ -14,6 +15,29 @@ describe HaveAPI::PerformanceFixtures::SQLite do
     responses = Array.new(count) { scenario.call }
     responses.each_with_index { |response, index| scenario.validate!(response, index:) }
     [responses, scenario.counters.fetch(:operations)]
+  end
+
+  it 'reuses only SQLite body semantics while checking every query, authorization and called index' do
+    with_scenario(rows: 32, include_depth: 2, user: 'member') do |scenario|
+      allow(scenario).to receive(:validate_body!).and_call_original
+      worker = HaveAPI::Performance::Worker.new({})
+      result = worker.measure(scenario, 4)
+      expect(result[:bodies].length).to eq(1)
+      expect(scenario).to have_received(:validate_body!).once
+      %i[queries authorizations executions].each do |counter|
+        calls = 0
+        allow(scenario).to receive(:call).and_wrap_original do |call|
+          response = call.call
+          calls += 1
+          scenario.instance_variable_get(:@operations)[1][counter] += 1 if calls == 2
+          response
+        end
+        expect { worker.measure(scenario, 3) }.to raise_error(/operation counters/)
+      end
+      scenario.reset!(iterations: 2)
+      response = scenario.call
+      expect { scenario.validate!(response, index: 1) { raise 'body validator must not run' } }.to raise_error(ArgumentError, /uncalled/)
+    end
   end
 
   it 'exposes unique stable quick/weekly cases and rejects unsupported shapes' do

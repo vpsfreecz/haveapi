@@ -1,0 +1,158 @@
+name: servers/ruby performance
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  schedule:
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: 'Full candidate SHA (leave both SHAs empty for default vs fixed reference)'
+        type: string
+        default: ''
+      baseline_sha:
+        description: 'Full ancestor baseline SHA'
+        type: string
+        default: ''
+      profile:
+        description: 'Performance workload'
+        type: choice
+        options: [quick, weekly]
+        default: quick
+
+permissions:
+  contents: read
+
+concurrency:
+  group: performance-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  performance:
+    name: Compare endpoint performance
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ (github.event_name == 'schedule' || inputs.profile == 'weekly') && 30 || 10 }}
+    outputs:
+      outcome: ${{ steps.completion.outputs.outcome }}
+    steps:
+      - name: Initialize retained evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/haveapi-performance-evidence"
+          echo "PERFORMANCE_EVIDENCE=$RUNNER_TEMP/haveapi-performance-evidence" >> "$GITHUB_ENV"
+          echo "PERFORMANCE_SOURCES=$RUNNER_TEMP/haveapi-performance-sources" >> "$GITHUB_ENV"
+          printf 'run_id=%s\nattempt=%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" \
+            > "$RUNNER_TEMP/haveapi-performance-evidence/workflow-run.txt"
+          cp "$GITHUB_EVENT_PATH" "$RUNNER_TEMP/haveapi-performance-evidence/event.json"
+
+      - name: Check out event source and history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve immutable sources and relevant paths
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ruby utils/performance_ci.rb resolve \
+            --event "$GITHUB_EVENT_PATH" --event-name "$EVENT_NAME" --event-sha "$EVENT_SHA" \
+            --repository "$GITHUB_WORKSPACE" --output "$PERFORMANCE_EVIDENCE/selection.json" \
+            --github-output "$GITHUB_OUTPUT" \
+            > "$PERFORMANCE_EVIDENCE/resolver.stdout" 2> "$PERFORMANCE_EVIDENCE/resolver.stderr"
+
+      - name: Check out the selected candidate harness
+        if: steps.resolve.outputs.relevant == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.resolve.outputs.candidate_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install Nix
+        if: steps.resolve.outputs.relevant == 'true'
+        uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # 31.11.3
+
+      - name: Prepare candidate server and tool dependencies once
+        if: steps.resolve.outputs.relevant == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          nix develop --command true > "$PERFORMANCE_EVIDENCE/setup-tools.log" 2>&1
+          nix develop .#server-ruby --command true > "$PERFORMANCE_EVIDENCE/setup-server.log" 2>&1
+
+      - name: Prepare optional Rust dependencies
+        if: steps.resolve.outputs.relevant == 'true' && steps.resolve.outputs.profile == 'weekly'
+        run: nix develop .#client-rust --command true > "$PERFORMANCE_EVIDENCE/setup-rust.log" 2>&1
+
+      - name: Run paired sources with one dependency environment
+        if: steps.resolve.outputs.relevant == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          HAVEAPI_RELEASE_TOOLS_ONLY=1 nix develop --command bash -euo pipefail -c '
+            combined_gems="$PWD/.gems:$PWD/clients/rust/.gems:$(ruby -e "puts Gem.default_dir")"
+            env -u RUBYOPT -u RUBYLIB -u BUNDLE_BIN_PATH -u BUNDLE_GEMFILE \
+              -u BUNDLE_LOCKFILE -u BUNDLE_PATH -u BUNDLE_FROZEN -u BUNDLER_SETUP \
+              GEM_PATH="$combined_gems" \
+              ruby utils/performance_ci.rb run --repository "$PWD" \
+              --selection "$PERFORMANCE_EVIDENCE/selection.json" \
+              --evidence "$PERFORMANCE_EVIDENCE" --sources "$PERFORMANCE_SOURCES"
+          ' > "$PERFORMANCE_EVIDENCE/campaign.log" 2>&1
+
+      - name: Record no-work selection
+        if: steps.resolve.outputs.relevant == 'false'
+        run: echo 'No relevant source changes; immutable event resolution passed.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Require explicit successful outcome
+        id: completion
+        env:
+          RELEVANT: ${{ steps.resolve.outputs.relevant }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$PERFORMANCE_EVIDENCE/selection.json"
+          case "$RELEVANT" in
+            true)
+              test "$(cat "$PERFORMANCE_EVIDENCE/runner.exit")" = 0
+              test -s "$PERFORMANCE_EVIDENCE/results/report.json"
+              echo 'outcome=compared' >> "$GITHUB_OUTPUT"
+              ;;
+            false) echo 'outcome=no-work' >> "$GITHUB_OUTPUT" ;;
+            *) echo 'Missing relevance output' >&2; exit 1 ;;
+          esac
+
+      - name: Retain success, regression and inconclusive evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: performance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.PERFORMANCE_EVIDENCE }}
+          retention-days: 30
+          if-no-files-found: error
+
+  gate:
+    name: Performance gate
+    needs: performance
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 1
+    steps:
+      - name: Require successful comparison or explicit no-work selection
+        env:
+          PERFORMANCE_RESULT: ${{ needs.performance.result }}
+          PERFORMANCE_OUTCOME: ${{ needs.performance.outputs.outcome }}
+        run: |
+          test "$PERFORMANCE_RESULT" = success
+          case "$PERFORMANCE_OUTCOME" in
+            compared|no-work) ;;
+            *) exit 1 ;;
+          esac

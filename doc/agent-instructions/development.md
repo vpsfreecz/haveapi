@@ -25,7 +25,15 @@ repository root unless explicitly stated otherwise.
   [the benchmark guide](../client-examples.md#documentation-benchmark) for shapes,
   optional Rust lanes and equivalent baseline/candidate runs. Fixture/mount setup
   is excluded from request measurements. Ordinary specs use deterministic
-  ownership, traversal and allocation checks, without a CI wall-clock gate.
+  ownership, traversal and allocation checks without wall-clock thresholds in
+  ordinary specs.
+- Required endpoint performance checks: see [performance testing](../performance.md)
+  before changing fixtures, budgets or the performance workflow. `make
+  test-performance` runs deterministic contracts; `make performance` and
+  `make performance-compare` invoke the paired runner and replay classifier.
+  Quick/weekly CI blocks regressions, inconclusive timing and input/response
+  errors. Keep exact source SHAs, matched dependency graphs and resolved locks
+  with evidence; never update the fixed reference or budgets automatically.
 - Release tooling checks: `make release-check` and `make release-test` in the
   top-level Nix shell. `make release-deps` installs maintained-component
   dependencies and creates ignored local library locks. Prepare these inputs

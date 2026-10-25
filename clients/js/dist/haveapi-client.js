@@ -376,7 +376,7 @@ var Client = function Client(url, opts) {
     this.authProvider = new Client.Authentication.Base();
 };
 /** @constant HaveAPI.Client.Version */
-Client.Version = '0.30.1';
+Client.Version = '0.30.2';
 /** @constant HaveAPI.Client.ProtocolVersion */
 Client.ProtocolVersion = '2.0';
 Client.unsafeAttachmentNames = Object.create(null);

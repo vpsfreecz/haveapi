@@ -4,12 +4,13 @@ require 'json'
 require 'open3'
 require 'optparse'
 require 'rbconfig'
+require_relative '../servers/ruby/benchmarks/performance_compare'
 
 module HaveAPI
   module PerformanceCI
     REFERENCE = 'b85ec364057f536940d689b09e612512ffffaf82'.freeze
     SHA = /\A[0-9a-f]{40}\z/
-    RELEVANT = %r{\A(?:servers/ruby/|clients/ruby/|clients/rust/|doc/|utils/performance_ci\.rb\z|utils/copydoc\.sh\z|\.github/workflows/servers-ruby-performance\.yml\z|(?:Gemfile|Makefile|flake\.nix|flake\.lock|\.ruby-version)\z)}
+    RELEVANT = %r{\A(?:servers/ruby/|clients/ruby/|clients/rust/|doc/|utils/performance_ci\.rb\z|utils/copydoc\.sh\z|\.github/workflows/servers-ruby-performance\.yml\z|(?:VERSION|Gemfile|Makefile|flake\.nix|flake\.lock|\.ruby-version)\z)}
 
     class Error < StandardError; end
 
@@ -54,6 +55,12 @@ module HaveAPI
       def default_sha(branch)
         commit!(git('rev-parse', '--verify', "refs/remotes/origin/#{branch}^{commit}").strip)
       end
+
+      def release_lineage(candidate)
+        Performance::Release.lineage(git: method(:git), ancestor: method(:ancestor?), candidate:)
+      rescue Performance::ContractError => e
+        raise Error, e.message
+      end
     end
 
     class Resolver
@@ -81,9 +88,16 @@ module HaveAPI
           raise Error, 'Only branch pushes are supported' unless event.fetch('ref').start_with?('refs/heads/')
 
           candidate = @repository.commit!(event.fetch('after'))
-          if event.fetch('ref') == "refs/heads/#{branch}"
+          lineage = @repository.release_lineage(candidate)
+          if ["refs/heads/#{branch}", 'refs/heads/haveapi-0.30'].include?(event.fetch('ref'))
+            raise Error, 'Unproven maintenance lineage' if event.fetch('ref') == 'refs/heads/haveapi-0.30' && !lineage
+
             baseline = @repository.commit!(event.fetch('before'))
-            reason = 'default-branch event before/after batch'
+            reason = event.fetch('ref') == "refs/heads/#{branch}" ? 'default-branch event before/after batch' : 'maintenance event before/after batch'
+          elsif lineage
+            release_sha = @repository.default_sha('haveapi-0.30')
+            baseline = @repository.merge_base(candidate, release_sha)
+            reason = 'whole maintenance feature against captured release'
           else
             baseline = @repository.merge_base(candidate, default_sha)
             reason = 'whole feature branch against captured default'
@@ -112,12 +126,16 @@ module HaveAPI
           raise Error, 'Weekly comparisons require the fixed accepted reference'
         end
         raise Error, 'Baseline and candidate must differ' if baseline == candidate
-        raise Error, 'Baseline must be an ancestor of candidate' unless @repository.ancestor?(baseline, candidate)
+
+        lineage ||= @repository.release_lineage(candidate)
+        unless @repository.ancestor?(baseline, candidate) || (profile == 'weekly' && baseline == REFERENCE && lineage)
+          raise Error, 'Baseline must be an ancestor of candidate'
+        end
 
         paths = @repository.paths(baseline, candidate)
         forced = %w[schedule workflow_dispatch].include?(event_name)
         { schema_version: 1, event_name:, profile:, candidate_sha: candidate, baseline_sha: baseline,
-          captured_default_sha: default_sha, fixed_reference_sha: REFERENCE, reason:,
+          captured_default_sha: default_sha, captured_release_sha: release_sha, release_lineage: lineage, fixed_reference_sha: REFERENCE, reason:,
           relevant: forced || paths.any? { |path| RELEVANT.match?(path) }, changed_paths: paths }
       rescue KeyError, TypeError => e
         raise Error, "Incomplete event: #{e.message}"
@@ -152,11 +170,19 @@ module HaveAPI
 
         candidate = @repository.commit!(@selection.fetch('candidate_sha'))
         baseline = @repository.commit!(@selection.fetch('baseline_sha'))
-        raise Error, 'Invalid selected ancestry' unless baseline != candidate && @repository.ancestor?(baseline, candidate)
+        @release_lineage = @repository.release_lineage(candidate)
+        unless baseline != candidate && (@repository.ancestor?(baseline, candidate) ||
+               (@selection.fetch('profile') == 'weekly' && baseline == REFERENCE && @release_lineage))
+          raise Error, 'Invalid selected ancestry'
+        end
+        if @selection.fetch('profile') == 'weekly' && baseline != REFERENCE
+          raise Error, 'Weekly comparisons require the fixed accepted reference'
+        end
         raise Error, 'Harness checkout differs from candidate' unless @repository.git('rev-parse', 'HEAD').strip == candidate
         raise Error, 'Harness checkout has tracked changes' unless @repository.git('diff', 'HEAD', '--').empty?
 
         FileUtils.mkdir_p(@evidence)
+        File.write(File.join(@evidence, 'release-lineage.json'), JSON.pretty_generate(@release_lineage)) if @release_lineage
         FileUtils.mkdir(@sources)
         roots = { baseline: export(:baseline, baseline), candidate: export(:candidate, candidate) }
         verify_dependencies(roots)
@@ -214,6 +240,19 @@ module HaveAPI
       end
 
       def verify_dependencies(roots)
+        if @release_lineage
+          receipts = roots.transform_values do |root|
+            contents = Performance::Release.paths(@selection.fetch('profile')).to_h { |path| [path, File.read(File.join(root, path))] }
+            Performance::Release.capture(contents)
+          end
+          File.write(File.join(@evidence, 'dependency-compatibility.json'), JSON.pretty_generate(receipts))
+          unless receipts[:baseline].fetch('normalized_sha256') == receipts[:candidate].fetch('normalized_sha256')
+            raise Error, 'Dependency inputs differ; reviewed environment migration required'
+          end
+
+          return
+        end
+
         configs = CONFIGS.dup
         specs = SPECS.dup
         if @selection.fetch('profile') == 'weekly'

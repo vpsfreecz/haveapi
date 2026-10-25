@@ -154,6 +154,7 @@ module HaveAPI
 
         selected = order == 'reverse' ? inventory.reverse : inventory
         results = selected.map do |spec|
+          @current_workload = spec.fetch(:id)
           count = @request.fetch('counts').fetch(Identity.key(JSON.parse(JSON.generate(spec))), 1)
           build_started = monotonic
           scenario = self.class.build(spec)
@@ -170,7 +171,8 @@ module HaveAPI
           result.merge(spec).merge(stages:)
         end
         { schema_version: 1, inventory:, cases: results, source: source_identity(source), environment: environment,
-          inputs: self.class.inputs(source, @request.fetch('profile')), fixture_sha256: self.class.fixture_hashes,
+          inputs: @request['release_versions'] ? self.class.inputs(source, @request.fetch('profile'), release: true) : self.class.inputs(source, @request.fetch('profile')),
+          fixture_sha256: self.class.fixture_hashes,
           runtime_policy: policy, workload_order: order, host: host_identity,
           stages: { require_load_seconds: load_seconds, worker_seconds: monotonic - started } }
       end
@@ -230,6 +232,14 @@ module HaveAPI
           end
           raise ContractError, 'Missing canonical identity' unless identity.has_key?('canonical_sha256')
 
+          if @request['release_versions'] && scenario.is_a?(DocumentationScenario) &&
+             @current_workload.to_s.start_with?('docs.html_')
+            own = File.read(File.join(@request.fetch('source_root'), 'VERSION')).strip
+            normalized = Release.html(response.body, own)
+            identity['canonical_sha256'] = Digest::SHA256.hexdigest(normalized)
+            identity['comparison'] = { 'kind' => 'own-webui-href', 'own_version' => own }
+          end
+
           if bodies.has_key?(raw_digest) && bodies[raw_digest][:body] != response.body
             raise ContractError, 'Raw output digest collision'
           end
@@ -253,7 +263,7 @@ module HaveAPI
         paths.to_h { |path| [path, Digest::SHA256.file(File.join(ROOT, path)).hexdigest] }
       end
 
-      def self.inputs(source, profile)
+      def self.inputs(source, profile, release: false)
         paths = %w[flake.lock servers/ruby/Gemfile servers/ruby/haveapi.gemspec clients/ruby/Gemfile clients/ruby/haveapi-client.gemspec]
         paths += %w[clients/rust/Gemfile clients/rust/haveapi-rust-client.gemspec] if profile == 'weekly'
         manifests = paths.to_h do |path|
@@ -269,6 +279,15 @@ module HaveAPI
           raise ContractError, "Missing resolved lock #{target}" unless File.file?(target)
 
           [path, Digest::SHA256.file(target).hexdigest]
+        end
+        if release
+          contents = Release.paths(profile).to_h { |path| [path, File.read(File.join(source, path))] }
+          receipt = Release.capture(contents)
+          versions = [HaveAPI::VERSION, HaveAPI::Client::VERSION]
+          versions << HaveAPI::RustClient::VERSION if profile == 'weekly'
+          raise ContractError, 'Wrong loaded local package version' unless versions.all? { |version| version == receipt.fetch('own_version') }
+
+          return { manifests: receipt.fetch('normalized_sha256'), locks:, release_versions: receipt }
         end
         { manifests:, locks: }
       end
@@ -379,6 +398,13 @@ module HaveAPI
         output
       end
 
+      def ancestor?(left, right)
+        _output, status = Open3.capture2('git', '-C', ROOT, 'merge-base', '--is-ancestor', left, right, err: File::NULL)
+        raise ContractError, 'Cannot establish source ancestry' unless [0, 1].include?(status.exitstatus)
+
+        status.success?
+      end
+
       def verify_source(role)
         sha = @options.fetch(:"#{role}_sha")
         raise ContractError, 'Source SHA must be full immutable SHA' unless sha.match?(/\A[0-9a-f]{40}\z/) && sha != '0' * 40
@@ -409,10 +435,12 @@ module HaveAPI
 
         sources = %w[baseline candidate].to_h { |role| [role, verify_source(role)] }
         @sources = JSON.parse(JSON.generate(sources))
-        git('merge-base', '--is-ancestor', @options[:baseline_sha], @options[:candidate_sha])
-        if @options[:profile] == 'weekly'
-          git('merge-base', '--is-ancestor', REFERENCE, @options[:candidate_sha])
+        @release_lineage = Release.lineage(git: method(:git), ancestor: method(:ancestor?), candidate: @options[:candidate_sha])
+        unless ancestor?(@options[:baseline_sha], @options[:candidate_sha]) ||
+               (@options[:profile] == 'weekly' && @options[:baseline_sha] == REFERENCE && @release_lineage)
+          raise ContractError, 'Baseline must be an ancestor of candidate'
         end
+
         pilot = child('baseline', {}, 'pilot')
         inventory = pilot.fetch('inventory')
         counts = pilot.fetch('cases').to_h do |item|
@@ -443,7 +471,8 @@ module HaveAPI
         { 'schema_version' => 1, 'profile' => @options[:profile], 'baseline_sha' => @options[:baseline_sha],
           'candidate_sha' => @options[:candidate_sha], 'harness_sha256' => Identity.digest(Worker.fixture_hashes),
           'fixture_sha256' => Worker.fixture_hashes, 'budget_sha256' => digest, 'sources' => @sources,
-          'environment' => @common.fetch('environment'), 'inputs' => @common.fetch('inputs'), 'observations' => @observations,
+          'environment' => @common.fetch('environment'), 'inputs' => @common.fetch('inputs'), 'release_lineage' => @release_lineage,
+          'observations' => @observations,
           'inventory' => inventory, 'cases' => cases }
       end
 
@@ -460,7 +489,7 @@ module HaveAPI
 
       def child(role, counts, label, workload_order = 'forward')
         request = { source_root: File.realpath(@options.fetch(:"#{role}_root")), source_sha: @options.fetch(:"#{role}_sha"),
-                    profile: @options[:profile], workload_order:, counts: }
+                    profile: @options[:profile], workload_order:, counts:, release_versions: !@release_lineage.nil? }
         env = ENV.keys.grep(/\ABUNDLE|\ABUNDLER|\ARUBY(?:OPT|LIB)\z/).to_h { |key| [key, nil] }
         env.merge!('LC_ALL' => 'C.UTF-8', 'LANG' => 'C.UTF-8', 'TZ' => 'UTC', 'RUBY_YJIT_ENABLE' => '0', 'RACK_ENV' => 'test')
         process_started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
@@ -480,7 +509,13 @@ module HaveAPI
           end
         end
 
-        common = result.slice('environment', 'inputs', 'inventory', 'fixture_sha256')
+        inputs = result.fetch('inputs')
+        if @release_lineage
+          Release.validate_inputs(inputs, @sources.fetch(role), @options.fetch(:profile))
+        elsif inputs.has_key?('release_versions')
+          raise ContractError, 'Unproven own-version normalization'
+        end
+        common = result.slice('environment', 'inventory', 'fixture_sha256').merge('inputs' => Release.graph(inputs))
         @common ||= common
         raise ContractError, 'Incompatible dependency/runtime/input/workload graph' unless common == @common
 

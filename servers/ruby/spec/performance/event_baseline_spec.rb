@@ -28,7 +28,7 @@ RSpec.describe HaveAPI::PerformanceCI do
 
       value
     end
-    allow(repository).to receive_messages(ancestor?: true, paths: ['servers/ruby/lib/haveapi/server.rb'])
+    allow(repository).to receive_messages(ancestor?: true, paths: ['servers/ruby/lib/haveapi/server.rb'], release_lineage: nil)
   end
 
   def resolve(name, data, **options)
@@ -64,6 +64,64 @@ RSpec.describe HaveAPI::PerformanceCI do
   it 'rejects initial default-branch pushes without an available predecessor' do
     event.merge!('ref' => 'refs/heads/master', 'after' => candidate, 'before' => '0' * 40)
     expect { resolve('push', event) }.to raise_error(described_class::Error)
+  end
+
+  context 'with the verified maintenance lineage' do
+    def release
+      sha('e')
+    end
+
+    def lineage
+      { 'candidate_sha' => candidate, 'mapped_sha' => HaveAPI::Performance::Release::MAPPED }
+    end
+
+    before do
+      allow(repository).to receive(:release_lineage).with(candidate).and_return(lineage)
+      allow(repository).to receive(:default_sha).with('haveapi-0.30').and_return(release)
+    end
+
+    it 'compares the complete maintenance push batch using event before' do
+      event.merge!('ref' => 'refs/heads/haveapi-0.30', 'before' => base, 'after' => candidate)
+      expect(resolve('push', event)).to include(baseline_sha: base, candidate_sha: candidate,
+                                                release_lineage: lineage, reason: 'maintenance event before/after batch')
+    end
+
+    [false, true].each do |created|
+      it "captures the release head for a #{created ? 'new' : 'subsequent'} release feature" do
+        event.merge!('ref' => 'refs/heads/feature', 'before' => created ? '0' * 40 : sha('a'), 'after' => candidate)
+        allow(repository).to receive(:merge_base).with(candidate, release).and_return(base)
+        expect(resolve('push', event)).to include(baseline_sha: base, captured_release_sha: release,
+                                                  captured_default_sha: default, release_lineage: lineage)
+      end
+    end
+
+    it 'fails if the captured release reference is unavailable' do
+      event.merge!('ref' => 'refs/heads/feature', 'after' => candidate)
+      allow(repository).to receive(:default_sha).with('haveapi-0.30').and_raise(described_class::Error, 'missing release ref')
+      expect { resolve('push', event) }.to raise_error(described_class::Error, /missing release ref/)
+    end
+
+    it 'accepts only the original weekly reference through the proven mapping' do
+      event['inputs'] = { 'profile' => 'weekly', 'candidate_sha' => candidate, 'baseline_sha' => described_class::REFERENCE }
+      allow(repository).to receive(:ancestor?).with(described_class::REFERENCE, candidate).and_return(false)
+      expect(resolve('workflow_dispatch', event)).to include(baseline_sha: described_class::REFERENCE, release_lineage: lineage)
+      event['inputs']['profile'] = 'quick'
+      expect { resolve('workflow_dispatch', event) }.to raise_error(described_class::Error, /ancestor/)
+      event['inputs']['profile'] = 'weekly'
+      allow(repository).to receive(:release_lineage).with(candidate).and_return(nil)
+      expect { resolve('workflow_dispatch', event) }.to raise_error(described_class::Error, /ancestor/)
+    end
+
+    it 'does not accept an unrelated explicit quick baseline' do
+      event['inputs'] = { 'candidate_sha' => candidate, 'baseline_sha' => base }
+      allow(repository).to receive(:ancestor?).with(base, candidate).and_return(false)
+      expect { resolve('workflow_dispatch', event) }.to raise_error(described_class::Error, /ancestor/)
+    end
+  end
+
+  it 'rejects unproven maintenance branch history' do
+    event.merge!('ref' => 'refs/heads/haveapi-0.30', 'before' => base, 'after' => candidate)
+    expect { resolve('push', event) }.to raise_error(described_class::Error, /Unproven/)
   end
 
   it 'rejects deleted pushes and tag events' do

@@ -112,6 +112,8 @@ Missing event/source evidence fails even when no relevant path can be establishe
 | Pull request | Exact event head SHA | Merge-base of head and exact event base SHA |
 | Feature push, including a new branch | Event `after` | Merge-base with captured default-branch SHA; compares the whole feature |
 | Default-branch push | Event `after` | Event `before`, covering the whole pushed batch |
+| `haveapi-0.30` push with verified maintenance lineage | Event `after` | Event `before`, covering the whole pushed batch |
+| Feature push with verified maintenance lineage | Event `after` | Merge-base with captured `origin/haveapi-0.30` head |
 | Weekly | Exact scheduled default-branch event SHA | Fixed accepted reference below |
 | Manual with a complete explicit pair | Supplied full candidate SHA | Supplied full baseline SHA |
 | Manual without either SHA | Captured default SHA | Fixed accepted reference below |
@@ -124,6 +126,45 @@ unrelated history or equal baseline/candidate fail. PRs use the head commit,
 never the synthetic merge commit; default pushes use `before`, never `HEAD^`.
 The weekly profile always requires that fixed baseline, including an explicit
 manual pair. An explicit quick pair may select another ancestor.
+
+### Maintained 0.30 release comparisons
+
+The original fixed reference remains the measured baseline for weekly runs.
+Its maintenance counterpart is
+`8b7abc097db49893da9cc8fa4395648901fec71d`. The resolver and direct runner accept
+this one nonliteral ancestry relationship only when the counterpart is a literal
+candidate ancestor and the complete binary tree delta from the original reference
+equals the published 0.30.1 metadata commit
+`1c3c98f0d77e0b23c8da1a8937f25c5799864a3b` relative to its parent. They verify
+the exact four trees and canonical full-index delta hash, retain both raw diffs
+and bind the receipt to
+the candidate SHA. Cherry-pick trailers do not establish this proof. A different
+mapping needs a new review; the reference and budget calibration never change.
+Diff rendering uses full blob IDs and explicit formatting options, independent
+of repository-dependent abbreviation and user diff display settings. Ordinary
+master ancestry is checked before probing the maintenance mapping, so a master
+clone does not need maintenance objects for that path.
+Unrelated quick baselines still fail. Maintenance feature selection records both
+the captured default and release heads; missing release refs fail closed.
+
+These verified maintenance comparisons reuse the candidate's prepared environment
+for both sources. They normalize only the shared `0.30.x` patch identity, matching
+local Ruby component VERSION assignments and exactly synchronized internal
+`haveapi-client` requirements. All other bytes in dependency manifests, gemspecs,
+Ruby requirements and flake inputs must match, as must the resolved third-party
+runtime graph and retained lock bytes. Raw manifest contents and hashes remain
+bound to each verified source tree alongside their normalized hashes. Replay
+recomputes the transformation and rejects missing, inconsistent or changed inputs.
+Ordinary master comparisons keep their exact input matching.
+
+The HTML comparison may normalize the own-version segment of the documentation
+templates' `https://webui.haveapi.org/v<own-version>/#...` anchor hrefs. Validation
+runs after the timed loop. Complete raw bodies, byte counts and hashes remain in
+the samples, together with the normalized comparison digest and source version.
+Replay checks these again from the raw body. The exception applies only to the
+two HTML documentation workloads on the proven maintenance lineage. JSON/API
+values, other URLs and hosts, example code, authorization markers, panels and all
+other output remain exact. A version change cannot hide a response difference.
 
 The workflow uses ephemeral GitHub-hosted Ubuntu workers, `contents: read`,
 disabled checkout credential persistence, ordinary `pull_request` events and no

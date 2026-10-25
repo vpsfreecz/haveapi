@@ -11,6 +11,122 @@ module HaveAPI
     RUNTIME_POLICY = { 'rack_env' => 'test', 'locale' => 'C.UTF-8', 'timezone' => 'UTC', 'yjit' => false, 'rjit' => false }.freeze
     class ContractError < StandardError; end
 
+    # One reviewed maintenance mapping, not a general cherry-pick certificate.
+    # Both live entry points verify Git; replay verifies the retained raw delta.
+    module Release
+      MAPPED = '8b7abc097db49893da9cc8fa4395648901fec71d'.freeze
+      METADATA = '1c3c98f0d77e0b23c8da1a8937f25c5799864a3b'.freeze
+      DELTA = '0a008acbb46434a0914421064149ce154ea41a6e82a29022c53e666eb2066fd5'.freeze
+      DIFF = %w[-c diff.suppressBlankEmpty=false -c core.quotePath=true diff --binary --full-index
+                --no-ext-diff --no-textconv --no-color --no-renames --diff-algorithm=myers
+                --no-indent-heuristic --unified=3 --inter-hunk-context=0 --src-prefix=a/ --dst-prefix=b/
+                --line-prefix= --no-relative -O/dev/null].freeze
+      TREES = %w[aaa082cae86f0a24559333213ab959729fb37494 e5a3896cad997648eaa08ff1c1865deca5de9a43
+                 32a09190e05a89f6312e07f20a9e4585335e468c d42a0638dc93a40ef08718ae2bf6897df966d980].freeze
+      VERSIONS = { 'servers/ruby/lib/haveapi/version.rb' => 'haveapi',
+                   'clients/ruby/lib/haveapi/client/version.rb' => 'haveapi-client',
+                   'clients/rust/lib/haveapi/rust_client/version.rb' => 'haveapi-rust-client' }.freeze
+
+      def self.lineage(git:, ancestor:, candidate:)
+        # Ordinary master ancestry needs no maintenance objects, including in a
+        # single-branch clone. Probe the exceptional mapping only when needed.
+        return if ancestor.call(REFERENCE, candidate)
+        return unless ancestor.call(MAPPED, candidate)
+
+        proof = { 'candidate_sha' => candidate, 'reference_sha' => REFERENCE, 'mapped_sha' => MAPPED,
+                  'metadata_sha' => METADATA,
+                  'trees' => [REFERENCE, MAPPED, "#{METADATA}^", METADATA].map { |sha| git.call('rev-parse', "#{sha}^{tree}").strip },
+                  'reference_delta' => git.call(*DIFF, REFERENCE, MAPPED),
+                  'metadata_delta' => git.call(*DIFF, "#{METADATA}^", METADATA) }
+        validate_lineage(proof, candidate)
+        proof
+      end
+
+      def self.validate_lineage(proof, candidate)
+        unless proof.fetch('candidate_sha') == candidate && proof.fetch('reference_sha') == REFERENCE &&
+               proof.fetch('mapped_sha') == MAPPED && proof.fetch('metadata_sha') == METADATA && proof.fetch('trees') == TREES &&
+               proof.fetch('reference_delta') == proof.fetch('metadata_delta') &&
+               Digest::SHA256.hexdigest(proof.fetch('reference_delta')) == DELTA
+          raise ContractError, 'Invalid published release lineage proof'
+        end
+      end
+
+      def self.version(contents)
+        value = contents.fetch('VERSION').strip
+        unless value.match?(/\A0\.30\.(?:0|[1-9][0-9]*)\z/) && contents.fetch('VERSION') == "#{value}\n"
+          raise ContractError, 'Expected own 0.30 patch version'
+        end
+
+        value
+      end
+
+      def self.paths(profile)
+        versions = VERSIONS.keys.reject { |path| profile != 'weekly' && path.start_with?('clients/rust/') }
+        %w[VERSION .ruby-version flake.nix flake.lock Gemfile servers/ruby/Gemfile clients/ruby/Gemfile] +
+          versions + versions.map { |path| "#{path.split('/lib/').first}/#{VERSIONS.fetch(path)}.gemspec" } +
+          (profile == 'weekly' ? ['clients/rust/Gemfile'] : [])
+      end
+
+      # Compare every byte except the validated component VERSION assignment and
+      # its synchronized internal dependency. Keep both raw and normalized hashes.
+      def self.normalize(contents)
+        own = version(contents)
+        normalized = contents.dup
+        normalized['VERSION'] = "0.30.PATCH\n"
+        VERSIONS.each do |path, name|
+          next unless contents.has_key?(path)
+
+          source = contents.fetch(path)
+          raise ContractError, "Mismatched local #{name} version" unless source.scan(/^\s*VERSION = '([^']+)'/).flatten == [own]
+
+          normalized[path] = source.sub(/^(\s*VERSION = )'#{Regexp.escape(own)}'/, "\\1'0.30.PATCH'")
+          spec_path = "#{path.split('/lib/').first}/#{name}.gemspec"
+          spec = contents.fetch(spec_path)
+          raise ContractError, 'Mismatched local package identity' unless spec.match?(/\.name\s*= '#{Regexp.escape(name)}'/)
+          next if name == 'haveapi-client'
+
+          requirement = /(?<=\.add_dependency )'haveapi-client', '~> ([^']+)'/
+          raise ContractError, 'Unsynchronized internal client constraint' unless spec.scan(requirement).flatten == [own]
+
+          normalized[spec_path] = spec.sub(requirement, "'haveapi-client', '~> 0.30.PATCH'")
+        end
+        normalized
+      end
+
+      def self.capture(contents)
+        { 'contents' => contents, 'own_version' => version(contents),
+          'raw_sha256' => contents.transform_values { |value| Digest::SHA256.hexdigest(value) },
+          'normalized_sha256' => normalize(contents).transform_values { |value| Digest::SHA256.hexdigest(value) } }
+      end
+
+      def self.validate_inputs(inputs, source, profile)
+        receipt = inputs.fetch('release_versions')
+        raise ContractError, 'Incomplete release input graph' unless receipt.fetch('contents').keys.sort == paths(profile).sort
+        raise ContractError, 'Release input normalization mismatch' unless receipt == capture(receipt.fetch('contents'))
+        raise ContractError, 'Release normalized graph mismatch' unless inputs.fetch('manifests') == receipt.fetch('normalized_sha256')
+
+        receipt.fetch('raw_sha256').each do |path, digest|
+          raise ContractError, 'Release input escaped verified source' unless source.fetch('files_sha256').fetch(path) == digest
+        end
+        receipt.fetch('own_version')
+      end
+
+      def self.graph(inputs)
+        inputs.except('release_versions')
+      end
+
+      def self.html(body, own)
+        raise ContractError, 'Expected own 0.30 patch version' unless own.match?(/\A0\.30\.(?:0|[1-9][0-9]*)\z/)
+
+        # Skip literal/example text in opaque HTML elements and comments. Only
+        # the href-first anchors emitted by the two documentation templates match.
+        pattern = %r{<!--.*?-->|(?i:<(?<opaque>script|style|pre|code|textarea)\b[^>]*>.*?</\k<opaque>\s*>)|(?<link><a\s+href=")https://webui\.haveapi\.org/v#{Regexp.escape(own)}/(?=#[^"<>]*")}m
+        body.gsub(pattern) do |match|
+          Regexp.last_match[:link] ? "#{Regexp.last_match[:link]}https://webui.haveapi.org/v0.30.PATCH/" : match
+        end
+      end
+    end
+
     def self.validate_source_pair(profile:, baseline_sha:, candidate_sha:)
       raise ContractError, 'Baseline and candidate must differ' if baseline_sha == candidate_sha
       return unless profile == 'weekly' && baseline_sha != REFERENCE
@@ -127,6 +243,8 @@ module HaveAPI
         end
 
         sources = @samples.fetch('sources')
+        lineage = @samples['release_lineage']
+        Release.validate_lineage(lineage, @samples.fetch('candidate_sha')) if lineage
         %w[baseline candidate].each do |role|
           source = sources.fetch(role)
           unless source.fetch('sha') == @samples.fetch("#{role}_sha") && source.fetch('root').start_with?('/') &&
@@ -148,7 +266,13 @@ module HaveAPI
           source.fetch('loaded_sources').each do |path, sha256|
             raise ContractError, 'Loaded runtime not in verified source tree' unless selected.fetch('files_sha256').fetch(path) == sha256
           end
-          unless observation.fetch('environment') == @samples['environment'] && observation.fetch('inputs') == @samples.fetch('inputs') &&
+          inputs = observation.fetch('inputs')
+          if lineage
+            Release.validate_inputs(inputs, selected, @samples.fetch('profile'))
+          elsif inputs.has_key?('release_versions')
+            raise ContractError, 'Unproven own-version normalization'
+          end
+          unless observation.fetch('environment') == @samples['environment'] && Release.graph(inputs) == @samples.fetch('inputs') &&
                  observation.fetch('fixture_sha256') == @samples['fixture_sha256']
             raise ContractError, 'Worker provenance mismatch'
           end
@@ -170,7 +294,7 @@ module HaveAPI
         sorted.length.odd? ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2.0
       end
 
-      def validate_sample(sample, iterations, budget)
+      def validate_sample(sample, iterations, budget, workload)
         METRICS.each { |metric| number(sample.fetch(metric)) }
         raise ContractError, 'Operation count mismatch' unless sample.fetch('operations') == iterations
 
@@ -199,6 +323,15 @@ module HaveAPI
 
           canonical = raw['canonical_body']
           digest = canonical.nil? ? output['body_sha256'] : Identity.digest(canonical)
+          if output.has_key?('comparison')
+            comparison = output.fetch('comparison')
+            unless @samples['release_lineage'] && %w[docs.html_resources docs.html_actions].include?(workload) && canonical.nil? &&
+                   comparison == { 'kind' => 'own-webui-href', 'own_version' => proof.fetch('inputs').fetch('release_versions').fetch('own_version') }
+              raise ContractError, 'Invalid own-version HTML comparison'
+            end
+
+            digest = Digest::SHA256.hexdigest(Release.html(raw.fetch('body'), comparison.fetch('own_version')))
+          end
           if digest != output['canonical_sha256']
             raise ContractError, 'Canonical output digest mismatch'
           end
@@ -257,7 +390,7 @@ module HaveAPI
 
           %w[baseline candidate].each do |role|
             sample = pair.fetch(role)
-            validate_sample(sample, iterations, budget)
+            validate_sample(sample, iterations, budget, item.fetch('id'))
             expected_sha = index < self_pairs.length ? @samples['baseline_sha'] : @samples["#{role}_sha"]
             actual_sha = @samples['observations'].fetch(sample['observation']).fetch('source').fetch('sha')
             raise ContractError, 'Sample belongs to wrong revision' unless actual_sha == expected_sha

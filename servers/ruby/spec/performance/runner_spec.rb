@@ -157,7 +157,8 @@ describe HaveAPI::Performance::Worker do
                                            '--candidate-sha', samples['candidate_sha'], '--budgets', policy, '--output', output])
       # Control source verification and worker replies, retaining the real run
       # assembly, child protocol validation, direct comparator and report path.
-      allow(cli).to receive(:git).and_return('')
+      allow(cli).to receive_messages(git: '', ancestor?: true)
+      allow(HaveAPI::Performance::Release).to receive(:lineage).and_return(nil)
       allow(cli).to receive(:verify_source) { |role| samples['sources'].fetch(role).transform_keys(&:to_sym) }
       allow(Open3).to receive(:capture3) do |*_arguments, stdin_data:|
         request = JSON.parse(stdin_data)

@@ -2,7 +2,7 @@ VERSION=$(shell cat VERSION)
 BENCHMARK_DOCUMENTATION_RUBY ?= bundle exec ruby
 RUST_ENV=env -u RUBYOPT -u RUBYLIB -u BUNDLE_BIN_PATH -u BUNDLE_LOCKFILE -u BUNDLE_PATH -u BUNDLE_FROZEN -u BUNDLER_SETUP GEM_HOME="$(CURDIR)/clients/rust/.gems" GEM_PATH="$(CURDIR)/clients/rust/.gems:$$(ruby -e 'puts Gem.default_dir')" BUNDLE_GEMFILE="$(CURDIR)/clients/rust/Gemfile"
 
-.PHONY: benchmark-documentation doc publish release release-check release-test release-deps release-rust test test-documentation test-documentation-assets test-documentation-python test-rust test-rust-unit version
+.PHONY: benchmark-documentation performance performance-compare test-performance doc publish release release-check release-test release-deps release-rust test test-documentation test-documentation-assets test-documentation-python test-rust test-rust-unit version
 
 doc:
 	./utils/copydoc.sh servers/ruby
@@ -30,6 +30,16 @@ test-documentation: doc
 benchmark-documentation:
 	@$(MAKE) --no-print-directory --silent doc
 	@cd servers/ruby && $(BENCHMARK_DOCUMENTATION_RUBY) benchmarks/documentation.rb $(BENCHMARK_DOCUMENTATION_ARGS)
+
+# Run in the prepared unbundled server environment; see doc/performance.md.
+performance:
+	ruby servers/ruby/benchmarks/endpoints.rb run $(PERFORMANCE_ARGS)
+
+performance-compare:
+	ruby servers/ruby/benchmarks/endpoints.rb compare $(PERFORMANCE_ARGS)
+
+test-performance: doc
+	cd servers/ruby && bundle exec rspec spec/performance
 
 test-documentation-assets:
 	node servers/ruby/spec/client_examples/assets/highlighter_test.cjs

@@ -289,11 +289,13 @@ old copying implementation. Investigate any output difference; record exact
 volatile-field normalization if needed rather than silently dropping mismatches.
 
 These measurements describe the synthetic workload on the recorded host. They
-do not establish production latency. There is no default CI timing gate; stable
-dedicated runners and measured variance are needed before choosing latency
-budgets. Ownership, traversal and allocation regressions cover this failure
-class, while concentrated-resource costs and other future regressions still
-need representative measurements.
+do not establish production latency. The opt-in harness has no timing threshold;
+the [paired endpoint performance suite](performance.md) supplies required
+quick/weekly CI timing, allocation and query gates, including documentation
+OPTIONS and both HTML shapes. It retains baseline/self noise and blocks
+inconclusive results. Ownership, traversal and allocation regressions cover this
+failure class, while concentrated-resource costs and other future regressions
+still need representative measurements.
 
 Each client also has acceptance commands that check executable snippets against
 installed packages or a generated SDK. These use

@@ -74,9 +74,9 @@ repository root unless explicitly stated otherwise.
 
 ## Rust generator and runtime
 
-See [the Rust client development guide](../../clients/rust/README.md) for the
-locally resolved Ruby component bundle, pinned Rust formatter, generator unit
-specs and separate runtime/integration checks. `make test-rust-unit` is the quick Ruby
+See [the Rust client development guide](../../clients/rust/docs/development.md)
+for the locally resolved Ruby component bundle, pinned Rust formatter, generator
+unit specs and separate runtime/integration checks. `make test-rust-unit` is the quick Ruby
 check; `make test-rust` also compiles and exercises generated clients. The Rust
 generator is included in the top-level release build and publishing workflow.
 `make release-check` checks its shared version and dependency; `make release`

@@ -13,6 +13,14 @@
       forAllSystems = nixpkgs.lib.genAttrs systems;
     in
     {
+      checks = forAllSystems (system:
+        let
+          pkgs = import nixpkgs { inherit system; };
+        in
+        {
+          python-ruff-parity = import ./utils/check-ruff.nix { inherit pkgs; };
+        });
+
       devShells = forAllSystems (system:
         let
           pkgs = import nixpkgs { inherit system; };

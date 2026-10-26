@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'bundler/setup'
+$:.unshift(File.expand_path('../../ruby/lib', __dir__))
 require 'open3'
 require 'tmpdir'
 require 'haveapi/go_client'

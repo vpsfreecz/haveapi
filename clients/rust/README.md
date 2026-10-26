@@ -1,158 +1,174 @@
 # Rust client generator
 
-This Ruby generator turns a saved HaveAPI protocol 2 description into a typed,
-self-contained Rust client for one explicit API version. Generated clients
-support async calls and the same actions through an optional `blocking` feature.
-Ruby and HaveAPI are needed to generate the crate; applications using it need
-only its Rust dependencies.
+Generate a typed Rust client for one explicit API version from a saved
+[HaveAPI](https://github.com/vpsfreecz/haveapi) protocol 2 description. Generated
+clients support async calls and an optional `blocking` feature. Their resource
+names and routes are fixed; applications do not need Ruby or runtime discovery.
 
-The [generated vpsAdmin Rust client](https://github.com/vpsfreecz/vpsadmin-rust-client)
-is ready to use with vpsAdmin. You can [install the generated crate](#use-the-generated-client)
-directly.
+## Prepare the source tools and crate
 
-## Install the generator
-
-The generator requires Ruby 3.2 or newer:
+From the HaveAPI checkout root:
 
 ```sh
-gem install haveapi-rust-client
+nix develop .#client-rust
+BUNDLE_GEMFILE="$PWD/clients/rust/Gemfile" bundle install
+mkdir -p /path/to/widget-client/schema /path/to/widget-client/src
 ```
 
-Generated crates use edition 2024 and require Rust 1.95 or newer. Their runtime
-uses Serde, url 2.5 and reqwest 0.13.5 with rustls TLS. Building the TLS
-dependencies may require a C toolchain. Generation also requires the exact
-`rustfmt` version recorded in the client configuration; see
-[configuration and crate setup](docs/generation.md#configuration-and-crate-scaffold)
-for the dependencies, Cargo features and formatter selection.
+The component shell supplies Ruby 3.2 or newer, Rust and `rustfmt`, and prepares
+an isolated Ruby bundle using the Ruby client from the same checkout. Retain the
+checkout revision and resolved component lock with your generation inputs.
 
-## Generate a client
+Create `/path/to/widget-client/Cargo.toml`:
 
-Create a Rust library crate with `Cargo.toml` and `generator.toml` matching the
-[configuration and crate setup](docs/generation.md#configuration-and-crate-scaffold).
-The generator checks an existing crate manifest but does not create it. Run the
-following commands from that crate's root to save a description, generate the
-client and check that it is current. Replace `CHOSEN_API_VERSION` with the
-numeric API version you want to generate:
+```toml
+[package]
+name = "widget-client"
+version = "0.1.0"
+license = "MIT"
+edition = "2024"
+rust-version = "1.95"
+
+[features]
+default = []
+blocking = ["reqwest/blocking"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+url = "2.5"
+reqwest = { version = "0.13.5", default-features = false, features = ["json", "rustls"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+```
+
+Record the selected formatter in `/path/to/widget-client/generator.toml`:
 
 ```sh
-api_version='CHOSEN_API_VERSION'
-mkdir -p schema
-haveapi-rust-client fetch "https://api.vpsfree.cz/v${api_version}/" \
-  --api-version "$api_version" --profile public --output schema/api.json
-haveapi-rust-client generate --schema schema/api.json \
-  --api-version "$api_version" --config generator.toml --output src/generated
-haveapi-rust-client generate --schema schema/api.json \
-  --api-version "$api_version" --config generator.toml --output src/generated --check
+cat > /path/to/widget-client/generator.toml <<EOF
+crate_name = "widget-client"
+crate_version = "0.1.0"
+license = "MIT"
+edition = "2024"
+rust_version = "1.95"
+rustfmt_version = "$(rustfmt --version)"
+EOF
 ```
 
-The fetch URL and `--api-version` select the same explicit version. The snapshot
-contains only the API surface visible to its capture profile. Generation is
-offline and uses the saved schema, configuration, prepared Ruby dependencies,
-embedded runtime source and pinned formatter. `--check` reports stale output
-without changing it. Generated clients have fixed routes and perform no runtime
-discovery or API version selection.
-
-Add this handwritten entry point in `src/lib.rs`, outside the managed generated
-directory:
+Add the handwritten entry point `/path/to/widget-client/src/lib.rs`:
 
 ```rust
 mod generated;
 pub use generated::*;
 ```
 
-Read [generation and snapshots](docs/generation.md) for naming, metadata,
-snapshot provenance and generated-file ownership rules.
+The generator checks the existing crate manifest; it does not create or replace
+it. See [crate configuration](docs/generation.md#configuration-and-crate-scaffold)
+for formatter selection and dependencies. Building the TLS dependencies can
+require a C toolchain.
 
-## Use the generated client
+## Fetch, save and generate
 
-These examples use the generated vpsAdmin crate. For another API, use its
-generated crate and resource/action names. Give the client the server root,
-including any mount path, without the generated API version suffix.
+The example API at `https://example.test/v1.0/` has `Widget#Update` with path
+`/v1.0/widgets/{widget_id}`, a nullable string `name` input, and `id` and `name`
+outputs. Replace the example URL, version and resource names with those of your
+API.
 
-### Async
+From the HaveAPI root in the prepared component environment:
 
-Add the client and Tokio to your application's `Cargo.toml`:
+```sh
+BUNDLE_GEMFILE="$PWD/clients/rust/Gemfile" bundle exec ruby \
+  clients/rust/bin/haveapi-rust-client fetch https://example.test/v1.0/ \
+  --api-version 1.0 --profile public \
+  --output /path/to/widget-client/schema/api.json
+BUNDLE_GEMFILE="$PWD/clients/rust/Gemfile" bundle exec ruby \
+  clients/rust/bin/haveapi-rust-client generate \
+  --schema /path/to/widget-client/schema/api.json --api-version 1.0 \
+  --config /path/to/widget-client/generator.toml \
+  --output /path/to/widget-client/src/generated
+BUNDLE_GEMFILE="$PWD/clients/rust/Gemfile" bundle exec ruby \
+  clients/rust/bin/haveapi-rust-client generate \
+  --schema /path/to/widget-client/schema/api.json --api-version 1.0 \
+  --config /path/to/widget-client/generator.toml \
+  --output /path/to/widget-client/src/generated --check
+```
+
+The schema's parent directory must exist. Fetch uses the exact mounted version
+endpoint; it does not choose a server default. Generation uses local schema,
+configuration, prepared dependencies, embedded runtime and the recorded formatter.
+It makes no network request or dependency installation. `--check` reports stale
+output without changing it. Keep handwritten files outside `src/generated`.
+
+For Basic capture, set `WIDGET_PASSWORD` in your environment, then run:
+
+```sh
+BUNDLE_GEMFILE="$PWD/clients/rust/Gemfile" bundle exec ruby \
+  clients/rust/bin/haveapi-rust-client fetch https://example.test/v1.0/ \
+  --api-version 1.0 --profile basic-user --basic-user demo \
+  --basic-password-env WIDGET_PASSWORD \
+  --output /path/to/widget-client/schema/api.json
+```
+
+For an existing HaveAPI token, set `WIDGET_TOKEN` and run:
+
+```sh
+BUNDLE_GEMFILE="$PWD/clients/rust/Gemfile" bundle exec ruby \
+  clients/rust/bin/haveapi-rust-client fetch https://example.test/v1.0/ \
+  --api-version 1.0 --profile token-user --token-env WIDGET_TOKEN \
+  --output /path/to/widget-client/schema/api.json
+```
+
+These authentication choices are mutually exclusive. Token capture uses anonymous
+discovery at the same endpoint to select the advertised token header. Supply a
+token you have already acquired. `--profile` labels the capture; it does not
+change authentication. Permissions and enabled plugins determine which resources
+the snapshot contains. Review saved defaults and
+data before sharing it. Never retain credentials or tokens. Failed capture leaves
+an existing output file intact.
+
+## Use the generated client locally
+
+In an application, refer to the crate you generated:
 
 ```toml
 [dependencies]
-vpsadmin-client = "0.1"
+widget-client = { path = "/path/to/widget-client" }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
-Public actions work without authentication:
-
 ```rust
-use vpsadmin_client::Client;
+use widget_client::Client;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let api = Client::builder("https://api.vpsfree.cz").build()?;
-    let stats = api.cluster().public_stats().send().await?.output;
-    println!("VPS count: {:?}", stats.vps_count);
+    let api = Client::builder("https://example.test").build()?;
+    let result = api.widget().update(1).name("new name".to_owned()).send().await?;
+    println!("Name: {:?}", result.output.name);
     Ok(())
 }
 ```
 
-### Blocking
+Give the builder the API root and mount prefix without `/v1.0`; generated routes
+already contain the version. Protected actions can use `.basic_auth(user,
+password)` or `.token(std::env::var("WIDGET_TOKEN")?)` before `.build()`, when
+advertised by the API. Server permissions still apply.
 
-Enable the generated crate's `blocking` feature:
+For synchronous use, enable `features = ["blocking"]` on the same local crate,
+import `widget_client::blocking::Client` and call `.send()?`. Construct, use and
+drop a blocking client outside an async runtime; see the
+[runtime contract](runtime/README.md#authentication-and-transport-policy).
 
-```toml
-[dependencies]
-vpsadmin-client = { version = "0.1", features = ["blocking"] }
-```
-
-Import the blocking client and call `.send()?`:
-
-```rust
-use vpsadmin_client::blocking::Client;
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let api = Client::builder("https://api.vpsfree.cz").build()?;
-    let stats = api.cluster().public_stats().send()?.output;
-    println!("VPS count: {:?}", stats.vps_count);
-    Ok(())
-}
-```
-
-Construct, use and drop a blocking client outside an async runtime. Async
-applications should use the async client or put the entire blocking-client
-lifecycle inside `tokio::task::spawn_blocking`. See the
-[runtime contract](runtime/README.md#authentication-and-transport-policy) for
-deadlines and blocking-task cancellation limits.
-
-### Authentication, actions and results
-
-For an existing HaveAPI token, configure the builder before calling `.build()`:
-
-```rust
-let api = Client::builder("https://api.vpsfree.cz")
-    .token(std::env::var("VPSADMIN_TOKEN")?)
-    .build()?;
-```
-
-The builder also supports `.basic_auth(username, password)` and
-`.oauth2_token(token)`. Choose one method supported by the generated API.
-Token acquisition and renewal are explicit actions; they do not run automatically.
-
-Resource methods return action builders. Pass resource IDs to actions such as
-`api.vps().show(123)`, set input fields on the builder, then call `.send().await?`
-or `.send()?`. Only fields you set are sent. Responses contain typed `output`,
-action metadata in `meta` and `http_status`. Output fields use `Option` because
-permissions and partial responses can omit them.
-
-The examples propagate errors with `?`; transport failures, unsuccessful HTTP
-or API responses and invalid response data return errors. See the
-[runtime contract](runtime/README.md) for input/null handling, partial
-associations, authentication, timeouts and error diagnostics, and the
-[vpsAdmin API reference](https://docs.rs/vpsadmin-client) for concrete actions
-and types.
+Only fields you set are sent. Results contain typed `output`, metadata in `meta`
+and `http_status`; optional outputs reflect fields hidden or omitted by the
+server. Transport, HTTP/API and decoding failures return errors. See
+[snapshots and generation](docs/generation.md) for ownership, recovery, naming,
+null handling and source digests, and the [runtime reference](runtime/README.md)
+for authentication and timeouts.
 
 ## Development and reference
 
-- [Generator development](docs/development.md): Nix setup, Ruby dependencies and quick checks.
-- [Integration harness](spec/integration/README.md): fixtures and acceptance commands.
-- [Packaging and releases](docs/releasing.md): generator and generated-client release checks.
-
-The [server documentation adapter](docs/documentation.md) provides optional
-async and blocking examples for a configured published SDK profile.
+- [Generator development](docs/development.md)
+- [Integration harness](spec/integration/README.md)
+- [Packaging and releases](docs/releasing.md)
+- [Server documentation profiles](docs/documentation.md)

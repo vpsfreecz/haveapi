@@ -1,94 +1,132 @@
-# HaveAPI client generator for Go
-HaveAPI-Go-Client generates a client library for accessing selected APIs built
-with the [HaveAPI framework](https://github.com/vpsfreecz/haveapi).
+# Go client generator
 
-See the [generated vpsAdmin Go client](https://github.com/vpsfreecz/vpsadmin-go-client)
-for a ready-to-use client and examples.
+Generate a Go client for one API version from a saved [HaveAPI](https://github.com/vpsfreecz/haveapi)
+protocol 2 description. Capture the schema once, review it, then generate offline.
+The resulting client has fixed resource names and routes; it does not discover
+API changes at runtime.
 
-## Installation
+## Prepare the source tools
 
-    $ gem install 'haveapi-go-client'
+From the HaveAPI checkout root, enter its Nix environment and prepare the Go
+component's Ruby dependencies:
 
-## CLI
-The generator is run against an API server that the resulting client should be
-able to work with. Without `--version`, generation uses the server's default
-API version. The generated client has fixed routes for that version; regenerate
-it to pick up API changes.
-
-```
-$ haveapi-go-client -h
-Usage: haveapi-go-client [options] <api url> <destination>
-        --version VERSION            Use specified API version
-        --module MODULE              Name of the generated Go module
-        --package PKG                Name of the generated Go package
+```sh
+nix develop
+BUNDLE_GEMFILE="$PWD/clients/go/Gemfile" bundle install
 ```
 
-For example:
+Keep that checkout and resolved component lock with your generation inputs.
+The component bundle uses the Ruby client from the same checkout. Go must also
+be on `PATH` for `go fmt`.
 
-```
-$ haveapi-go-client https://api.vpsfree.cz ~/go/src/foo/client
+## Fetch, save and generate
+
+The examples assume an API at `https://example.test/v1.0/` with a `Widget#Show`
+action at `/v1.0/widgets/{widget_id}` and a string `name` output. Replace the
+example URL, version and resource names with those of your API.
+
+From the HaveAPI root:
+
+```sh
+mkdir -p /path/to/widget-client/schema
+BUNDLE_GEMFILE="$PWD/clients/go/Gemfile" bundle exec ruby \
+  clients/go/bin/haveapi-go-client fetch https://example.test/v1.0/ \
+  --api-version 1.0 --profile public \
+  --output /path/to/widget-client/schema/api.json
+BUNDLE_GEMFILE="$PWD/clients/go/Gemfile" bundle exec ruby \
+  clients/go/bin/haveapi-go-client generate \
+  --schema /path/to/widget-client/schema/api.json --api-version 1.0 \
+  --output /path/to/widget-client --module example.test/widget-client --package client
 ```
 
-## Usage
-The generated library can then be imported in your projects. For example,
-in a project with the following `go.mod`:
+The output directory for the saved schema must already exist. Fetch sends OPTIONS
+at the exact version URL, including any mount prefix; it never selects a server
+default. Generation reads the saved schema, uses the existing Go emitter and
+runs `go fmt`. It does not contact the API or install dependencies. The generated
+module contains the `client` package; keep handwritten application files elsewhere.
 
-```
-module foo
+Public capture is the default. For Basic authentication, set `WIDGET_PASSWORD`
+in your environment, then run:
+
+```sh
+BUNDLE_GEMFILE="$PWD/clients/go/Gemfile" bundle exec ruby \
+  clients/go/bin/haveapi-go-client fetch https://example.test/v1.0/ \
+  --api-version 1.0 --profile basic-user --basic-user demo \
+  --basic-password-env WIDGET_PASSWORD \
+  --output /path/to/widget-client/schema/api.json
 ```
 
-Import and use the generated client:
+For an existing HaveAPI token, set `WIDGET_TOKEN` and use:
+
+```sh
+BUNDLE_GEMFILE="$PWD/clients/go/Gemfile" bundle exec ruby \
+  clients/go/bin/haveapi-go-client fetch https://example.test/v1.0/ \
+  --api-version 1.0 --profile token-user --token-env WIDGET_TOKEN \
+  --output /path/to/widget-client/schema/api.json
+```
+
+The two authentication choices are mutually exclusive. Token capture first reads
+anonymous discovery at the same version URL, then uses the advertised token
+header. Supply a token you have already acquired. `--profile` labels the capture;
+it does not change authentication. A snapshot covers the resources visible during
+capture, which depend on permissions and enabled plugins.
+Review saved defaults and data before sharing the schema. Credentials and tokens
+must stay out of snapshots. Failed capture preserves an existing output file.
+
+## Use the generated client
+
+In a separate application, use the generated module locally:
+
+```sh
+go mod init example.test/widget-app
+go mod edit -require=example.test/widget-client@v0.0.0
+go mod edit -replace=example.test/widget-client=/path/to/widget-client
+```
 
 ```go
 package main
 
 import (
-	"fmt"
-	"foo/client"
+    "fmt"
+    "log"
+    "example.test/widget-client/client"
 )
 
 func main() {
-	api := client.New("https://api.vpsfree.cz")
-	api.SetLanguage("cs")
-
-	action := api.Cluster.PublicStats.Prepare()
-	resp, err := action.Call()
-
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	if !resp.Status {
-		fmt.Printf("Action failed: %s\n", resp.Message)
-		return
-	}
-
-	fmt.Printf("VPS count: %d\n", resp.Output.VpsCount)
+    api := client.New("https://example.test")
+    action := api.Widget.Show.Prepare().SetPathParamInt("widget_id", 1)
+    resp, err := action.Call()
+    if err != nil {
+        log.Fatal(err)
+    }
+    if !resp.Status {
+        log.Fatal(resp.Message)
+    }
+    if resp.Output != nil {
+        fmt.Println(resp.Output.Name)
+    }
 }
 ```
 
-Public actions need no authentication. For protected actions, configure an
-existing token with `api.SetExistingTokenAuth(token)` or HTTP Basic credentials
-with `api.SetBasicAuthentication(username, password)` before making the call.
-`resp` contains the response envelope, `resp.Response.Cluster` contains the
-namespaced output, and `resp.Output` provides direct access to that output.
+Give `client.New` only the API origin, such as `https://example.test`, without
+a trailing slash. Generated action paths already contain the mount prefix and
+API version. Authentication helpers
+are emitted for advertised providers; a matching schema can use
+`SetBasicAuthentication(user, password)` or `SetExistingTokenAuth(token)`.
+Permissions and server validation still apply. `resp` retains the response
+envelope; `resp.Output` provides the action output directly.
 
-## Localization
+Set `api.SetLanguage("cs")` to send `Accept-Language`.
+`SetLanguageHeader("X-Language")` selects a custom header; `GetLanguage()` and
+`GetLanguageHeader()` return the configured values.
 
-Generated clients include bundled HaveAPI client translations. Set the
-language before making requests:
+## Legacy invocation
 
-```go
-api := client.New("https://api.vpsfree.cz")
-api.SetLanguage("cs")
-```
+The positional `haveapi-go-client [options] URL DESTINATION` command remains
+available. Its optional `--version` still defaults to the server's default
+version; `--basic-user` and raw `--basic-password` retain their old meaning.
+Use the saved-schema workflow above for explicit, repeatable generation and
+secrets supplied through environment variables.
 
-The value is sent in `Accept-Language` by default. Use
-`SetLanguageHeader("X-Language")` when the API is configured with a custom
-language header. Read the configured values with `GetLanguage()` and
-`GetLanguageHeader()`.
-
-## API documentation examples
-
-The Ruby server can render examples against a configured generated Go SDK.
-See [profile configuration, supported samples and verification](docs/documentation.md).
+The Ruby server can render examples for configured generated clients; see
+[documentation profiles](docs/documentation.md).

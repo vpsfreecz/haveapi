@@ -5,12 +5,17 @@ require 'haveapi/rust_client'
 module HaveAPI::RustClient
   class Cli
     def self.run(argv = ARGV, out: $stdout, err: $stderr)
+      argv = argv.dup
       command = argv.shift
+      if command == 'fetch'
+        return HaveAPI::Schema::FetchCommand.run(argv, out:, err:, command_name: 'haveapi-rust-client')
+      end
+
+      argv.unshift(command) if %w[-h --help].include?(command)
       options = {}
       parser = OptionParser.new do |opts|
         opts.banner = 'Usage: haveapi-rust-client fetch URL | generate [options]'
         opts.on('--api-version VERSION') { |value| options[:version] = value }
-        opts.on('--profile PROFILE') { |value| options[:profile] = value }
         opts.on('--schema FILE') { |value| options[:schema] = value }
         opts.on('--config FILE') { |value| options[:config] = value }
         opts.on('--output PATH') { |value| options[:output] = value }
@@ -25,14 +30,6 @@ module HaveAPI::RustClient
       raise Error, '--output is required' unless options[:output]
 
       case command
-      when 'fetch'
-        raise Error, 'fetch requires one explicit version URL and --profile' unless argv.length == 1 && options[:profile]
-        raise Error, '--check is supported only for generation' if options[:check]
-
-        diagnostics = []
-        snapshot = Snapshot.fetch(url: argv.first, api_version: options[:version], profile: options[:profile], diagnostics:)
-        diagnostics.each { |message| err.puts(message) }
-        File.write(options[:output], Snapshot.canonical(snapshot))
       when 'generate'
         unless argv.empty? && options[:schema] && options[:config]
           raise Error, 'generate requires --schema and --config'

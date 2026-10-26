@@ -3,29 +3,29 @@ require_relative '../spec_helper'
 RSpec.describe HaveAPI::RustClient::Snapshot do
   include RustGeneratorFixtures
 
-  it 'uses the existing metadata client with an explicit version and no redirects' do
-    require 'haveapi/client'
-    communicator = instance_double(HaveAPI::Client::Communicator)
-    communicator.instance_variable_set(:@proto_version, '2.0')
-    description = snapshot.fetch('description')
-    description['help'] = '/mounted/v1.0/'
-    description.fetch('resources').fetch('widget').fetch('actions').each_value do |item|
-      item['path'] = "/mounted#{item.fetch('path')}"
-    end
-    allow(HaveAPI::Client::Communicator).to receive(:new).with('https://example.test/mounted/').and_return(communicator)
-    allow(communicator).to receive(:describe_api).with('1.0').and_return(description)
-    allow(RestClient::Resource).to receive(:new).and_call_original
-    result = described_class.fetch(
-      url: 'https://example.test/mounted/v1.0/', api_version: '1.0', profile: 'fixture'
-    )
-    expect(communicator).to have_received(:describe_api).with('1.0')
-    expect(RestClient::Resource).to have_received(:new).with(
-      'https://example.test/mounted/', max_redirects: 0, open_timeout: 10, read_timeout: 30
-    )
-    expect(result.fetch('mount_path')).to eq('/mounted/')
+  it 'delegates mounted acquisition without changing the common capture contract' do
+    options = { url: 'https://example.test/mounted/v1.0/', api_version: '1.0', profile: 'fixture', token: 'test-only' }
+    expected = snapshot
+    allow(HaveAPI::Schema::Capture).to receive(:fetch).and_return(expected)
+    expect(described_class.fetch(**options)).to equal(expected)
+    expect(HaveAPI::Schema::Capture).to have_received(:fetch).with(**options)
   end
 
-  it 'rejects credential-bearing discovered URLs before a snapshot can be written' do
+  it 'preserves native generator errors at the shared acquisition boundary' do
+    allow(HaveAPI::Schema::Capture).to receive(:fetch).and_raise(HaveAPI::Schema::Error, 'capture failed')
+    expect { described_class.fetch(url: 'https://example.test/v1.0/', api_version: '1.0', profile: 'fixture') }
+      .to raise_error(HaveAPI::RustClient::Error, 'capture failed')
+  end
+
+  it 'preserves canonical bytes and helpers through the compatibility facade' do
+    schema = snapshot
+    expect(described_class.canonical(schema)).to eq(HaveAPI::Schema::Snapshot.canonical(schema))
+    expect(described_class.sha256(schema)).to eq(HaveAPI::Schema::Snapshot.sha256(schema))
+    expect(described_class.safe_segments?('/mounted/v1.0/')).to be(true)
+    expect { described_class.validate(schema.merge('api_version' => '2.0')) }.to raise_error(HaveAPI::RustClient::Error)
+  end
+
+  it 'rejects credential-bearing nested endpoints under the stronger common validation' do
     description = snapshot.fetch('description')
     description['authentication']['oauth2'] = { 'token_url' => 'https://user:secret@example.test/token' }
     expect do
@@ -33,6 +33,6 @@ RSpec.describe HaveAPI::RustClient::Snapshot do
         description:, api_version: '1.0', protocol_version: '2.0',
         source_url: 'https://example.test/v1.0/', profile: 'fixture'
       )
-    end.to raise_error(HaveAPI::RustClient::Error, /credentials/)
+    end.to raise_error(HaveAPI::RustClient::Error, /unsafe machine endpoint/)
   end
 end

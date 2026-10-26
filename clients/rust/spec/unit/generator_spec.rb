@@ -15,6 +15,15 @@ RSpec.describe HaveAPI::RustClient::Generator do
     end
   end
 
+  it 'binds the loaded shared schema source identity into generator provenance' do
+    before = described_class.new(schema: snapshot, config: config).send(:generator_digest)
+    identity = HaveAPI::Schema.source_identity
+    allow(HaveAPI::Schema).to receive(:source_identity).and_return(identity.merge('source_sha256' => '0' * 64))
+    expect(described_class.new(schema: snapshot, config: config).send(:generator_digest)).not_to eq(before)
+    allow(HaveAPI::Schema).to receive(:source_identity).and_return(identity.merge('version' => '999.0'))
+    expect(described_class.new(schema: snapshot, config: config).send(:generator_digest)).not_to eq(before)
+  end
+
   it 'generates identical offline files after shuffled object keys and never writes during check' do
     schema = snapshot
     generator = described_class.new(schema:, config: config)

@@ -3,23 +3,26 @@ require_relative 'artifacts'
 
 module HaveAPI
   module Release
-    # Only the extracted gem supplies generator code, templates and runtime.
+    # Extracted gems supply generator, schema, templates and runtime code.
     # Its third-party Ruby dependencies come from the prepared component bundle.
     class RustSmoke
       def self.run(artifacts, directory)
         package = Gem::Package.new(File.join(directory, "haveapi-rust-client-#{artifacts.version}.gem"))
         artifacts.inspect_rust(package)
+        schema_package = Gem::Package.new(File.join(directory, "haveapi-client-#{artifacts.version}.gem"))
         dependency = package.spec.runtime_dependencies.find { |item| item.name == 'fiddle' }
         Dir.mktmpdir('haveapi-rust-smoke-') do |tmp|
           extracted = File.join(tmp, 'gem')
           package.extract_files(extracted)
+          shared = File.join(tmp, 'shared')
+          schema_package.extract_files(shared)
           env = ENV.keys.grep(/\ABUNDLE_/).to_h { |key| [key, nil] }.merge(
             'GEM_HOME' => File.join(artifacts.root, 'clients/rust/.gems'),
             'GEM_PATH' => [File.join(artifacts.root, 'clients/rust/.gems'), Gem.default_dir].join(File::PATH_SEPARATOR),
             'RUBYOPT' => nil, 'RUBYLIB' => nil
           )
-          Release.run(env, RbConfig.ruby, '-I', File.join(extracted, 'lib'), '-e', consumer,
-                      extracted, artifacts.version, JSON.generate(dependency.requirement.as_list), chdir: tmp)
+          Release.run(env, RbConfig.ruby, '-I', File.join(shared, 'lib'), '-I', File.join(extracted, 'lib'), '-e', consumer,
+                      extracted, shared, artifacts.version, JSON.generate(dependency.requirement.as_list), chdir: tmp)
         end
       end
 
@@ -29,7 +32,7 @@ module HaveAPI
           require 'open3'
           require 'rbconfig'
 
-          extracted, version, fiddle_requirements = ARGV
+          extracted, shared, version, fiddle_requirements = ARGV
           requirements = JSON.parse(fiddle_requirements)
           gem 'fiddle', *requirements
           require 'haveapi/rust_client/cli'
@@ -44,6 +47,11 @@ module HaveAPI
           unless $LOADED_FEATURES.grep(%r{/haveapi/rust_client(?:/|\.rb)}).all? { |path| path.start_with?("#{extracted}/lib/") }
             abort 'generator source fallback outside the extracted artifact'
           end
+          shared_features = $LOADED_FEATURES.grep(%r{/haveapi/schema(?:/|\.rb)})
+          unless !shared_features.empty? && shared_features.all? { |path| path.start_with?("#{shared}/lib/") }
+            abort 'shared schema source fallback outside the extracted artifact'
+          end
+          abort 'wrong installed shared schema version' unless HaveAPI::Schema.source_identity.fetch('version') == version
           snapshot = HaveAPI::RustClient::Snapshot.from_description(
             api_version: '1.0', protocol_version: '2.0', source_url: 'https://example.test/v1.0/',
             profile: 'release-smoke', description: {
@@ -67,7 +75,7 @@ module HaveAPI
           args = %w[generate --schema schema.json --api-version 1.0 --config generator.toml --output generated]
           cli = File.join(extracted, 'bin/haveapi-rust-client')
           [args, args + ['--check']].each do |arguments|
-            abort 'extracted generator executable failed' unless system(RbConfig.ruby, '-I', File.join(extracted, 'lib'), cli, *arguments)
+            abort 'extracted generator executable failed' unless system(RbConfig.ruby, '-I', File.join(shared, 'lib'), '-I', File.join(extracted, 'lib'), cli, *arguments)
           end
           runtime = File.join(extracted, 'runtime/src/runtime')
           Dir.glob("#{runtime}/**/*").select { |path| File.file?(path) }.each do |path|

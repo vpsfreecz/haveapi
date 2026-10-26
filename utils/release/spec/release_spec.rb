@@ -397,10 +397,21 @@ RSpec.describe HaveAPI::Release do
 
     it 'runs offline generation in an extracted artifact with inherited bundle and source paths removed' do
       rust_gem
-      allow(described_class).to receive(:run) do |env, ruby, flag, library, expression, script, extracted, version, fiddle_requirements, **options|
+      shared_spec = Gem::Specification.load(File.join(root, 'clients/ruby/haveapi-client.gemspec')).dup
+      shared_source = File.join(tmp, 'shared-source')
+      shared_spec.files = Dir.chdir(File.join(root, 'clients/ruby')) { Dir['lib/**/*.rb'] }
+      shared_spec.files.each do |path|
+        destination = File.join(shared_source, path)
+        FileUtils.mkdir_p(File.dirname(destination))
+        FileUtils.cp(File.join(root, 'clients/ruby', path), destination)
+      end
+      Dir.chdir(shared_source) { Gem::Package.build(shared_spec, false, false, File.join(tmp, "haveapi-client-#{artifacts.version}.gem")) }
+      allow(described_class).to receive(:run) do |env, ruby, shared_flag, shared_library, flag, library, expression, script, extracted, shared, version, fiddle_requirements, **options|
         expect(ruby).to eq(RbConfig.ruby)
         expect([flag, expression]).to eq(['-I', '-e'])
         expect(library).to eq(File.join(extracted, 'lib'))
+        expect([shared_flag, shared_library]).to eq(['-I', File.join(shared, 'lib')])
+        expect(File.binread(File.join(shared, 'lib/haveapi/schema.rb'))).to eq(File.binread(File.join(root, 'clients/ruby/lib/haveapi/schema.rb')))
         expect(File.realpath(extracted)).not_to start_with(root)
         expect(options.fetch(:chdir)).to eq(File.dirname(extracted))
         expect(env).to include('RUBYOPT' => nil, 'RUBYLIB' => nil)
@@ -412,7 +423,7 @@ RSpec.describe HaveAPI::Release do
                                         .runtime_dependencies.find { |dependency| dependency.name == 'fiddle' }.requirement
         expect(JSON.parse(fiddle_requirements)).to eq(requirement.as_list)
         expect(script).to include("gem 'fiddle', *requirements", '!fiddle.default_gem?', 'satisfied_by?(fiddle.version)')
-        expect(script).to include('schema.json', 'generator::ROOT == extracted', "args + ['--check']", 'wrong copied runtime')
+        expect(script).to include('shared schema source fallback', 'schema.json', 'generator::ROOT == extracted', "args + ['--check']", 'wrong copied runtime')
       end
       HaveAPI::Release::RustSmoke.run(artifacts, tmp)
       expect(described_class).to have_received(:run).once

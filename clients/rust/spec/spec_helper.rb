@@ -1,4 +1,5 @@
 require 'bundler/setup'
+$:.unshift(File.expand_path('../../ruby/lib', __dir__))
 require 'haveapi/rust_client'
 require 'open3'
 require 'tmpdir'

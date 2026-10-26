@@ -158,7 +158,7 @@ module HaveAPI::RustClient
 
     def generator_digest
       paths = Dir.chdir(ROOT) { Dir['lib/**/*.rb', 'template/**/*'].select { |path| File.file?(path) }.sort }
-      digest_files(paths, ROOT)
+      Digest::SHA256.hexdigest("#{digest_files(paths, ROOT)}\0#{Snapshot.canonical(HaveAPI::Schema.source_identity)}")
     end
 
     def digest_files(paths, root)

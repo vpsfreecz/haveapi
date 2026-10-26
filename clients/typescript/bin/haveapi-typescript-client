@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+
+require_relative '../lib/haveapi/typescript_client/cli'
+
+exit HaveAPI::TypeScriptClient::Cli.run

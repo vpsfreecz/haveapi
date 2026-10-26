@@ -81,6 +81,7 @@ module HaveAPI
           'clients/ruby/lib/haveapi/client/version.rb' => /\bVERSION = '([^']+)'/,
           'clients/go/lib/haveapi/go_client/version.rb' => /\bVERSION = '([^']+)'/,
           'clients/rust/lib/haveapi/rust_client/version.rb' => /\bVERSION = '([^']+)'/,
+          'clients/typescript/lib/haveapi/typescript_client/version.rb' => /\bVERSION = '([^']+)'/,
           'clients/js/src/haveapi/client.ts' => /Client\.Version = '([^']+)'/,
           'clients/php/src/Client.php' => /const VERSION = '([^']+)'/,
           'clients/python/pyproject.toml' => /^version = "([^"]+)"/

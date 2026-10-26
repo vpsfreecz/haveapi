@@ -2,7 +2,7 @@ VERSION=$(shell cat VERSION)
 BENCHMARK_DOCUMENTATION_RUBY ?= bundle exec ruby
 RUST_ENV=env -u RUBYOPT -u RUBYLIB -u BUNDLE_BIN_PATH -u BUNDLE_LOCKFILE -u BUNDLE_PATH -u BUNDLE_FROZEN -u BUNDLER_SETUP GEM_HOME="$(CURDIR)/clients/rust/.gems" GEM_PATH="$(CURDIR)/clients/rust/.gems:$$(ruby -e 'puts Gem.default_dir')" BUNDLE_GEMFILE="$(CURDIR)/clients/rust/Gemfile"
 
-.PHONY: benchmark-documentation performance performance-compare test-performance doc publish release release-check release-test release-deps release-rust test test-documentation test-documentation-assets test-documentation-python test-rust test-rust-unit version
+.PHONY: benchmark-documentation performance performance-compare test-performance doc publish release release-check release-test release-deps release-rust test test-documentation test-documentation-assets test-documentation-python test-rust test-rust-unit test-schema test-go-cli test-typescript version
 
 doc:
 	./utils/copydoc.sh servers/ruby
@@ -13,6 +13,7 @@ test: doc
 	cd servers/ruby && bundle exec rspec
 	cd clients/ruby && bundle exec rspec
 	cd clients/go && bundle exec rspec
+	$(MAKE) test-typescript
 	cd clients/js && npm test
 	cd clients/php && vendor/bin/phpunit
 	clients/python/utils/check.sh
@@ -25,6 +26,12 @@ test-documentation: doc
 	cd clients/js && npm run build
 	cd servers/ruby && bundle exec rspec spec/client_examples spec/documentation
 	$(MAKE) test-documentation-assets
+
+test-schema:
+	bundle exec ruby -Iclients/ruby/lib -S rspec clients/ruby/spec/schema_*_spec.rb
+
+test-go-cli:
+	cd clients/go && bundle exec ruby -I../ruby/lib -Ilib -S rspec spec/unit
 
 # Opt-in; stdout contains only the benchmark JSON. Prepare the server bundle first.
 benchmark-documentation:
@@ -52,6 +59,10 @@ test-documentation-python:
 test-rust-unit:
 	cd clients/rust && $(RUST_ENV) bundle exec rspec spec/unit
 
+# Source-distributed generator: the root bundle supplies its development tools.
+test-typescript:
+	bundle exec ruby -Iclients/ruby/lib -Iclients/typescript/lib -S rspec clients/typescript/spec/unit
+
 # Run in nix develop .#client-rust after the generator unit checks.
 test-rust: test-rust-unit
 	cd clients/rust/runtime && cargo test --locked
@@ -64,6 +75,7 @@ release-deps:
 	cd clients/go && bundle install
 	cd clients/rust && $(RUST_ENV) gem install --no-document bundler
 	cd clients/rust && $(RUST_ENV) bundle install
+	cd clients/typescript && bundle install
 	cd clients/js && npm install --no-audit --no-fund
 	cd utils/highlight && npm ci --ignore-scripts --no-audit --no-fund
 	cd utils/highlight && npm run check
@@ -95,6 +107,7 @@ version:
 	@sed -ri "s/ VERSION = '[^']+'/ VERSION = '$(VERSION)'/" clients/ruby/lib/haveapi/client/version.rb
 	@sed -ri "s/ VERSION = '[^']+'/ VERSION = '$(VERSION)'/" clients/go/lib/haveapi/go_client/version.rb
 	@sed -ri "s/ VERSION = '[^']+'/ VERSION = '$(VERSION)'/" clients/rust/lib/haveapi/rust_client/version.rb
+	@sed -ri "s/ VERSION = '[^']+'/ VERSION = '$(VERSION)'/" clients/typescript/lib/haveapi/typescript_client/version.rb
 	@sed -ri "s/\"version\": \"[^\"]+\"/\"version\": \"$(VERSION)\"/" clients/js/package.json
 	@node -e 'const fs = require("fs"); const p = "clients/js/package-lock.json"; const lock = JSON.parse(fs.readFileSync(p, "utf8")); lock.version = lock.packages[""].version = process.argv[1]; fs.writeFileSync(p, JSON.stringify(lock, null, "\t") + "\n");' "$(VERSION)"
 	@sed -ri "s/Client\.Version = '[^']+'/Client.Version = '$(VERSION)'/" clients/js/src/haveapi/client.ts
@@ -106,5 +119,6 @@ version:
 	@sed -ri "s/s.add_dependency 'haveapi-client', '~> [^']+'/s.add_dependency 'haveapi-client', '~> $(VERSION)'/" servers/ruby/haveapi.gemspec
 	@sed -ri "s/spec.add_dependency 'haveapi-client', '~> [^']+'/spec.add_dependency 'haveapi-client', '~> $(VERSION)'/" clients/rust/haveapi-rust-client.gemspec
 	@sed -ri "s/spec.add_dependency 'haveapi-client', '~> [^']+'/spec.add_dependency 'haveapi-client', '~> $(VERSION)'/" clients/go/haveapi-go-client.gemspec
+	@sed -ri "s/spec.add_dependency 'haveapi-client', '~> [^']+'/spec.add_dependency 'haveapi-client', '~> $(VERSION)'/" clients/typescript/haveapi-typescript-client.gemspec
 	@sed -ri "s/gem 'haveapi', '~> [^']+'/gem 'haveapi', '~> $(VERSION)'/" examples/servers/ruby/activerecord_auth/Gemfile
 	@$(RUST_ENV) bundle lock --local

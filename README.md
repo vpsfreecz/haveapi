@@ -35,7 +35,10 @@ Available clients:
 - Ruby client library and CLI at [clients/ruby](clients/ruby)
 - PHP client at [clients/php](clients/php)
 - Python synchronous and asynchronous client at [clients/python](clients/python)
-- JavaScript and TypeScript client at [clients/js](clients/js)
+- Dynamic JavaScript and TypeScript client at [clients/js](clients/js), which
+  discovers resources and actions at runtime
+- TypeScript client generator at [clients/typescript](clients/typescript),
+  which generates typed resource/action modules from a saved schema
 - Go client generator at [clients/go](clients/go)
 - Rust client generator at [clients/rust](clients/rust)
 - Elixir client at [clients/elixir](clients/elixir) (outdated)
@@ -52,8 +55,8 @@ If there isn't a client in the language you need, you can
 
 ## Protocol features
 - Creates RESTful APIs usable even with simple HTTP client, should it be needed
-- A change in the API is immediately reflected in all clients when they re-download the
-  documentation
+- Dynamic clients discover API changes when they reload its description;
+  generated clients use a saved description and pick up changes when regenerated
 - Generic interface for clients - one client can be used to access all APIs
   that implement this protocol
 - Supports API versioning
@@ -68,6 +71,7 @@ For development rules and required procedures, start with [AGENTS.md](AGENTS.md)
  - [Protocol definition](doc/protocol.md)
  - [How to create a client](doc/create-client.md)
  - [Typed input validation rules](doc/typed-input-validation.md)
+ - [TypeScript client generator](clients/typescript/README.md)
  - [Rust client generator](clients/rust/README.md)
  - [Client examples in API documentation](doc/client-examples.md)
  - [Endpoint performance checks and CI](doc/performance.md)

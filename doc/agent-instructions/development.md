@@ -84,3 +84,92 @@ inspects the retained gem and runs the isolated packaged-generator smoke check.
 `make test` includes the longer `test-rust` target. See
 [Rust packaging](../../clients/rust/docs/releasing.md) for the standalone smoke
 command and generated-client release checks.
+
+## TypeScript generator
+
+The source-distributed generator lives in `clients/typescript`; see its
+[user guide](../../clients/typescript/README.md) for CLI use and generated-client
+examples. From the HaveAPI root:
+
+```sh
+nix develop
+make test-typescript
+bundle exec rubocop clients/typescript/lib clients/typescript/bin \
+  clients/typescript/spec clients/typescript/haveapi-typescript-client.gemspec
+```
+
+The root shell prepares Ruby development dependencies and supplies Node. Prepare
+the existing JavaScript component's dependencies before running the strict
+emitted-source checks; they use TypeScript under `clients/js/node_modules`.
+The fixtures compile with NodeNext/ES2022, `exactOptionalPropertyTypes`,
+`noUncheckedIndexedAccess` and `verbatimModuleSyntax`. Unit checks need no live
+API. Full-schema generation and server/consumer integration are separate checks.
+This component shares `VERSION` and has a gemspec for local packaging, but is
+excluded from registry release artifacts.
+
+`IR.build(snapshot)` returns deeply frozen symbol-key hashes and arrays.
+`Emitter.new(ir, { runtime_import: 'haveapi-client' }).files` returns a sorted map
+of relative paths to UTF-8 source with LF endings, without I/O. The generator alone
+installs that map. Coordinate changes to this interface across parser and emitter.
+Resource/action modules compose through internal factories; public entry points
+re-export types explicitly without exposing those factories.
+
+The writer replaces each file atomically and writes the ownership manifest last.
+An interruption can leave a mixed tree. It compares recursive file hashes,
+preserves timestamps for identical output and removes stale owned files and empty
+directories. Keep the interrupted-generation recovery steps in the user guide
+consistent with these guarantees.
+
+### TypeScript snapshots and provenance
+
+The format 1 JSON envelope has exactly `schema_format`, `api_version`,
+`protocol_version`, `source_url`, `profile`, `mount_path` and `description` keys.
+`schema_format` is `1`; `protocol_version` has major `2`. The source URL points to
+the explicit version endpoint and must match `mount_path` and `api_version`.
+The mount has leading and trailing `/`; a mounted API 7.0 fixture can use
+`https://schema.invalid/v7.0/` with mount `/`. The description retains resources,
+authentication discovery, metadata namespace and versioned help/routes.
+Authentication resource operations remain validated provenance; the runtime owns
+their API-root routes and they are excluded from generation. Manifest coverage
+records application and authentication resource/action counts separately.
+
+Capture code holding a structural description can use
+`Snapshot.from_description(description:, api_version:, protocol_version:,
+source_url:, profile:, mount_path: '/', diagnostics: [])` on
+`HaveAPI::Schema::Snapshot`; Rust and TypeScript keep compatibility facades.
+All three generators delegate their `fetch` subcommand to the shared
+`HaveAPI::Schema::FetchCommand`. See the generator READMEs for component bundle
+setup, public/Basic/token capture and explicit-version offline generation.
+The helper removes structural prose, examples, validator messages and protected defaults, preserving
+ordinary defaults, machine validators and real Custom/default/choice data keys.
+Capture provenance and removal diagnostics belong in a separate file. Review
+remaining data before sharing snapshots; never retain credentials, tokens or
+database connection strings.
+
+Capture and saved-snapshot validation check nested structural machine endpoints.
+HTTP URLs cannot contain credentials, queries or fragments; paths cannot contain
+traversal, queries or fragments. Help paths may use `?method=GET`, with `POST`,
+`PUT`, `PATCH`, `DELETE` or `OPTIONS` also accepted as the method value. These
+restrictions apply to description metadata, not parameter defaults, Custom JSON
+or validator choice keys.
+
+`Snapshot.canonical` recursively sorts object keys, preserves arrays, and writes
+two-space UTF-8 JSON with LF endings and one terminal newline. The schema digest
+covers those bytes. The manifest also records API/protocol versions, profile,
+generator version/configuration, source digest and owned file hashes. Source
+identity covers the executable, Ruby library, templates, Gemfile, gemspec and
+Rakefile; it excludes checkout paths, timestamps, docs, tests and development
+locks. It also binds `HaveAPI::Schema.source_identity`, which identifies the
+loaded Ruby-client version and shared schema source under stable logical paths.
+Offline source commands must explicitly select both `clients/ruby/lib` and
+`clients/typescript/lib`, or use the prepared component bundle; the root tools
+bundle alone does not provide generator dependencies. Pin the exact HaveAPI
+revision and retain tool/dependency versions in downstream provenance.
+
+The shared schema API is unreleased source functionality. A matching gem version
+range does not prove that an older installed Ruby client has this API; generators
+fail clearly when the required capability is missing. Use the component Gemfile
+with its explicit sibling Ruby-client path when working from source. Rust and
+TypeScript facades preserve their native error classes. Rust snapshot loading now
+also validates contextual nested machine endpoints, matching TypeScript capture
+and load; unsafe saved endpoints that older Rust loading accepted are rejected.

@@ -25,7 +25,7 @@ RSpec.describe HaveAPI::Release do
 
   def copy_source(directory, prepared: false)
     paths = git(root, 'ls-files', '-z').split("\0")
-    paths += %w[clients/js/package-lock.json clients/python/uv.lock clients/rust/Gemfile.lock] if prepared
+    paths += %w[clients/js/package-lock.json clients/python/uv.lock clients/rust/Gemfile.lock clients/typescript/Gemfile.lock] if prepared
     paths.uniq.each do |name|
       destination = File.join(directory, name)
       FileUtils.mkdir_p(File.dirname(destination))
@@ -102,7 +102,7 @@ RSpec.describe HaveAPI::Release do
     artifacts.names.each { |name| File.write(File.join(tmp, name), name) }
     manifest = {
       schema: 1, source: artifacts.source, version: artifacts.version, tag: artifacts.tag,
-      dependency_locks: described_class::Artifacts::LOCK_PATHS.to_h { |path| [path, path == 'clients/rust/Gemfile.lock' ? File.read(File.join(root, path)) : "retained #{path}"] },
+      dependency_locks: described_class::Artifacts::LOCK_PATHS.to_h { |path| [path, %w[clients/rust/Gemfile.lock clients/typescript/Gemfile.lock].include?(path) ? File.read(File.join(root, path)) : "retained #{path}"] },
       run_id: ENV.fetch('GITHUB_RUN_ID', 'local'), files: artifacts.names.to_h { |name| [name, Digest::SHA256.file(File.join(tmp, name)).hexdigest] }
     }
     File.write(File.join(tmp, 'release-manifest.json'), JSON.generate(manifest))
@@ -160,7 +160,7 @@ RSpec.describe HaveAPI::Release do
       end
     end
 
-    it 'updates local versions while preserving all external graphs in a real disposable version bump' do
+    it 'updates local versions and preserves external graphs despite an inherited Bundler lockfile' do
       copy = File.join(tmp, 'source')
       copy_source(copy, prepared: true)
       path = File.join(copy, 'clients/js/package-lock.json')
@@ -168,7 +168,9 @@ RSpec.describe HaveAPI::Release do
       old_lock = JSON.parse(before)
       rust_path = File.join(copy, 'clients/rust/Gemfile.lock')
       rust_before = File.read(rust_path)
-      source_locks = %w[Gemfile.lock clients/js/package-lock.json clients/python/uv.lock clients/rust/Gemfile.lock].to_h do |name|
+      typescript_path = File.join(copy, 'clients/typescript/Gemfile.lock')
+      typescript_before = File.read(typescript_path)
+      source_locks = %w[Gemfile.lock clients/js/package-lock.json clients/python/uv.lock clients/rust/Gemfile.lock clients/typescript/Gemfile.lock].to_h do |name|
         source_path = File.join(root, name)
         [source_path, File.file?(source_path) ? File.binread(source_path) : nil]
       end
@@ -177,7 +179,8 @@ RSpec.describe HaveAPI::Release do
       python_path = File.join(copy, 'clients/python/uv.lock')
       python_before = python_lock(python_path)
       FileUtils.ln_s(File.join(root, 'clients/rust/.gems'), File.join(copy, 'clients/rust/.gems'))
-      described_class.capture('make', 'version', 'VERSION=999.0.0', chdir: copy)
+      described_class.capture({ 'BUNDLE_LOCKFILE' => File.join(root, 'Gemfile.lock') },
+                              'make', 'version', 'VERSION=999.0.0', chdir: copy)
       after = File.read(path)
       expected = old_lock.merge('version' => '999.0.0', 'packages' => old_lock.fetch('packages').merge('' => old_lock.fetch('packages').fetch('').merge('version' => '999.0.0')))
       expect(JSON.parse(after)).to eq(expected)
@@ -185,6 +188,8 @@ RSpec.describe HaveAPI::Release do
       expect(after[after.index(dependency_start)..]).to eq(before[before.index(dependency_start)..])
       rust_expected = rust_before.gsub(/^( {2,6}haveapi-(?:rust-)?client \((?:~> )?)[^)]+(\))$/, '\\1999.0.0\\2')
       expect(File.read(rust_path)).to eq(rust_expected)
+      typescript_expected = typescript_before.gsub(/^( {2,6}haveapi-(?:typescript-)?client \((?:~> )?)[^)]+(\))$/, '\\1999.0.0\\2')
+      expect(File.read(typescript_path)).to eq(typescript_expected)
       python_expected = JSON.parse(JSON.generate(python_before))
       project = python_expected.fetch('package').select { |entry| entry['name'] == 'haveapi-client' }
       expect(project.length).to eq(1)
@@ -206,7 +211,7 @@ RSpec.describe HaveAPI::Release do
     it 'checks clean authored source without any local library locks' do
       copy = File.join(tmp, 'cold-source')
       copy_source(copy)
-      %w[clients/js/package-lock.json clients/python/uv.lock clients/rust/Gemfile.lock].each do |path|
+      %w[clients/js/package-lock.json clients/python/uv.lock clients/rust/Gemfile.lock clients/typescript/Gemfile.lock].each do |path|
         expect(File.exist?(File.join(copy, path))).to be(false)
       end
       git(copy, 'init', '-q')
@@ -217,7 +222,7 @@ RSpec.describe HaveAPI::Release do
       expect { candidate.check_inputs }.to raise_error(Errno::ENOENT)
     end
 
-    %w[clients/js/package-lock.json clients/python/uv.lock clients/rust/Gemfile.lock].each do |missing|
+    %w[clients/js/package-lock.json clients/python/uv.lock clients/rust/Gemfile.lock clients/typescript/Gemfile.lock].each do |missing|
       it "rejects missing prepared #{missing}" do
         copy = File.join(tmp, 'prepared-source')
         copy_source(copy, prepared: true)
@@ -275,14 +280,14 @@ RSpec.describe HaveAPI::Release do
       expect { artifacts.verify(tmp) }.to raise_error(HaveAPI::Release::Error, /checksum mismatch/)
     end
 
-    it 'retains all nine actual dependency locks and Rust tool versions in the manifest' do
+    it 'retains all ten actual dependency locks and Rust tool versions in the manifest' do
       fixture_manifest
       allow(described_class).to receive(:capture).and_call_original
       %w[ruby gem node npm go php composer python uv cargo rustc rustfmt].each do |tool|
         allow(described_class).to receive(:capture).with(tool, tool == 'go' ? 'version' : '--version').and_return("#{tool} fixture")
       end
       allow(File).to receive(:read).and_call_original
-      described_class::Artifacts::LOCK_PATHS.reject { |path| %w[clients/rust/Gemfile.lock clients/js/package-lock.json clients/python/uv.lock].include?(path) }.each do |path|
+      described_class::Artifacts::LOCK_PATHS.reject { |path| %w[clients/rust/Gemfile.lock clients/typescript/Gemfile.lock clients/js/package-lock.json clients/python/uv.lock].include?(path) }.each do |path|
         allow(File).to receive(:read).with(File.join(root, path)).and_return("retained #{path}")
       end
       artifacts.write_manifest(tmp)

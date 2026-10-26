@@ -8,7 +8,8 @@ Gem::Specification.new do |spec|
   spec.license = 'MIT'
   spec.required_ruby_version = '>= 3.2'
   spec.files = Dir.chdir(__dir__) do
-    Dir['{bin,lib,template}/**/*', 'README.md', 'LICENSE.txt'].select { |path| File.file?(path) }.sort
+    Dir['{bin,lib,template}/**/*', 'docs/*.md', 'README.md', 'LICENSE.txt',
+        'Gemfile', 'Rakefile', 'haveapi-typescript-client.gemspec'].select { |path| File.file?(path) }.sort
   end
   spec.bindir = 'bin'
   spec.executables = ['haveapi-typescript-client']

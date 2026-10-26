@@ -110,12 +110,12 @@ RSpec.describe HaveAPI::Release::Publisher do
     commands
   end
 
-  it 'preflights all four gems, including Rust, before staging the first Python upload' do
+  it 'preflights all five gems, including TypeScript, before staging the first Python upload' do
     prepare_python
 
-    expect(gem_names.length).to eq(4)
-    expect(gem_names).to include('haveapi-rust-client')
-    expect(reads.map(&:first).uniq.first(4)).to eq(gem_names.map { |name| gem_url(name) })
+    expect(gem_names.length).to eq(5)
+    expect(gem_names).to include('haveapi-rust-client', 'haveapi-typescript-client')
+    expect(reads.map(&:first).uniq.first(5)).to eq(gem_names.map { |name| gem_url(name) })
     expect(Dir.children(File.join(directory, 'python-publish')).sort).to eq(python_names.sort)
     expect(HaveAPI::Release).not_to have_received(:run)
   end
@@ -133,6 +133,35 @@ RSpec.describe HaveAPI::Release::Publisher do
 
     expect { publisher.publish_registries }.to raise_error(HaveAPI::Release::Error, /Existing RubyGems version differs: haveapi-rust-client/)
     expect(HaveAPI::Release).not_to have_received(:run)
+  end
+
+  it 'refuses a conflicting TypeScript gem before staging Python or uploading earlier gems' do
+    registry[gem_url('haveapi-typescript-client')] = { 'sha' => 'different' }
+    expect { prepare_python }.to raise_error(HaveAPI::Release::Error, /Existing RubyGems version differs: haveapi-typescript-client/)
+    expect { publisher.publish_registries }.to raise_error(HaveAPI::Release::Error, /Existing RubyGems version differs: haveapi-typescript-client/)
+    expect(File).not_to exist(File.join(directory, 'python-publish'))
+    expect(HaveAPI::Release).not_to have_received(:run)
+  end
+
+  it 'skips matching gems and uploads only the missing TypeScript gem once' do
+    publisher
+    (gem_names - ['haveapi-typescript-client']).each { |name| registry[gem_url(name)] = matching_gem(name) }
+    registry[npm_url] = matching_npm
+    commands = capture_gem_pushes
+    publisher.publish_registries
+    expect(commands).to eq(['haveapi-typescript-client'])
+    commands.clear
+    publisher.publish_registries
+    expect(commands).to be_empty
+  end
+
+  it 'keeps the GitHub release private while the TypeScript gem is unconfirmed' do
+    gem_names.each { |name| registry[gem_url(name)] = matching_gem(name) }
+    registry.delete(gem_url('haveapi-typescript-client'))
+    allow(publisher).to receive(:github_release).and_return({ 'draft' => true })
+    expect { publisher.finish_github }.to raise_error(HaveAPI::Release::Error, /Registry final validation timed out/)
+    expect(HaveAPI::Release).not_to have_received(:run)
+    expect(publisher).not_to have_received(:github_release)
   end
 
   it 'publishes every missing gem client-first after complete registry preflight' do
@@ -204,7 +233,7 @@ RSpec.describe HaveAPI::Release::Publisher do
     expect(HaveAPI::Release).not_to have_received(:run)
   end
 
-  it 'never repeats an accepted upload or attempts npm while Rust remains unconfirmed' do
+  it 'never repeats an accepted upload or attempts npm while TypeScript remains unconfirmed' do
     publisher
     (gem_names - [gem_names.last]).each { |name| registry[gem_url(name)] = matching_gem(name) }
     pushes = []

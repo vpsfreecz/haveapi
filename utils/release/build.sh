@@ -32,3 +32,8 @@ git archive --format=tar --output="dist/haveapi-client-php-$version.tar" HEAD:cl
 (cd clients/python && uv build --out-dir ../../dist)
 ruby utils/release/cli.rb manifest dist
 ruby utils/release/rust_smoke.rb dist
+typescript_runtime=$(mktemp -d)
+trap 'rm -rf "$typescript_runtime"' EXIT
+npm install --prefix "$typescript_runtime" --no-package-lock --ignore-scripts --no-audit --no-fund \
+  --registry=https://registry.npmjs.org haveapi-client@0.30.2
+ruby utils/release/typescript_smoke.rb dist "$typescript_runtime/node_modules/haveapi-client"

@@ -87,7 +87,7 @@ command and generated-client release checks.
 
 ## TypeScript generator
 
-The source-distributed generator lives in `clients/typescript`; see its
+The generator lives in `clients/typescript`; see its
 [user guide](../../clients/typescript/README.md) for CLI use and generated-client
 examples. From the HaveAPI root:
 
@@ -104,8 +104,11 @@ emitted-source checks; they use TypeScript under `clients/js/node_modules`.
 The fixtures compile with NodeNext/ES2022, `exactOptionalPropertyTypes`,
 `noUncheckedIndexedAccess` and `verbatimModuleSyntax`. Unit checks need no live
 API. Full-schema generation and server/consumer integration are separate checks.
-This component shares `VERSION` and has a gemspec for local packaging, but is
-excluded from registry release artifacts.
+This component shares `VERSION` and is included in release artifacts as
+`haveapi-typescript-client`. The release build inspects both its retained gem and
+the Ruby client's shared schema sources, then exercises the extracted generator
+against the supported published JavaScript runtime. See
+[release packaging](releases.md#build-only-checks-and-local-packaging).
 
 `IR.build(snapshot)` returns deeply frozen symbol-key hashes and arrays.
 `Emitter.new(ir, { runtime_import: 'haveapi-client' }).files` returns a sorted map

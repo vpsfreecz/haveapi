@@ -16,7 +16,7 @@ module HaveAPI
       HEADER_NAMES = %w[Age Date Cache-Control X-Cache Retry-After].freeze
       BACKOFF = [2, 4, 8, 15, 30].freeze
       ENDPOINTS = {
-        'rubygems.org' => %r{\A/api/v2/rubygems/(?:haveapi|haveapi-client|haveapi-go-client|haveapi-rust-client)/versions/\d+\.\d+\.\d+[A-Za-z0-9._-]*\.json\z},
+        'rubygems.org' => %r{\A/api/v2/rubygems/(?:haveapi|haveapi-client|haveapi-go-client|haveapi-rust-client|haveapi-typescript-client)/versions/\d+\.\d+\.\d+[A-Za-z0-9._-]*\.json\z},
         'pypi.org' => %r{\A/pypi/haveapi-client/\d+\.\d+\.\d+[A-Za-z0-9._-]*/json\z},
         'registry.npmjs.org' => %r{\A/haveapi-client/\d+\.\d+\.\d+[A-Za-z0-9._-]*\z}
       }.freeze

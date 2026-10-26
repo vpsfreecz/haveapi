@@ -5,6 +5,23 @@ protocol 2 schema. Call resources and actions by name, with types for their
 arguments and results. A request executor connects those calls to the existing
 `haveapi-client` runtime or your application's adapter.
 
+## Install the generator
+
+The generator is packaged as the Ruby gem `haveapi-typescript-client`. Once a
+release containing the generator and shared schema API is available, install it
+with:
+
+```sh
+gem install haveapi-typescript-client
+```
+
+The packaged command is `haveapi-typescript-client`; it accepts the same `fetch`
+and `generate` arguments shown below. Its Ruby `haveapi-client` dependency must
+contain the shared schema API. An older gem in the same version range is not
+sufficient. For unreleased development source, use the checkout setup below.
+See the [release guide](../../doc/agent-instructions/releases.md) for coordinated
+packaging and trusted-publisher setup.
+
 ## Prepare the source tools
 
 The generator requires Ruby 3.2 or newer. From the HaveAPI checkout root:

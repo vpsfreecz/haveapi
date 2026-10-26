@@ -15,7 +15,8 @@ module HaveAPI
       'haveapi-client' => 'clients/ruby',
       'haveapi' => 'servers/ruby',
       'haveapi-go-client' => 'clients/go',
-      'haveapi-rust-client' => 'clients/rust'
+      'haveapi-rust-client' => 'clients/rust',
+      'haveapi-typescript-client' => 'clients/typescript'
     }.freeze
     REPOSITORY = 'vpsfreecz/haveapi'.freeze
     PHP_REPOSITORY = 'git@github.com:vpsfreecz/haveapi-client-php.git'.freeze
@@ -34,7 +35,7 @@ module HaveAPI
     class Artifacts
       LOCK_PATHS = %w[
         Gemfile.lock servers/ruby/Gemfile.lock clients/ruby/Gemfile.lock
-        clients/go/Gemfile.lock clients/rust/Gemfile.lock
+        clients/go/Gemfile.lock clients/rust/Gemfile.lock clients/typescript/Gemfile.lock
         clients/rust/runtime/Cargo.lock clients/js/package-lock.json
         clients/php/composer.lock clients/python/uv.lock
       ].freeze
@@ -107,7 +108,7 @@ module HaveAPI
       end
 
       def check_inputs
-        locks = %w[clients/js/package-lock.json clients/python/uv.lock clients/rust/Gemfile.lock].to_h do |path|
+        locks = %w[clients/js/package-lock.json clients/python/uv.lock clients/rust/Gemfile.lock clients/typescript/Gemfile.lock].to_h do |path|
           [path, read_lock(path)]
         end
         lock = JSON.parse(locks.fetch('clients/js/package-lock.json'))
@@ -117,6 +118,7 @@ module HaveAPI
         end
 
         check_rust_lock(locks.fetch('clients/rust/Gemfile.lock'))
+        check_typescript_lock(locks.fetch('clients/typescript/Gemfile.lock'))
       end
 
       def read_lock(path)
@@ -133,6 +135,16 @@ module HaveAPI
                lock.scan(/^  (haveapi-client|haveapi-rust-client) \(([^)]+)\)$/) == packages &&
                lock.scan(/^      haveapi-client \(([^)]+)\)$/) == [["~> #{version}"]]
           raise Error, 'Version or dependency mismatch in clients/rust/Gemfile.lock'
+        end
+      end
+
+      def check_typescript_lock(lock)
+        packages = %w[haveapi-client haveapi-typescript-client].map { |name| [name, version] }
+        unless lock.is_a?(String) && !lock.strip.empty? &&
+               lock.scan(/^    (haveapi-client|haveapi-typescript-client) \(([^)]+)\)$/) == packages &&
+               lock.scan(/^  (haveapi-client|haveapi-typescript-client) \(([^)]+)\)$/) == packages &&
+               lock.scan(/^      haveapi-client \(([^)]+)\)$/) == [["~> #{version}"]]
+          raise Error, 'Version or dependency mismatch in clients/typescript/Gemfile.lock'
         end
       end
 
@@ -194,6 +206,7 @@ module HaveAPI
         end
 
         check_rust_lock(locks.fetch('clients/rust/Gemfile.lock'))
+        check_typescript_lock(locks.fetch('clients/typescript/Gemfile.lock'))
         inspect_packages(directory, rust_lock: locks.fetch('clients/rust/Gemfile.lock'))
         manifest
       end
@@ -224,12 +237,17 @@ module HaveAPI
           package = Gem::Package.new(File.join(directory, "#{name}-#{version}.gem"))
           spec = package.spec
           raise Error, "Wrong gem identity: #{name}" unless spec.name == name && spec.version.to_s == version
-          next if name == 'haveapi-client'
+
+          if name == 'haveapi-client'
+            inspect_shared_schema(package)
+            next
+          end
 
           dependency = spec.dependencies.find { |d| d.name == 'haveapi-client' }
           raise Error, "Wrong gem dependency: #{name}" unless dependency && dependency.requirement.to_s == "~> #{version}"
 
           inspect_rust(package, rust_lock:) if name == 'haveapi-rust-client'
+          inspect_typescript(package) if name == 'haveapi-typescript-client'
           next unless name == 'haveapi'
 
           required = %w[json-schema.html protocol.md create-client.md typed-input-validation.md client-examples.md protocol.png].map { |f| "doc/#{f}" }
@@ -241,6 +259,51 @@ module HaveAPI
         raise Error, 'Wrong Composer identity' unless JSON.parse(php.fetch('composer.json').first).values_at('name', 'version') == ['haveapi/client', version]
 
         Release.capture('python', File.join(root, 'utils/release/python_artifacts.py'), directory, version)
+      end
+
+      def inspect_shared_schema(package)
+        paths = %w[lib/haveapi/schema.rb lib/haveapi/client/version.rb] +
+                Dir.chdir(File.join(root, 'clients/ruby')) { Dir['lib/haveapi/schema/*.rb'] }
+        raise Error, 'Ruby client gem is missing shared schema sources' unless (paths - package.contents).empty?
+
+        Dir.mktmpdir('haveapi-schema-inspect-') do |tmp|
+          package.extract_files(tmp)
+          paths.each do |path|
+            file = File.join(tmp, path)
+            unless File.file?(file) && !File.symlink?(file) && File.binread(file) == File.binread(File.join(root, 'clients/ruby', path))
+              raise Error, "Ruby client shared schema differs from source: #{path}"
+            end
+          end
+        end
+      end
+
+      def inspect_typescript(package)
+        component = File.join(root, 'clients/typescript')
+        spec = package.spec
+        dependencies = spec.runtime_dependencies.map { |dependency| [dependency.name, dependency.requirement.to_s] }
+        unless spec.name == 'haveapi-typescript-client' && spec.version.to_s == version &&
+               spec.required_ruby_version == Gem::Requirement.new('>= 3.2') &&
+               dependencies == [['haveapi-client', "~> #{version}"]]
+          raise Error, 'TypeScript generator gem has a wrong identity, Ruby floor or shared-client dependency'
+        end
+
+        expected = Dir.chdir(component) do
+          Dir['{bin,lib,template}/**/*', 'docs/*.md', 'README.md', 'LICENSE.txt',
+              'Gemfile', 'Rakefile', 'haveapi-typescript-client.gemspec'].select { |path| File.file?(path) }.sort
+        end
+        unless package.contents.sort == expected && spec.executables == ['haveapi-typescript-client']
+          raise Error, 'TypeScript generator gem has missing or unexpected packaged files'
+        end
+
+        Dir.mktmpdir('haveapi-typescript-inspect-') do |tmp|
+          package.extract_files(tmp)
+          expected.each do |path|
+            file = File.join(tmp, path)
+            unless File.file?(file) && !File.symlink?(file) && File.binread(file) == File.binread(File.join(component, path))
+              raise Error, "TypeScript generator gem differs from source: #{path}"
+            end
+          end
+        end
       end
 
       def inspect_rust(package, rust_lock: read_lock('clients/rust/Gemfile.lock'))

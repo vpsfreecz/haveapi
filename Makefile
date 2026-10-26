@@ -127,3 +127,4 @@ version:
 	@sed -ri "s/spec.add_dependency 'haveapi-client', '~> [^']+'/spec.add_dependency 'haveapi-client', '~> $(VERSION)'/" clients/typescript/haveapi-typescript-client.gemspec
 	@sed -ri "s/gem 'haveapi', '~> [^']+'/gem 'haveapi', '~> $(VERSION)'/" examples/servers/ruby/activerecord_auth/Gemfile
 	@$(RUST_ENV) bundle lock --local
+	@env -u RUBYOPT -u RUBYLIB -u BUNDLE_BIN_PATH -u BUNDLE_LOCKFILE -u BUNDLE_PATH -u BUNDLE_FROZEN -u BUNDLER_SETUP BUNDLE_GEMFILE="$(CURDIR)/clients/typescript/Gemfile" bundle lock --local

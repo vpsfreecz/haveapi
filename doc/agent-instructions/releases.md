@@ -20,6 +20,7 @@ All maintained components use the shared version and are released together:
 | Ruby client and CLI | RubyGems `haveapi-client` |
 | Go client generator, implemented in Ruby | RubyGems `haveapi-go-client` |
 | Rust client generator, implemented in Ruby | RubyGems `haveapi-rust-client` |
+| TypeScript client generator, implemented in Ruby | RubyGems `haveapi-typescript-client` |
 | JavaScript and TypeScript client | One npm `haveapi-client` package with both clients and TypeScript declarations; a JavaScript browser bundle |
 | PHP client | Composer `haveapi/client`, through `vpsfreecz/haveapi-client-php` |
 | Python client | PyPI `haveapi-client` |
@@ -45,9 +46,9 @@ source revision.
    repository policy. The workflow checks that required reviewers are configured;
    merely naming an environment does not enable approval.
 2. Configure a [RubyGems trusted publisher](https://guides.rubygems.org/trusted-publishing/)
-   for each of the four gems: owner `vpsfreecz`, repository `haveapi`, workflow
+   for each of the five gems: owner `vpsfreecz`, repository `haveapi`, workflow
    filename `release.yml`, environment `release`. For a gem that does not exist
-   yet, such as the first `haveapi-rust-client` release, use your account's
+   yet, such as the first `haveapi-typescript-client` release, use your account's
    [pending trusted publishers](https://rubygems.org/profile/oidc/pending_trusted_publishers)
    page. Enter the gem name and the same GitHub fields; leave the optional
    Workflow Repository fields blank because the workflow lives in HaveAPI.
@@ -98,13 +99,12 @@ installation while publishing credentials are present.
 Run release commands from the top-level `nix develop` shell.
 
 Library dependency locks are local build inputs and are not tracked in Git.
-Before changing versions on a fresh checkout, prepare the Rust component with
-`nix develop .#client-rust -c true`, then enter the top-level shell and run
-`npm install --no-audit --no-fund` in `clients/js` and `uv sync` in
-`clients/python`. `make release-deps` also prepares these inputs for a complete
-release build. Keep the resulting local locks for subsequent locked checks.
-`make version` updates their local package versions using the prepared Rust
-bundle and native uv resolver; external dependency records must stay unchanged.
+Run `make release-deps` in the top-level shell before changing versions or
+building on a fresh checkout. This prepares the component bundles, including
+Rust and TypeScript, and the JavaScript and Python environments. Keep the
+resulting local locks for subsequent locked checks. `make version` updates the
+local package versions with Bundler's local resolution and the native uv
+resolver; external dependency records must stay unchanged.
 
 1. Prepare the new major/minor branch or the supported patch branch. Keep its
    source and release metadata changes in separate commits.
@@ -132,13 +132,13 @@ bundle and native uv resolver; external dependency records must stay unchanged.
    GitHub Release. It validates the PHP mirror and existing registry hashes
    before writing to any registry. The PyPA action uploads missing retained
    Python files, then the helper confirms their PyPI hashes. It pushes the Ruby
-   client before its dependent server, Go-generator and Rust-generator gems,
-   publishes the npm tarball and updates the PHP mirror. It
+   client before its dependent server and Go, Rust and TypeScript generator
+   gems, then publishes the npm tarball and updates the PHP mirror. It
    publishes the GitHub Release only after all destinations succeed.
 7. Confirm the workflow's publication receipts and verify that the PHP version
    appears on Packagist. Packagist indexes the mirror asynchronously.
 
-The GitHub Release contains the four gems, npm tarball, browser bundle, PHP
+The GitHub Release contains the five gems, npm tarball, browser bundle, PHP
 source archive, Python wheel and sdist, release notes and manifest. Python uses
 the shared `VERSION`; `make version` updates its pyproject and lockfile, and
 release checks reject a mismatch. No package is rebuilt after approval.
@@ -171,7 +171,7 @@ checkout. Source-only `ruby utils/release/cli.rb check-clean` works before
 preparation; `make release-check`, package building and manifest creation also
 require `check-inputs` to pass for the actual local library locks.
 Move earlier artifacts aside before building. It generates shared documentation
-for the Ruby server, builds four gems, rebuilds and packs JavaScript,
+for the Ruby server, builds five gems, rebuilds and packs JavaScript,
 archives the tracked PHP subtree, and builds the Python wheel and sdist with uv.
 It never uploads packages. Component gems use the local Ruby client, so a new
 shared version need not already exist on RubyGems.
@@ -179,7 +179,7 @@ Do not commit generated server documentation or build artifacts.
 
 Rust generator packaging includes its executable, templates, dependency lock,
 documentation and embedded runtime source. The private Cargo harness and test
-fixtures are excluded. The manifest records Rust tool versions and all nine
+fixtures are excluded. The manifest records Rust tool versions and all ten
 actual dependency lock texts, including ignored library locks. The generator
 gem must contain its prepared Ruby lock. Tools-only restoration verifies those
 packaged bytes against the original manifest without requiring or resolving a
@@ -193,6 +193,36 @@ generator unit tests, both runtime feature configurations and generated-client
 protocol acceptance. See the [Rust packaging
 guide](../../clients/rust/docs/releasing.md) for the generated crate's
 independent versioning and compatibility checks.
+
+TypeScript generator packaging includes the executable, Ruby library, templates,
+README, license, Gemfile, Rakefile and gemspec. The last three files are part of
+the generator's source identity and must travel with the gem. Package inspection
+rejects missing, extra or changed files and checks the executable declaration,
+Ruby floor and shared-client dependency. The Ruby client gem is also checked for
+the exact shared schema sources. Its coordinated release must contain that API;
+an older gem satisfying the same version range does not provide it.
+
+The manifest retains the TypeScript component lock without packaging it in the
+TypeScript gem. Tools-only artifact verification uses the retained lock and does
+not resolve or require a local component bundle. After packaging, the build
+prepares the supported published JavaScript runtime `haveapi-client@0.30.2`,
+with install scripts disabled, then runs `typescript_smoke.rb`. This check
+extracts both retained Ruby gems, clears inherited Ruby/Bundler load overrides,
+verifies loaded paths, versions and source identities, generates a saved mounted
+fixture with the packaged executable, runs `--check`, and compiles a strict
+consumer of the emitted modules. The consumer uses the published runtime's
+package-name declarations and adapter; it makes no API requests. This runtime
+version is independent of the candidate's shared source VERSION.
+
+To repeat only that smoke against already prepared artifacts and runtime:
+
+```sh
+ruby utils/release/typescript_smoke.rb dist /path/to/node_modules/haveapi-client
+```
+
+The runtime must be the original published 0.30.2 bundle; the smoke checks its
+version and SHA-256. The release build prepares it before protected publication.
+No dependency installation or extracted consumer build runs after approval.
 
 The Rust runtime is embedded in generated clients; it is not a separately
 published crates.io dependency. The `haveapi-runtime-tests` harness stays private
@@ -255,8 +285,10 @@ when choosing which original files to stage. Post-upload and final confirmation
 require one complete, validated response. A withdrawn file leaves confirmation
 pending; it is not uploaded again. A conflict in any response stops the operation.
 
-A rerun uses the original tagged workflow and helpers. If the correction needs
-changes to that source, prepare a new patch version and obtain publication
+A rerun uses the original tagged workflow and helpers. Older tags retain their
+four-gem artifact contract; verify and republish their manifests with the
+original tooling. If the correction needs changes to that source, prepare a new
+patch version and obtain publication
 authorization for it. Preserve the failed tag and its original artifacts.
 
 Before resuming a failed publishing job, verify that every logged successful
@@ -275,7 +307,8 @@ that artifact is missing or expired. Do not substitute a new build for an accept
 Each destination is checked before publication. Existing gems must match the
 retained SHA-256; npm must match package identity and tarball integrity. An
 existing PHP tag must contain the same snapshot and HaveAPI source commit. The
-workflow skips only verified matches, including the Rust generator gem.
+workflow skips only verified matches, including the Rust and TypeScript
+generator gems.
 Conflicting versions, authentication errors and network errors fail visibly.
 Existing PyPI filenames and SHA-256
 values must match the manifest. Unexpected or changed files stop the release.

@@ -7,6 +7,7 @@
 .yardoc
 .gems
 Gemfile.lock
+!/servers/ruby/benchmarks/Gemfile.lock
 /clients/rust/runtime/target/
 clients/js/package-lock.json
 clients/python/uv.lock

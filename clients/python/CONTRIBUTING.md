@@ -60,8 +60,9 @@ without changing the shared server. The parser-only test uses HTTPX's final
 query bytes with the installed `Rack::Utils.parse_nested_query`; it also checks
 that unsupported GET shapes fail before action I/O. Run it with
 `uv run --locked pytest tests/integration/test_rack_wire.py`. It launches a Ruby
-parser subprocess and does not start an API server. See the README for the
-lossless GET subset, DELETE JSON encoding and JSON root-object restriction.
+parser subprocess and does not start an API server. See the
+[input encoding reference](docs/reference.md#input-encoding) for the lossless GET
+subset, DELETE JSON encoding and JSON root-object restriction.
 
 `uv run --locked pytest tests/integration/test_mounted_description.py` checks
 real mounted action and token descriptors using `Rack::MockRequest` and the

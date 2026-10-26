@@ -1,7 +1,9 @@
-HaveAPI Client Generator For Go
--------------------------------
+# HaveAPI client generator for Go
 HaveAPI-Go-Client generates a client library for accessing selected APIs built
 with the [HaveAPI framework](https://github.com/vpsfreecz/haveapi).
+
+See the [generated vpsAdmin Go client](https://github.com/vpsfreecz/vpsadmin-go-client)
+for a ready-to-use client and examples.
 
 ## Installation
 
@@ -9,8 +11,9 @@ with the [HaveAPI framework](https://github.com/vpsfreecz/haveapi).
 
 ## CLI
 The generator is run against an API server that the resulting client should be
-able to work with. The generated client uses one selected API version. When
-the API server changes, the client has to be regenerated.
+able to work with. Without `--version`, generation uses the server's default
+API version. The generated client has fixed routes for that version; regenerate
+it to pick up API changes.
 
 ```
 $ haveapi-go-client -h
@@ -34,7 +37,7 @@ in a project with the following `go.mod`:
 module foo
 ```
 
-The client could be imported and used as:
+Import and use the generated client:
 
 ```go
 package main
@@ -47,7 +50,6 @@ import (
 func main() {
 	api := client.New("https://api.vpsfree.cz")
 	api.SetLanguage("cs")
-	api.SetBasicAuthentication("admin", "secret")
 
 	action := api.Cluster.PublicStats.Prepare()
 	resp, err := action.Call()
@@ -56,13 +58,20 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+	if !resp.Status {
+		fmt.Printf("Action failed: %s\n", resp.Message)
+		return
+	}
 
-	fmt.Printf("%+v\n", resp)
-	fmt.Printf("%+v\n", resp.Response)
-	fmt.Printf("%+v\n", resp.Response.Cluster)
-	fmt.Printf("%+v\n", resp.Output)
+	fmt.Printf("VPS count: %d\n", resp.Output.VpsCount)
 }
 ```
+
+Public actions need no authentication. For protected actions, configure an
+existing token with `api.SetExistingTokenAuth(token)` or HTTP Basic credentials
+with `api.SetBasicAuthentication(username, password)` before making the call.
+`resp` contains the response envelope, `resp.Response.Cluster` contains the
+namespaced output, and `resp.Output` provides direct access to that output.
 
 ## Localization
 

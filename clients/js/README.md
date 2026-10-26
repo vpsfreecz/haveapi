@@ -1,368 +1,275 @@
-haveapi-client-js
-=================
-A client library for HaveAPI based APIs in JavaScript.
+# HaveAPI client for JavaScript and TypeScript
 
-Installation
-------------
- - Manual - Copy `dist/haveapi-client.js` to your project
- - Node.js - `npm install haveapi-client`
- - bower - `bower install haveapi-client`
+This package discovers a HaveAPI server's resources and actions at runtime.
+It provides two interfaces, both usable from JavaScript and TypeScript:
 
-The client is authored in TypeScript. The package ships the UMD JavaScript bundle
-at `dist/haveapi-client.js` and generated declarations at `dist/types/haveapi.d.ts`.
-Use it from JavaScript or TypeScript without compiling the library yourself.
+| Interface | Constructor | Setup and authentication | Action result |
+| --- | --- | --- | --- |
+| Callbacks | `CallbackClient` | Callback receives `(client, ready)` | Callback receives `(client, reply)`; check `reply.isOk()` |
+| Promises / async-await | `AsyncClient` | Await `setup()` or `authenticate()` | Await an action to receive `{ value, response }`; failures reject |
 
-Usage
------
-On the web:
+`Client` remains an alias of `CallbackClient`.
+
+## Installation
+
+```sh
+npm install haveapi-client
+```
+
+The package includes compiled JavaScript and declarations for its public
+TypeScript interface. You can use it without building the library.
+
+For browser script tags, copy `dist/haveapi-client.js` into your project and load
+it before your application:
 
 ```html
 <script src="haveapi-client.js"></script>
 ```
 
-With NodeJS:
+The constructors are then available as `HaveAPI.CallbackClient` and
+`HaveAPI.AsyncClient`. Node.js examples below use the CommonJS package entry.
+
+## Quickstarts
+
+Give either client the API root, including any mount path, without appending an
+API version. Omitting the `version` option selects the server's default version.
+`setup()` downloads the public API description. `authenticate()` can run first
+and also loads the authorized description, so these examples need no separate
+setup call.
+
+The four examples list VPSes from vpsAdmin using an existing token in the
+`VPSADMIN_TOKEN` environment variable. Resource names, actions, input fields and
+visibility depend on the server's description and your permissions.
+
+### JavaScript with callbacks
 
 ```js
-var HaveAPI = require('haveapi-client');
+const { CallbackClient } = require('haveapi-client');
+
+const token = process.env.VPSADMIN_TOKEN;
+if (!token) throw new Error('Set VPSADMIN_TOKEN to an existing API token');
+
+const api = new CallbackClient('https://api.vpsfree.cz');
+api.authenticate('token', { token }, (client, ready) => {
+  if (!ready) {
+    console.error('Authentication or API discovery failed');
+    return;
+  }
+
+  client.vps.list({ limit: 10 }, (owner, vpses) => {
+    if (!vpses.isOk()) {
+      console.error('Unable to list VPSes');
+      return;
+    }
+    vpses.each(vps => console.log(vps.id, vps.hostname));
+  });
+});
 ```
 
-Use `CallbackClient` for callbacks or `AsyncClient` for Promises. `Client`
-remains supported as an alias of `CallbackClient`: both names refer to the same
-constructor, prototype and static helpers. Its runtime constructor name remains
-`Client`.
+Setup and authentication callbacks receive a boolean status. Action callbacks
+receive a response, resource instance or resource list, according to the action's
+output layout. These callbacks use `(client, result)` rather than Node's
+error-first convention. Callback operations do not return Promises; local
+invocation errors can throw synchronously.
 
-### AsyncClient
-
-For a Promise-based path request, the API base already includes its version:
+### JavaScript with async-await
 
 ```js
 const { AsyncClient } = require('haveapi-client');
 
 async function main() {
-  const api = new AsyncClient('https://api.example.test/v7.0');
-  const result = await api.request({ method: 'GET', path: '/items' });
-  console.log(result.data);
+  const token = process.env.VPSADMIN_TOKEN;
+  if (!token) throw new Error('Set VPSADMIN_TOKEN to an existing API token');
+
+  const api = new AsyncClient('https://api.vpsfree.cz');
+  await api.authenticate('token', { token });
+  const { value: vpses } = await api.vps.list({
+    params: { limit: 10 }
+  });
+  vpses.each(vps => console.log(vps.get('id'), vps.get('hostname')));
 }
 
 main().catch(console.error);
 ```
 
-This request does not need `setup()`. See [async requests and authentication](doc-async-client.md)
-and [async resources and binding](doc-async-resources.md) for description-based
-resource access, authentication, errors and completion waiting.
+`value` contains the materialized action output: an `AsyncResourceInstance` for
+`object`, an `AsyncResourceList` for `object_list`, or ordinary data for other
+layouts. `response` contains `data`, `meta`, `envelope` and `httpStatus`.
+Transport, protocol, authentication, validation and API failures reject the
+Promise with an `AsyncError`; there is no callback status to inspect.
 
-For discovery and described actions, configure the API root including its mount,
-such as `https://api.example.test/mount/`, and select the version with
-`{version: '2'}`. The server's advertised action and authentication paths already
-specify the route, including the mount and any version prefix. Clients resolve
-these paths from the origin root.
-Raw `AsyncClient.request` paths remain relative to the configured API base.
-Applications with manually built or cached API-relative descriptors under a
-mounted base must refresh those descriptors from OPTIONS.
+### TypeScript with callbacks
 
-### CallbackClient
-
-Create a callback client instance:
-
-```js
-var api = new HaveAPI.CallbackClient("http://your.api.tld");
-```
-
-Request translated API messages and translate local client-side validation
-errors by passing `language`:
-
-```js
-var api = new HaveAPI.CallbackClient("http://your.api.tld", { language: "cs" });
-```
-
-The value is sent in `Accept-Language` by default. Use `language_header` when
-the API is configured with a custom language header. Set the language before
-`setup()` or `authenticate()` so translated validator descriptions are loaded
-from the server.
-
-Before using callback resource actions, set up the callback client:
-
-```js
-api.setup(function() {
-	console.log("The client is ready to roll");
-});
-```
-
-Use the public lookup helpers after discovery to access resources and actions
-by their exact names. They also support TypeScript without endpoint-specific
-types:
+The declarations describe the library interface. Endpoint names downloaded at
+runtime are not statically known, so use the explicit resource/action lookup
+helpers in TypeScript:
 
 ```ts
 import { CallbackClient } from 'haveapi-client';
 
-const api = new CallbackClient('https://api.example.test/mount/', {version: '2'});
-api.setup((client, ready) => {
-  if (!ready) return;
-  const resource = CallbackClient.findResource(client, ['widget']);
-  const action = CallbackClient.findAction(resource, 'show');
-  action.directInvoke(7, (owner, response) => {
-    if (!response.isOk()) {
-      console.error(response.message(), response.envelope.errors);
-      return;
-    }
-    console.log(response.response(), response.meta());
+const token = process.env.VPSADMIN_TOKEN;
+if (!token) throw new Error('Set VPSADMIN_TOKEN to an existing API token');
+
+const api = new CallbackClient('https://api.vpsfree.cz');
+api.authenticate('token', { token }, (client, ready) => {
+  if (!ready) {
+    console.error('Authentication or API discovery failed');
+    return;
+  }
+
+  try {
+    const resource = CallbackClient.findResource(client, ['vps']);
+    const action = CallbackClient.findAction(resource, 'list');
+    action.directInvoke({ limit: 10 }, (owner, reply) => {
+      if (!reply.isOk()) {
+        console.error(reply.message(), reply.envelope.errors);
+        return;
+      }
+      console.log(reply.response(), reply.meta());
+    });
+  } catch (error) {
+    console.error('Unable to look up or invoke the action:', error);
+  }
+});
+```
+
+`directInvoke` supplies the raw callback `Response` wrapper, including
+`response()`, `meta()`, `message()` and `envelope.errors`. It does not materialize
+a resource list. `findResource` accepts a path of exact resource names;
+`findAction` accepts that resource and an action name. Missing or ambiguous names
+throw `ProtocolError`. These helpers also reach names that collide with local
+JavaScript properties.
+
+### TypeScript with async-await
+
+```ts
+import { AsyncClient, AsyncResourceList } from 'haveapi-client';
+
+async function main(): Promise<void> {
+  const token = process.env.VPSADMIN_TOKEN;
+  if (!token) throw new Error('Set VPSADMIN_TOKEN to an existing API token');
+
+  const api = new AsyncClient('https://api.vpsfree.cz');
+  await api.authenticate('token', { token });
+  const { value: vpses } = await api.resource('vps').action('list')<AsyncResourceList>({
+    params: { limit: 10 }
   });
-});
-```
-
-`findAction` accepts a resource returned by `findResource` (including a bound
-resource). Canonical action names take priority; aliases resolve only when they
-identify one action. Missing or ambiguous names raise `ProtocolError`. Names
-that collide with JavaScript properties remain accessible through these helpers.
-Existing direct properties and the resource's `actions` name array keep their
-existing behavior. `directInvoke` always supplies a raw `Response`; ordinary
-invocation may return resource instances or lists according to the description.
-
-### Authentication
-haveapi-client-js supports HTTP basic and token authentication. However, the HTTP basic
-method is by default not allowed by HaveAPI to be used from web browsers.
-
-#### HTTP basic
-
-```js
-api.setup(function() {
-	console.log("The client is ready to roll");
-
-	api.authenticate('basic', {
-			user: 'yourname',
-			password: 'yourpassword'
-		}, function(c, status) {
-		console.log("Are we authenticated?", status);
-	});
-});
-```
-
-#### Token authentication
-Request a token:
-
-```js
-api.setup(function() {
-	console.log("The client is ready to roll");
-
-	api.authenticate('token', {
-			user: 'yourname',
-			password: 'yourpassword'
-		}, function(c, status) {
-		console.log("Are we authenticated?", status);
-		console.log("Auth token is:", api.authProvider.token);
-	});
-});
-```
-
-Use an existing token:
-
-```js
-api.setup(function() {
-	console.log("The client is ready to roll");
-
-	api.authenticate('token', {
-			token: 'qwertyuiopasdfghjkl',
-		}, function(c, status) {
-		console.log("Are we authenticated?", status);
-	});
-});
-```
-
-It is possible to avoid calling setup and use only authenticate, if
-you won't use the client before authentication anyway.
-
-```js
-api.authenticate('token', {
-		token: 'qwertyuiopasdfghjkl',
-	}, function(c, status) {
-	console.log("The client is set up");
-	console.log("Are we authenticated?", status);
-});
-```
-
-## Multi-factor token authentication
-The token authentication also supports multi-factor authentication, i.e. the
-API server may require clients to call multiple authentication actions with
-different credentials. It is necessary to implement a callback function which
-is called when additional authentication steps are needed. The function
-either returns input parameters to use for authentication, or invokes the
-callback which it gets as an argument.
-
-```js
-api.authenticate('token', {
-		user: 'yourname',
-		password: 'yourpassword',
-		callback: function (action, params, cont) {
-			console.log("The server requires additional authentication", action);
-
-			// Either call the callback whenever ready
-			cont({"code": 123456});
-
-			// Or return the parameters immediately
-			return {"code": 123456};
-		}
-	}, function(c, status) {
-	console.log("Are we authenticated?", status);
-	console.log("Auth token is:", api.authProvider.token);
-});
-```
-
-### Access resources and actions
-Resources and actions can be used only after the client has been set up
-or authenticated.
-
-```js
-// Get a resource
-api.vps.show(101, function(c, vps) {
-	console.log("Received VPS:", vps.id, vps.hostname);
-});
-
-// Create a resource
-api.vps.create(101, {
-		hostname: 'something',
-		and: 'others'
-	}, function(c, reply) {
-	console.log('Created VPS?', reply.isOk());
-});
-
-// It's also possible to create it with an empty instance
-var myvps = api.vps.new();
-myvps.hostname = 'something_different';
-myvps.save(function(c, vps) {
-	console.log('created a vps?', vps.isOk(), vps.id);
-});
-
-// Lists of objects
-api.vps.list({limit: 10}, function(c, vpses) {
-	console.log('received a list of vpses', vpses.isOk(), vpses.length);
-
-	vpses.each(function(vps) {
-		console.log('containing', vps.id, vps.hostname);
-	});
-});
-
-```
-
-### Blocking actions
-HaveAPI has support for long-running actions. Progress of such actions can be monitored.
-The client has a callback to get updates about the action's state and a callback that
-is called when the action is finished.
-
-Notice that the callbacks are passed in a different way, see the
-[documentation](https://projects.vpsfree.cz/haveapi-client-js/ref/HaveAPI.Client.Action.html#invoke__anchor)
-to learn more about it.
-
-```js
-api.vps.restart(101, {
-    // onReply is called when the API server responds. It is the final callback
-    // for non-blocking actions.
-    onReply: function (c, reply) {
-        console.log('Server replied, action is being executed');
-    },
-
-    // Called regularly when the action's state changes
-    onStateChange: function (c, reply, state) {
-        console.log('Current progress:', state.progress.toString());
-    },
-
-    // Called when the action finishes
-    onDone: function (c, reply) {
-        console.log('Action done!');
-    }
-})
-```
-
-Some actions can be cancelled from the `onStateChange` callback if
-`state.canCancel` is `true`.
-
-```js
-...
-onStateChange: function (c, reply, state) {
-    if (state.canCancel) {
-        // Note that the cancel operation can also be blocking. That depends on the
-        // API server.
-        state.cancel({
-            onReply: function () { ... },
-            onStateChange: function () { ... },
-            onDone: function () { ... }
-        });
-    }
+  vpses.each(vps => console.log(vps.get('id'), vps.get('hostname')));
 }
-...
+
+main().catch(console.error);
 ```
 
-### Metadata
-Metadata may be used to prefetch associated resources or get total item count.
+The generic type argument specifies the expected result type; it does not generate endpoint
+types or validate application fields at runtime. The same explicit
+`resource(name).action(name)` form works in JavaScript. Use
+`AsyncResourceInstance` as the result type for an `object` action such as `show`.
+
+## Common usage
+
+### Public resources and API versions
+
+Use `api.setup((client, ready) => { ... })` with callbacks or `await api.setup()`
+with the async interface when authentication is unnecessary. Check `ready`
+before callback calls, and handle async setup rejection as in the quickstarts.
+
+To select a specific API version, pass `{ version: 'API_VERSION' }` to either
+constructor, replacing `API_VERSION` with the chosen version. Keep the URL at
+the API root. Discovery and described actions use the paths advertised by the
+server. The
+[request reference](doc-async-client.md#path-based-requests) explains mounted
+URLs and the different path rules for low-level requests.
+
+### IDs and input parameters
+
+After discovery or authentication, pass path IDs before the input parameters.
+For example, to fetch VPS 101 using callbacks:
+
+```js
+api.vps.show(101, (client, vps) => {
+  if (!vps.isOk()) {
+    console.error('Unable to fetch VPS 101');
+    return;
+  }
+  console.log(vps.id, vps.hostname);
+});
+```
+
+For the async interface, call `await api.vps.show(101)` inside an async function
+with rejection handling. Put action input under `params`, as in the list
+quickstarts. Actions that operate on a collection take only the IDs present in
+their described path. In particular, a top-level collection create action does
+not take an existing object's ID. Required create fields depend on the API.
+
+### Metadata and associations
+
+Callback calls accept metadata inside the parameter object:
 
 ```js
 api.vps.list({
-		limit: 10,
-		meta: {count: true, includes: 'user,node__location'}
-	}, function(c, vpses) {
-	console.log('received a list of vpses', vpses.isOk());
-	console.log('number of received vpses', vpses.length);
-	console.log('total count of vpses', vpses.tocalCount)
-
-	vpses.each(function(vps) {
-		// Associations user, node and node__location are prefetched.
-		// They can be accessed immediately without any additional
-		// HTTP request.
-		console.log('VPS', vps.id, vps.hostname, vps.user.login, vps.node.name, vps.node.location.label);
-	});
+  limit: 10,
+  meta: { count: true, includes: 'user,node__location' }
+}, (client, vpses) => {
+  if (!vpses.isOk()) {
+    console.error('Unable to list VPSes');
+    return;
+  }
+  console.log('Received:', vpses.length, 'Total:', vpses.totalCount);
+  vpses.each(vps => console.log(vps.id, vps.hostname));
 });
 ```
 
-### Hooks
-Sometimes it is needed to use the client independently on multiple places, but
-to only have one instance and setup/authenticate just once.
+The requested callback associations are prefetched when supported by the API.
+Async calls put `meta` alongside `params`, for example
+`{ params: { limit: 10 }, meta: { count: true } }`, and expose metadata through
+`response.meta`. Async association getters never perform network I/O; use
+`loadAssociation(name)` explicitly. See [async resources](doc-async-resources.md)
+for binding, association loading and `new()` / `save()` behavior.
 
-There are two hooks available: `setup` and `authenticated`. They are both called
-after the event occurs. A hook may be registered multiple times and it does not matter
-if it is registered before (the callback is queued) or after (it is called right away)
-the event actually happens.
+### Authentication and language
 
-```js
-// The client is initialized, set up and authenticated somewhere else in the
-// code. Something just needs to be done when it is ready.
-api.after('setup', function() {
-	console.log("The client is set up");
-});
+Both interfaces support HTTP basic authentication, existing tokens and token
+acquisition. Use `{ user, password }` instead of `{ token }` to request a token
+when those are the server's described credentials. With basic authentication,
+use the method name `'basic'` and `{ user, password }`; HaveAPI servers normally
+disable this method for browsers.
 
-api.after('authenticated', function() {
-	console.log("The client is authenticated");
-})
-```
+For multi-factor token authentication, callback options accept
+`callback(action, parameters, cont)`. Return the next input object immediately,
+or call `cont(input)` later and return nothing. Use only one continuation per
+challenge. Async options accept `onChallenge(action, parameters)`, which returns
+the next input object or a Promise for it. See
+[async authentication](doc-async-client.md#setup-and-authentication) and the
+[callback API reference](https://projects.vpsfree.cz/haveapi-client-js/ref/).
 
-Documentation
--------------
-https://projects.vpsfree.cz/haveapi-client-js/ref/
+Pass `{ language: 'cs' }` to either constructor to request translated messages
+and local validation errors. The default header is `Accept-Language`; set
+`language_header` for a custom header. Set the language before setup or
+authentication to load translated descriptions.
 
-Development tool compatibility
-------------------------------
-Prepare build and test dependencies from `clients/js` in the repository's
-`nix develop .#client-js` environment:
+## Advanced usage and reference
 
-```sh
-npm install --no-audit --no-fund
-```
+- [Async requests, authentication and errors](doc-async-client.md): low-level
+  `request()` for known paths, timeouts, abort signals and server completion.
+- [Async resources and binding](doc-async-resources.md): action options, result
+  layouts, identity, saves and association loading.
+- [Callback API reference](https://projects.vpsfree.cz/haveapi-client-js/ref/):
+  resources, actions, responses and hooks. `api.after('setup', callback)` and
+  `api.after('authenticated', callback)` register readiness hooks, including
+  after the event has occurred.
+- [Callback action options](https://projects.vpsfree.cz/haveapi-client-js/ref/HaveAPI.Client.Action.html#invoke__anchor):
+  long-running actions use `onReply`, `onStateChange` and `onDone`. The initial
+  reply reports acceptance. Inspect `state.finished` and `state.status` in
+  `onStateChange` for the terminal job outcome; `onDone` receiving an `isOk()`
+  reply alone does not prove job success. Cancellation is available through
+  `state.cancel(options)` when `state.canCancel` is true. Async callers use
+  `waitForCompletion()` separately, as described in the async reference.
 
-The library's `package-lock.json` is local and ignored. Keep that prepared
-resolution for the build and its checks. Fresh preparation can select different
-compatible dependency versions within the constraints in `package.json`.
+## Development
 
-The pinned Node 24 shell builds the client with TypeScript 6.0.3 and Rollup.
-TypeScript 6 supports the bundle's ES5 target; TypeScript 7 removes it. The
-affected build and consumer configs set `ignoreDeprecations: "6.0"` for ES5 and
-`moduleResolution: "node"`, the legacy Node10 resolution algorithm. Strict type
-and declaration checks and an ES5 parser still validate the emitted package.
-The async client's runtime requirements remain unchanged.
+See [build preparation and checks](test/README.md) for the Nix environment,
+compiler compatibility, documentation generation and test commands.
 
-JSDoc uses `markdown-it` 15.0.3 and `markdown-it-anchor` 10.0.0 through overrides
-scoped to JSDoc. The compatibility suite checks heading renders, links and
-generated API navigation. These are build tools; package consumers use the
-bundled JavaScript and emitted declarations.
-See [the check commands](test/README.md).
+## License
 
-License
--------
-haveapi-client-js is released under the MIT license.
+The HaveAPI JavaScript client is released under the MIT license.

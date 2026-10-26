@@ -14,6 +14,25 @@ This creates or reuses the ignored local `package-lock.json`. Run the build and
 checks against that prepared resolution without installing dependencies between
 them. The compatibility suite also inspects this local dependency graph.
 
+## Build tool compatibility
+
+Fresh dependency preparation can select different compatible versions within
+the constraints in `package.json`.
+
+The pinned Node 24 shell builds the client with TypeScript 6.0.3 and Rollup.
+TypeScript 6 supports the bundle's ES5 target; TypeScript 7 removes it. The
+affected build and consumer configs set `ignoreDeprecations: "6.0"` for ES5 and
+`moduleResolution: "node"`, the legacy Node10 resolution algorithm. Strict type
+and declaration checks and an ES5 parser still validate the emitted package.
+The async client's runtime requirements remain unchanged.
+
+JSDoc uses `markdown-it` 15.0.3 and `markdown-it-anchor` 10.0.0 through overrides
+scoped to JSDoc. The compatibility suite checks heading renders, links and
+generated API navigation. These are build tools; package consumers use the
+bundled JavaScript and emitted declarations.
+
+## Check commands
+
 The focused checks are:
 
 ```sh
@@ -25,13 +44,8 @@ npm run test:resources
 npm run test:types
 ```
 
-TypeScript 6.0.3 supports ES5 output and the existing Node10 resolution algorithm
-(`moduleResolution: "node"`). Both options are deprecated in 6 and removed in 7,
-so the affected build and consumer fixtures set `ignoreDeprecations: "6.0"`.
-The resource and async declaration configs inherit that setting. Strict checks
-and library declaration checking remain enabled. The ES5 parser and type tests
-still check emitted syntax and public declarations. `@types/node` stays on the
-Node 24 line used by the development shell.
+The resource and async declaration configs inherit the compiler settings above.
+`@types/node` stays on the Node 24 line used by the development shell.
 
 The compatibility suite parses the distributed bundle as ES5 and tests its
 bundled TypeScript helpers with conflicting global helper names. The callback

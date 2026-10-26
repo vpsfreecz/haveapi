@@ -60,9 +60,20 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           EVENT_SHA: ${{ github.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.event.after }}
         shell: bash
         run: |
           set -euo pipefail
+          if [[ "$EVENT_NAME" == push ]]; then
+            for sha in "$PUSH_BEFORE" "$PUSH_AFTER"; do
+              [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+              [[ "$sha" != 0000000000000000000000000000000000000000 ]] || continue
+              if ! git cat-file -e "$sha^{commit}"; then
+                git fetch --no-tags origin "$sha"
+              fi
+            done
+          fi
           ruby utils/performance_ci.rb resolve \
             --event "$GITHUB_EVENT_PATH" --event-name "$EVENT_NAME" --event-sha "$EVENT_SHA" \
             --repository "$GITHUB_WORKSPACE" --output "$PERFORMANCE_EVIDENCE/selection.json" \
@@ -81,29 +92,27 @@ jobs:
         if: steps.resolve.outputs.relevant == 'true'
         uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # 31.11.3
 
-      - name: Prepare candidate server and tool dependencies once
+      - name: Install the locked benchmark bundle
         if: steps.resolve.outputs.relevant == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          nix develop --command true > "$PERFORMANCE_EVIDENCE/setup-tools.log" 2>&1
-          nix develop .#server-ruby --command true > "$PERFORMANCE_EVIDENCE/setup-server.log" 2>&1
+          echo "HAVEAPI_BENCHMARK_GEM_HOME=$RUNNER_TEMP/haveapi-benchmark-gems" >> "$GITHUB_ENV"
+          HAVEAPI_BENCHMARK_GEM_HOME="$RUNNER_TEMP/haveapi-benchmark-gems" \
+            nix-shell servers/ruby/benchmarks/shell.nix --run '
+              set -e
+              gem install bundler --version 4.0.23 --no-document
+              BUNDLE_IGNORE_CONFIG=1 BUNDLE_FROZEN=1 BUNDLE_PATH__SYSTEM=1 \
+                BUNDLE_GEMFILE="$PWD/servers/ruby/benchmarks/Gemfile" bundle _4.0.23_ install
+            ' > "$PERFORMANCE_EVIDENCE/setup-benchmark.log" 2>&1
 
-      - name: Prepare Rust documentation dependencies
-        if: steps.resolve.outputs.relevant == 'true'
-        run: nix develop .#client-rust --command true > "$PERFORMANCE_EVIDENCE/setup-rust.log" 2>&1
-
-      - name: Run paired sources with one dependency environment
+      - name: Run the selected pair outside Bundler
         if: steps.resolve.outputs.relevant == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          HAVEAPI_RELEASE_TOOLS_ONLY=1 nix develop --command bash -euo pipefail -c '
-            combined_gems="$PWD/.gems:$PWD/clients/rust/.gems:$(ruby -e "puts Gem.default_dir")"
-            env -u RUBYOPT -u RUBYLIB -u BUNDLE_BIN_PATH -u BUNDLE_GEMFILE \
-              -u BUNDLE_LOCKFILE -u BUNDLE_PATH -u BUNDLE_FROZEN -u BUNDLER_SETUP \
-              GEM_PATH="$combined_gems" \
-              ruby utils/performance_ci.rb run --repository "$PWD" \
+          nix-shell servers/ruby/benchmarks/shell.nix --run '
+            ruby utils/performance_ci.rb run --repository "$PWD" \
               --selection "$PERFORMANCE_EVIDENCE/selection.json" \
               --evidence "$PERFORMANCE_EVIDENCE" --sources "$PERFORMANCE_SOURCES"
           ' > "$PERFORMANCE_EVIDENCE/campaign.log" 2>&1

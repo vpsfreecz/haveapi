@@ -15,39 +15,45 @@ every future performance characteristic.
 
 ## Local commands
 
-Use the repository's Nix environments and prepare dependencies before running
-measurements. `nix develop .#server-ruby` prepares the server bundle; the top-level
-`nix develop` prepares contributor tools. Both profiles render full Rust-enabled
-pages and need the Ruby dependencies from `nix develop .#client-rust`. SDK
-generation, Cargo and formatting are outside these measurements. Resolved
-component lockfiles remain local library inputs and must not be committed.
-
-Run deterministic specs in the prepared top-level shell:
+The benchmark has its own third-party tool bundle and pinned Nix shell in
+`servers/ruby/benchmarks/`. This keeps contributor Nix updates separate from the
+calibrated measurement runtime. Prepare the ordinary frozen bundle once:
 
 ```sh
-make test-performance
+export HAVEAPI_BENCHMARK_GEM_HOME="$PWD/servers/ruby/benchmarks/.gems"
+nix-shell servers/ruby/benchmarks/shell.nix --run '
+  set -e
+  gem install bundler --version 4.0.23 --no-document
+  BUNDLE_IGNORE_CONFIG=1 BUNDLE_FROZEN=1 BUNDLE_PATH__SYSTEM=1 \
+    BUNDLE_GEMFILE="$PWD/servers/ruby/benchmarks/Gemfile" bundle _4.0.23_ install
+'
 ```
 
-The runner consumes the same neutral fixtures for both implementation roots,
-using a fresh process for each sample. Keep the harness in a candidate repository
-checkout containing the exact baseline and candidate Git objects. Export both
-source revisions separately, retain their archive hashes and source manifests,
-and run `make doc` in each exported root. Do not point one process at both roots.
-Then run outside Bundler with the prepared gem stores:
+The tool Gemfile installs no HaveAPI package. Its tracked lock is an application
+lock; component library locks remain local contributor inputs. Launch the runner
+outside Bundler so both exported sources use the same Ruby and gem paths. The
+shell clears inherited Bundler settings, `RUBYOPT`, `RUBYLIB` and
+`RUBYGEMS_GEMDEPS`.
+
+Run deterministic specs in the prepared contributor shell with
+`make test-performance`. For a comparison, keep the neutral harness in a candidate
+checkout containing both exact Git objects. Export the baseline and candidate
+separately, retain their archive hashes and manifests, and run `make doc` in each
+exported root. Then run from the candidate checkout:
 
 ```sh
-env -u RUBYOPT -u RUBYLIB -u BUNDLE_BIN_PATH -u BUNDLE_GEMFILE \
-  -u BUNDLE_LOCKFILE -u BUNDLE_PATH -u BUNDLE_FROZEN -u BUNDLER_SETUP \
-  GEM_PATH="$PWD/.gems:$PWD/clients/rust/.gems:$(ruby -e 'puts Gem.default_dir')" \
-  make performance PERFORMANCE_ARGS='--baseline-root /absolute/baseline --baseline-sha BASELINE_FULL_SHA --candidate-root /absolute/candidate --candidate-sha CANDIDATE_FULL_SHA --profile quick --budgets servers/ruby/benchmarks/performance_budgets.json --output /absolute/new-evidence-directory'
+nix-shell servers/ruby/benchmarks/shell.nix --run '
+  make performance PERFORMANCE_ARGS="--baseline-root /absolute/baseline --baseline-sha BASELINE_FULL_SHA --candidate-root /absolute/candidate --candidate-sha CANDIDATE_FULL_SHA --profile quick --budgets servers/ruby/benchmarks/performance_budgets.json --output /absolute/new-evidence-directory"
+'
 ```
 
-Run inside the prepared top-level Nix shell, from the candidate checkout.
-Replace the paths and full 40-character lowercase SHAs. Use `--profile weekly`
-for the expanded workload. The runner verifies source paths, source identities,
-response contracts and dependency/runtime identities before accepting a result.
-An incompatible graph or fixture contract fails; prepare a separately reviewed
-environment/reference migration instead of mixing versions or relaxing checks.
+Replace paths and full 40-character lowercase SHAs. Use `--profile weekly` for
+the expanded workload. The runner checks the exact calibrated Ruby and available
+dependency versions before timing, then requires each worker's complete activated
+graph to match the weekly calibration. Source identities, loaded files and
+response contracts must also match. An unsupported declaration or runtime change
+requires a separately reviewed environment migration; it does not update the
+reference or budgets.
 
 To reclassify retained samples without making requests:
 
@@ -153,10 +159,11 @@ a constant amount. Budget changes require measured justification and review.
 Missing or uncalibrated budgets for the existing calibrated workloads fail rather
 than disabling the gate.
 
-Both profiles use the already recorded weekly Rust dependency closure as their
-expected runtime identity. Quick includes the Rust manifests, gemspec, resolved
-lock and actually loaded dependencies too. Baseline and candidate must match
-that environment exactly; unavailable or changed identities fail. The shared
+Both profiles use the recorded weekly Rust dependency closure as their expected
+runtime identity. Quick includes the Rust manifests, gemspec and loaded
+dependencies. Both profiles retain the benchmark Gemfile, lock and shell bytes
+and hashes. Baseline and candidate must match that environment exactly;
+unavailable or changed identities fail. The shared
 comparison entry point activates the recorded native JSON 2.21.2 before its
 first require, including in unbundled workers. A newer visible or already loaded
 JSON must not silently replace that dependency; a missing or conflicting version
@@ -183,20 +190,23 @@ Missing event/source evidence fails even when no relevant path can be establishe
 | Event | Candidate | Baseline |
 | --- | --- | --- |
 | Pull request | Exact event head SHA | Merge-base of head and exact event base SHA |
-| Feature push, including a new branch | Event `after` | Merge-base with captured default-branch SHA; compares the whole feature |
-| Default-branch push | Event `after` | Event `before`, covering the whole pushed batch |
-| `haveapi-0.30` push with verified maintenance lineage | Event `after` | Event `before`, covering the whole pushed batch |
-| Feature push with verified maintenance lineage | Event `after` | Merge-base with captured `origin/haveapi-0.30` head |
+| Existing branch push, quick | Exact event `after` | Exact nonzero event `before`, on every branch |
+| New branch push, quick (zero `before`) | Exact event `after` | Merge-base with captured exact default-branch SHA |
 | Weekly | Exact scheduled default-branch event SHA | Fixed accepted reference below |
 | Manual with a complete explicit pair | Supplied full candidate SHA | Supplied full baseline SHA |
 | Manual without either SHA | Captured default SHA | Fixed accepted reference below |
 
 The immutable accepted reference is
 `b85ec364057f536940d689b09e612512ffffaf82`. Required ancestry is checked. The
-reference and budgets never move automatically. Deleted branches, initial
-default pushes without a predecessor, missing commits, partial manual pairs,
-unrelated history or equal baseline/candidate fail. PRs use the head commit,
-never the synthetic merge commit; default pushes use `before`, never `HEAD^`.
+reference and budgets never move automatically. Deleted branches, malformed or
+missing commits, unavailable new-branch fallback, partial manual pairs and equal
+endpoints fail. PRs use the head commit, never the synthetic merge commit. An
+existing branch push uses `before`, never `HEAD^` or a guessed fallback. A quick
+push can compare a nonancestor before/after pair after a force push; its exact
+event pair is carried through all ancestry guards. Direct CLI use of that
+exception requires `--push-event selection.json` from the event resolver. Other
+PR, manual and weekly ancestry restrictions remain. Relevance uses the direct
+before/after tree diff, including the benchmark setup files.
 The weekly profile always requires that fixed baseline, including an explicit
 manual pair. An explicit quick pair may select another ancestor.
 
@@ -217,17 +227,21 @@ Diff rendering uses full blob IDs and explicit formatting options, independent
 of repository-dependent abbreviation and user diff display settings. Ordinary
 master ancestry is checked before probing the maintenance mapping, so a master
 clone does not need maintenance objects for that path.
-Unrelated quick baselines still fail. Maintenance feature selection records both
-the captured default and release heads; missing release refs fail closed.
+Unrelated direct quick baselines still fail. Existing maintenance branch pushes
+use their exact pushed pair; new branches retain the captured-default fallback
+and reason. A `haveapi-0.30` push still requires verified maintenance lineage.
 
-These verified maintenance comparisons reuse the candidate's prepared environment
-for both sources. In addition to the JSON preparation rule above, they normalize
-the shared `0.30.x` patch identity, matching
-local Ruby component VERSION assignments and exactly synchronized internal
-`haveapi-client` requirements. All remaining bytes in dependency manifests, gemspecs,
-Ruby requirements and flake inputs must match, as must the resolved third-party
-runtime graph and retained lock bytes. Raw manifest contents and hashes remain
-bound to each verified source tree alongside their normalized hashes. Replay
+Both sources in a maintenance comparison use the prepared benchmark environment.
+In addition to the JSON preparation rule above, these comparisons normalize the
+shared `0.30.x` patch identity, matching local Ruby component VERSION assignments
+and exactly synchronized internal `haveapi-client` requirements. All remaining
+bytes in dependency manifests, gemspecs and Ruby requirements must match, as must
+the resolved third-party runtime graph and benchmark lock bytes. Source `flake.nix` and `flake.lock` remain raw provenance
+with source hashes; they do not supply the benchmark runtime and may differ.
+Every other supported declaration remains strict. The consumed benchmark shell
+and lock are retained separately and must match across workers. Raw manifest
+contents and hashes remain bound to each verified source tree alongside their
+normalized hashes. Replay
 recomputes the transformation and rejects missing, inconsistent or changed inputs.
 
 The HTML comparison may normalize the own-version segment of the documentation

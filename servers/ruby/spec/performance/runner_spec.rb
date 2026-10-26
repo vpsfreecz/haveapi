@@ -3,6 +3,7 @@ require 'open3'
 require 'tmpdir'
 require 'fileutils'
 require_relative '../../benchmarks/endpoints'
+require_relative '../../../../utils/performance_ci'
 require_relative 'support/samples'
 require_relative '../../test_support/performance_endpoint_fixture'
 require_relative '../../test_support/documentation_performance_fixture'
@@ -106,6 +107,70 @@ describe HaveAPI::Performance::Worker do
       stub_const('HaveAPI::Performance::ROOT', harness)
       expect { described_class.inputs(source, 'quick') }.to raise_error(HaveAPI::Performance::ContractError,
                                                                         "Missing resolved lock #{harness}/Gemfile.lock")
+    end
+  end
+
+  it 'retains the single benchmark bundle and raw unused contributor flakes without library locks' do
+    root = File.expand_path('../../../..', __dir__)
+    inputs = JSON.parse(JSON.generate(described_class.inputs(root, 'quick', benchmark: true)))
+    tool = inputs.fetch('benchmark')
+    expect(tool.keys).to match_array(HaveAPI::Performance::BENCHMARK_INPUTS)
+    expect(inputs.fetch('locks')).to eq('servers/ruby/benchmarks/Gemfile.lock' => tool.fetch('servers/ruby/benchmarks/Gemfile.lock').fetch('sha256'))
+    expect(inputs.fetch('manifests')).to have_key('.ruby-version')
+    expect(inputs.fetch('manifests')).not_to have_key('flake.lock')
+    expect(inputs.fetch('contributor_flakes').keys).to match_array(%w[flake.nix flake.lock])
+    tool.each do |path, input|
+      expect(input.fetch('content')).to eq(File.read(File.join(root, path)))
+      expect(input.fetch('sha256')).to eq(Digest::SHA256.hexdigest(input.fetch('content')))
+    end
+  end
+
+  it 'rejects changed Ruby and unavailable calibrated dependencies before starting workers' do
+    samples, json = PerformanceSamples.fixture
+    Dir.mktmpdir('haveapi-runtime-guard-') do |directory|
+      budget = File.join(directory, 'budgets.json')
+      cli = HaveAPI::Performance::CLI.new(['run', '--baseline-root', directory, '--baseline-sha', samples['baseline_sha'],
+                                           '--candidate-root', directory, '--candidate-sha', samples['candidate_sha'],
+                                           '--budgets', budget, '--output', File.join(directory, 'result')])
+      cli.send(:parse)
+      File.write(budget, json)
+      allow(cli).to receive(:child)
+      expect { cli.send(:run_samples, 'f' * 64) }.to raise_error(HaveAPI::Performance::ContractError, 'Calibration Ruby mismatch')
+      budgets = JSON.parse(json)
+      budgets['environment']['weekly']['ruby'] = JSON.parse(JSON.generate(described_class.new({}).environment.fetch(:ruby)))
+      budgets['environment']['weekly']['gems'] = { 'haveapi-missing-calibrated-gem' => { 'version' => '99.0', 'platform' => 'ruby' } }
+      File.write(budget, JSON.generate(budgets))
+      expect { cli.send(:run_samples, 'f' * 64) }.to raise_error(HaveAPI::Performance::ContractError, /Missing calibrated dependency/)
+      expect(cli).not_to have_received(:child)
+    end
+  end
+
+  it 'limits the nonancestor runner exception to an exact quick push event pair' do
+    samples, = PerformanceSamples.fixture
+    Dir.mktmpdir('haveapi-push-guard-') do |directory|
+      event = File.join(directory, 'selection.json')
+      selection = samples.slice('baseline_sha', 'candidate_sha').merge('event_name' => 'push', 'profile' => 'quick',
+                                                                       'push_pair' => { 'event_name' => 'push', 'before' => samples['baseline_sha'], 'after' => samples['candidate_sha'] })
+      %w[valid changed missing weekly].each do |control|
+        value = Marshal.load(Marshal.dump(selection))
+        value['push_pair']['before'] = 'c' * 40 if control == 'changed'
+        value.delete('push_pair') if control == 'missing'
+        File.write(event, JSON.generate(value))
+        cli = HaveAPI::Performance::CLI.new(['run', '--baseline-root', directory, '--baseline-sha', samples['baseline_sha'],
+                                             '--candidate-root', directory, '--candidate-sha', samples['candidate_sha'],
+                                             '--profile', control == 'weekly' ? 'weekly' : 'quick', '--push-event', event,
+                                             '--budgets', '/unused', '--output', '/unused'])
+        cli.send(:parse)
+        allow(cli).to receive(:verify_runtime)
+        allow(HaveAPI::Performance).to receive(:gemspec)
+        allow(cli).to receive(:verify_source) { |role| samples['sources'].fetch(role) }
+        allow(cli).to receive(:ancestor?).and_return(false)
+        allow(HaveAPI::Performance::Release).to receive(:lineage).and_return(nil)
+        allow(cli).to receive(:child).and_raise(HaveAPI::Performance::ContractError, 'pilot boundary')
+        expect { cli.send(:run_samples, 'f' * 64) }.to raise_error(HaveAPI::Performance::ContractError,
+                                                                   control == 'valid' ? 'pilot boundary' : /push|Push|Weekly/)
+        expect(cli).not_to have_received(:child) unless control == 'valid'
+      end
     end
   end
 
@@ -252,6 +317,8 @@ describe HaveAPI::Performance::Worker do
                                            '--candidate-root', '/controlled/candidate', '--candidate-sha', samples['candidate_sha'],
                                            '--budgets', '/unused', '--output', '/unused'])
       cli.send(:parse)
+      allow(cli).to receive(:verify_runtime)
+      allow(HaveAPI::Performance).to receive(:gemspec)
       allow(cli).to receive(:verify_source) { |role| samples['sources'].fetch(role) }
       allow(cli).to receive(:ancestor?).and_return(true)
       allow(HaveAPI::Performance::Release).to receive(:lineage).and_return(nil)
@@ -354,6 +421,8 @@ describe HaveAPI::Performance::Worker do
                                              '--candidate-sha', samples['candidate_sha'], '--budgets', policy, '--output', output])
         # Control source verification and worker replies, retaining the real run
         # assembly, child protocol validation, direct comparator and report path.
+        allow(cli).to receive(:verify_runtime)
+        allow(HaveAPI::Performance).to receive(:gemspec)
         allow(cli).to receive_messages(git: '', ancestor?: true)
         allow(HaveAPI::Performance::Release).to receive(:lineage).and_return(nil)
         allow(cli).to receive(:verify_source) { |role| samples['sources'].fetch(role).transform_keys(&:to_sym) }
@@ -463,6 +532,7 @@ describe HaveAPI::Performance::Worker do
       cli = HaveAPI::Performance::CLI.new(['run', '--baseline-root', directory, '--baseline-sha', '0' * 40,
                                            '--candidate-root', directory, '--candidate-sha', '1' * 40,
                                            '--budgets', budget, '--output', missing])
+      allow(cli).to receive(:verify_runtime)
       expect(cli.execute).to eq(3)
       report = JSON.parse(File.read(File.join(missing, 'report.json')))
       expect(report['error']['message']).to include('Source SHA must be full immutable SHA')
@@ -471,6 +541,65 @@ describe HaveAPI::Performance::Worker do
                                              '--candidate-root', directory, '--candidate-sha', 'a' * 40,
                                              '--budgets', budget, '--output', File.join(directory, 'equal')])
       expect(equal.execute).to eq(3)
+    end
+  end
+
+  it 'checks declared Ruby and runtime requirements against installed tools including unloaded rake' do
+    campaign = HaveAPI::PerformanceCI::Campaign.new(repository: instance_double(HaveAPI::PerformanceCI::Repository),
+                                                    selection: {}, evidence: '/unused', sources: '/unused')
+    spec = { 'ruby' => '>= 3.2', 'dependencies' => [['rake', 'runtime', '>= 13.0'], ['haveapi-client', 'runtime', '~> 0.30.0']] }
+    status = instance_double(Process::Status, success?: true)
+    allow(Open3).to receive(:capture3).and_return([JSON.generate(spec), '', status])
+    expect(campaign.send(:gemspec, '/source', 'servers/ruby/haveapi.gemspec')).to eq(spec)
+    changed = spec.merge('ruby' => '>= 99')
+    allow(Open3).to receive(:capture3).and_return([JSON.generate(changed), '', status])
+    expect { campaign.send(:gemspec, '/source', 'servers/ruby/haveapi.gemspec') }.to raise_error(HaveAPI::PerformanceCI::Error, /Benchmark Ruby/)
+    changed = spec.merge('dependencies' => [['rake', 'runtime', '>= 99']])
+    allow(Open3).to receive(:capture3).and_return([JSON.generate(changed), '', status])
+    expect { campaign.send(:gemspec, '/source', 'servers/ruby/haveapi.gemspec') }.to raise_error(HaveAPI::PerformanceCI::Error, /Benchmark dependencies/)
+  end
+
+  it 'rejects unsupported Ruby or gem requirements in either direct source before the first child' do
+    samples, = PerformanceSamples.fixture
+    Dir.mktmpdir('haveapi-source-requirements-') do |directory|
+      roots = %w[baseline candidate].to_h { |role| [role, File.join(directory, role)] }
+      paths = HaveAPI::Performance::Release::VERSIONS.map { |path, name| "#{path.split('/lib/').first}/#{name}.gemspec" }
+      valid = <<~RUBY
+        Gem::Specification.new do |spec|
+          spec.name = 'haveapi-fixture'
+          spec.version = '1.0.0'
+          spec.required_ruby_version = '>= 3.2'
+          spec.add_dependency 'rake', '>= 13.0'
+        end
+      RUBY
+      roots.each_value do |root|
+        paths.each do |path|
+          FileUtils.mkdir_p(File.dirname(File.join(root, path)))
+          File.write(File.join(root, path), valid)
+        end
+      end
+      %w[baseline candidate].product(%w[valid ruby dependency]).each do |role, fault|
+        path = File.join(roots.fetch(role), paths.last)
+        text = case fault
+               when 'ruby' then valid.sub('>= 3.2', '>= 99')
+               when 'dependency' then valid.sub('>= 13.0', '>= 99')
+               else valid
+               end
+        File.write(path, text)
+        cli = HaveAPI::Performance::CLI.new(['run', '--baseline-root', roots['baseline'], '--baseline-sha', samples['baseline_sha'],
+                                             '--candidate-root', roots['candidate'], '--candidate-sha', samples['candidate_sha'],
+                                             '--budgets', '/unused', '--output', '/unused'])
+        cli.send(:parse)
+        allow(cli).to receive(:verify_runtime)
+        allow(cli).to receive(:verify_source) { |name| { root: roots.fetch(name), sha: samples.fetch("#{name}_sha") } }
+        allow(cli).to receive(:ancestor?).and_return(true)
+        allow(HaveAPI::Performance::Release).to receive(:lineage).and_return(nil)
+        allow(cli).to receive(:child).and_raise(HaveAPI::Performance::ContractError, 'pilot boundary')
+        expect { cli.send(:run_samples, 'f' * 64) }.to raise_error(HaveAPI::Performance::ContractError,
+                                                                   fault == 'valid' ? 'pilot boundary' : /Benchmark Ruby|Benchmark dependencies/)
+        expect(cli).not_to have_received(:child) unless fault == 'valid'
+        File.write(path, valid)
+      end
     end
   end
 end

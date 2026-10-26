@@ -238,8 +238,15 @@ module HaveAPI
           end
           result.merge(spec).merge(stages:)
         end
+        inputs = if @request['benchmark'] == true
+                   self.class.inputs(source, @request.fetch('profile'), release: @request['release_versions'] == true, benchmark: true)
+                 elsif @request['release_versions'] == true
+                   self.class.inputs(source, @request.fetch('profile'), release: true)
+                 else
+                   self.class.inputs(source, @request.fetch('profile'))
+                 end
         { schema_version: SAMPLE_SCHEMA, inventory:, cases: results, source: source_identity(source), environment: environment,
-          inputs: @request['release_versions'] ? self.class.inputs(source, @request.fetch('profile'), release: true) : self.class.inputs(source, @request.fetch('profile')),
+          inputs:,
           fixture_sha256: self.class.fixture_hashes,
           runtime_policy: policy, workload_order: order, host: host_identity,
           stages: { require_load_seconds: load_seconds, worker_seconds: monotonic - started } }
@@ -375,9 +382,10 @@ module HaveAPI
         @progress.syswrite("#{JSON.generate(state:, workload: @current_workload, phase: @phase, iterations:)}\n")
       end
 
-      def self.inputs(source, profile, release: false)
+      def self.inputs(source, profile, release: false, benchmark: false)
         paths = %w[Gemfile flake.lock servers/ruby/Gemfile servers/ruby/haveapi.gemspec clients/ruby/Gemfile clients/ruby/haveapi-client.gemspec]
         paths += %w[clients/rust/Gemfile clients/rust/haveapi-rust-client.gemspec]
+        paths += %w[.ruby-version flake.nix] if benchmark
         raw_manifests = paths.to_h do |path|
           target = File.join(source, path)
           raise ContractError, "Missing dependency input #{target}" unless File.file?(target)
@@ -386,8 +394,7 @@ module HaveAPI
         end
         preparation = Release.json_preparation(raw_manifests)
         manifests = raw_manifests.merge(preparation.fetch('normalized_contents')).transform_values { |text| Digest::SHA256.hexdigest(text) }
-        lock_paths = %w[Gemfile.lock servers/ruby/Gemfile.lock]
-        lock_paths << 'clients/rust/Gemfile.lock'
+        lock_paths = benchmark ? ['servers/ruby/benchmarks/Gemfile.lock'] : %w[Gemfile.lock servers/ruby/Gemfile.lock clients/rust/Gemfile.lock]
         locks = lock_paths.to_h do |path|
           target = File.join(ROOT, path)
           raise ContractError, "Missing resolved lock #{target}" unless File.file?(target)
@@ -401,9 +408,19 @@ module HaveAPI
           versions << HaveAPI::RustClient::VERSION
           raise ContractError, 'Wrong loaded local package version' unless versions.all? { |version| version == receipt.fetch('own_version') }
 
-          return { manifests: receipt.fetch('normalized_sha256'), locks:, release_versions: receipt }
+          result = { manifests: receipt.fetch('normalized_sha256'), locks:, release_versions: receipt }
+        else
+          result = { manifests:, locks:, json_preparation: preparation }
         end
-        { manifests:, locks:, json_preparation: preparation }
+        if benchmark
+          result[:manifests] = result.fetch(:manifests).except('flake.nix', 'flake.lock')
+          result[:contributor_flakes] = raw_manifests.slice('flake.nix', 'flake.lock').transform_values { |content| { 'content' => content } }
+          result[:benchmark] = BENCHMARK_INPUTS.to_h do |path|
+            content = File.read(File.join(ROOT, path))
+            [path, { 'content' => content, 'sha256' => Digest::SHA256.hexdigest(content) }]
+          end
+        end
+        result
       end
 
       def environment
@@ -482,7 +499,7 @@ module HaveAPI
         raise ContractError, 'Expected run or compare' unless %w[run compare].include?(@mode)
 
         OptionParser.new do |parser|
-          %w[baseline-root baseline-sha candidate-root candidate-sha profile budgets output input].each do |name|
+          %w[baseline-root baseline-sha candidate-root candidate-sha profile budgets output input push-event].each do |name|
             parser.on("--#{name} VALUE") { |value| @options[name.tr('-', '_').to_sym] = value }
           end
         end.parse!(@argv)
@@ -543,17 +560,42 @@ module HaveAPI
         { root:, sha:, tracked_files: files.length, files_sha256: graph, tree: git('rev-parse', "#{sha}^{tree}").strip }
       end
 
+      def verify_runtime
+        expected = Identity.parse(File.read(@options.fetch(:budgets))).fetch('environment').fetch('weekly')
+        ruby = JSON.parse(JSON.generate(Worker.new({}).environment.fetch(:ruby)))
+        raise ContractError, 'Calibration Ruby mismatch' unless ruby == expected.fetch('ruby')
+
+        expected.fetch('gems').each do |name, identity|
+          unless Gem::Specification.find_all_by_name(name, identity.fetch('version')).any? { |spec| spec.platform.to_s == identity.fetch('platform') }
+            raise ContractError, "Missing calibrated dependency #{name}"
+          end
+        end
+      end
+
       def run_samples(digest)
         policy = PROFILES.fetch(@options.fetch(:profile))
+        verify_runtime
         Performance.validate_source_pair(profile: @options[:profile], baseline_sha: @options[:baseline_sha],
                                          candidate_sha: @options[:candidate_sha])
 
         sources = %w[baseline candidate].to_h { |role| [role, verify_source(role)] }
         @sources = JSON.parse(JSON.generate(sources))
         @release_lineage = Release.lineage(git: method(:git), ancestor: method(:ancestor?), candidate: @options[:candidate_sha])
-        unless ancestor?(@options[:baseline_sha], @options[:candidate_sha]) ||
+        if @options[:push_event]
+          raise ContractError, 'Push event exception requires quick profile' unless @options[:profile] == 'quick'
+
+          push = Performance.push_pair!(Identity.parse(File.read(@options[:push_event])), baseline: @options[:baseline_sha], candidate: @options[:candidate_sha])
+          raise ContractError, 'Missing exact push pair' unless push
+        end
+        unless push || ancestor?(@options[:baseline_sha], @options[:candidate_sha]) ||
                (@options[:profile] == 'weekly' && @options[:baseline_sha] == REFERENCE && @release_lineage)
           raise ContractError, 'Baseline must be an ancestor of candidate'
+        end
+
+        @sources.each_value do |source|
+          Release::VERSIONS.each do |path, name|
+            Performance.gemspec(source.fetch('root'), "#{path.split('/lib/').first}/#{name}.gemspec")
+          end
         end
 
         pilot = child('baseline', {}, 'pilot')
@@ -622,8 +664,8 @@ module HaveAPI
 
       def child(role, counts, label, workload_order = 'forward')
         request = { source_root: File.realpath(@options.fetch(:"#{role}_root")), source_sha: @options.fetch(:"#{role}_sha"),
-                    profile: @options[:profile], workload_order:, counts:, warmup_counts: @warmup_counts || {}, release_versions: !@release_lineage.nil? }
-        env = ENV.keys.grep(/\ABUNDLE|\ABUNDLER|\ARUBY(?:OPT|LIB)\z/).to_h { |key| [key, nil] }
+                    profile: @options[:profile], workload_order:, counts:, warmup_counts: @warmup_counts || {}, release_versions: !@release_lineage.nil?, benchmark: true }
+        env = ENV.keys.grep(/\ABUNDLE|\ABUNDLER|\ARUBY(?:OPT|LIB|GEMS_GEMDEPS)\z/).to_h { |key| [key, nil] }
         env.merge!('LC_ALL' => 'C.UTF-8', 'LANG' => 'C.UTF-8', 'TZ' => 'UTC', 'RUBY_YJIT_ENABLE' => '0', 'RACK_ENV' => 'test')
         process_started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         output, errors, status = capture_worker(env, request, label)
@@ -651,6 +693,9 @@ module HaveAPI
         else
           Release.validate_json_preparation(inputs, @sources.fetch(role))
         end
+        expected = Identity.parse(File.read(@options.fetch(:budgets))).fetch('environment').fetch('weekly')
+        raise ContractError, 'Calibration environment mismatch' unless result.fetch('environment') == expected
+
         common = result.slice('environment', 'inventory', 'fixture_sha256').merge('inputs' => Release.graph(inputs))
         @common ||= common
         raise ContractError, 'Incompatible dependency/runtime/input/workload graph' unless common == @common

@@ -8,6 +8,8 @@ module HaveAPI
 end
 require 'digest'
 require 'json'
+require 'open3'
+require 'rbconfig'
 
 module HaveAPI
   module Performance
@@ -18,6 +20,7 @@ module HaveAPI
     MAX_ITERATIONS = 100_000
     REQUEST_LIMIT_SECONDS = 30.0
     SETUP_LIMIT_SECONDS = 120.0
+    BENCHMARK_INPUTS = %w[servers/ruby/benchmarks/Gemfile servers/ruby/benchmarks/Gemfile.lock servers/ruby/benchmarks/shell.nix].freeze
 
     def self.complex_cases(profile)
       sizes = profile == 'weekly' ? [32] : [16]
@@ -29,6 +32,34 @@ module HaveAPI
     COUNTERS = %w[queries authorizations executions].freeze
     RUNTIME_POLICY = { 'rack_env' => 'test', 'locale' => 'C.UTF-8', 'timezone' => 'UTC', 'yjit' => false, 'rjit' => false }.freeze
     class ContractError < StandardError; end
+
+    def self.gemspec(root, path)
+      script = <<~RUBY
+        require 'json'
+        spec = Gem::Specification.load(File.basename(ARGV.fetch(0)))
+        abort 'Cannot load gemspec' unless spec
+        puts JSON.generate(ruby: spec.required_ruby_version.to_s,
+                           dependencies: spec.dependencies.map { |d| [d.name, d.type.to_s, d.requirement.to_s] }.sort)
+      RUBY
+      environment = (ENV.keys.grep(/\ABUNDLE/) + %w[RUBYOPT RUBYLIB RUBYGEMS_GEMDEPS]).to_h { |key| [key, nil] }
+      output, errors, status = Open3.capture3(environment, RbConfig.ruby, '-e', script, path, chdir: File.dirname(File.join(root, path)))
+      raise ContractError, "Cannot load source gemspec #{path}: #{errors.strip}" unless status.success?
+
+      specification = JSON.parse(output)
+      unless Gem::Requirement.new(specification.fetch('ruby')).satisfied_by?(Gem::Version.new(RUBY_VERSION))
+        raise ContractError, "Benchmark Ruby does not satisfy #{path}"
+      end
+
+      specification.fetch('dependencies').each do |name, type, requirement|
+        next unless type == 'runtime'
+        next if %w[haveapi haveapi-client haveapi-rust-client].include?(name)
+
+        unless Gem::Requirement.new(requirement.split(',').map(&:strip)).satisfied_by?(Gem::Specification.find_by_name(name).version)
+          raise ContractError, "Benchmark dependencies do not satisfy #{name} #{requirement}"
+        end
+      end
+      specification
+    end
 
     # One reviewed maintenance mapping, not a general cherry-pick certificate.
     # Both live entry points verify Git; replay verifies the retained raw delta.
@@ -166,7 +197,10 @@ module HaveAPI
         receipt = inputs.fetch('release_versions')
         raise ContractError, 'Incomplete release input graph' unless receipt.fetch('contents').keys.sort == paths(profile).sort
         raise ContractError, 'Release input normalization mismatch' unless receipt == capture(receipt.fetch('contents'))
-        raise ContractError, 'Release normalized graph mismatch' unless inputs.fetch('manifests') == receipt.fetch('normalized_sha256')
+
+        expected = receipt.fetch('normalized_sha256')
+        expected = expected.except('flake.nix', 'flake.lock') if inputs.has_key?('benchmark')
+        raise ContractError, 'Release normalized graph mismatch' unless inputs.fetch('manifests') == expected
 
         receipt.fetch('raw_sha256').each do |path, digest|
           raise ContractError, 'Release input escaped verified source' unless source.fetch('files_sha256').fetch(path) == digest
@@ -175,7 +209,7 @@ module HaveAPI
       end
 
       def self.graph(inputs)
-        inputs.except('release_versions', 'json_preparation')
+        inputs.except('release_versions', 'json_preparation', 'contributor_flakes')
       end
 
       def self.html(body, own)
@@ -209,6 +243,19 @@ module HaveAPI
       return unless profile == 'weekly' && baseline_sha != REFERENCE
 
       raise ContractError, 'Weekly baseline must be the fixed reference'
+    end
+
+    def self.push_pair!(selection, baseline:, candidate:)
+      return false unless selection['push_pair']
+
+      expected = { 'event_name' => 'push', 'before' => baseline, 'after' => candidate }
+      unless selection['event_name'] == 'push' && selection['profile'] == 'quick' && selection['push_pair'] == expected &&
+             selection['baseline_sha'] == baseline && selection['candidate_sha'] == candidate && baseline != candidate &&
+             [baseline, candidate].all? { |sha| sha.is_a?(String) && sha.match?(/\A[0-9a-f]{40}\z/) && sha != '0' * 40 }
+        raise ContractError, 'Invalid quick push event pair'
+      end
+
+      true
     end
 
     # Canonicalization ignores map order only. Arrays and scalar types retain
@@ -357,6 +404,37 @@ module HaveAPI
             raise ContractError, 'Loaded runtime not in verified source tree' unless selected.fetch('files_sha256').fetch(path) == sha256
           end
           inputs = observation.fetch('inputs')
+          if inputs.has_key?('benchmark')
+            tool = inputs.fetch('benchmark')
+            raise ContractError, 'Incomplete benchmark inputs' unless tool.keys.sort == BENCHMARK_INPUTS.sort
+
+            tool.each do |path, input|
+              unless Digest::SHA256.hexdigest(input.fetch('content')) == input.fetch('sha256') &&
+                     @samples.fetch('inputs').fetch('benchmark').fetch(path) == input
+                raise ContractError, 'Benchmark input digest mismatch'
+              end
+            end
+            unless inputs.fetch('locks') == { 'servers/ruby/benchmarks/Gemfile.lock' => tool.fetch('servers/ruby/benchmarks/Gemfile.lock').fetch('sha256') }
+              raise ContractError, 'Benchmark lock identity mismatch'
+            end
+
+            inputs.fetch('contributor_flakes').each do |path, input|
+              unless %w[flake.nix flake.lock].include?(path) && Digest::SHA256.hexdigest(input.fetch('content')) == selected.fetch('files_sha256').fetch(path)
+                raise ContractError, 'Contributor flake escaped source'
+              end
+            end
+            unless inputs.fetch('contributor_flakes').keys.sort == %w[flake.lock flake.nix]
+              raise ContractError, 'Missing contributor flake provenance'
+            end
+
+            inputs.fetch('manifests').each do |path, digest|
+              next if Release::JSON_GEMFILES.include?(path) || lineage
+
+              raise ContractError, 'Dependency manifest escaped source' unless selected.fetch('files_sha256').fetch(path) == digest
+            end
+          elsif inputs.has_key?('contributor_flakes')
+            raise ContractError, 'Contributor flake separation without benchmark inputs'
+          end
           if lineage
             Release.validate_inputs(inputs, selected, @samples.fetch('profile'))
           elsif inputs.has_key?('release_versions')

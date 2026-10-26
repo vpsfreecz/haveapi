@@ -44,6 +44,43 @@ describe HaveAPI::Performance::Comparator do
     expect(JSON.generate(report)).not_to include('canonical_body', 'body_sha256', 'self_pairs', 'observations', 'loaded_sources')
   end
 
+  it 'replays benchmark inputs with different unused contributor flakes and rejects tampered consumed or source inputs' do
+    %w[quick weekly].each do |profile|
+      samples, budgets = PerformanceSamples.fixture(profile:)
+      tool = HaveAPI::Performance::BENCHMARK_INPUTS.to_h do |path|
+        content = "controlled #{path}\n"
+        [path, { 'content' => content, 'sha256' => Digest::SHA256.hexdigest(content) }]
+      end
+      samples.fetch('observations').each_value do |observation|
+        role = observation.fetch('source').fetch('sha') == samples['baseline_sha'] ? 'baseline' : 'candidate'
+        inputs = Marshal.load(Marshal.dump(observation.fetch('inputs')))
+        inputs['benchmark'] = tool
+        inputs['locks'] = { 'servers/ruby/benchmarks/Gemfile.lock' => tool.fetch('servers/ruby/benchmarks/Gemfile.lock').fetch('sha256') }
+        inputs['contributor_flakes'] = %w[flake.nix flake.lock].to_h { |path| [path, { 'content' => "#{role} #{path}" }] }
+        inputs['contributor_flakes'].each do |path, input|
+          samples['sources'][role]['files_sha256'][path] = Digest::SHA256.hexdigest(input.fetch('content'))
+        end
+        inputs['manifests']['.ruby-version'] = Digest::SHA256.hexdigest('3.2.0')
+        samples['sources'][role]['files_sha256']['.ruby-version'] = inputs['manifests']['.ruby-version']
+        observation['inputs'] = inputs
+      end
+      samples['inputs'] = HaveAPI::Performance::Release.graph(samples['observations']['baseline']['inputs'])
+      expect(compare_cli(samples, budgets).first).to eq(0)
+      %w[tool lock raw-flake declaration ruby].each do |fault|
+        changed = Marshal.load(Marshal.dump(samples))
+        inputs = changed['observations']['candidate']['inputs']
+        case fault
+        when 'tool' then inputs['benchmark']['servers/ruby/benchmarks/shell.nix']['content'] << 'tampered'
+        when 'lock' then inputs['locks']['servers/ruby/benchmarks/Gemfile.lock'] = 'f' * 64
+        when 'raw-flake' then inputs['contributor_flakes']['flake.nix']['content'] << 'tampered'
+        when 'declaration' then inputs['manifests']['servers/ruby/Gemfile'] = 'f' * 64
+        else inputs['manifests']['.ruby-version'] = 'f' * 64
+        end
+        expect(compare_cli(changed, budgets).first).to eq(3), "#{profile}:#{fault}"
+      end
+    end
+  end
+
   it 'rejects unsupported sample formats without converting historical evidence' do
     samples, budgets = PerformanceSamples.fixture
     samples['schema_version'] = 1

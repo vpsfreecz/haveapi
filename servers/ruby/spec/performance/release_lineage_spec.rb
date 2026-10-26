@@ -150,6 +150,8 @@ describe HaveAPI::Performance::Release do
                                            '--baseline-root', root, '--candidate-root', root,
                                            '--budgets', 'unused', '--output', 'unused'])
       cli.send(:parse)
+      allow(cli).to receive(:verify_runtime)
+      allow(HaveAPI::Performance).to receive(:gemspec)
       allow(cli).to receive(:verify_source) { |role| { root: "/controlled/#{role}", sha: head } }
       allow(cli).to receive(:git) { |*arguments| repository.git(*arguments) }
       allow(cli).to receive(:ancestor?) { |left, right| repository.ancestor?(left, right) }
@@ -224,6 +226,14 @@ describe HaveAPI::Performance::Release do
       expect(captured[:locks]).to have_key('clients/rust/Gemfile.lock')
       expect(captured[:manifests]).to have_key('clients/rust/Gemfile')
       expect(captured.fetch(:release_versions)).to eq(described_class.capture(contents(File.read(File.join(root, 'VERSION')).strip)))
+      HaveAPI::Performance::BENCHMARK_INPUTS.each do |path|
+        FileUtils.mkdir_p(File.dirname(File.join(harness, path)))
+        FileUtils.cp(File.join(root, path), File.join(harness, path))
+      end
+      benchmark = JSON.parse(JSON.generate(HaveAPI::Performance::Worker.inputs(root, 'quick', release: true, benchmark: true)))
+      expect(benchmark.fetch('manifests')).not_to have_key('flake.lock')
+      expect(benchmark.fetch('contributor_flakes')).to have_key('flake.lock')
+      expect(described_class.validate_inputs(benchmark, { 'files_sha256' => benchmark.fetch('release_versions').fetch('raw_sha256') }, 'quick')).to eq(HaveAPI::VERSION)
       Dir.mktmpdir('haveapi-release-inputs-') do |source|
         contents('0.30.99').each do |path, value|
           FileUtils.mkdir_p(File.dirname(File.join(source, path)))

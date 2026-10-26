@@ -43,27 +43,111 @@ RSpec.describe HaveAPI::PerformanceCI do
     expect(result).to include(candidate_sha: candidate, baseline_sha: base, profile: 'quick', relevant: true)
   end
 
-  it 'compares an entire default-branch push batch against event before' do
-    event.merge!('ref' => 'refs/heads/master', 'after' => candidate, 'before' => base)
-    allow(repository).to receive(:merge_base)
+  %w[master feature].each do |branch|
+    it "compares the exact #{branch} push batch against event before" do
+      event.merge!('ref' => "refs/heads/#{branch}", 'after' => candidate, 'before' => base)
+      allow(repository).to receive(:merge_base)
 
-    expect(resolve('push', event)).to include(baseline_sha: base, candidate_sha: candidate)
-    expect(repository).not_to have_received(:merge_base)
-  end
+      expect(resolve('push', event)).to include(baseline_sha: base, candidate_sha: candidate,
+                                                reason: 'push event before/after batch',
+                                                push_pair: { 'event_name' => 'push', 'before' => base, 'after' => candidate })
+      expect(repository).to have_received(:paths).with(base, candidate)
+      expect(repository).not_to have_received(:merge_base)
+    end
 
-  [false, true].each do |new_branch|
-    it "uses the whole feature merge-base for a #{new_branch ? 'new' : 'subsequent'} push" do
-      event.merge!('ref' => 'refs/heads/feature', 'after' => candidate,
-                   'before' => new_branch ? '0' * 40 : sha('a'), 'created' => new_branch)
-      allow(repository).to receive(:merge_base).with(candidate, default).and_return(base)
+    it "permits a nonancestor #{branch} rewrite only for the exact pushed pair" do
+      event.merge!('ref' => "refs/heads/#{branch}", 'after' => candidate, 'before' => base, 'forced' => true)
+      allow(repository).to receive(:ancestor?).with(base, candidate).and_return(false)
+      allow(repository).to receive(:merge_base)
 
-      expect(resolve('push', event, default_sha: default)).to include(baseline_sha: base, captured_default_sha: default)
+      result = resolver.resolve(event_name: 'push', event:, event_sha: sha('e'))
+      expect(result).to include(baseline_sha: base, candidate_sha: candidate,
+                                push_pair: { 'event_name' => 'push', 'before' => base, 'after' => candidate })
+      expect(repository).to have_received(:paths).with(base, candidate)
+      expect(repository).not_to have_received(:merge_base)
     end
   end
 
-  it 'rejects initial default-branch pushes without an available predecessor' do
+  [false, true].each do |created|
+    it "uses the captured default merge-base for a zero-before push with created=#{created}" do
+      event.merge!('ref' => 'refs/heads/feature', 'after' => candidate,
+                   'before' => '0' * 40, 'created' => created)
+      allow(repository).to receive(:merge_base).with(candidate, default).and_return(base)
+
+      result = resolve('push', event, default_sha: default)
+      expect(result).to include(baseline_sha: base, captured_default_sha: default,
+                                reason: 'new-branch merge-base against captured default')
+      expect(result[:push_pair]).to be_nil
+      expect(repository).to have_received(:paths).with(base, candidate)
+    end
+  end
+
+  it 'does not guess a fallback when the captured default commit is unavailable' do
+    event.merge!('ref' => 'refs/heads/feature', 'after' => candidate, 'before' => '0' * 40)
+    allow(repository).to receive(:commit!).with(default).and_raise(described_class::Error, 'unavailable default')
+    expect { resolve('push', event, default_sha: default) }.to raise_error(described_class::Error, /unavailable default/)
+  end
+
+  it 'rejects a new branch whose captured-default merge-base equals its head' do
     event.merge!('ref' => 'refs/heads/master', 'after' => candidate, 'before' => '0' * 40)
+    allow(repository).to receive(:merge_base).with(candidate, default).and_return(candidate)
+    expect { resolve('push', event) }.to raise_error(described_class::Error, /differ/)
+  end
+
+  it 'does not replace an unavailable new-branch merge-base with another commit' do
+    event.merge!('ref' => 'refs/heads/feature', 'after' => candidate, 'before' => '0' * 40)
+    allow(repository).to receive(:merge_base).with(candidate, default).and_raise(described_class::Error, 'no merge-base')
+    expect { resolve('push', event) }.to raise_error(described_class::Error, /no merge-base/)
+  end
+
+  it 'requires ancestry for the new-branch fallback instead of granting a push-pair exception' do
+    event.merge!('ref' => 'refs/heads/feature', 'after' => candidate, 'before' => '0' * 40)
+    allow(repository).to receive(:merge_base).with(candidate, default).and_return(base)
+    allow(repository).to receive(:ancestor?).with(base, candidate).and_return(false)
+    expect { resolve('push', event) }.to raise_error(described_class::Error, /ancestor/)
+  end
+
+  it 'does not grant the quick push exception to a weekly push profile' do
+    event.merge!('ref' => 'refs/heads/feature', 'after' => candidate, 'before' => described_class::REFERENCE,
+                 'inputs' => { 'profile' => 'weekly' })
+    allow(repository).to receive(:ancestor?).with(described_class::REFERENCE, candidate).and_return(false)
+    expect { resolve('push', event) }.to raise_error(described_class::Error, /ancestor/)
+  end
+
+  %w[before after].each do |endpoint|
+    [nil, '', 'short', 'A' * 40].each do |invalid|
+      it "rejects an invalid push #{endpoint} #{invalid.inspect}" do
+        event.merge!('ref' => 'refs/heads/feature', 'before' => base, 'after' => candidate, endpoint => invalid)
+        expect { resolve('push', event) }.to raise_error(described_class::Error)
+        expect(repository).not_to have_received(:paths)
+      end
+    end
+
+    it "rejects a missing push #{endpoint}" do
+      event.merge!('ref' => 'refs/heads/feature', 'before' => base, 'after' => candidate)
+      event.delete(endpoint)
+      expect { resolve('push', event) }.to raise_error(described_class::Error)
+      expect(repository).not_to have_received(:paths)
+    end
+
+    %w[noncommit unavailable].each do |failure|
+      it "rejects a #{failure} push #{endpoint} without substituting a merge-base" do
+        event.merge!('ref' => 'refs/heads/feature', 'before' => base, 'after' => candidate)
+        allow(repository).to receive(:commit!).with(event.fetch(endpoint)).and_raise(described_class::Error, failure)
+        allow(repository).to receive(:merge_base)
+        expect { resolve('push', event) }.to raise_error(described_class::Error, failure)
+        expect(repository).not_to have_received(:merge_base)
+        expect(repository).not_to have_received(:paths)
+      end
+    end
+  end
+
+  it 'rejects zero after and equal push endpoints' do
+    event.merge!('ref' => 'refs/heads/feature', 'before' => base, 'after' => '0' * 40)
     expect { resolve('push', event) }.to raise_error(described_class::Error)
+    event['after'] = base
+    expect { resolve('push', event) }.to raise_error(described_class::Error, /differ/)
+    expect(repository).not_to have_received(:paths)
   end
 
   context 'with the verified maintenance lineage' do
@@ -83,22 +167,28 @@ RSpec.describe HaveAPI::PerformanceCI do
     it 'compares the complete maintenance push batch using event before' do
       event.merge!('ref' => 'refs/heads/haveapi-0.30', 'before' => base, 'after' => candidate)
       expect(resolve('push', event)).to include(baseline_sha: base, candidate_sha: candidate,
-                                                release_lineage: lineage, reason: 'maintenance event before/after batch')
+                                                release_lineage: lineage, reason: 'push event before/after batch',
+                                                push_pair: { 'event_name' => 'push', 'before' => base, 'after' => candidate })
     end
 
-    [false, true].each do |created|
-      it "captures the release head for a #{created ? 'new' : 'subsequent'} release feature" do
-        event.merge!('ref' => 'refs/heads/feature', 'before' => created ? '0' * 40 : sha('a'), 'after' => candidate)
-        allow(repository).to receive(:merge_base).with(candidate, release).and_return(base)
-        expect(resolve('push', event)).to include(baseline_sha: base, captured_release_sha: release,
-                                                  captured_default_sha: default, release_lineage: lineage)
-      end
+    it 'permits a proven maintenance rewrite with the exact push pair' do
+      event.merge!('ref' => 'refs/heads/haveapi-0.30', 'before' => base, 'after' => candidate, 'forced' => true)
+      allow(repository).to receive(:ancestor?).with(base, candidate).and_return(false)
+      expect(resolve('push', event)).to include(baseline_sha: base, candidate_sha: candidate, release_lineage: lineage,
+                                                push_pair: { 'event_name' => 'push', 'before' => base, 'after' => candidate })
     end
 
-    it 'fails if the captured release reference is unavailable' do
-      event.merge!('ref' => 'refs/heads/feature', 'after' => candidate)
-      allow(repository).to receive(:default_sha).with('haveapi-0.30').and_raise(described_class::Error, 'missing release ref')
-      expect { resolve('push', event) }.to raise_error(described_class::Error, /missing release ref/)
+    it 'uses exact before for an existing maintenance feature without looking up a release head' do
+      event.merge!('ref' => 'refs/heads/feature', 'before' => base, 'after' => candidate)
+      expect(resolve('push', event)).to include(baseline_sha: base, candidate_sha: candidate, release_lineage: lineage)
+      expect(repository).not_to have_received(:default_sha).with('haveapi-0.30')
+    end
+
+    it 'uses the captured default merge-base for a new maintenance feature' do
+      event.merge!('ref' => 'refs/heads/feature', 'before' => '0' * 40, 'after' => candidate)
+      allow(repository).to receive(:merge_base).with(candidate, default).and_return(base)
+      expect(resolve('push', event)).to include(baseline_sha: base, captured_default_sha: default, release_lineage: lineage)
+      expect(repository).not_to have_received(:default_sha).with('haveapi-0.30')
     end
 
     it 'accepts only the original weekly reference through the proven mapping' do
@@ -135,6 +225,15 @@ RSpec.describe HaveAPI::PerformanceCI do
     expect { resolve('workflow_dispatch', event) }.to raise_error(described_class::Error, /ancestor/)
     event['inputs']['baseline_sha'] = candidate
     expect { resolve('workflow_dispatch', event) }.to raise_error(described_class::Error, /differ/)
+  end
+
+  it 'does not extend the push exception to pull requests or schedules' do
+    event['pull_request'] = { 'head' => { 'sha' => candidate }, 'base' => { 'sha' => default } }
+    allow(repository).to receive(:merge_base).with(candidate, default).and_return(base)
+    allow(repository).to receive(:ancestor?).with(base, candidate).and_return(false)
+    expect { resolve('pull_request', event) }.to raise_error(described_class::Error, /ancestor/)
+    allow(repository).to receive(:ancestor?).with(described_class::REFERENCE, candidate).and_return(false)
+    expect { resolve('schedule', event) }.to raise_error(described_class::Error, /ancestor/)
   end
 
   it 'uses the exact scheduled event SHA and preserves fixed reference ancestry' do
@@ -178,6 +277,7 @@ RSpec.describe HaveAPI::PerformanceCI do
 
   it 'detects configuration, dependencies, harness and workflow changes' do
     %w[flake.lock Gemfile Makefile .ruby-version servers/ruby/benchmarks/endpoints.rb
+       servers/ruby/benchmarks/Gemfile servers/ruby/benchmarks/Gemfile.lock servers/ruby/benchmarks/shell.nix
        servers/ruby/test_support/performance_sqlite_fixture.rb clients/ruby/Gemfile clients/rust/Gemfile
        doc/performance.md utils/performance_ci.rb .github/workflows/servers-ruby-performance.yml].each do |path|
       expect(described_class::RELEVANT).to match(path)
@@ -206,8 +306,8 @@ RSpec.describe HaveAPI::PerformanceCI do
     end
   end
 
-  [0, 1, 3].each do |code|
-    it "preserves actual runner exit #{code} with a matching report" do
+  [[0, false], [1, false], [3, false], [0, true]].each do |code, rewrite|
+    it "preserves actual runner exit #{code} with a matching report#{' for a nonancestor push' if rewrite}" do
       Dir.mktmpdir('haveapi-runner-wrapper-') do |directory|
         checkout = File.join(directory, 'checkout')
         FileUtils.mkdir_p(File.join(checkout, 'servers/ruby/benchmarks'))
@@ -228,6 +328,10 @@ RSpec.describe HaveAPI::PerformanceCI do
         allow(repository).to receive(:git).with('diff', 'HEAD', '--').and_return('')
         selection = { 'schema_version' => 1, 'relevant' => true, 'profile' => 'quick',
                       'baseline_sha' => base, 'candidate_sha' => candidate }
+        if rewrite
+          selection.merge!('event_name' => 'push', 'push_pair' => { 'event_name' => 'push', 'before' => base, 'after' => candidate })
+          allow(repository).to receive(:ancestor?).with(base, candidate).and_return(false)
+        end
         campaign = described_class::Campaign.new(repository:, selection:,
                                                  evidence: File.join(directory, 'evidence'), sources: File.join(directory, 'sources'))
         allow(campaign).to receive(:export).with(:baseline, base).and_return(directory)
@@ -235,6 +339,12 @@ RSpec.describe HaveAPI::PerformanceCI do
         allow(campaign).to receive_messages(verify_dependencies: nil, retain_inputs: nil, command!: nil)
         expect(campaign.run).to eq(code)
         expect(File.read(File.join(directory, 'evidence/runner.exit')).strip).to eq(code.to_s)
+        if rewrite
+          push_event = File.join(directory, 'evidence/push-event.json')
+          expect(JSON.parse(File.read(push_event))).to eq(selection)
+          command = JSON.parse(File.read(File.join(directory, 'evidence/runner-command.json')))
+          expect(command.last(2)).to eq(['--push-event', push_event])
+        end
       end
     end
   end

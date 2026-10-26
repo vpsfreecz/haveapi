@@ -89,18 +89,15 @@ module HaveAPI
 
           candidate = @repository.commit!(event.fetch('after'))
           lineage = @repository.release_lineage(candidate)
-          if ["refs/heads/#{branch}", 'refs/heads/haveapi-0.30'].include?(event.fetch('ref'))
-            raise Error, 'Unproven maintenance lineage' if event.fetch('ref') == 'refs/heads/haveapi-0.30' && !lineage
+          raise Error, 'Unproven maintenance lineage' if event.fetch('ref') == 'refs/heads/haveapi-0.30' && !lineage
 
-            baseline = @repository.commit!(event.fetch('before'))
-            reason = event.fetch('ref') == "refs/heads/#{branch}" ? 'default-branch event before/after batch' : 'maintenance event before/after batch'
-          elsif lineage
-            release_sha = @repository.default_sha('haveapi-0.30')
-            baseline = @repository.merge_base(candidate, release_sha)
-            reason = 'whole maintenance feature against captured release'
-          else
+          if event.fetch('before') == '0' * 40
             baseline = @repository.merge_base(candidate, default_sha)
-            reason = 'whole feature branch against captured default'
+            reason = 'new-branch merge-base against captured default'
+          else
+            baseline = @repository.commit!(event.fetch('before'))
+            reason = 'push event before/after batch'
+            push_pair = { 'event_name' => 'push', 'before' => baseline, 'after' => candidate } if profile == 'quick'
           end
         when 'schedule'
           candidate = @repository.commit!(event_sha)
@@ -128,14 +125,14 @@ module HaveAPI
         raise Error, 'Baseline and candidate must differ' if baseline == candidate
 
         lineage ||= @repository.release_lineage(candidate)
-        unless @repository.ancestor?(baseline, candidate) || (profile == 'weekly' && baseline == REFERENCE && lineage)
+        unless push_pair || @repository.ancestor?(baseline, candidate) || (profile == 'weekly' && baseline == REFERENCE && lineage)
           raise Error, 'Baseline must be an ancestor of candidate'
         end
 
         paths = @repository.paths(baseline, candidate)
         forced = %w[schedule workflow_dispatch].include?(event_name)
         { schema_version: 1, event_name:, profile:, candidate_sha: candidate, baseline_sha: baseline,
-          captured_default_sha: default_sha, captured_release_sha: release_sha, release_lineage: lineage, fixed_reference_sha: REFERENCE, reason:,
+          captured_default_sha: default_sha, release_lineage: lineage, fixed_reference_sha: REFERENCE, reason:, push_pair:,
           relevant: forced || paths.any? { |path| RELEVANT.match?(path) }, changed_paths: paths }
       rescue KeyError, TypeError => e
         raise Error, "Incomplete event: #{e.message}"
@@ -153,7 +150,7 @@ module HaveAPI
     class Campaign
       CONFIGS = %w[.ruby-version flake.nix flake.lock Gemfile servers/ruby/Gemfile clients/ruby/Gemfile].freeze
       SPECS = %w[servers/ruby/haveapi.gemspec clients/ruby/haveapi-client.gemspec].freeze
-      UNSET = (ENV.keys.grep(/\ABUNDLE/) + %w[RUBYOPT RUBYLIB]).to_h { |key| [key, nil] }.freeze
+      UNSET = (ENV.keys.grep(/\ABUNDLE/) + %w[RUBYOPT RUBYLIB RUBYGEMS_GEMDEPS]).to_h { |key| [key, nil] }.freeze
 
       def initialize(repository:, selection:, evidence:, sources:)
         @repository = repository
@@ -171,7 +168,8 @@ module HaveAPI
         candidate = @repository.commit!(@selection.fetch('candidate_sha'))
         baseline = @repository.commit!(@selection.fetch('baseline_sha'))
         @release_lineage = @repository.release_lineage(candidate)
-        unless baseline != candidate && (@repository.ancestor?(baseline, candidate) ||
+        push = Performance.push_pair!(@selection, baseline:, candidate:)
+        unless baseline != candidate && (push || @repository.ancestor?(baseline, candidate) ||
                (@selection.fetch('profile') == 'weekly' && baseline == REFERENCE && @release_lineage))
           raise Error, 'Invalid selected ancestry'
         end
@@ -193,6 +191,11 @@ module HaveAPI
         command = [RbConfig.ruby, runner, 'run', '--baseline-root', roots[:baseline], '--baseline-sha', baseline,
                    '--candidate-root', roots[:candidate], '--candidate-sha', candidate,
                    '--profile', @selection.fetch('profile'), '--budgets', budget, '--output', File.join(@evidence, 'results')]
+        if push
+          selection_path = File.join(@evidence, 'push-event.json')
+          File.write(selection_path, JSON.pretty_generate(@selection))
+          command += ['--push-event', selection_path]
+        end
         File.write(File.join(@evidence, 'runner-command.json'), JSON.pretty_generate(command))
         status = nil
         File.open(File.join(@evidence, 'runner.stdout'), 'w') do |stdout|
@@ -241,12 +244,15 @@ module HaveAPI
 
       def verify_dependencies(roots)
         if @release_lineage
+          roots.each_value do |root|
+            (SPECS + ['clients/rust/haveapi-rust-client.gemspec']).each { |path| gemspec(root, path) }
+          end
           receipts = roots.transform_values do |root|
             contents = Performance::Release.paths(@selection.fetch('profile')).to_h { |path| [path, File.read(File.join(root, path))] }
             Performance::Release.capture(contents)
           end
           File.write(File.join(@evidence, 'dependency-compatibility.json'), JSON.pretty_generate(receipts))
-          unless receipts[:baseline].fetch('normalized_sha256') == receipts[:candidate].fetch('normalized_sha256')
+          unless receipts[:baseline].fetch('normalized_sha256').except('flake.nix', 'flake.lock') == receipts[:candidate].fetch('normalized_sha256').except('flake.nix', 'flake.lock')
             raise Error, 'Dependency inputs differ; reviewed environment migration required'
           end
 
@@ -260,29 +266,24 @@ module HaveAPI
         manifests = roots.transform_values do |root|
           contents = configs.to_h { |path| [path, File.read(File.join(root, path))] }
           preparation = Performance::Release.json_preparation(contents)
-          { configs: contents.merge(preparation.fetch('normalized_contents')).transform_values { |text| Digest::SHA256.hexdigest(text) },
+          { configs: contents.merge(preparation.fetch('normalized_contents')).except('flake.nix', 'flake.lock').transform_values { |text| Digest::SHA256.hexdigest(text) },
+            contributor_flakes: contents.slice('flake.nix', 'flake.lock'),
             json_preparation: preparation,
             gemspecs: specs.to_h { |path| [path, gemspec(root, path)] } }
         end
         File.write(File.join(@evidence, 'dependency-compatibility.json'), JSON.pretty_generate(manifests))
-        raise Error, 'Dependency inputs differ; reviewed environment migration required' unless manifests[:baseline].except(:json_preparation) == manifests[:candidate].except(:json_preparation)
+        raise Error, 'Dependency inputs differ; reviewed environment migration required' unless manifests[:baseline].except(:json_preparation, :contributor_flakes) == manifests[:candidate].except(:json_preparation, :contributor_flakes)
       end
 
       def gemspec(root, path)
-        script = <<~RUBY
-          require 'json'
-          spec = Gem::Specification.load(File.basename(ARGV.fetch(0)))
-          abort 'Cannot load gemspec' unless spec
-          puts JSON.generate(ruby: spec.required_ruby_version.to_s,
-                             dependencies: spec.dependencies.map { |d| [d.name, d.type.to_s, d.requirement.to_s] }.sort)
-        RUBY
-        JSON.parse(command!(RbConfig.ruby, '-e', script, path, chdir: File.dirname(File.join(root, path))))
+        Performance.gemspec(root, path)
+      rescue Performance::ContractError => e
+        raise Error, e.message
       end
 
       def retain_inputs
-        paths = %w[flake.nix flake.lock .ruby-version Gemfile Gemfile.lock
-                   servers/ruby/Gemfile servers/ruby/Gemfile.lock]
-        paths += %w[clients/rust/Gemfile clients/rust/Gemfile.lock]
+        paths = %w[flake.nix flake.lock .ruby-version Gemfile servers/ruby/Gemfile clients/rust/Gemfile]
+        paths += Performance::BENCHMARK_INPUTS
         hashes = paths.to_h do |path|
           source = File.join(@repository.root, path)
           raise Error, "Missing prepared input: #{path}" unless File.file?(source)
@@ -295,11 +296,6 @@ module HaveAPI
         File.write(File.join(@evidence, 'input-sha256.json'), JSON.pretty_generate(hashes))
         File.write(File.join(@evidence, 'runtime.json'), JSON.pretty_generate(description: RUBY_DESCRIPTION,
                                                                               executable: RbConfig.ruby, gem_paths: Gem.path))
-        File.write(File.join(@evidence, 'flake-metadata.json'), command!('nix', 'flake', 'metadata', '--json', '--no-write-lock-file'))
-        system = command!('nix', 'eval', '--raw', '--impure', '--expr', 'builtins.currentSystem').strip
-        derivation = command!('nix', 'eval', '--raw', '--no-write-lock-file', ".#devShells.#{system}.default.drvPath").strip
-        File.write(File.join(@evidence, 'shell-derivation.txt'), "#{derivation}\n")
-        File.write(File.join(@evidence, 'shell-input-graph.txt'), command!('nix-store', '--query', '--requisites', derivation))
       end
     end
 

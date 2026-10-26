@@ -42,10 +42,10 @@ describe HaveAPI::ClientExample do
     expect(last_response.body).to include('Initialization', '<h4>Ruby</h4>', '<h4>PHP</h4>', '<h4>curl</h4>')
   end
 
-  it 'hides unconfigured Go and Rust SDKs in overview, initialization, authentication and actions' do
+  it 'hides unconfigured generated SDKs in overview, initialization, authentication and actions' do
     get '/v1/'
     expect(last_response.status).to eq(200)
-    expect(last_response.body).not_to include('clients/go', 'clients/rust', 'init-go', 'init-rust', '>Go</h', '>Rust (')
+    expect(last_response.body).not_to include('clients/go', 'clients/rust', 'init-go', 'init-rust', 'typescript-generated', '>Go</h', '>Rust (')
     expect(last_response.body).to include('init-javascript-callback', 'init-typescript-async', 'init-python-sync')
     expect(last_response.body).to include('example-widget-show-0-javascript-callback')
   end

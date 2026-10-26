@@ -178,6 +178,9 @@ tree before regenerating. If the first generation was interrupted before an
 ownership manifest was written, preserve that partial directory and generate
 into a fresh empty `src/generated`. Do not edit the manifest to bypass a refusal.
 
+The Ruby server can render examples using this generated interface; see
+[generated documentation profiles](docs/documentation.md).
+
 ## Development
 
 See [generator development](../../doc/agent-instructions/development.md#typescript-generator)

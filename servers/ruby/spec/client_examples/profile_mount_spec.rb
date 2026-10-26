@@ -139,6 +139,20 @@ describe HaveAPI::Server, '#mount' do
     )
   end
 
+  def register_typescript
+    generator = Module.new
+    generator.const_set(:VERSION, HaveAPI::VERSION)
+    generator.const_set(:Documentation, documentation)
+    stub_const('HaveAPI::TypeScriptClient', generator)
+    allow(registry).to receive(:require).with('haveapi/typescript_client/documentation').and_return(true)
+    allow(documentation).to receive(:from_description) do |description:, **|
+      descriptions << description
+      adapter
+    end
+    allow(documentation).to receive(:from_snapshot).and_return(adapter)
+    server.documentation_clients(1, typescript: { package_name: '@example/widget-client' })
+  end
+
   it 'captures the complete selected version after auth, action-state and post-mount routes exist' do
     register
     server.action_state = Object.new
@@ -209,6 +223,37 @@ describe HaveAPI::Server, '#mount' do
     server.connect_hook(:post_mount) { raise 'fixture mount failure' }
     expect { server.mount('/') }.to raise_error(RuntimeError, 'fixture mount failure')
     expect(documentation).not_to have_received(:new)
+    expect(server.app).to be_nil
+    expect(server.documentation_client_profiles(1)).to be_empty
+  end
+
+  it 'mounts a generated TypeScript panel beside dynamic tabs using only authorized request samples' do
+    register_typescript
+    server.mount('/mounted/api/')
+    expect(descriptions.size).to eq(1)
+    private_schema = descriptions.first
+    expect(private_schema).to be_frozen
+    expect(JSON.generate(private_schema)).not_to include('PRIVATE_DEFAULT', 'PRIVATE_SAMPLE', 'PRIVATE_RESPONSE')
+    expect(private_schema.dig('resources', 'widget', 'actions')).to have_key('secret')
+    expect(request_as('admin', 'en').body).to include('PRIVATE_SAMPLE')
+    contexts.clear
+    response = request_as('member', 'en')
+    expect(response.status).to eq(200)
+    expect(response.body).to include('TypeScript (generated)', 'init-typescript-generated', 'init-typescript-callback',
+                                     'init-typescript-async', 'example-widget-show-0-typescript-generated', '@example/widget-client')
+    expect(response.body).not_to include('PRIVATE_DEFAULT', 'PRIVATE_SAMPLE', 'PRIVATE_RESPONSE', 'admin_only')
+    selected = contexts.find { |context| context.action_name == 'show' }
+    expect(selected.version_url).to eq('http://example.org/mounted/api/v1/')
+    expect(selected.action.dig(:input, :parameters).keys).to eq([:visible])
+    expect(selected.sample[:request]).to eq(visible: 'public sample')
+    expect(documentation).to have_received(:from_description).once
+  end
+
+  it 'aborts the whole mount when the generated TypeScript adapter rejects the full declaration' do
+    register_typescript
+    allow(documentation).to receive(:from_description).and_raise('PRIVATE_TYPESCRIPT_DIAGNOSTIC')
+    expect { server.mount('/') }.to raise_error(HaveAPI::ClientExample::Profiles::Invalid,
+                                                'Configured documentation client schema or configuration is invalid')
     expect(server.app).to be_nil
     expect(server.documentation_client_profiles(1)).to be_empty
   end

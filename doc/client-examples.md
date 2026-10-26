@@ -2,20 +2,23 @@
 
 The Ruby server renders examples from the current user's API description.
 JavaScript and TypeScript examples cover callback and async clients; Python
-examples cover sync and async clients. These clients need no server configuration.
+examples cover sync and async clients. These clients need no server
+configuration.
 Ruby, PHP, CLI, curl and HTTP examples are also available. A sample
 that a client cannot represent shows a limitation instead of dropping input or
 inventing a successful result.
 
-Go and Rust tabs require a profile for a generated SDK. Their package versions
-are independent of HaveAPI and the API version. Without a profile, the server
+Go, Rust and generated TypeScript tabs require a profile for a generated SDK.
+Their package versions are independent of HaveAPI and the API version. Without a
+profile, the server
 hides those clients from the overview and all initialization, authentication and
 action panels. Install the matching generator gem only when configuring its
-profile; ordinary servers do not depend on either generator.
+profile; ordinary servers do not depend on these generators.
 
 ## Configure a generated SDK
 
-Register profiles before mounting the server. For an SDK that matches the current
+Register profiles before mounting the server. For an SDK that matches the
+current
 API, configure its package identity:
 
 ```ruby
@@ -25,25 +28,34 @@ api.documentation_clients('1.0',
   },
   rust: {
     crate_name: 'widget-client'
+  },
+  typescript: {
+    package_name: '@example/widget-client'
   }
 )
 api.mount('/api/')
 ```
 
 `generator_version` defaults to the server's `HaveAPI::VERSION`. Install the
-optional `haveapi-go-client` or `haveapi-rust-client` generator gem at that
-version. An explicit `generator_version` requires the installed generator to
-report that version; it never downloads one. It is independent of the SDK and
-API versions.
+matching generator in the server's Ruby environment: `haveapi-go-client`,
+`haveapi-rust-client`, or the source-distributed `haveapi-typescript-client`.
+See the [TypeScript generator guide](../clients/typescript/README.md) for its
+setup. An explicit `generator_version` requires the installed generator to
+report
+that version; the server never downloads one. This version is independent of the
+SDK and API versions.
 
-At the end of mount, the server builds one private structural model per configured
-API version. The model includes authentication resources, routes and changes from
+At the end of mount, the server builds one private structural model per
+configured
+API version. The model includes authentication resources, routes and changes
+from
 post-mount hooks, so canonical names and parent arguments use the complete API
 declaration. The private copy excludes examples, prose and parameter defaults.
 HTML requests use the current user's authorized description, fields and samples;
 they never expose the private model or its initialization diagnostics. Without
-a configured profile, the server loads no optional generator and shows no Go or
-Rust panels.
+a configured profile, the server loads no optional generator and hides the Go,
+Rust and generated TypeScript panels. The callback and async TypeScript
+examples remain separate and need no profile.
 
 Automatic profiles assume that the installed SDK matches the current server's
 generation contract. A package name or version does not prove its contents.
@@ -53,8 +65,9 @@ schema override below when the SDK represents an older or restricted API.
 
 ### Optional SDK versions and sources
 
-Set `module_version: 'v1.2.3'` for Go or `crate_version: '1.2.3'` for Rust when a
-specific package version is needed. Omit the field or use nil to let the user's
+Set `module_version: 'v1.2.3'` for Go, `crate_version: '1.2.3'` for Rust or
+`package_version: '1.2.3'` for TypeScript when a specific package version is
+needed. Omit the field or use nil to let the user's
 package manager select a release. The server does not query a registry or claim
 to have resolved a version. Omitted versions produce these installation hints:
 
@@ -63,14 +76,24 @@ go get example.org/widget/client@latest
 cargo add widget-client
 # Blocking Rust variant:
 cargo add widget-client --features blocking
+npm install @example/widget-client haveapi-client@0.30.2
 ```
 
 Go resolves `@latest` by its normal rules. Cargo selects a compatible release
 according to its resolver, manifest and toolchain; existing lockfiles still
 apply. Explicit Cargo versions remain version requirements, without an added
-exact `=` pin. Latest selection can change over time; supply a version to control
+exact `=` pin. Latest selection can change over time; supply a version to
+control
 the selection. Cargo never receives a literal `version = "latest"`. Rust
 examples also show their Tokio and serde_json requirements.
+
+TypeScript accepts ordinary lowercase npm package names, including scoped names,
+and optional concrete SemVer versions. Tags, version ranges, Git URLs, local
+paths
+and custom factories are not profile options. Configure a package that users can
+install; the server does not check its availability or publish it. Generated
+snippets use the package's public `createClient` export and the published
+`haveapi-client` 0.30.2 runtime.
 
 For an unpublished Rust SDK, supply an HTTPS Git URL and a full commit SHA:
 
@@ -118,13 +141,20 @@ api.documentation_clients('1.0',
     snapshot_path: '/srv/widget-sdk/api-1.0.snapshot.json',
     generator_config_path: '/srv/widget-sdk/generator.toml',
     generator_version: '0.30.0'
+  },
+  typescript: {
+    package_name: '@example/widget-client',
+    package_version: '1.2.3',
+    snapshot_path: '/srv/widget-sdk/api-1.0.snapshot.json',
+    generator_version: '0.30.0'
   }
 )
 ```
 
 Paths name trusted absolute local files. `description_path` is Go's saved
-machine-readable description, not HTML. `snapshot_path` is Rust's saved schema
-and capture metadata. They select an exact SDK shape in place of the current
+machine-readable description, not HTML. For Rust and TypeScript, `snapshot_path`
+selects the saved schema and capture metadata. These files select an exact SDK
+shape in place of the current
 server declaration. Keep the files private and retain them with the SDK release.
 
 Rust's legacy `generator_config_path` supplies the crate name/version and full
@@ -138,7 +168,8 @@ Saved files are read and validated during registration. Automatic models are
 initialized at the end of mount. Missing files or generators, actual generator
 version mismatches, unknown fields, conflicting identities and invalid schemas
 fail startup. Mounting also rejects unavailable API versions and mismatched Rust
-snapshot versions. Failed mounting publishes no profiles and leaves no usable
+and TypeScript snapshot versions. Failed mounting publishes no profiles and
+leaves no usable
 server application. An older explicitly pinned generator can serve a suitable
 legacy file profile, but automatic/inline Rust mode requires the new factory
 interface and never guesses a fallback.
@@ -165,7 +196,8 @@ Construction copies and freezes Hash, Array and String data without freezing
 the caller's containers. Each request owns its description snapshot.
 `context.with(...)` creates a distinct frozen context, sharing unchanged fields
 by identity and normalizing only explicitly supplied fields. A shallow-frozen
-input container still needs copying; explicitly supplying an existing owned Hash,
+input container still needs copying; explicitly supplying an existing owned
+Hash,
 Array or String also copies it. Renderers must treat context-owned data as
 read-only.
 
@@ -185,16 +217,21 @@ overview and every panel before rendering.
 
 Generated-client adapters belong to their generator gems and consume context
 readers without depending on the server gem. They resolve names using the
-complete private generator model and never run a compiler, formatter or generator
-in an HTML request. Keep adapter rendering read-only: configured adapters are frozen
-and shared, while authorized description snapshots belong to individual requests.
+complete private generator model and never run a compiler, formatter or
+generator
+in an HTML request. Keep adapter rendering read-only: configured adapters are
+frozen
+and shared, while authorized description snapshots belong to individual
+requests.
 Derived contexts within one request share unchanged owned data. Supplying a
-resource, action or sample still copies that supplied subtree, so a resource with
+resource, action or sample still copies that supplied subtree, so a resource
+with
 many actions can remain costly to render.
 
 ## Verification
 
-`make test-documentation` checks renderers, contexts, profiles, rendered HTML and
+`make test-documentation` checks renderers, contexts, profiles, rendered HTML
+and
 local assets. Prepare the component bundles and JavaScript development
 dependencies with `make release-deps` first. The target builds the JavaScript
 package before compiling TypeScript examples against its public declarations;
@@ -220,8 +257,10 @@ nix develop .#server-ruby --command bash -c \
   'make --no-print-directory benchmark-documentation > /tmp/documentation.json'
 ```
 
-The target synchronizes shared documentation before running the harness. Standard
-output is JSON; shell/dependency preparation happens before the redirected command.
+The target synchronizes shared documentation before running the harness.
+Standard
+output is JSON; shell/dependency preparation happens before the redirected
+command.
 No network server, database, generated SDK compilation or formatter is involved.
 The synthetic fixture uses Basic users `admin` and `member`, both with the local
 test password `fixture-only`.
@@ -229,8 +268,10 @@ test password `fixture-only`.
 Defaults measure two shapes with eight ordinary actions each: eight resources
 with one action, and one resource with eight actions. Each ordinary action also
 has a privileged sample; the first resource has an additional admin-only action.
-Context lanes derive a prepared parent with a changed profile or a constant small
-sample. The HTML lane performs one real Rack request per trial, with all available
+Context lanes derive a prepared parent with a changed profile or a constant
+small
+sample. The HTML lane performs one real Rack request per trial, with all
+available
 dynamic renderer panels. Use a minimal smoke run or a larger repeated campaign:
 
 ```sh
@@ -242,8 +283,10 @@ make benchmark-documentation \
 ```
 
 Run these `make` commands inside the prepared shell. `--shape custom --resources
-N --actions N` controls both dimensions independently; `--lanes context` isolates
-derivation and `--lanes html` isolates requests. `--user member` selects restricted
+N --actions N` controls both dimensions independently; `--lanes context`
+isolates
+derivation and `--lanes html` isolates requests. `--user member` selects
+restricted
 help. `--help` lists all options. `--rust` enables the fixture's matching Rust
 profile, includes both Rust variants in HTML, and adds separate async/blocking
 action and authentication adapter lanes. It requires the optional generator's
@@ -269,13 +312,16 @@ Rust lanes are never silently omitted. See the
 
 Every lane reports each trial and the median wall seconds, process CPU seconds
 and allocated objects, with the operation count per trial. Wall time uses a
-monotonic clock. A full GC runs before each trial, outside its timer; GC triggered
+monotonic clock. A full GC runs before each trial, outside its timer; GC
+triggered
 by the measured work remains included. Mount/profile construction has separate
 setup metrics. Ownership construction, description selection, warmups, output
 validation, hashing and JSON serialization are outside lane measurements.
 Reports include fixture dimensions, renderer IDs, profile mode, Ruby runtime,
-host, Git HEAD/status/diff digest, loaded source digests, dependency versions and
-available lockfile/harness/fixture digests. HTML and Rust outputs include status, bytes and
+host, Git HEAD/status/diff digest, loaded source digests, dependency versions
+and
+available lockfile/harness/fixture digests. HTML and Rust outputs include
+status, bytes and
 SHA-256; failed or missing output causes a nonzero exit.
 
 For a before/after comparison, retain one exact harness and fixture and point

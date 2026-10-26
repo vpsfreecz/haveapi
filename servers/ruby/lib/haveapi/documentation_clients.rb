@@ -21,7 +21,8 @@ module HaveAPI
 
       KEYS = {
         go: %i[import_path module_version description_path generator_version],
-        rust: %i[crate_name crate_version source snapshot_path generator_config_path generator_version]
+        rust: %i[crate_name crate_version source snapshot_path generator_config_path generator_version],
+        typescript: %i[package_name package_version snapshot_path generator_version]
       }.freeze
 
       def initialize
@@ -52,9 +53,12 @@ module HaveAPI
         raise Invalid, 'Documentation client profile selects an unavailable API version' unless unknown.empty?
 
         @registrations.each do |version, languages|
-          snapshot = languages.dig(:rust, :snapshot)
-          if snapshot && snapshot.fetch('api_version').to_s != version
-            raise Invalid, 'Documentation Rust snapshot API version mismatch'
+          %i[rust typescript].each do |language|
+            snapshot = languages.dig(language, :snapshot)
+            if snapshot && snapshot.fetch('api_version').to_s != version
+              label = language == :rust ? 'Rust' : 'TypeScript'
+              raise Invalid, "Documentation #{label} snapshot API version mismatch"
+            end
           end
         end
       end
@@ -101,7 +105,7 @@ module HaveAPI
 
       def validate_config(language, config)
         unless config.is_a?(Hash) && (config.keys - KEYS.fetch(language)).empty? &&
-               config.all? { |key, value| %i[source module_version crate_version].include?(key) || nonempty_string?(value) }
+               config.all? { |key, value| %i[source module_version crate_version package_version].include?(key) || nonempty_string?(value) }
           raise Invalid, 'Invalid documentation client profile fields'
         end
 
@@ -125,7 +129,11 @@ module HaveAPI
       def load_profile(language, config)
         safely do
           config = validate_config(language, config)
-          language == :go ? load_go(config) : load_rust(config)
+          case language
+          when :go then load_go(config)
+          when :rust then load_rust(config)
+          when :typescript then load_typescript(config)
+          end
         end
       end
 
@@ -211,6 +219,12 @@ module HaveAPI
 
         arguments = { description:, api_version: version, protocol_version: HaveAPI::PROTOCOL_VERSION,
                       mount_path: server.root }
+        if language == :typescript
+          adapter = HaveAPI::TypeScriptClient::Documentation.from_description(
+            **arguments, package_name: config[:name], package_version: config[:version]
+          )
+          return profile(:typescript, config, adapter)
+        end
         if config[:generator_config]
           snapshot = HaveAPI::RustClient::Snapshot.from_description(
             **arguments, source_url: "https://haveapi.invalid#{server.root}v#{version}/", profile: 'server-documentation'
@@ -235,6 +249,35 @@ module HaveAPI
                     )
                   end
         profile(:rust, config, adapter)
+      end
+
+      def load_typescript(config)
+        name = config[:package_name]
+        version = config[:package_version]
+        unless nonempty_string?(name) && name.bytesize <= 214 &&
+               name.match?(%r{\A(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*\z}) &&
+               !%w[node_modules favicon.ico].include?(name) &&
+               (version.nil? || (version.is_a?(String) &&
+                 version.match?(/\A(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?\z/)))
+          raise Invalid, 'Invalid TypeScript documentation client package'
+        end
+
+        require 'haveapi/typescript_client/documentation'
+        unless config.fetch(:generator_version) == HaveAPI::TypeScriptClient::VERSION
+          raise Invalid, 'Documentation TypeScript generator version mismatch'
+        end
+
+        documentation = HaveAPI::TypeScriptClient::Documentation
+        unless documentation.respond_to?(:from_description) && documentation.respond_to?(:from_snapshot)
+          raise Invalid, 'Documentation TypeScript generator has an incompatible profile interface'
+        end
+
+        prepared = { name: name.dup.freeze, version: version&.dup&.freeze }.freeze
+        return prepared unless config.has_key?(:snapshot_path)
+
+        snapshot = JSON.parse(File.read(local_file(config[:snapshot_path])))
+        adapter = documentation.from_snapshot(snapshot:, package_name: name, package_version: version)
+        prepared.merge(snapshot:, profile: profile(:typescript, prepared, adapter)).freeze
       end
 
       def profile(language, config, adapter)

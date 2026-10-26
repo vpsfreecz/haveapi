@@ -2,7 +2,7 @@ VERSION=$(shell cat VERSION)
 BENCHMARK_DOCUMENTATION_RUBY ?= bundle exec ruby
 RUST_ENV=env -u RUBYOPT -u RUBYLIB -u BUNDLE_BIN_PATH -u BUNDLE_LOCKFILE -u BUNDLE_PATH -u BUNDLE_FROZEN -u BUNDLER_SETUP GEM_HOME="$(CURDIR)/clients/rust/.gems" GEM_PATH="$(CURDIR)/clients/rust/.gems:$$(ruby -e 'puts Gem.default_dir')" BUNDLE_GEMFILE="$(CURDIR)/clients/rust/Gemfile"
 
-.PHONY: benchmark-documentation performance performance-compare test-performance doc publish release release-check release-test release-deps release-rust test test-documentation test-documentation-assets test-documentation-python test-rust test-rust-unit test-schema test-go-cli test-typescript version
+.PHONY: benchmark-documentation performance performance-compare test-performance doc publish release release-check release-test release-deps release-rust test test-documentation test-documentation-generated test-documentation-assets test-documentation-python test-rust test-rust-unit test-schema test-go-cli test-typescript version
 
 doc:
 	./utils/copydoc.sh servers/ruby
@@ -14,6 +14,7 @@ test: doc
 	cd clients/ruby && bundle exec rspec
 	cd clients/go && bundle exec rspec
 	$(MAKE) test-typescript
+	$(MAKE) test-documentation-generated
 	cd clients/js && npm test
 	cd clients/php && vendor/bin/phpunit
 	clients/python/utils/check.sh
@@ -26,6 +27,10 @@ test-documentation: doc
 	cd clients/js && npm run build
 	cd servers/ruby && bundle exec rspec spec/client_examples spec/documentation
 	$(MAKE) test-documentation-assets
+
+# Prepared server bundle; optional generator sources are selected explicitly here.
+test-documentation-generated: doc
+	cd servers/ruby && bundle exec ruby -I../../clients/ruby/lib -I../../clients/typescript/lib -S rspec spec/client_examples/typescript_profiles_spec.rb spec/client_examples/ts_generated_client_spec.rb spec/client_examples/profile_mount_spec.rb
 
 test-schema:
 	bundle exec ruby -Iclients/ruby/lib -S rspec clients/ruby/spec/schema_*_spec.rb

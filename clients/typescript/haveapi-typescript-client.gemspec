@@ -14,5 +14,5 @@ Gem::Specification.new do |spec|
   spec.bindir = 'bin'
   spec.executables = ['haveapi-typescript-client']
   spec.require_paths = ['lib']
-  spec.add_dependency 'haveapi-client', '~> 0.31.0'
+  spec.add_dependency 'haveapi-client', '~> 0.31.1'
 end

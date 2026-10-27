@@ -85,6 +85,11 @@ module HaveAPI::TypeScriptClient
       end
     end
 
+    # Match normalize's last-insertion key semantics without visiting descendants.
+    def normalized_members(value)
+      value.is_a?(Hash) ? value.to_h { |key, item| [key.to_s, item] } : {}
+    end
+
     def index_resources(resources, parents)
       resources.each do |resource|
         accessors = (parents + [resource.fetch(:accessor_name)]).freeze
@@ -125,11 +130,12 @@ module HaveAPI::TypeScriptClient
     end
 
     def authentication(context, method, description = nil)
-      providers = normalize(context.description)['authentication'] || {}
+      providers = normalized_members(normalized_members(context.description)['authentication'])
       saved = @snapshot.fetch('description').fetch('authentication')
       live = providers[method.to_s]
       stored = saved[method.to_s]
       unsupported! unless live.is_a?(Hash) && stored.is_a?(Hash)
+      live = normalize(live)
       unsupported! if description && normalize(description) != live
       case method.to_s
       when 'basic'
@@ -145,7 +151,7 @@ module HaveAPI::TypeScriptClient
     def action_authentication(action, context)
       return [] unless action.fetch(:auth)
 
-      live = normalize(context.description).fetch('authentication', {})
+      live = normalized_members(normalized_members(context.description)['authentication'])
       %w[basic token].each do |method|
         next unless live.has_key?(method) && @snapshot.fetch('description').fetch('authentication').has_key?(method)
 
@@ -155,21 +161,21 @@ module HaveAPI::TypeScriptClient
     end
 
     def authorized_action(context)
-      description = normalize(context.description)
-      resources = description['resources']
+      resources = normalized_members(context.description)['resources']
       resource = nil
       context.resource_path.each do |name|
-        resource = resources.is_a?(Hash) && resources[name.to_s]
+        resource = normalized_members(resources)[name.to_s]
         return nil unless resource.is_a?(Hash)
 
-        resources = resource['resources']
+        resources = normalized_members(resource)['resources']
       end
-      actions = resource && resource['actions']
-      return nil unless actions.is_a?(Hash)
-      return actions[context.action_name.to_s] if actions.has_key?(context.action_name.to_s)
+      actions = normalized_members(normalized_members(resource)['actions'])
+      return normalize(actions[context.action_name.to_s]) if actions.has_key?(context.action_name.to_s)
 
-      aliases = actions.values.select { |action| Array(action['aliases']).include?(context.action_name.to_s) }
-      aliases.one? ? aliases.first : nil
+      aliases = actions.values.select do |action|
+        Array(normalize(normalized_members(action)['aliases'])).include?(context.action_name.to_s)
+      end
+      normalize(aliases.first) if aliases.one?
     end
 
     def saved_action(action)
@@ -183,7 +189,8 @@ module HaveAPI::TypeScriptClient
       expected_path = URI.parse(context.version_url.to_s).path.sub(%r{/+\z}, '') + action.fetch(:path_template)
       unsupported! unless live['path'] == expected_path && live['method'] == action.fetch(:method) &&
                           (live['auth'] != false) == action.fetch(:auth) && (live['blocking'] == true) == action.fetch(:blocking)
-      unsupported! unless normalize(context.description).dig('meta', 'namespace') == @ir.fetch(:metadata_namespace)
+      namespace = normalized_members(normalized_members(context.description)['meta'])['namespace']
+      unsupported! unless normalize(namespace) == @ir.fetch(:metadata_namespace)
       %w[input output].each do |direction|
         left = saved[direction]
         right = live[direction]

@@ -84,6 +84,12 @@ description or saved snapshot. `resolve` returns a frozen canonical action;
 `render` returns the server's code or limitation result. Rendering performs no
 file, network, generator or compiler work.
 
+Rendering selects the current action, authentication provider and metadata
+namespace before recursively normalizing their contents. It leaves unrelated
+description descendants untouched and keeps authorization decisions local to
+each render. Deterministic work checks grow unrelated subtrees while keeping
+the selected inputs and rendered source fixed.
+
 Focused unit checks compile the actual rendered programs against generated
 fixture modules with TypeScript 6, NodeNext/ES2022, `exactOptionalPropertyTypes`,
 `noUncheckedIndexedAccess` and `verbatimModuleSyntax`. They cover aliases, nested

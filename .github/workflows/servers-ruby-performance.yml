@@ -106,6 +106,17 @@ jobs:
                 BUNDLE_GEMFILE="$PWD/servers/ruby/benchmarks/Gemfile" bundle _4.0.23_ install
             ' > "$PERFORMANCE_EVIDENCE/setup-benchmark.log" 2>&1
 
+      - name: Require all current client examples and complete pages
+        id: clients
+        if: steps.resolve.outputs.relevant == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          nix-shell servers/ruby/benchmarks/shell.nix --run '
+            make test-performance-clients
+          ' > "$PERFORMANCE_EVIDENCE/all-client-contract.log" 2>&1
+          echo 'outcome=passed' >> "$GITHUB_OUTPUT"
+
       - name: Run the selected pair outside Bundler
         if: steps.resolve.outputs.relevant == 'true'
         shell: bash
@@ -125,12 +136,15 @@ jobs:
         id: completion
         env:
           RELEVANT: ${{ steps.resolve.outputs.relevant }}
+          CLIENT_CONTRACT: ${{ steps.clients.outputs.outcome }}
         shell: bash
         run: |
           set -euo pipefail
           test -s "$PERFORMANCE_EVIDENCE/selection.json"
           case "$RELEVANT" in
             true)
+              test "$CLIENT_CONTRACT" = passed
+              test -s "$PERFORMANCE_EVIDENCE/all-client-contract.log"
               test "$(cat "$PERFORMANCE_EVIDENCE/runner.exit")" = 0
               test -s "$PERFORMANCE_EVIDENCE/results/report.json"
               echo 'outcome=compared' >> "$GITHUB_OUTPUT"

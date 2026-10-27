@@ -10,7 +10,7 @@ module HaveAPI
   module PerformanceCI
     REFERENCE = 'b85ec364057f536940d689b09e612512ffffaf82'.freeze
     SHA = /\A[0-9a-f]{40}\z/
-    RELEVANT = %r{\A(?:servers/ruby/|clients/ruby/|clients/rust/|doc/|utils/performance_ci\.rb\z|utils/copydoc\.sh\z|\.github/workflows/servers-ruby-performance\.yml\z|(?:VERSION|Gemfile|Makefile|flake\.nix|flake\.lock|\.ruby-version)\z)}
+    RELEVANT = %r{\A(?:servers/ruby/|clients/|doc/|utils/performance_ci\.rb\z|utils/copydoc\.sh\z|\.github/workflows/servers-ruby-performance\.yml\z|(?:VERSION|Gemfile|Makefile|flake\.nix|flake\.lock|\.ruby-version)\z)}
 
     class Error < StandardError; end
 

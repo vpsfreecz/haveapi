@@ -13,6 +13,56 @@ query behavior; they do not measure production database, network server or
 vpsAdmin latency. The checks detect specific regressions and do not guarantee
 every future performance characteristic.
 
+## All-client documentation contract
+
+The required performance workflow first runs `make test-performance-clients`
+against the selected candidate in the prepared, unbundled benchmark shell:
+
+```sh
+export HAVEAPI_BENCHMARK_GEM_HOME="$PWD/servers/ruby/benchmarks/.gems"
+nix-shell servers/ruby/benchmarks/shell.nix --run 'make test-performance-clients'
+```
+
+Prepare the frozen benchmark bundle as described below before running this
+command. It loads the actual Go, Rust and TypeScript generator sources and fails
+if a dependency or profile is missing. It needs no Go, Rust or TypeScript
+compiler. The ordinary `make test-performance` remains a separate server-bundle
+check; both checks are required.
+
+The explicit coverage matrix must equal the live renderer registry. Its 15
+entries include every callback, async, blocking and generated variant. Each
+entry renders initialization, Basic, token and OAuth2 authentication, public and
+protected actions, and a failed action sample. Basic authentication and action
+samples must produce code for every renderer. Generated TypeScript's OAuth2
+limitation and the Ruby library/CLI's existing unsupported-OAuth2 comments have
+explicit expectations. New renderer IDs or providers require reviewed coverage;
+they cannot silently disappear from measurement.
+
+Direct checks hold the selected action, sample and provider constant while adding
+128 unrelated resource subtrees. Setup and context ownership copying happen
+outside measurement. Three batches of eight renders check allocations, and a
+separate Ruby-call count checks traversal growth; each allows 32 additional
+objects or calls per render. Output must remain identical and inputs unchanged.
+
+Complete Rack HTML requests enable all three generated profiles. Checks compare
+every registered initialization/authentication/action panel with real renderer
+output, including successful and failed samples, and exercise admin/member/admin
+isolation through the same adapters. Allocation measurements use pages with
+2, 4 and 8 resources, each with two actions and three admin-visible samples per
+action, plus one admin-only action. Member pages hide the admin sample and action.
+The added-resource allocation increment may grow by at most 2.5 times when the
+resource increment doubles. This permits linear panel/output growth while
+rejecting the measured whole-description-per-example copy regression. The
+fixture uses scalar fields so Go action panels exercise supported code paths.
+
+The log retains the named registry, kinds, allocations, Ruby-call counts and
+page byte counts. These deterministic checks measure the selected candidate.
+They use no wall-clock threshold and provide no historical timing result. The
+paired timing suite below retains its original workloads, fixed reference and budgets; its
+reference predates generated TypeScript support. Relevant pushes and pull
+requests, manual runs and scheduled runs must pass the all-client contract before
+the paired comparison. Changes under any client directory trigger the gate.
+
 ## Local commands
 
 The benchmark has its own third-party tool bundle and pinned Nix shell in

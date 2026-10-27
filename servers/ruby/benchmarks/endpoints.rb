@@ -468,6 +468,7 @@ module HaveAPI
         end
         return worker if @mode == 'worker'
 
+        comparison = { 'policy' => Comparator::POLICY, 'comparator_sha256' => Comparator::SOURCE_SHA256 }
         parse
         destination = File.expand_path(@options.fetch(:output))
         raise ContractError, 'Output directory must not exist' if File.exist?(destination)
@@ -477,9 +478,16 @@ module HaveAPI
         budget_path = @options.fetch(:budgets)
         budgets = Identity.parse(File.read(budget_path))
         digest = Digest::SHA256.file(budget_path).hexdigest
-        samples = @mode == 'run' ? run_samples(digest) : Identity.parse(File.read(@options.fetch(:input)))
-        File.write(File.join(@output, 'samples.json'), JSON.pretty_generate(samples)) if @mode == 'run'
-        report = Comparator.new(samples, budgets, budget_sha256: digest).compare
+        if @mode == 'run'
+          samples = run_samples(digest)
+          sample_bytes = JSON.pretty_generate(samples)
+          File.binwrite(File.join(@output, 'samples.json'), sample_bytes)
+        else
+          sample_bytes = File.binread(@options.fetch(:input))
+        end
+        comparison['samples_sha256'] = Digest::SHA256.hexdigest(sample_bytes)
+        samples = Identity.parse(sample_bytes) unless @mode == 'run'
+        report = Comparator.new(samples, budgets, budget_sha256: digest).compare.merge('comparison' => comparison)
         File.write(File.join(@output, 'report.json'), JSON.pretty_generate(report))
         puts JSON.generate(status: report.fetch('status'), report: File.join(@output, 'report.json'))
         EXIT_CODES.fetch(report.fetch('status'))
@@ -487,7 +495,10 @@ module HaveAPI
         report = { schema_version: SAMPLE_SCHEMA, status: 'error', error: { class: e.class.name, message: e.message } }
         report[:error][:details] = e.details if e.is_a?(WorkerTimeout)
         %i[baseline_sha candidate_sha profile].each { |key| report[key] = @options[key] if @options.has_key?(key) }
-        report[:harness_sha256] = Identity.digest(Worker.fixture_hashes) if FIXTURE_PATHS.all? { |name| File.file?(File.join(ROOT, 'servers/ruby/test_support', name)) }
+        if samples.is_a?(Hash)
+          report.merge!(samples.slice('baseline_sha', 'candidate_sha', 'profile', 'harness_sha256', 'budget_sha256').transform_keys(&:to_sym))
+        end
+        report[:comparison] = comparison if comparison
         File.write(File.join(@output, 'report.json'), JSON.pretty_generate(report)) if @output && File.directory?(@output)
         warn JSON.generate(report)
         3

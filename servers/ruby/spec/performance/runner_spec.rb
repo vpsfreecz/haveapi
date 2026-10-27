@@ -456,6 +456,9 @@ describe HaveAPI::Performance::Worker do
         expect(cli.execute).to eq(0)
         retained = JSON.parse(File.read(File.join(output, 'samples.json')))
         expect(retained['sources']).to eq(samples['sources'])
+        saved_report = JSON.parse(File.read(File.join(output, 'report.json')))
+        expect(saved_report.dig('comparison', 'samples_sha256')).to eq(Digest::SHA256.file(File.join(output, 'samples.json')).hexdigest)
+        expect(saved_report['harness_sha256']).to eq(retained['harness_sha256'])
         report = HaveAPI::Performance::Comparator.new(retained, budgets, budget_sha256: Digest::SHA256.hexdigest(budget_json)).compare
         expect(report['status']).to eq('pass')
         expect(requests.map(&:first).count('calibration-adjusted')).to eq(expensive ? 0 : 1)
@@ -537,6 +540,8 @@ describe HaveAPI::Performance::Worker do
       report = JSON.parse(File.read(File.join(missing, 'report.json')))
       expect(report['error']['message']).to include('Source SHA must be full immutable SHA')
       expect(report.values_at('baseline_sha', 'candidate_sha')).to eq(['0' * 40, '1' * 40])
+      expect(report).not_to have_key('harness_sha256')
+      expect(report.fetch('comparison')).not_to have_key('samples_sha256')
       equal = HaveAPI::Performance::CLI.new(['run', '--baseline-root', directory, '--baseline-sha', 'a' * 40,
                                              '--candidate-root', directory, '--candidate-sha', 'a' * 40,
                                              '--budgets', budget, '--output', File.join(directory, 'equal')])

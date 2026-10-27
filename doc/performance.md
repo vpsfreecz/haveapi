@@ -50,8 +50,8 @@ nix-shell servers/ruby/benchmarks/shell.nix --run '
 Replace paths and full 40-character lowercase SHAs. Use `--profile weekly` for
 the expanded workload. The runner checks the exact calibrated Ruby and available
 dependency versions before timing, then requires each worker's complete activated
-graph to match the weekly calibration. Source identities, loaded files and
-response contracts must also match. An unsupported declaration or runtime change
+graph to match the weekly calibration. Source and loaded-file checks and
+response validation must also pass. An unsupported declaration or runtime change
 requires a separately reviewed environment migration; it does not update the
 reference or budgets.
 
@@ -65,14 +65,22 @@ make performance-compare \
 The commands invoke `servers/ruby/benchmarks/endpoints.rb run` and `compare`
 directly. `run` retains `samples.json`, `report.json` and process diagnostics.
 `compare` reads compact samples format version 2; unsupported versions are
-rejected without conversion. Historical evidence remains attributable to its
-recorded implementation. `report.json` contains source/profile identity,
-overall outcome and per-workload results, without raw samples or response bodies.
+rejected without conversion. `report.json` retains the original measurement's
+`harness_sha256`. Its `comparison` metadata identifies policy
+`per-revision-response-stability-v1`, the loaded comparator file's SHA-256 and
+the SHA-256 of the exact consumed `samples.json` bytes. Error reports retain
+these identities when available; they omit unavailable measurement/input fields
+instead of identifying old measurements with the current harness. The existing
+`budget_sha256` identifies the budget. Replaying samples classifies the recorded
+measurements under the identified comparison policy. It makes no requests and
+leaves the original result unchanged.
+`report.json` contains source/profile identity, overall outcome and per-workload
+results, without raw samples or response bodies.
 Exit codes are 0 for a pass
 or an inconclusive timing result, 1 for a regression and 3 for errors, including
-missing workloads, wrong responses, inputs or provenance. An inconclusive report
-remains explicitly inconclusive; a successful process exit does not establish a
-measured performance pass. Deterministic failures and regressions block CI.
+missing workloads, invalid or unstable responses, inputs or provenance. An
+inconclusive report remains explicitly inconclusive; a successful process exit
+does not establish a measured performance pass. Deterministic failures and regressions block CI.
 Keep the original evidence and diagnose failures or insufficient timing signal;
 there is no automatic retry loop or baseline update.
 
@@ -146,9 +154,23 @@ Samples retain metrics, one uniform validated counter record with its operation
 count, and distinct response examples with occurrence counts and raw bodies.
 Replay checks those counts, counters, examples and raw/canonical identities,
 including comparison mode, verified own version and source/environment/inputs.
-It compares response occurrence totals across paired samples; it does not retain
-request order or independently reprove each live authorization/counter check.
+It compares canonical response identities and occurrence totals across samples
+from the same verified source SHA. Both columns of a baseline/self pair belong
+to the baseline SHA. JSON map order may vary; raw byte stability is not required.
+It does not retain request order or independently reprove each live
+authorization/counter check.
 The compact artifact is a summary, not an execution transcript.
+
+Responses may differ between baseline and candidate without failing or skipping
+the performance comparison. Each workload reports `raw_changed` and
+`canonical_changed`, together with baseline/candidate bytes per request and
+their byte and percentage changes. These diagnostics use the
+occurrence-weighted output distributions from baseline/candidate pairs only;
+baseline/self pairs do not affect the size comparison. Reports retain no raw
+bodies. Response growth alone does not fail the comparison or change its timing
+and allocation limits. Equal response lengths do not prove correctness. The CI
+step summary shows these diagnostics beside wall, CPU, allocation and overall
+outcomes, including regressions and inconclusive timing.
 
 Allocation growth above baseline median plus the larger of 10% or 32 objects
 per request fails. Additional fixed-reference ceilings use measured accepted
@@ -248,12 +270,14 @@ The HTML comparison may normalize the own-version segment of the documentation
 templates' `https://webui.haveapi.org/v<own-version>/#...` anchor hrefs and
 the version in the exact framework-generated HaveAPI footer. The footer must
 occur once and match the verified source's own VERSION; literal examples, other
-footer text and URLs remain exact. Validation runs after the timed loop. Complete raw bodies, byte counts and hashes remain in
-the samples, together with the normalized comparison digest and source version.
-Replay checks these again from the raw body. The exception applies only to the
-HTML documentation workloads on the proven maintenance lineage. JSON/API
+footer text and URLs remain exact. Validation runs after the timed loop. Complete
+raw bodies, byte counts and hashes remain in the samples, together with the
+normalized comparison digest and source version. Replay checks these again from
+the raw body. This normalization applies only to the HTML documentation workloads
+on the proven maintenance lineage. JSON/API
 values, other URLs and hosts, example code, authorization markers, panels and all
-other output remain exact. A version change cannot hide a response difference.
+other output are not normalized. Cross-revision differences remain diagnostic;
+within-revision stability and raw/canonical integrity still apply.
 
 The workflow uses ephemeral GitHub-hosted Ubuntu workers, `contents: read`,
 disabled checkout credential persistence, ordinary `pull_request` events and no

@@ -3,6 +3,7 @@ require 'open3'
 require 'tmpdir'
 require 'yaml'
 require_relative '../../../../utils/performance_ci'
+require_relative 'support/samples'
 
 RSpec.describe HaveAPI::PerformanceCI do
   let(:candidate) { sha('c') }
@@ -306,20 +307,30 @@ RSpec.describe HaveAPI::PerformanceCI do
     end
   end
 
-  [[0, false], [1, false], [3, false], [0, true]].each do |code, rewrite|
-    it "preserves actual runner exit #{code} with a matching report#{' for a nonancestor push' if rewrite}" do
+  [[0, 'pass', false], [0, 'inconclusive', false], [1, 'regression', false], [3, 'error', false], [0, 'pass', true]].each do |code, outcome, rewrite|
+    it "preserves actual runner exit #{code}/#{outcome} and writes its summary#{' for a nonancestor push' if rewrite}" do
       Dir.mktmpdir('haveapi-runner-wrapper-') do |directory|
         checkout = File.join(directory, 'checkout')
         FileUtils.mkdir_p(File.join(checkout, 'servers/ruby/benchmarks'))
+        samples, budget_json = PerformanceSamples.fixture
+        report = HaveAPI::Performance::Comparator.new(samples, JSON.parse(budget_json), budget_sha256: samples['budget_sha256']).compare
+        report.merge!('status' => outcome, 'baseline_sha' => base, 'candidate_sha' => candidate)
+        item = report['cases'].first
+        item['classification'] = outcome
+        item['timing']['wall_seconds']['classification'] = outcome
+        item['responses']['raw_changed'] = true
+        item['responses']['bytes_per_request'].merge!('baseline' => 100.0, 'candidate' => 112.0, 'delta' => 12.0, 'delta_percent' => 12.0)
+        summary_path = File.join(directory, 'summary.md')
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:fetch).and_call_original
+        allow(ENV).to receive(:[]).with('GITHUB_STEP_SUMMARY').and_return(summary_path)
+        allow(ENV).to receive(:fetch).with('GITHUB_STEP_SUMMARY').and_return(summary_path)
         script = <<~RUBY
           require 'json'
           require 'fileutils'
           output = ARGV.fetch(ARGV.index('--output') + 1)
           FileUtils.mkdir_p(output)
-          File.write(File.join(output, 'report.json'), JSON.generate(
-            schema_version: #{HaveAPI::Performance::SAMPLE_SCHEMA}, status: '#{{ 0 => 'pass', 1 => 'regression', 2 => 'inconclusive', 3 => 'error' }.fetch(code)}',
-            baseline_sha: '#{base}', candidate_sha: '#{candidate}'
-          ))
+          File.write(File.join(output, 'report.json'), #{JSON.generate(report).dump})
           exit #{code}
         RUBY
         File.write(File.join(checkout, 'servers/ruby/benchmarks/endpoints.rb'), script)
@@ -339,6 +350,13 @@ RSpec.describe HaveAPI::PerformanceCI do
         allow(campaign).to receive_messages(verify_dependencies: nil, retain_inputs: nil, command!: nil)
         expect(campaign.run).to eq(code)
         expect(File.read(File.join(directory, 'evidence/runner.exit')).strip).to eq(code.to_s)
+        summary = File.read(summary_path)
+        expect(summary).to include("Performance comparison: #{outcome}", base, candidate)
+        if outcome == 'error'
+          expect(summary).not_to include('Bytes/request')
+        else
+          expect(summary).to include("| api.public_get {} | #{outcome} | #{outcome} | pass | pass | true | false | 100.00 → 112.00 | +12.00 (+12.00%) |")
+        end
         if rewrite
           push_event = File.join(directory, 'evidence/push-event.json')
           expect(JSON.parse(File.read(push_event))).to eq(selection)

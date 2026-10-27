@@ -4,12 +4,12 @@ require 'open3'
 require_relative 'support/samples'
 
 describe HaveAPI::Performance::Comparator do
-  def compare_cli(samples, budgets)
+  def compare_cli(samples, budgets, sample_bytes: JSON.generate(samples))
     Dir.mktmpdir('haveapi-comparator-') do |directory|
       input = File.join(directory, 'samples.json')
       policy = File.join(directory, 'budgets.json')
       output = File.join(directory, 'result')
-      File.write(input, JSON.generate(samples))
+      File.binwrite(input, sample_bytes)
       File.write(policy, budgets)
       _stdout, _stderr, status = Open3.capture3(RbConfig.ruby, File.expand_path('../../benchmarks/endpoints.rb', __dir__),
                                                 'compare', '--input', input, '--budgets', policy, '--output', output)
@@ -23,6 +23,14 @@ describe HaveAPI::Performance::Comparator do
     digest = Digest::SHA256.hexdigest(body)
     sample['bodies'][digest] = raw.merge('body' => body)
     output.merge!('body_sha256' => digest, 'body_bytes' => body.bytesize)
+  end
+
+  def replace_response(sample, body, json: true)
+    replace_raw_body(sample, body)
+    canonical = json ? JSON.parse(body) : nil
+    sample['bodies'].values.first['canonical_body'] = canonical
+    sample['outputs'].first.merge!('envelope_status' => json ? canonical.fetch('status') : nil,
+                                   'canonical_sha256' => json ? HaveAPI::Performance::Identity.digest(canonical) : Digest::SHA256.hexdigest(body))
   end
 
   def rebind_source(samples, role, sha)
@@ -42,6 +50,62 @@ describe HaveAPI::Performance::Comparator do
     expect(report['schema_version']).to eq(2)
     expect(report['cases'].first['correctness']).to include('status' => 'pass', 'operations_per_sample' => 1)
     expect(JSON.generate(report)).not_to include('canonical_body', 'body_sha256', 'self_pairs', 'observations', 'loaded_sources')
+  end
+
+  it 'attributes replay success and loaded-input errors to exact input/comparator bytes and the original measurement harness' do
+    samples, budgets = PerformanceSamples.fixture
+    [false, true].each do |broken|
+      samples['schema_version'] = broken ? 1 : 2
+      bytes = "#{JSON.pretty_generate(samples)}\n"
+      code, report = compare_cli(samples, budgets, sample_bytes: bytes)
+      expect(code).to eq(broken ? 3 : 0)
+      expect(report['harness_sha256']).to eq('e' * 64)
+      expect(report.values_at('baseline_sha', 'candidate_sha', 'budget_sha256')).to eq(samples.values_at('baseline_sha', 'candidate_sha', 'budget_sha256'))
+      expect(report['comparison']).to eq('policy' => 'per-revision-response-stability-v1',
+                                         'comparator_sha256' => Digest::SHA256.file(File.expand_path('../../benchmarks/performance_compare.rb', __dir__)).hexdigest,
+                                         'samples_sha256' => Digest::SHA256.hexdigest(bytes))
+    end
+    code, report = compare_cli(samples, budgets, sample_bytes: '{')
+    expect(code).to eq(3)
+    expect(report).not_to have_key('harness_sha256')
+    expect(report.dig('comparison', 'samples_sha256')).to eq(Digest::SHA256.hexdigest('{'))
+  end
+
+  it 'classifies stable changed JSON and HTML normally without changing performance budgets' do
+    samples, budgets = PerformanceSamples.fixture
+    samples['cases'].each do |item|
+      html = item['id'].start_with?('docs.')
+      (item['self_pairs'] + item['pairs']).each do |pair|
+        %w[baseline candidate].each do |role|
+          actual = samples['observations'][pair[role]['observation']]['source']['sha']
+          value = actual == samples['baseline_sha'] ? 'before' : 'after'
+          body = html ? "<!doctype html><html><body>#{value}</body></html>" : JSON.generate(status: true, response: value)
+          replace_response(pair[role], body, json: !html)
+        end
+      end
+    end
+    code, report = compare_cli(samples, budgets)
+    expect(code).to eq(0)
+    expect(report['status']).to eq('pass')
+    expect(report['cases'].map { |item| item['responses'].slice('raw_changed', 'canonical_changed') }).to all(eq('raw_changed' => true, 'canonical_changed' => true))
+    %w[wall_seconds cpu_seconds allocated_objects].each do |metric|
+      changed = Marshal.load(Marshal.dump(samples))
+      changed['cases'].first['pairs'].each { |pair| pair['candidate'][metric] = metric == 'allocated_objects' ? 140 : 3.0 }
+      regression_code, regression_report = compare_cli(changed, budgets)
+      expect(regression_code).to eq(1), metric
+      expect(regression_report['status']).to eq('regression')
+    end
+  end
+
+  it 'rejects canonical variation within a source including the second baseline/self column' do
+    %w[self_pairs pairs].each do |group|
+      samples, budgets = PerformanceSamples.fixture
+      replace_response(samples['cases'].first[group].last['candidate'], '{"status":true,"response":"changed"}')
+      code, report = compare_cli(samples, budgets)
+      expect(code).to eq(3)
+      expected_sha = samples[group == 'self_pairs' ? 'baseline_sha' : 'candidate_sha']
+      expect(report.dig('error', 'message')).to eq("Response identity differs within revision #{expected_sha}")
+    end
   end
 
   it 'replays benchmark inputs with different unused contributor flakes and rejects tampered consumed or source inputs' do
@@ -207,7 +271,7 @@ describe HaveAPI::Performance::Comparator do
     end
   end
 
-  it 'compares response occurrence totals across revisions without retaining request order' do
+  it 'compares response occurrence totals within each revision without retaining request order' do
     samples, json = PerformanceSamples.fixture
     spec = samples['cases'].first
     spec['iterations'] = 3
@@ -215,7 +279,7 @@ describe HaveAPI::Performance::Comparator do
       %w[baseline candidate].each do |role|
         sample = pair[role]
         output = sample['outputs'].first
-        body = sample['bodies'].values.first['body'].sub('"zero":0', '"zero":1')
+        body = sample['bodies'].values.first['body'].sub('"zero":0', '"zero":100')
         canonical = JSON.parse(body)
         digest = Digest::SHA256.hexdigest(body)
         sample['bodies'][digest] = { 'body' => body, 'canonical_body' => canonical }
@@ -226,9 +290,16 @@ describe HaveAPI::Performance::Comparator do
       end
     end
     comparator = described_class.new(samples, JSON.parse(json), budget_sha256: samples['budget_sha256'])
-    expect(comparator.compare['status']).to eq('pass')
+    report = comparator.compare
+    expect(report['status']).to eq('pass')
+    original_bytes = spec['pairs'].first['baseline']['outputs'].first['body_bytes']
+    expect(report['cases'].first.dig('responses', 'bytes_per_request', 'baseline')).to be_within(0.00001).of(original_bytes + (4.0 / 3))
     spec['pairs'].last['candidate']['outputs'].reverse!
     expect(comparator.compare['status']).to eq('pass')
+    spec['pairs'].each { |pair| pair['candidate']['outputs'].each { |example| example['count'] = 3 - example['count'] } }
+    report = comparator.compare
+    expect(report['status']).to eq('pass')
+    expect(report['cases'].first.dig('responses', 'canonical_changed')).to be(true)
     spec['pairs'].last['candidate']['outputs'].each { |example| example['count'] = 3 - example['count'] }
     expect { comparator.compare }.to raise_error(HaveAPI::Performance::ContractError, /Response identity/)
   end
@@ -263,7 +334,29 @@ describe HaveAPI::Performance::Comparator do
     body = JSON.parse(target['bodies'].values.first['body'])
     body['response'] = body['response'].to_a.reverse.to_h
     replace_raw_body(target, JSON.generate(body.to_a.reverse.to_h))
-    expect(compare_cli(samples, budgets).first).to eq(0)
+    code, report = compare_cli(samples, budgets)
+    expect(code).to eq(0)
+    expect(report['cases'].first['responses']).to include('raw_changed' => true, 'canonical_changed' => false)
+    expect(report['cases'].first.dig('responses', 'bytes_per_request', 'delta')).to eq(0)
+  end
+
+  it 'reports weighted byte deltas from baseline/candidate pairs without self-pair bias or a raw determinism requirement' do
+    samples, budgets = PerformanceSamples.fixture
+    item = samples['cases'].first
+    baseline_bytes = item['pairs'].first['baseline']['outputs'].first['body_bytes']
+    item['self_pairs'].each do |pair|
+      %w[baseline candidate].each { |role| replace_raw_body(pair[role], " #{pair[role]['bodies'].values.first['body']}") }
+    end
+    item['pairs'].last(2).each do |pair|
+      replace_raw_body(pair['candidate'], "  #{pair['candidate']['bodies'].values.first['body']}")
+    end
+    code, report = compare_cli(samples, budgets)
+    expect(code).to eq(0)
+    response = report['cases'].first['responses']
+    expect(response).to include('raw_changed' => true, 'canonical_changed' => false)
+    expect(response['bytes_per_request']).to include('baseline' => baseline_bytes, 'candidate' => baseline_bytes + 0.8)
+    expect(response['bytes_per_request']['delta']).to be_within(0.00001).of(0.8)
+    expect(response['bytes_per_request']['delta_percent']).to be_within(0.00001).of(80.0 / baseline_bytes)
   end
 
   it 'rejects identical source SHAs even with consistently rebound provenance' do

@@ -33,7 +33,9 @@ repository root unless explicitly stated otherwise.
   `make performance-compare` invoke the paired runner and replay classifier.
   Both profiles need the prepared Rust Ruby bundle for complete documentation
   pages. Quick/weekly batches target one/two seconds of baseline request work,
-  with 20%/10% regression budgets and deterministic input/response gates.
+  with 20%/10% regression budgets and deterministic input/response validation.
+  Response stability is checked within each verified revision; cross-revision
+  body changes and byte deltas are diagnostic and never waive performance gates.
   Inconclusive timing stays diagnostic and is not a measured pass; do not retry
   automatically until it becomes green. Keep exact source SHAs, matched
   dependency graphs and resolved locks with evidence; never update the fixed

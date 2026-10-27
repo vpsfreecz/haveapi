@@ -317,6 +317,9 @@ module HaveAPI
     end
 
     class Comparator
+      POLICY = 'per-revision-response-stability-v1'.freeze
+      SOURCE_SHA256 = Digest::SHA256.file(__FILE__).hexdigest.freeze
+
       def initialize(samples, budgets, budget_sha256:)
         @samples = samples
         @budgets = budgets
@@ -552,14 +555,28 @@ module HaveAPI
         end
       end
 
-      def same_outputs(left, right)
-        summaries = [left, right].map do |outputs|
-          outputs.each_with_object(Hash.new(0)) do |output, counts|
-            identity = JSON.generate(output.values_at('http_status', 'envelope_status', 'canonical_sha256'))
-            counts[identity] += output.fetch('count')
-          end
+      def output_counts(outputs, digest = 'canonical_sha256')
+        outputs.each_with_object(Hash.new(0)) do |output, counts|
+          identity = JSON.generate(output.values_at('http_status', 'envelope_status', digest))
+          counts[identity] += output.fetch('count')
         end
-        summaries.first == summaries.last
+      end
+
+      def same_outputs(left, right)
+        output_counts(left) == output_counts(right)
+      end
+
+      def response_changes(pairs)
+        outputs = %w[baseline candidate].to_h do |role|
+          [role, pairs.flat_map { |pair| pair.fetch(role).fetch('outputs') }]
+        end
+        bytes = outputs.transform_values do |examples|
+          examples.sum { |output| output.fetch('body_bytes') * output.fetch('count') }.to_f / examples.sum { |output| output.fetch('count') }
+        end
+        delta = bytes.fetch('candidate') - bytes.fetch('baseline')
+        { 'raw_changed' => output_counts(outputs.fetch('baseline'), 'body_sha256') != output_counts(outputs.fetch('candidate'), 'body_sha256'),
+          'canonical_changed' => !same_outputs(outputs.fetch('baseline'), outputs.fetch('candidate')),
+          'bytes_per_request' => bytes.merge('delta' => delta, 'delta_percent' => 100.0 * delta / bytes.fetch('baseline')) }
       end
 
       def compare_case(item, budget)
@@ -577,7 +594,8 @@ module HaveAPI
           raise ContractError, 'Uncalibrated allocation ceiling' unless reference > 0 && ceiling == (reference * 1.25).ceil + 32
         end
 
-        canonical_outputs = canonical_counters = nil
+        outputs_by_source = {}
+        canonical_counters = nil
         (self_pairs + pairs).each_with_index do |pair, index|
           expected_order = if index < self_pairs.length
                              %w[baseline baseline]
@@ -608,8 +626,10 @@ module HaveAPI
               raise ContractError, 'Worker workload order mismatch'
             end
 
-            canonical_outputs ||= sample.fetch('outputs')
-            raise ContractError, 'Response identity differs between operations/revisions' unless same_outputs(canonical_outputs, sample['outputs'])
+            outputs_by_source[actual_sha] ||= sample.fetch('outputs')
+            unless same_outputs(outputs_by_source.fetch(actual_sha), sample.fetch('outputs'))
+              raise ContractError, "Response identity differs within revision #{actual_sha}"
+            end
           end
         end
         classifications = %w[wall_seconds cpu_seconds].to_h do |metric|
@@ -644,9 +664,10 @@ module HaveAPI
                            'pass'
                          end
         item.slice('id', 'dimensions', 'iterations')
-            .merge('classification' => classification, 'timing' => classifications,
+            .merge('classification' => classification, 'timing' => classifications, 'responses' => response_changes(pairs),
                    'correctness' => { 'status' => 'pass', 'validated_samples' => 2 * (self_pairs.length + pairs.length),
-                                      'operations_per_sample' => iterations, 'distinct_responses' => canonical_outputs.length },
+                                      'operations_per_sample' => iterations, 'distinct_responses' => outputs_by_source.fetch(@samples.fetch('baseline_sha')).length,
+                                      'distinct_responses_by_source' => outputs_by_source.transform_values(&:length) },
                    'pilot' => item.fetch('pilot', {}).slice('selected_iterations', 'warmup_iterations', 'target_seconds',
                                                             'baseline_batch_seconds', 'adequate_signal', 'capped', 'calibration_adjusted'),
                    'allocations' => { 'baseline_median' => base_allocations, 'candidate_median' => candidate_allocations,

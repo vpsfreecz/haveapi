@@ -215,10 +215,31 @@ module HaveAPI
           raise Error, 'Runner report/exit/source identity mismatch'
         end
 
+        write_summary(report) if ENV['GITHUB_STEP_SUMMARY']
         code
       end
 
       private
+
+      def write_summary(report)
+        File.open(ENV.fetch('GITHUB_STEP_SUMMARY'), 'a') do |file|
+          file.puts("### Performance comparison: #{report.fetch('status')}", '',
+                    "`#{report.fetch('baseline_sha')}` → `#{report.fetch('candidate_sha')}`", '')
+          next if report.fetch('status') == 'error'
+
+          file.puts('| Workload | Outcome | Wall | CPU | Allocations | Raw changed | Canonical changed | Bytes/request (before → after) | Byte delta |',
+                    '| --- | --- | --- | --- | --- | --- | --- | --- | --- |')
+          report.fetch('cases').each do |item|
+            response = item.fetch('responses')
+            bytes = response.fetch('bytes_per_request')
+            label = "#{item.fetch('id')} #{JSON.generate(item.fetch('dimensions'))}"
+            file.puts("| #{label} | #{item.fetch('classification')} | #{item.fetch('timing').fetch('wall_seconds').fetch('classification')} | " \
+                      "#{item.fetch('timing').fetch('cpu_seconds').fetch('classification')} | #{item.fetch('allocations').fetch('classification')} | " \
+                      "#{response.fetch('raw_changed')} | #{response.fetch('canonical_changed')} | #{format('%.2f → %.2f', bytes.fetch('baseline'), bytes.fetch('candidate'))} | " \
+                      "#{format('%+.2f (%+.2f%%)', bytes.fetch('delta'), bytes.fetch('delta_percent'))} |")
+          end
+        end
+      end
 
       def export(name, sha)
         archive = File.join(@evidence, "#{name}-source.tar")

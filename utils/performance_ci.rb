@@ -287,13 +287,14 @@ module HaveAPI
         manifests = roots.transform_values do |root|
           contents = configs.to_h { |path| [path, File.read(File.join(root, path))] }
           preparation = Performance::Release.json_preparation(contents)
-          { configs: contents.merge(preparation.fetch('normalized_contents')).except('flake.nix', 'flake.lock').transform_values { |text| Digest::SHA256.hexdigest(text) },
+          versions = Performance::SourceVersions.capture(Performance::SourceVersions::PATHS.to_h { |path| [path, File.read(File.join(root, path))] })
+          { configs: contents.merge(preparation.fetch('normalized_contents')).except('flake.nix', 'flake.lock').transform_values { |text| Digest::SHA256.hexdigest(text) }.merge(versions.fetch('normalized_sha256')),
             contributor_flakes: contents.slice('flake.nix', 'flake.lock'),
-            json_preparation: preparation,
-            gemspecs: specs.to_h { |path| [path, gemspec(root, path)] } }
+            json_preparation: preparation, source_versions: versions,
+            gemspecs: specs.to_h { |path| [path, Performance::SourceVersions.gemspec(root, path, versions)] } }
         end
         File.write(File.join(@evidence, 'dependency-compatibility.json'), JSON.pretty_generate(manifests))
-        raise Error, 'Dependency inputs differ; reviewed environment migration required' unless manifests[:baseline].except(:json_preparation, :contributor_flakes) == manifests[:candidate].except(:json_preparation, :contributor_flakes)
+        raise Error, 'Dependency inputs differ; reviewed environment migration required' unless manifests[:baseline].except(:json_preparation, :source_versions, :contributor_flakes) == manifests[:candidate].except(:json_preparation, :source_versions, :contributor_flakes)
       end
 
       def gemspec(root, path)

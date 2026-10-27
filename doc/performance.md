@@ -250,6 +250,20 @@ the original manifest contents, hashes and declaration evidence, then compare
 normalized contents. Replay verifies the transformation from the retained raw
 inputs. Other dependency requirements and manifest contents must match.
 
+Comparisons outside the historical 0.30 maintenance mapping retain a
+`source_versions` receipt for each source. It validates the numeric source
+`VERSION`, matching Ruby server/client
+and Rust generator version constants, package identities and exact synchronized
+internal `haveapi-client` requirements before normalizing those version fields.
+Preparation, live workers and replay bind the raw hashes to the verified source
+and compare the normalized manifests. Missing, duplicate, inconsistent or tampered
+metadata fails. All other manifest bytes, external dependencies, runtime and
+benchmark locks remain part of the strict comparison. Older raw-manifest samples
+still replay; removing a receipt from normalized samples fails source validation.
+This rule permits coordinated package-version changes without changing baseline
+selection or the separate historical 0.30 maintenance-lineage proof. Response
+changes remain diagnostics under the existing per-revision stability policy.
+
 ## GitHub workflow and baseline selection
 
 The `servers/ruby performance` workflow runs on pushes, ordinary pull requests,

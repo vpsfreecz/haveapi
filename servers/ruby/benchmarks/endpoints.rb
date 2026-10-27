@@ -386,6 +386,7 @@ module HaveAPI
         paths = %w[Gemfile flake.lock servers/ruby/Gemfile servers/ruby/haveapi.gemspec clients/ruby/Gemfile clients/ruby/haveapi-client.gemspec]
         paths += %w[clients/rust/Gemfile clients/rust/haveapi-rust-client.gemspec]
         paths += %w[.ruby-version flake.nix] if benchmark
+        paths |= SourceVersions::PATHS unless release
         raw_manifests = paths.to_h do |path|
           target = File.join(source, path)
           raise ContractError, "Missing dependency input #{target}" unless File.file?(target)
@@ -410,7 +411,12 @@ module HaveAPI
 
           result = { manifests: receipt.fetch('normalized_sha256'), locks:, release_versions: receipt }
         else
-          result = { manifests:, locks:, json_preparation: preparation }
+          versions = SourceVersions.capture(raw_manifests.slice(*SourceVersions::PATHS))
+          loaded = [HaveAPI::VERSION, HaveAPI::Client::VERSION, HaveAPI::RustClient::VERSION]
+          raise ContractError, 'Wrong loaded local package version' unless loaded.all? { |version| version == versions.fetch('own_version') }
+
+          result = { manifests: manifests.merge(versions.fetch('normalized_sha256')), locks:,
+                     json_preparation: preparation, source_versions: versions }
         end
         if benchmark
           result[:manifests] = result.fetch(:manifests).except('flake.nix', 'flake.lock')
@@ -697,13 +703,7 @@ module HaveAPI
         end
 
         inputs = result.fetch('inputs')
-        if @release_lineage
-          Release.validate_inputs(inputs, @sources.fetch(role), @options.fetch(:profile))
-        elsif inputs.has_key?('release_versions')
-          raise ContractError, 'Unproven own-version normalization'
-        else
-          Release.validate_json_preparation(inputs, @sources.fetch(role))
-        end
+        Performance.validate_input_receipts(inputs, @sources.fetch(role), profile: @options.fetch(:profile), lineage: @release_lineage)
         expected = Identity.parse(File.read(@options.fetch(:budgets))).fetch('environment').fetch('weekly')
         raise ContractError, 'Calibration environment mismatch' unless result.fetch('environment') == expected
 

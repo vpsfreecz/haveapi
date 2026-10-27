@@ -101,4 +101,99 @@ RSpec.describe HaveAPI::TypeScriptClient::Documentation do
     expect(code).to include('error instanceof AsyncError', 'error.envelope, error.response')
     expect(code).not_to include('console.log', 'retry')
   end
+
+  it 'does not traverse unrelated subtrees when rendering an aliased protected example or authentication' do
+    schema = documentation_snapshot
+    fixture_action(schema)['auth'] = true
+    adapter = documentation_adapter(schema)
+    context = documentation_context(schema)
+    context.action_name = 'change'
+    unrelated = { 'private' => 'unrelated body' }
+    allow(unrelated).to receive(:to_h).and_call_original
+    context.description['resources']['unrelated'] = unrelated
+    widget = context.description['resources']['widget']
+    widget['resources']['unrelated'] = unrelated
+    widget['actions']['unrelated'] = { 'aliases' => ['other'], 'input' => unrelated }
+    context.description['authentication']['unrelated'] = unrelated
+    context.description['meta']['unrelated'] = unrelated
+
+    expect(adapter.render(kind: :example, context:)[:code]).to include('api["widget"]["update"]', "runtime.authenticate('basic'")
+    expect(adapter.render(kind: :auth, context:, auth_method: :token)[:code]).to include("runtime.authenticate('token'")
+    expect(unrelated).not_to have_received(:to_h)
+  end
+
+  it 'preserves symbol values and last-insertion collisions in mixed request description keys' do
+    adapter = documentation_adapter
+    [false, true].each do |symbol_last|
+      context = documentation_context
+      selected = context.description.fetch('resources')
+      symbols = JSON.parse(JSON.generate(context.description), symbolize_names: true)
+      symbols[:resources][:widget][:actions][:update][:aliases] = [:change]
+      symbols[:meta][:namespace] = symbols[:meta][:namespace].to_sym
+      context.description = if symbol_last
+                              { 'resources' => {}, **symbols }
+                            else
+                              { resources: {}, **context.description }
+                            end
+      context.action_name = :change
+      expect(adapter.render(kind: :example, context:)[:status]).to eq(:code)
+      context.description = symbol_last ? { **symbols, 'resources' => {} } : { 'resources' => selected, resources: {} }
+      expect(adapter.render(kind: :example, context:)[:status]).to eq(:limitation)
+    end
+  end
+
+  it 'prefers canonical actions over aliases and rejects ambiguous aliases without visiting their bodies' do
+    adapter = documentation_adapter
+    context = documentation_context
+    actions = context.description['resources']['widget']['actions']
+    actions['other'] = { 'aliases' => %i[update change], 'path' => '/wrong' }
+    expect(adapter.render(kind: :example, context:)[:status]).to eq(:code)
+    context.action_name = 'change'
+    expect(adapter.render(kind: :example, context:)[:status]).to eq(:limitation)
+    actions.delete('other')
+    actions['update']['aliases'] = [:change]
+    expect(adapter.render(kind: :example, context:)[:code]).to include('api["widget"]["update"]')
+  end
+
+  it 'selects advertised authentication with mixed keys and rejects changed headers and explicit descriptions' do
+    context = documentation_context
+    adapter = documentation_adapter
+    providers = { token: { http_header: 'X-Widget-Token' } }
+    context.description = { authentication: providers, **context.description.except('authentication') }
+    expect(adapter.render(kind: :auth, context:, auth_method: :token, auth_description: providers[:token])[:status]).to eq(:code)
+    expect(adapter.render(kind: :auth, context:, auth_method: :basic)[:status]).to eq(:limitation)
+    expect(adapter.render(kind: :auth, context:, auth_method: :token, auth_description: {})[:status]).to eq(:limitation)
+    providers[:token]['http_header'] = 'Changed'
+    expect(adapter.render(kind: :auth, context:, auth_method: :token)[:status]).to eq(:limitation)
+    providers[:token] = { http_header: "X-Widget-Token\n" }
+    expect(adapter.render(kind: :auth, context:, auth_method: :token)[:status]).to eq(:limitation)
+  end
+
+  it 'does not mutate frozen request inputs or retain authorization decisions between contexts' do
+    adapter = documentation_adapter
+    allowed = documentation_context
+    denied = documentation_context
+    denied.description['resources'].clear
+    freeze_tree = lambda do |value|
+      case value
+      when Hash
+        value.each do |key, item|
+          freeze_tree.call(key)
+          freeze_tree.call(item)
+        end
+      when Array then value.each { |item| freeze_tree.call(item) }
+      end
+      value.freeze
+    end
+    [allowed, denied].each do |context|
+      context.each { |value| freeze_tree.call(value) }
+      context.freeze
+    end
+    before = Marshal.dump([allowed, denied])
+    first = adapter.render(kind: :example, context: allowed)
+    expect(first[:status]).to eq(:code)
+    expect(adapter.render(kind: :example, context: denied)[:status]).to eq(:limitation)
+    expect(adapter.render(kind: :example, context: allowed)).to eq(first)
+    expect(Marshal.dump([allowed, denied])).to eq(before)
+  end
 end

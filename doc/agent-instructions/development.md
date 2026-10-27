@@ -40,6 +40,11 @@ repository root unless explicitly stated otherwise.
   automatically until it becomes green. Keep exact source SHAs, matched
   dependency graphs and resolved locks with evidence; never update the fixed
   reference or budgets automatically.
+- Required current-client performance coverage: `make test-performance-clients`
+  in the prepared unbundled benchmark shell checks every registered renderer and
+  mode plus complete pages. This additional deterministic contract uses actual
+  Go/Rust/TypeScript profiles; it does not change historical paired timing
+  workloads or budgets. See [performance testing](../performance.md).
 - Release tooling checks: `make release-check` and `make release-test` in the
   top-level Nix shell. `make release-deps` installs maintained-component
   dependencies and creates ignored local library locks. Prepare these inputs

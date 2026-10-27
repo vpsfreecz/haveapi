@@ -247,6 +247,13 @@ They check description sharing, allocation growth and isolation between users
 without a wall-clock threshold. The Rust adapter suite separately checks that
 normalization avoids unrelated description descendants.
 
+The additional required `make test-performance-clients` contract checks every
+registered renderer and mode with real generated profiles, bounded per-render
+work and allocations, and complete-page allocation scaling. It runs in the
+locked, unbundled benchmark environment, separately from the ordinary server
+bundle. See [performance testing](performance.md#all-client-documentation-contract)
+for preparation, exact coverage and CI behavior.
+
 ### Documentation benchmark
 
 Prepare the server bundle in its declared Nix environment, then run the opt-in

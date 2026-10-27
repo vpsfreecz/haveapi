@@ -269,7 +269,7 @@ RSpec.describe HaveAPI::PerformanceCI do
   end
 
   it 'skips only irrelevant valid push/PR changes and still forces scheduled/manual work' do
-    allow(repository).to receive(:paths).and_return(['clients/php/README.md'])
+    allow(repository).to receive(:paths).and_return(['LICENSE.txt'])
     event.merge!('ref' => 'refs/heads/master', 'after' => candidate, 'before' => base)
     expect(resolve('push', event)).to include(relevant: false)
     expect(resolve('schedule', event)).to include(relevant: true)
@@ -280,8 +280,35 @@ RSpec.describe HaveAPI::PerformanceCI do
     %w[flake.lock Gemfile Makefile .ruby-version servers/ruby/benchmarks/endpoints.rb
        servers/ruby/benchmarks/Gemfile servers/ruby/benchmarks/Gemfile.lock servers/ruby/benchmarks/shell.nix
        servers/ruby/test_support/performance_sqlite_fixture.rb clients/ruby/Gemfile clients/rust/Gemfile
-       doc/performance.md utils/performance_ci.rb .github/workflows/servers-ruby-performance.yml].each do |path|
+       doc/performance.md utils/performance_ci.rb .github/workflows/servers-ruby-performance.yml
+       servers/ruby/benchmarks/spec/client_examples_spec.rb servers/ruby/test_support/all_client_performance_fixture.rb
+       clients/go/lib/haveapi/go_client/documentation.rb clients/typescript/lib/haveapi/typescript_client/documentation.rb
+       clients/js/src/client.ts clients/python/haveapi/client.py clients/php/src/Client.php clients/new-client/renderer.rb].each do |path|
       expect(described_class::RELEVANT).to match(path)
+    end
+  end
+
+  it 'requires the current-client contract before comparison and rejects a missing contract outcome' do
+    path = File.expand_path('../../../../.github/workflows/servers-ruby-performance.yml', __dir__)
+    steps = YAML.load_file(path).fetch('jobs').fetch('performance').fetch('steps')
+    contract = steps.find { |step| step['id'] == 'clients' }
+    comparison = steps.find { |step| step['name'] == 'Run the selected pair outside Bundler' }
+    expect(steps.index(contract)).to be < steps.index(comparison)
+    expect(contract.fetch('if')).to eq(comparison.fetch('if'))
+    expect(contract.fetch('run')).to include('make test-performance-clients', "echo 'outcome=passed'")
+    completion = steps.find { |step| step['id'] == 'completion' }
+    Dir.mktmpdir('haveapi-client-contract-gate-') do |directory|
+      File.write(File.join(directory, 'selection.json'), '{}')
+      File.write(File.join(directory, 'runner.exit'), "0\n")
+      FileUtils.mkdir_p(File.join(directory, 'results'))
+      File.write(File.join(directory, 'results/report.json'), '{}')
+      File.write(File.join(directory, 'all-client-contract.log'), 'passed')
+      [nil, '', 'failed', 'passed'].each do |outcome|
+        environment = { 'RELEVANT' => 'true', 'CLIENT_CONTRACT' => outcome,
+                        'PERFORMANCE_EVIDENCE' => directory, 'GITHUB_OUTPUT' => File.join(directory, 'output') }
+        _output, _error, status = Open3.capture3(environment, 'bash', '-euo', 'pipefail', '-c', completion.fetch('run'))
+        expect(status.success?).to eq(outcome == 'passed')
+      end
     end
   end
 

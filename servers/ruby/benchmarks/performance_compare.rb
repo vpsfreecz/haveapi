@@ -38,7 +38,7 @@ module HaveAPI
         require 'json'
         spec = Gem::Specification.load(File.basename(ARGV.fetch(0)))
         abort 'Cannot load gemspec' unless spec
-        puts JSON.generate(ruby: spec.required_ruby_version.to_s,
+        puts JSON.generate(name: spec.name, version: spec.version.to_s, ruby: spec.required_ruby_version.to_s,
                            dependencies: spec.dependencies.map { |d| [d.name, d.type.to_s, d.requirement.to_s] }.sort)
       RUBY
       environment = (ENV.keys.grep(/\ABUNDLE/) + %w[RUBYOPT RUBYLIB RUBYGEMS_GEMDEPS]).to_h { |key| [key, nil] }
@@ -209,7 +209,7 @@ module HaveAPI
       end
 
       def self.graph(inputs)
-        inputs.except('release_versions', 'json_preparation', 'contributor_flakes')
+        inputs.except('release_versions', 'source_versions', 'json_preparation', 'contributor_flakes')
       end
 
       def self.html(body, own)
@@ -235,6 +235,103 @@ module HaveAPI
         raise ContractError, 'Expected one framework documentation footer' unless footers == 1
 
         normalized
+      end
+    end
+
+    # Ordinary source ancestry needs no historical maintenance certificate.
+    # Only synchronized package metadata is omitted from input equality.
+    module SourceVersions
+      PLACEHOLDER = 'OWN.VERSION'.freeze
+      COMPONENTS = Release::VERSIONS
+      SPECS = COMPONENTS.to_h { |path, name| ["#{path.split('/lib/').first}/#{name}.gemspec", name] }.freeze
+      PATHS = (['VERSION'] + COMPONENTS.keys + SPECS.keys).freeze
+
+      def self.capture(contents)
+        raise ContractError, 'Incomplete own source metadata' unless contents.keys.sort == PATHS.sort
+
+        own = contents.fetch('VERSION').delete_suffix("\n")
+        unless own.match?(/\A(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\z/) && contents['VERSION'] == "#{own}\n"
+          raise ContractError, 'Invalid own source VERSION'
+        end
+
+        normalized = contents.merge('VERSION' => "#{PLACEHOLDER}\n")
+        COMPONENTS.each do |path, name|
+          text = contents.fetch(path)
+          declaration = /^(\s*VERSION = )'#{Regexp.escape(own)}'(?=\.freeze$)/
+          unless text.scan(/^\s*VERSION\s*=/).length == 1 && text.scan(declaration).length == 1
+            raise ContractError, "Unsynchronized own version: #{name}"
+          end
+
+          normalized[path] = text.sub(declaration, "\\1'#{PLACEHOLDER}'")
+        end
+        SPECS.each do |path, name|
+          text = contents.fetch(path)
+          constant = { 'haveapi' => 'HaveAPI', 'haveapi-client' => 'HaveAPI::Client', 'haveapi-rust-client' => 'HaveAPI::RustClient' }.fetch(name)
+          unless text.scan(/\.name\s*=/).length == 1 && text.scan(/\.name\s*= '#{Regexp.escape(name)}'$/).length == 1 &&
+                 text.scan(/\.version\s*=/).length == 1 && text.scan(/\.version\s*= #{Regexp.escape(constant)}::VERSION$/).length == 1
+            raise ContractError, 'Mismatched own package identity'
+          end
+
+          dependencies = text.scan(/\.add_(?:runtime_|development_)?dependency\s+['"]haveapi-client['"]/)
+          requirement = /(?<=\.add_dependency )'haveapi-client', '~> #{Regexp.escape(own)}'(?=$)/
+          if name == 'haveapi-client'
+            raise ContractError, 'Unexpected own client dependency' unless dependencies.empty?
+          else
+            unless dependencies.length == 1 && text.scan(requirement).length == 1
+              raise ContractError, 'Unsynchronized own client constraint'
+            end
+
+            normalized[path] = text.sub(requirement, "'haveapi-client', '~> #{PLACEHOLDER}'")
+          end
+        end
+        { 'contents' => contents, 'own_version' => own,
+          'raw_sha256' => contents.transform_values { |text| Digest::SHA256.hexdigest(text) },
+          'normalized_sha256' => normalized.transform_values { |text| Digest::SHA256.hexdigest(text) } }
+      end
+
+      def self.gemspec(root, path, receipt)
+        spec = Performance.gemspec(root, path)
+        own = receipt.fetch('own_version')
+        unless spec.fetch('name') == SPECS.fetch(path) && spec.fetch('version') == own
+          raise ContractError, 'Evaluated own package identity mismatch'
+        end
+
+        dependencies = spec.fetch('dependencies').select { |name, _type, _requirement| name == 'haveapi-client' }
+        expected = SPECS.fetch(path) == 'haveapi-client' ? [] : [['haveapi-client', 'runtime', "~> #{own}"]]
+        raise ContractError, 'Evaluated own client constraint mismatch' unless dependencies == expected
+
+        spec.merge('version' => PLACEHOLDER, 'dependencies' => spec.fetch('dependencies').map do |name, type, requirement|
+          [name, type, name == 'haveapi-client' ? "~> #{PLACEHOLDER}" : requirement]
+        end)
+      end
+
+      def self.validate_inputs(inputs, source)
+        receipt = inputs.fetch('source_versions')
+        raise ContractError, 'Own source metadata normalization mismatch' unless receipt == capture(receipt.fetch('contents'))
+
+        receipt.fetch('raw_sha256').each do |path, digest|
+          unless source.fetch('files_sha256').fetch(path) == digest && inputs.fetch('manifests').fetch(path) == receipt.fetch('normalized_sha256').fetch(path)
+            raise ContractError, 'Own source metadata escaped verified source'
+          end
+        end
+      end
+    end
+
+    def self.validate_input_receipts(inputs, source, profile:, lineage:)
+      if lineage
+        raise ContractError, 'Conflicting own-version receipts' if inputs.has_key?('source_versions')
+
+        Release.validate_inputs(inputs, source, profile)
+      else
+        raise ContractError, 'Unproven own-version normalization' if inputs.has_key?('release_versions')
+
+        Release.validate_json_preparation(inputs, source)
+        SourceVersions.validate_inputs(inputs, source) if inputs.has_key?('source_versions')
+        inputs.fetch('manifests').each do |path, digest|
+          next if Release::JSON_GEMFILES.include?(path) || (inputs.has_key?('source_versions') && SourceVersions::PATHS.include?(path))
+
+          raise ContractError, 'Dependency manifest escaped source' unless source.fetch('files_sha256').fetch(path) == digest
+        end
       end
     end
 
@@ -430,21 +527,10 @@ module HaveAPI
               raise ContractError, 'Missing contributor flake provenance'
             end
 
-            inputs.fetch('manifests').each do |path, digest|
-              next if Release::JSON_GEMFILES.include?(path) || lineage
-
-              raise ContractError, 'Dependency manifest escaped source' unless selected.fetch('files_sha256').fetch(path) == digest
-            end
           elsif inputs.has_key?('contributor_flakes')
             raise ContractError, 'Contributor flake separation without benchmark inputs'
           end
-          if lineage
-            Release.validate_inputs(inputs, selected, @samples.fetch('profile'))
-          elsif inputs.has_key?('release_versions')
-            raise ContractError, 'Unproven own-version normalization'
-          else
-            Release.validate_json_preparation(inputs, selected)
-          end
+          Performance.validate_input_receipts(inputs, selected, profile: @samples.fetch('profile'), lineage:)
           unless observation.fetch('environment') == @samples['environment'] && Release.graph(inputs) == @samples.fetch('inputs') &&
                  observation.fetch('fixture_sha256') == @samples['fixture_sha256']
             raise ContractError, 'Worker provenance mismatch'

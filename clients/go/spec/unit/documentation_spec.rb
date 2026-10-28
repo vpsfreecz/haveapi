@@ -7,12 +7,43 @@ RSpec.describe HaveAPI::GoClient::Documentation do
   let(:action) { description.dig(:resources, :client, :resources, :child, :actions, :client) }
   let(:sample) { GoDocumentationFixture.sample }
   let(:context) do
-    Struct.new(:version, :base_url, :description, :resource_path, :action_name, :action, :sample).new(version: '7', base_url: 'https://api.example.test/mounted/', description:,
-                                                                                                      resource_path: %w[client child], action_name: 'client', action:, sample:)
+    Struct.new(:version, :base_url, :description, :resource_path, :action_name, :action, :sample, :detail).new(detail: :thorough, version: '7', base_url: 'https://api.example.test/mounted/', description:,
+                                                                                                               resource_path: %w[client child], action_name: 'client', action:, sample:)
   end
 
   def render
     adapter.render(kind: :example, context:, mode: :sync)
+  end
+
+  it 'renders a simple action with exact inputs, required error checks and no repeated setup' do
+    context.detail = :simple
+    source = render.fetch(:code)
+    expect(source).to start_with('invocation := api.Client.Child.ClientAction.Prepare()')
+    expect(source).to include('input.SetNameNil(true)', 'input.SetEnabled(false)', 'input.SetCount(0)',
+                              'response, err := invocation.Call()', 'if err != nil {', 'if !response.Status {', 'response.Output.Id')
+    expect(source).not_to include('package main', 'func main', 'client.New(', 'os.Getenv', 'NewMetaInput', 'SetUnused')
+    context.detail = :thorough
+    expect(render.fetch(:code)).to include('package main', 'client.New(', 'NewMetaInput')
+  end
+
+  it 'keeps simple and thorough limitations identical and does not change the sample' do
+    sample[:request][:count] = 'invalid'
+    before = Marshal.dump(sample)
+    results = %i[simple thorough].map do |detail|
+      context.detail = detail
+      render
+    end
+    expect(results.first).to include(status: :limitation)
+    expect(results.last).to eq(results.first)
+    expect(Marshal.dump(sample)).to eq(before)
+  end
+
+  it 'keeps a simple blocking call explicit without polling the operation automatically' do
+    action[:blocking] = true
+    context.detail = :simple
+    source = render.fetch(:code)
+    expect(source).to include('invocation.Call()', 'Request success does not establish operation completion.')
+    expect(source).not_to include('OperationStatus', 'IsBlocking')
   end
 
   it 'leaves an omitted module version unresolved and prints the Go latest selector' do

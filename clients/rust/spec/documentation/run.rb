@@ -49,12 +49,20 @@ module RustDocumentationAcceptance
       variants = { 'init' => source(renderer, :init, context) }
       variants.merge!(profile_initializations(renderer, context, snapshot:, config:))
       index = nil
-      RustDocumentationCases.cases.each do |entry|
-        current = RustDocumentationCases.context_for(context, entry)
+      %i[simple thorough].product(RustDocumentationCases.cases).each do |detail, entry|
+        current = RustDocumentationCases.context_for(context.with(detail:), entry)
         rendered = source(renderer, :example, current)
+        if detail == :simple
+          provider = if current.action['auth'] != false
+                       %w[basic token oauth2].find { |name| current.description.fetch('authentication').has_key?(name) }
+                     end
+          setup = source(renderer, provider ? :auth : :init, current, auth_method: provider,
+                                                                      auth_description: current.description.fetch('authentication')[provider])
+          rendered = RustDocumentationCases.compose_fragment(setup, rendered)
+        end
         checked = RustDocumentationCases.assert_output(rendered, entry[:assertion])
-        variants[entry.fetch(:name)] = checked
-        index = checked if entry.fetch(:name) == 'index'
+        variants["#{detail}_#{entry.fetch(:name)}"] = checked
+        index = checked if detail == :thorough && entry.fetch(:name) == 'index'
       end
       %w[basic token oauth2].each do |provider|
         auth = source(renderer, :auth, context, auth_method: provider.to_sym,
@@ -160,6 +168,7 @@ module RustDocumentationAcceptance
             :rust, config.fetch('crate_name'), nil, adapter
           ).freeze
           context = HaveAPI::ClientExample::Context.new(
+            detail: :thorough,
             version: '1.0', host: '127.0.0.1', base_url:, version_url: "#{base_url}v1.0/",
             description: snapshot.fetch('description'), profile:
           )

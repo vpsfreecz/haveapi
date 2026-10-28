@@ -141,8 +141,11 @@ class GoDocumentationAcceptance
   end
 
   def prepare_programs(dir)
-    @cases = self.class.expected_cases
-    @cases.each_key do |name|
+    @cases = self.class.expected_cases.flat_map do |name, expected|
+      %i[simple thorough].map { |detail| ["#{detail}_#{name}", expected.merge(case_name: name, detail:)] }
+    end.to_h
+    @cases.each do |program_name, expected|
+      name, detail = expected.values_at(:case_name, :detail)
       kind = if name == :init
                :init
              else
@@ -162,6 +165,7 @@ class GoDocumentationAcceptance
                else { status: true }
                end
       context = HaveAPI::ClientExample::Context.new(
+        detail:,
         version: '7', host: '127.0.0.1', base_url: "http://127.0.0.1:#{@server.config[:Port]}/mounted/",
         version_url: "http://127.0.0.1:#{@server.config[:Port]}/mounted/v7/", description: @description,
         resource_path: %w[client child], action_name:, action:, sample:, profile: @profile
@@ -169,11 +173,20 @@ class GoDocumentationAcceptance
       result = HaveAPI::ClientExamples::GoClient.render(kind, context:, auth_method: name, auth_description: {})
       raise "#{name}: unexpected limitation: #{result[:reason]}" unless result[:status] == :code
 
-      path = File.join(dir, 'consumer/cmd', name.to_s)
+      path = File.join(dir, 'consumer/cmd', program_name)
       FileUtils.mkdir_p(path)
-      # The complete program is the actual renderer result, without replacements.
+      # Simple fragments use the separately rendered setup; requests stay intact.
       source = result.fetch(:code)
-      if name.to_s.end_with?('_call')
+      if detail == :simple && kind == :example
+        setup = if name.to_s.end_with?('_call')
+                  HaveAPI::ClientExamples::GoClient.render(:auth, context:, auth_method: name.to_s.delete_suffix('_call').to_sym, auth_description: {})
+                else
+                  HaveAPI::ClientExamples::GoClient.render(:init, context:)
+                end
+        raise "#{name}: setup limitation" unless setup[:status] == :code
+
+        source = compose_fragment(setup.fetch(:code), source)
+      elsif name.to_s.end_with?('_call')
         auth = HaveAPI::ClientExamples::GoClient.render(:auth, context:, auth_method: name.to_s.delete_suffix('_call').to_sym, auth_description: {})
         raise "#{name}: authentication limitation" unless auth[:status] == :code
 
@@ -213,7 +226,8 @@ class GoDocumentationAcceptance
     response.body = JSON.generate(result)
   end
 
-  def verify(name, expected, stdout)
+  def verify(_program_name, expected, stdout)
+    name = expected.fetch(:case_name)
     if %i[init basic token oauth2].include?(name)
       raise "#{name}: initialization performed a request" unless @requests.empty?
 
@@ -237,11 +251,18 @@ class GoDocumentationAcceptance
     end
     raise "#{name}: unexpected rendered output #{stdout.inspect}" if expected[:output] && !stdout.include?(expected[:output])
 
-    if expected[:state]
+    if expected[:state] && expected[:detail] == :thorough
       state = @requests.pop(true)
       raise 'operation: generated helper used the wrong route' unless state[:path] == '/mounted/v7/action_states/55'
     end
     raise "#{name}: unexpected extra request" unless @requests.empty?
+  end
+
+  def compose_fragment(setup, fragment)
+    raise 'rendered initialization marker missing' unless setup.include?('  _ = api') || setup.include?('api.Set')
+
+    # fmt is used by the exact fragment's error/output handling.
+    setup.sub("import (\n", "import (\n  \"fmt\"\n").sub(/\n\}\n\z/) { "\n#{fragment}}\n" }
   end
 
   # Compose exact rendered sections, deduplicating their shared initialization.

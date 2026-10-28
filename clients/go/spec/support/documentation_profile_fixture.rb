@@ -117,6 +117,7 @@ module GoDocumentationProfileFixture
     resource = path.inject(description) { |parent, name| parent.fetch(:resources).fetch(name) }
     action = resource.fetch(:actions).fetch(action_name)
     HaveAPI::ClientExample::Context.new(
+      detail: :thorough,
       version: '7', host: 'api.example.test', base_url: 'https://api.example.test/mounted/',
       version_url: 'https://api.example.test/mounted/v7/', description:, resource_path: path,
       resource:, action_name:, action:, sample: sample || action.fetch(:examples).first

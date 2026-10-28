@@ -109,13 +109,11 @@ module HaveAPI::TypeScriptClient
       JSON.generate(value).gsub("\u2028", '\\u2028').gsub("\u2029", '\\u2029')
     end
 
-    def program(context, body, auth = [])
-      version_url = context.version_url.to_s.sub(%r{/+\z}, '')
-      uri = URI.parse(version_url)
-      unsupported! unless uri.is_a?(URI::HTTP) && uri.host && !uri.userinfo && !uri.query && !uri.fragment &&
-                          uri.path.end_with?("/v#{@snapshot.fetch('api_version')}") && Snapshot.safe_path?(uri.path)
+    def program(context, body, auth = [], errors: false)
+      version_url = version_url(context)
       dependencies = "// Configured SDK: #{@package_name}#{"@#{@package_version}" if @package_version}; runtime: haveapi-client@0.30.2."
-      lines = [dependencies, "import {AsyncClient, AsyncError} from 'haveapi-client';", "import {createClient} from #{literal(@package_name)};"]
+      runtime_imports = errors ? 'AsyncClient, AsyncError' : 'AsyncClient'
+      lines = [dependencies, "import {#{runtime_imports}} from 'haveapi-client';", "import {createClient} from #{literal(@package_name)};"]
       unless auth.empty?
         lines += ["import {env} from 'node:process';", '', 'function credential(name: string): string {', '  const value = env[name];',
                   '  if (!value) throw new Error(`Missing environment variable ${name}`);', '  return value;', '}']
@@ -125,6 +123,14 @@ module HaveAPI::TypeScriptClient
       lines << '  const api = createClient({execute: spec => runtime.request(spec)});'
       lines.concat(body.map { |line| "  #{line}" })
       lines.push('}', '', 'main().catch(error => { throw error; });', '').join("\n")
+    end
+
+    def version_url(context)
+      value = context.version_url.to_s.sub(%r{/+\z}, '')
+      uri = URI.parse(value)
+      unsupported! unless uri.is_a?(URI::HTTP) && uri.host && !uri.userinfo && !uri.query && !uri.fragment &&
+                          uri.path.end_with?("/v#{@snapshot.fetch('api_version')}") && Snapshot.safe_path?(uri.path)
+      value
     rescue URI::InvalidURIError
       unsupported!
     end
@@ -186,7 +192,7 @@ module HaveAPI::TypeScriptClient
 
     def compatible_action!(action, saved, live, context)
       unsupported! unless live.is_a?(Hash)
-      expected_path = URI.parse(context.version_url.to_s).path.sub(%r{/+\z}, '') + action.fetch(:path_template)
+      expected_path = URI.parse(version_url(context)).path + action.fetch(:path_template)
       unsupported! unless live['path'] == expected_path && live['method'] == action.fetch(:method) &&
                           (live['auth'] != false) == action.fetch(:auth) && (live['blocking'] == true) == action.fetch(:blocking)
       namespace = normalized_members(normalized_members(context.description)['meta'])['namespace']
@@ -298,26 +304,45 @@ module HaveAPI::TypeScriptClient
       if sample['status'] == false || (sample['http_status'].is_a?(Integer) && sample['http_status'] >= 400)
         body = ['try {', "  await #{call};", '  throw new Error("Expected the documented request to fail");',
                 '} catch (error) {', '  if (!(error instanceof AsyncError)) throw error;',
-                '  void [error.kind, error.httpStatus, error.errors, error.envelope, error.response];', '}']
+                '  console.error(error.kind, error.httpStatus);']
+        body << '  void [error.errors, error.envelope, error.response];' if context.detail == :thorough
+        body << '}'
+        failure = true
       else
-        body = ["const result = await #{call};", 'void [result.data, result.meta, result.envelope, result.httpStatus];']
-        body.concat(output_lines(action, response))
+        body = ["const result = await #{call};"]
+        body << 'void [result.data, result.meta, result.envelope, result.httpStatus];' if context.detail == :thorough
+        body.concat(output_lines(action, response, thorough: context.detail == :thorough))
       end
       body << '// Request success does not establish completion of a server-side operation.' if action.fetch(:blocking)
-      program(context, body, action_authentication(action, context))
+      auth = action_authentication(action, context)
+      if context.detail == :thorough
+        unless failure
+          body = ['try {'] + body.map { |line| "  #{line}" } +
+                 ['} catch (error) {', '  if (!(error instanceof AsyncError)) throw error;',
+                  '  console.error(error.kind, error.httpStatus);', '  throw error;', '}']
+        end
+        return program(context, body, auth, errors: true)
+      end
+
+      imports = failure ? ["import {AsyncError} from 'haveapi-client';", ''] : []
+      (imports + ['// Requires an initialized api and an async context.'] + body + ['']).join("\n")
     end
 
-    def output_lines(action, response)
+    def output_lines(action, response, thorough:)
       return [] unless response && action[:output]
 
       list = action[:output][:layout].end_with?('_list')
       values = list ? response : [response]
       names = values.flat_map(&:keys).uniq
       body = names.flat_map do |name|
-        expression = "item[#{literal(name)}]"
-        ["const value#{names.index(name)}: unknown = #{expression};", "if (value#{names.index(name)} !== null && value#{names.index(name)} !== undefined) void value#{names.index(name)};"]
+        expression = "#{list || thorough ? 'item' : 'result.data'}[#{literal(name)}]"
+        next ["console.log(#{expression});"] unless thorough
+
+        ["const value#{names.index(name)}: unknown = #{expression};", "if (value#{names.index(name)} !== null && value#{names.index(name)} !== undefined) console.log(value#{names.index(name)});"]
       end
-      list ? ['for (const item of result.data) {'] + body.map { |line| "  #{line}" } + ['}'] : ['const item = result.data;'] + body
+      return ['for (const item of result.data) {'] + body.map { |line| "  #{line}" } + ['}'] if list
+
+      (thorough ? ['const item = result.data;'] : []) + body
     end
   end
 end

@@ -66,6 +66,12 @@ module RustDocumentationCases
     body = action_source.split("        .build()?;\n", 2).fetch(1).split('    Ok(())', 2).first
     raise 'Rendered authentication composition marker missing' unless auth_source.include?('    let _ = &api;')
 
-    auth_source.sub('    let _ = &api;', body.rstrip)
+    compose_fragment(auth_source, body.rstrip)
+  end
+
+  def compose_fragment(setup, fragment)
+    raise 'Rendered initialization marker missing' unless setup.include?('    let _ = &api;')
+
+    setup.sub('    let _ = &api;') { fragment }
   end
 end

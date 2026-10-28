@@ -3,6 +3,18 @@ require 'fileutils'
 require 'open3'
 
 module TypeScriptDocumentationCompilation
+  # Wrap the exact action fragment with the separately rendered setup.
+  def executable_documentation(adapter, context, source)
+    return source unless context.detail == :simple
+
+    provider = context.action['auth'] == false ? nil : %w[basic token].find { |name| context.description['authentication'].has_key?(name) }
+    setup = adapter.render(kind: provider ? :auth : :init, context:, auth_method: provider).fetch(:code)
+    raise 'Rendered initialization marker missing' unless setup.include?('  void api;')
+
+    imports, body = source.lines.partition { |line| line.start_with?('import ') }
+    imports.join + setup.sub('  void api;') { body.join.rstrip }
+  end
+
   def compile_documentation(directory, schema, snippets, runtime_types:, emit: false)
     root = File.expand_path('../../../..', __dir__)
     node = ENV.fetch('NODE', 'node')

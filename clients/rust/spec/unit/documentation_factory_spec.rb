@@ -11,9 +11,9 @@ describe HaveAPI::RustClient::Documentation do
   end
   let(:source) { { git: 'https://example.test/fixture-client', rev: 'a1' * 20 } }
   let(:context) do
-    Struct.new(:version, :base_url, :description, :resource_path, :action_name, :sample).new(
+    Struct.new(:version, :base_url, :description, :resource_path, :action_name, :sample, :detail).new(
       '1.0', 'https://visible.example.test/', schema.fetch('description'), ['widget'], 'update',
-      { path_params: [1], request: { name: 'visible' }, response: { id: 1 } }
+      { path_params: [1], request: { name: 'visible' }, response: { id: 1 } }, :thorough
     )
   end
 

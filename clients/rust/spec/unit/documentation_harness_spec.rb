@@ -13,6 +13,7 @@ describe RustDocumentationAcceptance do
   let(:profile) { Struct.new(:language, :adapter).new(:rust, adapter).freeze }
   let(:context) do
     HaveAPI::ClientExample::Context.new(
+      detail: :thorough,
       version: '1.0', host: 'example.test', base_url: 'https://example.test/', version_url: 'https://example.test/v1.0/',
       description: schema.fetch('description'), resource_path: ['widget'], action_name: 'update',
       sample: { path_params: [1], request: { name: 'actual rendered source' }, response: { id: 1 } }, profile:
@@ -40,6 +41,15 @@ describe RustDocumentationAcceptance do
     expect(composed).to include('.basic_auth(std::env::var("HAVEAPI_USER")?, std::env::var("HAVEAPI_PASSWORD")?)')
     expect(composed).to include(action.split("        .build()?;\n", 2).last.split('    Ok(())', 2).first.rstrip)
     expect(composed.scan('#[tokio::main]').length).to eq(1)
+  end
+
+  it 'wraps a simple fragment with separately rendered authentication without changing its source' do
+    auth = described_class.source(renderer, :auth, context, auth_method: :basic,
+                                                            auth_description: schema['description']['authentication']['basic'])
+    fragment = described_class.source(renderer, :example, context.with(detail: :simple))
+    composed = RustDocumentationCases.compose_fragment(auth, fragment)
+    expect(composed).to include(fragment, 'Client::builder', '.basic_auth(')
+    expect(composed.scan('api.widget().update').length).to eq(1)
   end
 
   it 'resolves fixture canonical names independently of Rust normalization' do

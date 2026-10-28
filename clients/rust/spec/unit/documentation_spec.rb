@@ -11,16 +11,47 @@ describe HaveAPI::RustClient::Documentation do
   let(:schema) { snapshot }
   let(:adapter) { described_class.new(snapshot: schema, config:) }
   let(:context_type) do
-    Struct.new(:version, :base_url, :description, :resource_path, :action_name, :sample)
+    Struct.new(:version, :base_url, :description, :resource_path, :action_name, :sample, :detail)
   end
   let(:context) do
-    context_type.new(version: '1.0', base_url: 'https://example.test/', description: schema['description'],
+    context_type.new(detail: :thorough, version: '1.0', base_url: 'https://example.test/', description: schema['description'],
                      resource_path: ['widget'], action_name: 'update',
                      sample: { path_params: [1], request: { name: 'widget' }, response: { id: 1 }, status: true })
   end
 
   def render(mode = :async, kind = :example, **options)
     adapter.render(kind:, context:, mode:, **options)
+  end
+
+  %i[async blocking].each do |mode|
+    it "renders a simple #{mode} action in a documented Result context without repeating initialization" do
+      context.detail = :simple
+      source = render(mode).fetch(:code)
+      expect(source).to include('returning Result<(), Box<dyn std::error::Error>>',
+                                'api.widget().update("1").name("widget".to_owned()).send()', 'response.output.id')
+      expect(source.include?('.await?')).to eq(mode == :async)
+      expect(source).not_to include('fn main', 'Client::builder', 'std::env', 'response.meta', 'server-side operation')
+      context.detail = :thorough
+      expect(render(mode).fetch(:code)).to include('fn main', 'Client::builder', 'response.meta')
+    end
+
+    it "preserves #{mode} simple null, zero, false, empty and omitted inputs and shared limitations" do
+      schema['description']['resources']['widget']['actions']['update']['input'] = io(
+        'type' => parameter('String', nullable: true), 'count' => parameter('Integer'),
+        'enabled' => parameter('Boolean'), 'name' => parameter, 'omitted' => parameter
+      )
+      context.sample[:request] = { type: nil, count: 0, enabled: false, name: '' }
+      context.detail = :simple
+      expect(render(mode).fetch(:code)).to include('.type__null().count(0_i64).enabled(false).name("".to_owned())')
+      expect(render(mode).fetch(:code)).not_to include('.omitted(')
+      context.sample[:request][:count] = 'invalid'
+      results = %i[simple thorough].map do |detail|
+        context.detail = detail
+        render(mode)
+      end
+      expect(results.first).to include(status: :limitation)
+      expect(results.last).to eq(results.first)
+    end
   end
 
   it 'constructs and renders without acquisition, generation, subprocesses or writes' do

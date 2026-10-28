@@ -3,6 +3,35 @@ require_relative '../documentation/fixtures'
 RSpec.describe HaveAPI::TypeScriptClient::Documentation do
   include TypeScriptDocumentationFixtures
 
+  it 'renders simple fragments using the same canonical calls and values without repeated setup' do
+    context = documentation_context(detail: :simple)
+    adapter = documentation_adapter
+    source = adapter.render(kind: :example, context:).fetch(:code)
+    expect(source).to include('const result = await api["widget"]["update"]', '"cleared":null', '"enabled":false', '"count":0',
+                              '"wire_name":"mapped"', 'console.log(result.data["name"])')
+    expect(source).not_to include('AsyncClient', 'createClient', 'function main', 'credential(', 'catch', 'result.meta')
+    context.detail = :thorough
+    expect(adapter.render(kind: :example, context:).fetch(:code)).to include('createClient', 'catch (error)', 'error instanceof AsyncError')
+  end
+
+  it 'uses the runtime error class for a simple documented rejection and preserves limitations' do
+    context = documentation_context(detail: :simple)
+    context.sample[:status] = false
+    adapter = documentation_adapter
+    source = adapter.render(kind: :example, context:).fetch(:code)
+    expect(source).to include("import {AsyncError} from 'haveapi-client'", 'error instanceof AsyncError', 'error.httpStatus')
+    expect(source).not_to include('result.data', 'error.envelope', 'function main')
+    context.sample[:request]['count'] = 'invalid'
+    before = Marshal.dump(context.sample)
+    results = %i[simple thorough].map do |detail|
+      context.detail = detail
+      adapter.render(kind: :example, context:)
+    end
+    expect(results.first).to include(status: :limitation)
+    expect(results.last).to eq(results.first)
+    expect(Marshal.dump(context.sample)).to eq(before)
+  end
+
   it 'copies and freezes the SDK model, resolving canonical actions and aliases without allocating names' do
     schema = documentation_snapshot
     adapter = documentation_adapter(schema)
@@ -59,6 +88,8 @@ RSpec.describe HaveAPI::TypeScriptClient::Documentation do
   it 'limits stale routes, versions, metadata, parameter contracts and missing required values' do
     changes = [
       ->(context) { context.version = '2.0' },
+      ->(context) { context.version_url = 'https://user:password@api.example.test/api/v1.0/' },
+      ->(context) { context.version_url += '?query=value' },
       ->(context) { context.action['path'] = '/api/v1.0/changed' },
       ->(context) { context.action['method'] = 'POST' },
       ->(context) { context.action['blocking'] = true },
@@ -75,9 +106,13 @@ RSpec.describe HaveAPI::TypeScriptClient::Documentation do
       ->(context) { context.sample[:request]['count'] = 1.5 }
     ]
     changes.each do |change|
-      context = documentation_context
-      change.call(context)
-      expect(documentation_adapter.render(kind: :example, context:)[:status]).to eq(:limitation)
+      results = %i[simple thorough].map do |detail|
+        context = documentation_context(detail:)
+        change.call(context)
+        documentation_adapter.render(kind: :example, context:)
+      end
+      expect(results.first[:status]).to eq(:limitation)
+      expect(results.last).to eq(results.first)
     end
     context = documentation_context(action_name: 'index')
     context.sample[:request]['custom'] = { 'not' => 'a scalar' }

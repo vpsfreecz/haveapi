@@ -131,9 +131,9 @@ module HaveAPI::GoClient
       lines = ["invocation := api.#{members.join('.')}.Prepare()"]
       lines.concat(path_lines(action, sample))
       lines.concat(input_lines(action, saved[:input], live[:input], sample))
-      lines.concat(metadata_lines(action, saved, live))
+      lines.concat(metadata_lines(action, saved, live)) if context.detail == :thorough
       lines.concat(call_lines(action, live, sample, context))
-      code(program(context, ['fmt'], lines))
+      code(context.detail == :thorough ? program(context, ['fmt'], lines) : (lines + ['']).join("\n"))
     end
 
     def check_action(saved, live)
@@ -311,7 +311,7 @@ module HaveAPI::GoClient
       return lines + ['// This sample demonstrates the failure branch above.'] unless sample[:status]
 
       lines.concat(output_lines(action, sample))
-      if operation_visible?(action, live, context)
+      if context.detail == :thorough && operation_visible?(action, live, context)
         lines.push(
           'if response.IsBlocking() {',
           '  state, err := response.OperationStatus()',

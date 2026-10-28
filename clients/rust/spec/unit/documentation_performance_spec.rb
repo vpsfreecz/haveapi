@@ -11,9 +11,9 @@ describe HaveAPI::RustClient::Documentation do
   end
   let(:adapter) { described_class.from_snapshot(snapshot: schema, crate_name: 'fixture-client', crate_version: '0.1.0') }
   let(:normalized_nodes) { [] }
-  let(:context_type) { Struct.new(:version, :base_url, :description, :resource_path, :action_name, :sample) }
+  let(:context_type) { Struct.new(:version, :base_url, :description, :resource_path, :action_name, :sample, :detail) }
   let(:context) do
-    context_type.new(version: '1.0', base_url: 'https://example.test/', resource_path: ['widget'], action_name: 'update',
+    context_type.new(detail: :thorough, version: '1.0', base_url: 'https://example.test/', resource_path: ['widget'], action_name: 'update',
                      sample: { path_params: [1], request: { name: 'widget' }, response: { id: 1 }, status: true })
   end
 

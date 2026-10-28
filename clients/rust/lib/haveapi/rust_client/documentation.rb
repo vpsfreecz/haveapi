@@ -200,16 +200,28 @@ module HaveAPI::RustClient
       body = inputs.fetch(:before)
       if sample['status'] == false || (sample['http_status'].is_a?(Integer) && sample['http_status'] >= 400)
         body += ["match #{call}#{send} {", '    Ok(_) => return Err("expected the documented request to fail".into()),',
-                 '    Err(error) => {', '        let _ = error.http_status();',
-                 '        // Inspect these explicitly; server diagnostics can contain sensitive values.',
-                 '        let _ = (error.server_message(), error.validation_errors());', '    }', '}']
+                 '    Err(error) => {', '        eprintln!("HTTP status: {:?}", error.http_status());']
+        if context.detail == :thorough
+          body += ['        // Inspect these explicitly; server diagnostics can contain sensitive values.',
+                   '        let _ = (error.server_message(), error.validation_errors());']
+        end
+        body += ['    }', '}']
       else
-        body += ["let response = #{call}#{send}?;", 'let _ = response.http_status;', 'let _ = &response.meta;']
+        body += ["let response = #{call}#{send}?;"]
+        body += ['let _ = response.http_status;', 'let _ = &response.meta;'] if context.detail == :thorough
         body.concat(output_lines(saved, sample['response']))
       end
-      body << '// Request success or a timeout does not establish completion of a server-side operation.'
-      body << '// Use only the separately documented action-state action; this SDK has no automatic wait helper.'
-      program(context, mode, body, credentials: action_credentials(saved, context))
+      if saved[:desc]['blocking'] == true
+        body << '// Request success or a timeout does not establish completion of a server-side operation.'
+        if context.detail == :thorough
+          body << '// Use only the separately documented action-state action; this SDK has no automatic wait helper.'
+        end
+      end
+      credentials = action_credentials(saved, context)
+      return program(context, mode, body, credentials:) if context.detail == :thorough
+
+      enclosing = mode == :async ? 'an async function' : 'a synchronous function outside async runtime threads'
+      (["// Use inside #{enclosing} returning Result<(), Box<dyn std::error::Error>>."] + body + ['']).join("\n")
     end
 
     def action_credentials(action, context)
@@ -405,7 +417,7 @@ module HaveAPI::RustClient
     end
 
     def output_lines(action, response)
-      return ['let _ = &response.output;'] unless action[:output] && response
+      return [] unless action[:output] && response
 
       list = action[:output][:layout].end_with?('_list')
       names = (list ? response : [response]).flat_map(&:keys).uniq
@@ -413,7 +425,7 @@ module HaveAPI::RustClient
       names.each do |name|
         parameter = action[:output][:parameters].find { |item| item[:name] == name }
         target = list ? 'item' : 'response.output'
-        lines << "#{'    ' if list}let _ = &#{target}.#{parameter[:field]};"
+        lines << "#{'    ' if list}println!(\"{:?}\", &#{target}.#{parameter[:field]});"
       end
       lines << '}' if list
       lines

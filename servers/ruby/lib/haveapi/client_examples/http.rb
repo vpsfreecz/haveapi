@@ -7,6 +7,7 @@ module HaveAPI::ClientExamples
     label 'HTTP'
     language 'http'
     language_label 'HTTP'
+    detail_levels :simple
     code :http
     order 100
 

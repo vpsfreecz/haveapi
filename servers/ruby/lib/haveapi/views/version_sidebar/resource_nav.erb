@@ -1,21 +1,12 @@
-<li>
-  <a href="#<%= "#{prefix}-#{resource}" %>">.<%= resource.humanize %></a>
-
-  <ul>
-    <% sort_hash(info[:actions]).each do |action, info| %>
-      <li>
-        <a href="#<%= "#{prefix}-#{resource}-#{action}" %>">#<%= action.capitalize %></a>
-      </li>
-    <% end %>
-
-    <% sort_hash(info[:resources]).each do |r, i| %>
-      <%=
-        erb :"version_sidebar/resource_nav", locals: {
-          resource: r,
-          info: i,
-          prefix: "#{prefix}-#{resource}",
-        }
-      %>
-    <% end %>
-  </ul>
+<% resource_path = path + [resource.to_s] %>
+<% key = resource_path.join('.') %>
+<li data-resource-item>
+  <a href="<%= escape_html(documentation_url(resource: key)) %>" data-resource-link="<%= escape_html(key) %>"<% if @documentation_resource && @documentation_resource[:key] == key %> aria-current="page"<% end %>><%= escape_html(key) %></a>
+  <% unless info[:resources].empty? %>
+    <ul>
+      <% sort_hash(info[:resources]).each do |child, child_info| %>
+        <%= erb :'version_sidebar/resource_nav', locals: {resource: child, info: child_info, path: resource_path} %>
+      <% end %>
+    </ul>
+  <% end %>
 </li>

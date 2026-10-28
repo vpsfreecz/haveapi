@@ -4,13 +4,17 @@ require 'tilt'
 require 'cgi'
 require 'haveapi/hooks'
 require 'haveapi/documentation_clients'
+require 'haveapi/documentation_helpers'
+require 'haveapi/documentation_validators'
+require 'haveapi/documentation_search'
+require 'haveapi/shared_documentation_helpers'
 
 module HaveAPI
   class Server
     attr_accessor :default_version, :action_state, :validation_error_http_status,
                   :default_locale, :parameter_i18n_scope
     attr_reader :root, :routes, :module_name, :auth_chain, :versions, :extensions,
-                :action_state_auth, :locale_header, :available_locales
+                :action_state_auth, :locale_header, :available_locales, :documentation_name
 
     include Hookable
 
@@ -231,13 +235,8 @@ module HaveAPI
         settings.api_server.root
       end
 
-      def logout_url
-        ret = url("#{root}_logout")
-        ret.insert(ret.index('//') + 2, '_log:out@')
-      end
-
       def doc(file)
-        markdown :"../../../doc/#{file}"
+        markdown :"../../../doc/#{file}", with_toc_data: true, tables: true, fenced_code_blocks: true, lax_spacing: true
       end
 
       def base_url
@@ -299,27 +298,15 @@ module HaveAPI
       def format_param_type(param)
         return param[:type] if param[:type] != 'Resource'
 
-        "<a href=\"#root-#{param[:resource].join('-')}-show\">#{param[:type]}</a>"
+        entry = documentation_resources.find { |resource| resource[:path] == param[:resource].map(&:to_s) }
+        return param[:type] unless entry
+
+        anchor = entry[:info][:actions].has_key?('show') || entry[:info][:actions].has_key?(:show) ? "#{entry[:id]}-show" : entry[:id]
+        "<a href=\"#{escape_html(documentation_url(resource: entry[:key], anchor:))}\">#{param[:type]}</a>"
       end
 
-      def format_validators(validators)
-        ret = ''
-        return ret if validators.nil?
-
-        validators.each do |name, opts|
-          ret += "<h5>#{escape_html(name.to_s.capitalize)}</h5>"
-          ret += '<dl>'
-          if opts.respond_to?(:each_pair)
-            opts.each_pair do |k, v|
-              ret += "<dt>#{escape_html(k)}</dt><dd>#{escape_html(v.to_s)}</dd>"
-            end
-          else
-            ret += "<dt>description</dt><dd>#{escape_html(opts.to_s)}</dd>"
-          end
-          ret += '</dl>'
-        end
-
-        ret
+      def format_validators(validators, type: nil)
+        DocumentationValidators.render(validators, type:)
       end
 
       def escape_html(v)
@@ -340,6 +327,30 @@ module HaveAPI
       @default_locale = :en
       self.available_locales = HaveAPI::I18n.available_locales
       self.locale_header = 'Accept-Language'
+    end
+
+    def documentation_name=(value)
+      raise ArgumentError, 'Documentation name must be configured before mount' if @sinatra
+
+      if value.nil?
+        @documentation_name = nil
+        return
+      end
+      unless value.is_a?(String)
+        raise ArgumentError, 'Documentation name must be a UTF-8 string'
+      end
+
+      name = value.dup.force_encoding(Encoding::UTF_8)
+      unless name.valid_encoding? && !name.match?(/[[:cntrl:]]/)
+        raise ArgumentError, 'Documentation name must be a UTF-8 string without control characters'
+      end
+
+      name = name.strip
+      unless name.bytesize.between?(1, 256)
+        raise ArgumentError, 'Documentation name must contain 1 to 256 bytes'
+      end
+
+      @documentation_name = name.freeze
     end
 
     def documentation_clients(version, **profiles)
@@ -461,6 +472,9 @@ module HaveAPI
         helpers Sinatra::Cookies
         helpers ServerHelpers
         helpers DocHelpers
+        helpers DocumentationHelpers
+        helpers DocumentationSearch::Helpers
+        helpers SharedDocumentationHelpers
 
         before do
           setup_request_locale
@@ -496,7 +510,15 @@ module HaveAPI
 
       # Mount root
       @sinatra.get @root do
-        auth_users_by_version = authenticated_versions
+        if documentation_selection?
+          next render_version_documentation(settings.api_server.default_version)
+        end
+
+        headers 'Cache-Control' => 'private, no-store'
+        single_version = settings.api_server.versions.length == 1
+        auth_users_by_version = settings.api_server.versions.to_h do |version|
+          [version, documentation_authenticated?(version)]
+        end
 
         @api = settings.api_server.describe(Context.new(
                                               settings.api_server,
@@ -505,8 +527,16 @@ module HaveAPI
                                               auth_users_by_version:
                                             ))
 
+        if single_version
+          version = settings.api_server.default_version
+          @documentation_index_account = {
+            version:, user: auth_users_by_version[version],
+            authentication: @api[:versions].fetch(version).fetch(:authentication)
+          }
+        end
+
         content_type 'text/html'
-        erb :index, layout: :main_layout
+        render_documentation_index
       end
 
       @sinatra.options @root do
@@ -548,63 +578,46 @@ module HaveAPI
         @formatter.format(true, ret)
       end
 
-      # Doc
+      # Shared documentation keeps the existing content and URL aliases.
       @sinatra.get "#{@root}doc" do
-        content_type 'text/html'
-        erb :main_layout do
-          doc(:index)
-        end
+        render_shared_readme
       end
 
       @sinatra.get "#{@root}doc/readme" do
-        content_type 'text/html'
-
-        erb :main_layout do
-          markdown File.new("#{settings.views}/../../../README.md").read
-        end
+        render_shared_readme
       end
 
       @sinatra.get "#{@root}doc/json-schema" do
-        content_type 'text/html'
-        erb :doc_layout, layout: :main_layout do
-          begin
-            @content = File.read(File.join(settings.root, '../../doc/json-schema.html'))
-          rescue Errno::ENOENT
-            halt 404
-          end
-
-          @sidebar = erb :'doc_sidebars/json-schema'
+        begin
+          content = File.read(File.join(settings.root, '../../doc/json-schema.html'))
+        rescue Errno::ENOENT
+          halt 404
         end
+        render_shared_documentation(content:, title: 'JSON schema', sidebar: erb(:'doc_sidebars/json-schema'))
       end
 
-      @sinatra.get %r{#{@root}doc/([^.]+)(\.md)?} do |f, _|
-        content_type 'text/html'
-        erb :doc_layout, layout: :main_layout do
-          begin
-            @content = doc(f)
-          rescue Errno::ENOENT
-            halt 404
-          end
+      @sinatra.get %r{#{@root}doc/([^.]+)(\.md)?} do |file, _|
+        next render_shared_readme if file == 'index'
 
-          begin
-            @sidebar = erb :"doc_sidebars/#{f}"
-          rescue Errno::ENOENT
-            @sidebar = ''
-          end
+        begin
+          content = doc(file)
+        rescue Errno::ENOENT
+          halt 404
         end
+        sidebar = begin
+          erb :"doc_sidebars/#{file}"
+        rescue Errno::ENOENT
+          nil
+        end
+        render_shared_documentation(content:, title: file.humanize, sidebar:)
       end
 
-      # Login/logout links
-      @sinatra.get "#{root}_login" do
-        if current_user
-          redirect back
-        else
-          authenticate!(settings.api_server.default_version) # FIXME
+      # Retain old documentation links without engaging browser credentials.
+      %w[_login _logout].each do |path|
+        @sinatra.get "#{root}#{path}" do
+          headers 'Cache-Control' => 'private, no-store'
+          halt 303, { 'Location' => url(settings.api_server.version_prefix(settings.api_server.default_version), false) }, ''
         end
-      end
-
-      @sinatra.get "#{root}_logout" do
-        require_auth!
       end
 
       @auth_chain << HaveAPI.default_authenticate if @auth_chain.empty?
@@ -618,6 +631,7 @@ module HaveAPI
       mount_version(@root, @default_version)
 
       @versions.each do |v|
+        mount_documentation_redirect(v)
         mount_version(version_prefix(v), v)
       end
 
@@ -629,26 +643,28 @@ module HaveAPI
       raise
     end
 
+    def mount_documentation_redirect(version)
+      prefix = version_prefix(version)
+      slashless = prefix.chomp('/')
+      @sinatra.get slashless do
+        pass unless request.path_info == slashless
+
+        headers 'Cache-Control' => 'private, no-store'
+        query = request.query_string
+        halt 400, 'Invalid documentation query' if query.bytes.any? { |byte| byte < 32 || byte == 127 }
+        destination = url(prefix, false)
+        destination += "?#{query}" unless query.empty?
+        halt 308, { 'Location' => destination }, ''
+      end
+    end
+    private :mount_documentation_redirect
+
     def mount_version(prefix, v)
       @routes[v] ||= {}
       @routes[v][:resources] = {}
 
       @sinatra.get prefix do
-        authenticated?(v)
-
-        @v = v
-        @help = settings.api_server.describe_version(Context.new(
-                                                       settings.api_server,
-                                                       version: v,
-                                                       user: current_user,
-                                                       params:
-                                                     ))
-
-        content_type 'text/html'
-        erb :doc_layout, layout: :main_layout do
-          @content = erb :version_page
-          @sidebar = erb :version_sidebar
-        end
+        render_version_documentation(v)
       end
 
       @sinatra.options prefix do

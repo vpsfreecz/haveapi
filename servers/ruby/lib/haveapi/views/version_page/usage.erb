@@ -1,0 +1,7 @@
+<section aria-labelledby="reference-usage">
+  <h2 id="reference-usage">Using this reference</h2>
+  <p>Choose a <strong>Language</strong> and <strong>Client</strong> variant for the examples. <strong>Examples</strong> offers the selected client's supported formats. Your choices apply to every example and stay selected as you browse.</p>
+  <p>Start with <a href="#initialization">Initialization</a> below and <a href="<%= escape_html(documentation_url(page: 'authentication')) %>">Authentication</a> for credentials. Open <a href="<%= escape_html(documentation_url(page: 'resources')) %>">Resources</a> to browse the API, then choose a resource to see its actions, parameters and examples.</p>
+  <p>Search finds resources, actions and input or output parameters. Follow a result to its reference entry.</p>
+  <p>While signed out, the reference shows all declared resources, actions and parameters.<% if documentation_account_context&.dig(:controls) %> Sign in to show only those available to your account.<% end %> Each API request still checks permissions for the requested operation.</p>
+</section>

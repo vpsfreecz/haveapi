@@ -44,16 +44,22 @@ outside measurement. Three batches of eight renders check allocations, and a
 separate Ruby-call count checks traversal growth; each allows 32 additional
 objects or calls per render. Output must remain identical and inputs unchanged.
 
-Complete Rack HTML requests enable all three generated profiles. Checks compare
-every registered initialization/authentication/action panel with real renderer
-output, including successful and failed samples, and exercise admin/member/admin
-isolation through the same adapters. Allocation measurements use pages with
-2, 4 and 8 resources, each with two actions and three admin-visible samples per
-action, plus one admin-only action. Member pages hide the admin sample and action.
-The added-resource allocation increment may grow by at most 2.5 times when the
-resource increment doubles. This permits linear panel/output growth while
-rejecting the measured whole-description-per-example copy regression. The
-fixture uses scalar fields so Go action panels exercise supported code paths.
+Rack HTML checks enable all three generated profiles and request the overview,
+authentication page, resource directory and every resource page. Each panel is
+compared with the real renderer output at both detail levels, including successful and failed
+samples. Admin/member/admin requests verify isolation through the same adapters;
+a selected resource page must not render another resource's action examples.
+The fixture uses scalar fields so Go action panels exercise supported code paths.
+
+Allocation measurements cover two dimensions at the unchanged 2.5 increment
+ratio. With 2, 4 and 8 resources, a fixed request set (overview, authentication,
+directory and resource0) measures growth from the authorized description and
+navigation.
+Separately, one selected resource with 2, 4 and 8 ordinary actions measures
+panel growth and detects repeated whole-resource or whole-description copies.
+Both dimensions retain the existing samples and admin-only action. Measured
+page bytes are recorded separately from complete-site correctness bytes; summing
+all resource pages would also count their repeated page structure.
 
 The log retains the named registry, kinds, allocations, Ruby-call counts and
 page byte counts. These deterministic checks measure the selected candidate.
@@ -151,8 +157,25 @@ Rust panels, authorization boundaries and operation counts. They use relative
 allocation and deterministic checks without inventing fixed-reference allocation
 ceilings for the new shapes. Existing calibrated workload budgets remain intact.
 
-These shapes exercise complete pages with several megabytes of HTML, so a
-single request provides substantial measurement work. The weekly shape doubles
+The HTML workloads retain one GET to the version overview for each operation,
+with unchanged fixture dimensions, counters and budgets. The validator accepts
+the legacy complete-page layout or the current overview as explicit, separate
+shapes. It checks the overview's resource-directory link, complete authorized
+resource/action anchor map and real initialization panels, and rejects action
+bodies or private sample values there. The current overview intentionally omits resource examples;
+its smaller response does not establish that resource-page rendering is faster.
+The separate all-client checks cover the directory inventory, resource pages and
+both detail levels.
+
+Documentation HTML on sources supporting the optional documentation OAuth client
+uses a real encrypted session cookie. Historical sources retain their Basic
+authentication setup; API, OPTIONS and direct renderer lanes keep their original
+credentials. Cookie issuance happens during fixture setup, with stable per-role
+CSRF. Every HTML request still decrypts the cookie and validates its token through
+the OAuth provider. Samples record the selected identity mode and role.
+
+Historical complete-page shapes can contain several megabytes of HTML, so a
+single request can provide substantial measurement work. The weekly shape doubles
 the resource count. Actual batch durations and output sizes belong in each
 run's evidence; these synthetic shapes do not define production latency targets.
 

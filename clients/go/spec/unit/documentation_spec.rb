@@ -170,6 +170,62 @@ RSpec.describe HaveAPI::GoClient::Documentation do
     expect(adapter.render(kind: :auth, context:, mode: :sync, auth_method: :token, auth_description: {})).to include(status: :limitation)
   end
 
+  [[String, String], [Symbol, Symbol], [String, Symbol], [Symbol, String]].each do |saved_type, visible_type|
+    it "matches token transport names saved as #{saved_type} and visible as #{visible_type}" do
+      description[:authentication][:token].merge!(http_header: saved_type == String ? 'X-Token' : :'X-Token',
+                                                  query_parameter: saved_type == String ? 'token' : :token)
+      adapter
+      context.description = Marshal.load(Marshal.dump(description))
+      context.description[:authentication][:token].merge!(http_header: visible_type == String ? 'X-Token' : :'X-Token',
+                                                          query_parameter: visible_type == String ? 'token' : :token)
+
+      result = adapter.render(kind: :auth, context:, mode: :sync, auth_method: :token, auth_description: {})
+      expect(result[:status]).to eq(:code)
+      expect(result[:code]).to include('api.SetExistingTokenAuth(os.Getenv("HAVEAPI_TOKEN"))')
+    end
+  end
+
+  %i[http_header query_parameter].each do |field|
+    it "rejects a different token #{field} even when the other transport matches" do
+      adapter
+      context.description = Marshal.load(Marshal.dump(description))
+      context.description[:authentication][:token][field] = 'other'
+
+      expect(adapter.render(kind: :auth, context:, mode: :sync, auth_method: :token, auth_description: {})).to include(
+        status: :limitation, reason: 'This authentication method does not match the configured Go SDK.'
+      )
+    end
+
+    [nil, false, 7].each do |invalid|
+      it "rejects unsupported token #{field} values #{invalid.inspect} without coercion" do
+        [[invalid, invalid], [invalid, invalid.to_s], [invalid.to_s, invalid]].each do |saved, visible|
+          description[:authentication][:token][field] = saved
+          candidate = described_class.new(description:, import_path: 'example.test/sdk/client')
+          context.description = Marshal.load(Marshal.dump(description))
+          context.description[:authentication][:token][field] = visible
+
+          expect(candidate.render(kind: :auth, context:, mode: :sync, auth_method: :token, auth_description: {})).to include(
+            status: :limitation, reason: 'This authentication method does not match the configured Go SDK.'
+          )
+        end
+      end
+    end
+  end
+
+  %i[saved visible descriptor].each do |missing|
+    it "keeps token authentication unavailable without the #{missing} provider description" do
+      description[:authentication].delete(:token) if missing == :saved
+      adapter
+      context.description = Marshal.load(Marshal.dump(description))
+      context.description[:authentication][:token] = GoDocumentationFixture.token
+      context.description[:authentication].delete(:token) if missing == :visible
+
+      result = adapter.render(kind: :auth, context:, mode: :sync, auth_method: :token,
+                              auth_description: missing == :descriptor ? nil : {})
+      expect(result).to include(status: :limitation, reason: 'This authentication method is unavailable in the configured Go SDK.')
+    end
+  end
+
   it 'does not show operation helpers when action-state visibility is absent' do
     action[:blocking] = true
     action[:meta][:global][:output] = GoDocumentationFixture.io({ action_state_id: { type: 'Integer' } }, namespace: false)

@@ -276,6 +276,23 @@ describe DocAuthFilteringSpec do
       expect(examples.size).to eq(1)
       expect(examples.first[:response][:msg]).to eq('ADMIN_ONLY_RESULT')
     end
+
+    it 'does not retain privileged sample data across HTML documentation requests' do
+      require_relative '../../test_support/documentation_oauth_fixture'
+      @api = HaveAPI::Server.new(get_opt(:api_module))
+      @api.use_version(1)
+      users = %w[admin user].to_h { |name| [name, DocAuthFilteringSpec::User.new(1, name)] }
+      fixture = DocumentationOAuthFixture.configure(@api, users: { 1 => users })
+      @api.mount('/')
+      get "#{fixture.origin}/v1/?resource=secure", {}, 'HTTP_COOKIE' => fixture.header_for(@api, version: 1, token: 'admin')
+      expect(last_response.status).to eq(200)
+      expect(last_response.body).to include('ADMIN_ONLY_RESULT')
+
+      get "#{fixture.origin}/v1/?resource=secure", {}, 'HTTP_COOKIE' => fixture.header_for(@api, version: 1, token: 'user')
+      expect(last_response.status).to eq(200)
+      expect(last_response.body).not_to include('ADMIN_ONLY_RESULT')
+      expect(fixture.lookups).to eq([[1, 'admin'], [1, 'user']])
+    end
   end
 end
 

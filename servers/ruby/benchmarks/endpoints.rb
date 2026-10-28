@@ -1,5 +1,6 @@
 require_relative 'performance_compare'
 require 'base64'
+require 'cgi'
 require 'fileutils'
 require 'etc'
 require 'open3'
@@ -126,38 +127,127 @@ module HaveAPI
 
           return identity
         end
-        unless response.body.include?('PUBLIC_SAMPLE_0') && response.body.include?('init-python-sync') && response.body.include?('init-examples')
-          raise ContractError, 'Documentation panels missing'
-        end
-        if response.body.include?('ADMIN_ONLY_REQUEST') != (@user == 'admin')
-          raise ContractError, 'Documentation authorization mismatch'
-        end
-
-        if @id == 'docs.html_rust'
-          actions = @dimensions.fetch(:resources) * @dimensions.fetch(:actions)
-          unless response.body.include?('init-rust-async') && response.body.include?('init-rust-blocking') &&
-                 response.body.include?("example-resource#{@dimensions.fetch(:resources) - 1}-action3-1")
-            raise ContractError, 'Full Rust documentation page missing panels/actions/examples'
-          end
-
-          markers = %w[ADMIN_ONLY_ACTION ADMIN_ONLY_DEFAULT ADMIN_ONLY_REQUEST ADMIN_ONLY_RESPONSE ADMIN_ONLY_ACTION_SAMPLE admin_field admin_only]
-          unless markers.all? { |marker| response.body.include?(marker) == (@user == 'admin') }
-            raise ContractError, 'Full Rust documentation authorization mismatch'
-          end
-
-          examples = response.body.scan(/id="example-resource\d+-(?:action\d+|admin_only)-\d+-examples"/).uniq.length
-          expected_examples = (actions * (@dimensions.fetch(:samples) + (@user == 'admin' ? 1 : 0))) + (@user == 'admin' ? 1 : 0)
-          unless examples == expected_examples && response.body.include?('documentation_performance_client')
-            raise ContractError, 'Full Rust documentation example inventory mismatch'
-          end
-
-          @page = { actual_examples: examples, resources: @dimensions.fetch(:resources), actions: actions + (@user == 'admin' ? 1 : 0),
-                    public_examples: actions * @dimensions.fetch(:samples), user: @user }
+        if response.body.match?(/\bdata-docs(?:\s|=|>)/)
+          validate_overview!(response.body)
+        else
+          validate_monolith!(response.body)
         end
         { http_status: 200, envelope_status: nil, body_bytes: response.body.bytesize,
           body_sha256: Digest::SHA256.hexdigest(response.body), canonical_sha256: Digest::SHA256.hexdigest(response.body) }.tap do |identity|
           identity[:page] = @page if @page
         end
+      end
+
+      def validate_monolith!(body)
+        @page = { shape: 'monolithic' }
+        unless body.include?('PUBLIC_SAMPLE_0') && body.include?('init-python-sync') && body.include?('init-examples')
+          raise ContractError, 'Documentation panels missing'
+        end
+        if body.include?('ADMIN_ONLY_REQUEST') != (@user == 'admin')
+          raise ContractError, 'Documentation authorization mismatch'
+        end
+
+        return unless @id == 'docs.html_rust'
+
+        actions = @dimensions.fetch(:resources) * @dimensions.fetch(:actions)
+        unless body.include?('init-rust-async') && body.include?('init-rust-blocking') &&
+               body.include?("example-resource#{@dimensions.fetch(:resources) - 1}-action3-1")
+          raise ContractError, 'Full Rust documentation page missing panels/actions/examples'
+        end
+
+        markers = %w[ADMIN_ONLY_ACTION ADMIN_ONLY_DEFAULT ADMIN_ONLY_REQUEST ADMIN_ONLY_RESPONSE ADMIN_ONLY_ACTION_SAMPLE admin_field admin_only]
+        unless markers.all? { |marker| body.include?(marker) == (@user == 'admin') }
+          raise ContractError, 'Full Rust documentation authorization mismatch'
+        end
+
+        examples = body.scan(/id="example-resource\d+-(?:action\d+|admin_only)-\d+-examples"/).uniq.length
+        expected_examples = (actions * (@dimensions.fetch(:samples) + (@user == 'admin' ? 1 : 0))) + (@user == 'admin' ? 1 : 0)
+        unless examples == expected_examples && body.include?('documentation_performance_client')
+          raise ContractError, 'Full Rust documentation example inventory mismatch'
+        end
+
+        @page = { shape: 'monolithic', actual_examples: examples, resources: @dimensions.fetch(:resources), actions: actions + (@user == 'admin' ? 1 : 0),
+                  public_examples: actions * @dimensions.fetch(:samples), user: @user }
+      end
+
+      def validate_overview!(body)
+        roots = body.scan(/<[^>]+\bdata-docs(?:\s|=|>)[^>]*>/)
+        unless body.scan(/\sdata-docs(?=[\s=>])/).length == 1 && roots.length == 1 && roots.first.scan(/\bdata-page="([^"]*)"/).flatten == ['overview']
+          raise ContractError, 'Documentation overview root differs'
+        end
+
+        forbidden = /id="(?:example-|root-)|PUBLIC_SAMPLE_|ADMIN_ONLY_|admin_field|admin_result/
+        raise ContractError, 'Documentation overview contains action data' if body.match?(forbidden)
+
+        resources, actions = documentation_dimensions
+        expected = resources.times.map { |index| "resource#{index}" }
+        links = body.scan(/<a\b([^>]*\bdata-resource-directory-link[^>]*)>/).map do |attributes|
+          href = attributes.first[/\bhref="([^"]*)"/, 1]
+          href && CGI.unescapeHTML(href)
+        end
+        unless !links.empty? && links.all? { |href| href == '/benchmark/api/v1/?page=resources' } &&
+               !body.include?('data-resource-link=')
+          raise ContractError, 'Documentation overview directory navigation differs'
+        end
+
+        %w[0 2 3 5 6 javascript-callback javascript-async typescript-callback typescript-async python-sync python-async].tap do |clients|
+          clients.push('rust-async', 'rust-blocking') if @id == 'docs.html_rust'
+          clients.each do |client|
+            %w[simple thorough].each do |detail|
+              suffix = detail == 'thorough' ? '-thorough' : ''
+              pattern = %r{<details\b(?=[^>]*\bdata-example-panel\b)(?=[^>]*\bdata-client="#{client}")(?=[^>]*\bdata-detail="#{detail}")(?=[^>]*\bid="init-#{client}#{suffix}")[^>]*>(.*?)</details>}m
+              panel = body.match(pattern)
+              code = panel && panel[1].match(%r{<pre><code[^>]*>(.*?)</code></pre>}m)
+              unless code && !code[1].strip.empty?
+                raise ContractError, 'Documentation overview initialization panel missing'
+              end
+            end
+          end
+        end
+        if @id == 'docs.html_rust' && !body.include?('documentation_performance_client')
+          raise ContractError, 'Documentation overview Rust package missing'
+        end
+
+        maps = body.scan(%r{<script\b[^>]*\bdata-legacy-anchors\b[^>]*>(.*?)</script>}m)
+        raise ContractError, 'Documentation overview legacy map missing' unless maps.length == 1
+
+        anchors = JSON.parse(maps.first.first)
+        raise ContractError, 'Documentation overview legacy map invalid' unless anchors.is_a?(Hash)
+
+        expected_anchors = {}
+        expected.each do |key|
+          destination = "/benchmark/api/v1/?resource=#{key}"
+          expected_anchors["root-#{key}"] = destination
+          actions.times do |index|
+            expected_anchors["root-#{key}-action#{index}"] = destination
+            expected_anchors["example-#{key}-action#{index}-"] = destination
+          end
+        end
+        if @user == 'admin'
+          expected_anchors['root-resource0-admin_only'] = '/benchmark/api/v1/?resource=resource0'
+          expected_anchors['example-resource0-admin_only-'] = '/benchmark/api/v1/?resource=resource0'
+        end
+        allowed_destinations = expected.map { |key| "/benchmark/api/v1/?resource=#{key}" } +
+                               ['/benchmark/api/v1/', '/benchmark/api/v1/?page=resources', '/benchmark/api/v1/?page=authentication']
+        unless anchors.values.all? { |destination| allowed_destinations.include?(destination) }
+          raise ContractError, 'Documentation overview legacy targets differ'
+        end
+
+        actual = anchors.select { |key, _| key.start_with?('root-', 'example-') }
+        unless actual == expected_anchors
+          raise ContractError, 'Documentation overview authorization or legacy targets differ'
+        end
+
+        @page = { shape: 'overview', actual_examples: 0, resources:, actions: (resources * actions) + (@user == 'admin' ? 1 : 0),
+                  public_examples: 0, user: @user }
+      rescue JSON::ParserError
+        raise ContractError, 'Documentation overview legacy map invalid'
+      end
+
+      def documentation_dimensions
+        size = @dimensions.fetch(:size, 1)
+        resources, actions = @id == 'docs.html_actions' ? [1, size] : [size, 1]
+        [@dimensions.fetch(:resources, resources), @dimensions.fetch(:actions, actions)]
       end
 
       def counters

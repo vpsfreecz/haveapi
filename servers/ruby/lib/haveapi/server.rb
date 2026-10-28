@@ -265,7 +265,17 @@ module HaveAPI
         profile = if client
                     settings.api_server.documentation_client_profiles(@v)[client.code&.to_sym]
                   end
-        @documentation_context.with(profile:, **changes)
+        parent = @documentation_context
+        # Snapshot each selected resource once in this request, before client
+        # profile/detail derivation, and share it across that resource's panels.
+        if changes[:resource] && changes[:resource_path]
+          resource = changes.delete(:resource)
+          path = changes.delete(:resource_path).map { |part| part.to_s.dup.freeze }.freeze
+          @documentation_resource_contexts ||= {}
+          key = [resource.__id__, path]
+          parent = @documentation_resource_contexts[key] ||= parent.with(resource_path: path, resource:)
+        end
+        parent.with(profile:, **changes)
       end
 
       def documentation_clients

@@ -15,7 +15,7 @@ module HaveAPI
       end
     end
 
-    def self.build(resources:)
+    def self.build(resources:, actions: 2)
       definitions = Module.new
       resources.times do |index|
         resource = Class.new(HaveAPI::Resource)
@@ -23,7 +23,8 @@ module HaveAPI
         resource.resource_name = "Resource#{index}"
         resource.version 1
         resource.route "resources#{index}"
-        %w[Public Protected].each { |name| add_action(resource, name) }
+        names = %w[Public Protected] + (2...actions).map { |i| "Action#{i}" }
+        names.each { |name| add_action(resource, name) }
         DocumentationPerformanceFixture.send(:add_admin_action, resource) if index == 0
       end
       server = HaveAPI::Server.new(definitions)
@@ -44,7 +45,7 @@ module HaveAPI
       resource.define_action(name) do
         route name.downcase
         http_method :post
-        auth name == 'Protected'
+        auth name != 'Public'
         input(:hash) do
           string :value
           bool :enabled

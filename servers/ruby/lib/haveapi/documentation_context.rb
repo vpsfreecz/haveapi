@@ -4,12 +4,12 @@ module HaveAPI
   class ClientExample
     # A request-local snapshot: never freeze or retain the server's shared help.
     class Context
-      FIELDS = %i[version host base_url version_url description resource_path resource action_name action sample profile].freeze
+      FIELDS = %i[version host base_url version_url description resource_path resource action_name action sample profile detail].freeze
       attr_reader(*FIELDS)
 
       def initialize(version:, host:, base_url:, version_url:, description:,
                      resource_path: [], resource: nil, action_name: nil, action: nil,
-                     sample: nil, profile: nil)
+                     sample: nil, profile: nil, detail: :simple)
         @version = normalize(:version, version)
         @host = normalize(:host, host)
         @base_url = normalize(:base_url, base_url)
@@ -21,6 +21,7 @@ module HaveAPI
         @action = normalize(:action, action)
         @sample = normalize(:sample, sample)
         @profile = normalize(:profile, profile)
+        @detail = normalize(:detail, detail)
         freeze
       end
 
@@ -54,6 +55,10 @@ module HaveAPI
         when :action_name
           value.nil? ? nil : value.to_s.dup.freeze
         when :profile
+          value
+        when :detail
+          raise ArgumentError, 'detail must be :simple or :thorough' unless %i[simple thorough].include?(value)
+
           value
         else
           copy(value)

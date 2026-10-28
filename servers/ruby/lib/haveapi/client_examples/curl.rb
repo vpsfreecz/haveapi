@@ -4,6 +4,8 @@ require 'haveapi/client_examples/http'
 module HaveAPI::ClientExamples
   class Curl < Http
     label 'curl'
+    language 'curl'
+    language_label 'curl'
     code :bash
     order 90
 

@@ -8,6 +8,15 @@ Ruby, PHP, CLI, curl and HTTP examples are also available. A sample
 that a client cannot represent shows a limitation instead of dropping input or
 inventing a successful result.
 
+Examples default to **Simple**. Action examples assume an initialized and, when
+needed, authenticated `api`; initialization and authentication examples are on
+separate pages. Select **With error handling** for setup, error handling and
+relevant response metadata. Both levels preserve the same sample values, path
+arguments and operation semantics, and report the same limitations for unsupported samples.
+Some formats use identical output when extra handling would add no useful detail.
+See [the documentation UI guide](documentation-ui.md) for navigation and saved
+display preferences.
+
 Go, Rust and generated TypeScript tabs require a profile for a generated SDK.
 Their package versions are independent of HaveAPI and the API version. Without a
 profile, the server
@@ -192,6 +201,11 @@ Existing renderer positional constructors and `init`, `auth(method, desc)` and
 The registry binds a request-local `HaveAPI::ClientExample::Context` through
 `with_context`. It holds the selected version, URLs including the API mount,
 the filtered description, and the current resource, action and sample.
+Its `detail` reader is exactly `:simple` or `:thorough`, defaulting to `:simple`.
+Both construction and `context.with(detail: ...)` reject other values, including
+strings and nil. Changing detail shares the existing owned data, as other
+context derivations do. The base renderer's `thorough?` helper reads this value;
+legacy positional renderer instances use simple behavior.
 Construction copies and freezes Hash, Array and String data without freezing
 the caller's containers. Each request owns its description snapshot.
 `context.with(...)` creates a distinct frozen context, sharing unchanged fields
@@ -215,6 +229,26 @@ strings, escaped once by the templates. A stable class `id` identifies a
 variant; `code` selects its syntax language. `available?(context)` controls the
 overview and every panel before rendering.
 
+Renderer classes declare presentation with `language 'python'`,
+`language_label 'Python'` and, for a client variant, `variant 'Async'`. These
+class methods also read the metadata. The language is a stable lower-case group
+ID, independent of the syntax lexer and exact client ID. An unspecified language
+defaults to the renderer's own `id`, its language label defaults to `label`, and
+its variant is nil. Metadata is declared on each class; a subclass without its
+own metadata gets those defaults. Keep client IDs and registry order stable.
+
+Simple action renderers use the established `api` and show the actual call and
+relevant result. Initialize and authenticate it using the separate examples.
+Python async fragments belong inside an async function; their comment makes that
+context explicit. Python setup examples use a minimal async function and
+`asyncio.run`, while sync examples run at top level. Neither level has a
+`__main__` guard. Thorough sync examples use top-level `try`/`except`.
+
+Translate and validate samples before selecting presentation detail. Keep exact
+names, parent arguments, false, zero, empty strings, nullable values and blocking
+operation behavior. Do not shorten examples by dropping unsupported input or
+removing lines from an already rendered program.
+
 Generated-client adapters belong to their generator gems and consume context
 readers without depending on the server gem. They resolve names using the
 complete private generator model and never run a compiler, formatter or
@@ -223,6 +257,10 @@ in an HTML request. Keep adapter rendering read-only: configured adapters are
 frozen
 and shared, while authorized description snapshots belong to individual
 requests.
+Adapters keep their existing `render(kind:, context:, mode:, ...)` signature and
+read `context.detail` directly. Test contexts must provide the reader. An older
+third-party adapter can ignore this additive field and return the same output
+for both detail levels.
 Derived contexts within one request share unchanged owned data. Supplying a
 resource, action or sample still copies that supplied subtree, so a resource
 with

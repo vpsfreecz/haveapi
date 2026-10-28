@@ -3,6 +3,8 @@ require 'haveapi/client_example'
 module HaveAPI::ClientExamples
   class GoClient < HaveAPI::ClientExample
     label 'Go'
+    language 'go'
+    language_label 'Go'
     id 'go'
     code :go
     order 16

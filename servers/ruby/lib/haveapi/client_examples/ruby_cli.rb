@@ -8,6 +8,8 @@ require 'haveapi/client_example'
 module HaveAPI::ClientExamples
   class RubyCli < HaveAPI::ClientExample
     label 'CLI'
+    language 'cli'
+    language_label 'CLI'
     code :bash
     order 30
 

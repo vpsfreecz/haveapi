@@ -4,6 +4,8 @@ require 'haveapi/client_example'
 module HaveAPI::ClientExamples
   class RubyClient < HaveAPI::ClientExample
     label 'Ruby'
+    language 'ruby'
+    language_label 'Ruby'
     code :ruby
     order 0
 
@@ -11,7 +13,7 @@ module HaveAPI::ClientExamples
       <<~END
         require 'haveapi-client'
 
-        client = HaveAPI::Client.new("#{base_url}", version: "#{version}")
+        api = HaveAPI::Client.new("#{base_url}", version: "#{version}")
       END
     end
 
@@ -21,7 +23,7 @@ module HaveAPI::ClientExamples
         <<~END
           #{init}
 
-          client.authenticate(:basic, user: "user", password: "secret")
+          api.authenticate(:basic, user: "user", password: "secret")
         END
 
       when :token
@@ -29,12 +31,12 @@ module HaveAPI::ClientExamples
           #{init}
 
           # Get token using username and password
-          client.authenticate(:token, #{auth_token_credentials(desc).map { |k, v| "#{k}: \"#{v}\"" }.join(', ')})
+          api.authenticate(:token, #{auth_token_credentials(desc).map { |k, v| "#{k}: \"#{v}\"" }.join(', ')})
 
-          puts "Token = \#{client.auth.token}"
+          puts "Token = \#{api.auth.token}"
 
           # Next time, the client can authenticate using the token directly
-          client.authenticate(:token, token: saved_token)
+          api.authenticate(:token, token: saved_token)
         END
 
       when :oauth2
@@ -51,8 +53,8 @@ module HaveAPI::ClientExamples
         args << PP.pp(sample[:request], '').strip
       end
 
-      out = "#{init}\n"
-      out << "reply = client.#{resource_path.join('.')}.#{action_name}"
+      out = thorough? ? "#{init}\n" : +''
+      out << "reply = api.#{resource_path.join('.')}.#{action_name}"
       out << "(#{args.join(', ')})" unless args.empty?
 
       return out << response(sample) if sample[:status]

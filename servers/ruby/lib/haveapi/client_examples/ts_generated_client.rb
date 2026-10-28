@@ -4,6 +4,9 @@ module HaveAPI::ClientExamples
   class TsGeneratedClient < HaveAPI::ClientExample
     id 'typescript-generated'
     label 'TypeScript (generated)'
+    language 'typescript'
+    language_label 'TypeScript'
+    variant 'Generated'
     code :typescript
     order 19
 

@@ -16,7 +16,9 @@ bundle exec rspec spec/client_examples/dynamic_js_spec.rb \
 ```
 
 The unit checks parse the actual generated source and compile both TypeScript
-variants against emitted public declarations. Prepare the JavaScript build and
+variants at both detail levels against emitted public declarations. Simple
+action fragments receive a declared initialized `api` in the compiler fixture;
+Python async fragments are parsed in an async function. Prepare the JavaScript build and
 its declared development dependencies first. The Rack fixture check renders real
 mounted HTML and verifies the extraction boundary and request/result fixtures;
 it opens no listening socket and does not install packages.
@@ -56,7 +58,8 @@ bundle exec ruby spec/client_examples/dynamic_acceptance.rb \
 Repeat with the retained Python sdist and a separate evidence directory. Replace
 artifact versions with the release being tested. The test installs the supplied
 packages without checkout imports, starts its disposable mounted fixture, extracts
-the code from the served HTML, compiles TypeScript with strict checking and runs
+explicitly thorough code panels from the overview, authentication and selected
+nested-resource pages, compiles TypeScript with strict checking and runs
 the snippets with the installed clients. It checks discovery, Basic/existing
 token/OAuth credentials, a deterministic token challenge, success/failure and
 request receipts preserving exact names, path order, Unicode, nested Custom

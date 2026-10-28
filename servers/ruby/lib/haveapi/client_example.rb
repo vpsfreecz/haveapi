@@ -46,6 +46,21 @@ module HaveAPI
         true
       end
 
+      def language(value = nil)
+        @language = value.to_s.freeze unless value.nil?
+        @language || id
+      end
+
+      def language_label(value = nil)
+        @language_label = value.to_s.freeze unless value.nil?
+        @language_label || label
+      end
+
+      def variant(value = nil)
+        @variant = value.to_s.freeze unless value.nil?
+        @variant
+      end
+
       def render(kind, context:, auth_method: nil, auth_description: nil)
         arguments = [context.host, context.base_url, context.version]
         arguments.push(context.resource_path, context.resource, context.action_name, context.action) if kind == :example
@@ -116,6 +131,10 @@ module HaveAPI
     def with_context(value)
       @context = value
       self
+    end
+
+    def thorough?
+      context&.detail == :thorough
     end
 
     def version_url

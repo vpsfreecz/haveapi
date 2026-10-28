@@ -5,6 +5,9 @@ module HaveAPI::ClientExamples
     include DynamicHelpers
 
     label 'JavaScript (callback)'
+    language 'javascript'
+    language_label 'JavaScript'
+    variant 'Callback'
     id 'javascript-callback'
     code :javascript
     order 10
@@ -49,9 +52,24 @@ module HaveAPI::ClientExamples
     end
 
     def program(body, authentication: nil)
-      imports = "import { #{client_name}#{', AsyncError' if asynchronous?} } from \"haveapi-client\";\n"
+      imports = "import { #{client_name}#{', AsyncError' if asynchronous? && thorough?} } from \"haveapi-client\";\n"
       imports << "import { env } from \"node:process\";\n\n#{env_helper}\n" if authentication
       declaration = "const api = new #{client_name}(#{js_literal(api_base)}, {version: #{js_literal(api_version)}});\n"
+      unless thorough?
+        return "#{imports}\n#{declaration}#{authentication || "await api.setup();\n"}#{body}" if asynchronous?
+
+        return <<~JS
+          #{imports}
+          #{declaration}
+          #{authentication || 'api.setup('}(api, ready) => {
+            if (!ready) {
+              console.error("Discovery or authentication failed");
+              return;
+            }
+          #{indent(body)}});
+        JS
+      end
+
       if asynchronous?
         <<~JS
           #{imports}
@@ -71,7 +89,7 @@ module HaveAPI::ClientExamples
         <<~JS
           #{imports}
           #{declaration}
-          #{authentication || 'api.setup('}(client, ready) => {
+          #{authentication || 'api.setup('}(api, ready) => {
             if (!ready) {
               console.error("Discovery or authentication failed");
               return;
@@ -86,7 +104,7 @@ module HaveAPI::ClientExamples
     end
 
     def init
-      code_result { program("console.log(\"Discovery complete\");\n") }
+      code_result { program(thorough? ? "console.log(\"Discovery complete\");\n" : '') }
     end
 
     def action_authentication
@@ -128,7 +146,7 @@ module HaveAPI::ClientExamples
                          else
                            "api.authenticate(#{js_literal(method.to_s)}, #{options}, "
                          end
-        source = program("console.log(\"Authenticated\");\n", authentication:)
+        source = program(thorough? ? "console.log(\"Authenticated\");\n" : '', authentication:)
         if method.to_sym == :oauth2
           source = "// Use an existing access token; this client does not run an OAuth authorization flow.\n#{source}"
         elsif method.to_sym == :token && !token_login_fields(description).empty?
@@ -179,13 +197,14 @@ module HaveAPI::ClientExamples
           end.join
           options = request.nil? ? [] : ["{params: #{js_literal(request)}}"]
           body = "const result = await #{resource}.action(#{js_literal(current_action_name)})(#{(args + options).join(', ')});\n"
-          body << "console.log(result.value);\nconsole.log(result.response.meta);\n"
+          body << "console.log(result.value);\n"
+          body << "console.log(result.response.meta);\n" if thorough?
           if field(current_action, :blocking)
             body << "// Request success alone does not establish operation completion.\n"
             body << "const completed = await api.waitForCompletion(result, {timeoutMs: 300000});\nconsole.log(completed.state);\n"
           end
         else
-          body = "const resource = CallbackClient.findResource(client, #{js_literal(current_resource_path)});\n"
+          body = "const resource = CallbackClient.findResource(api, #{js_literal(current_resource_path)});\n"
           body << "const action = CallbackClient.findAction(resource, #{js_literal(current_action_name)});\n"
           options = request.nil? ? '' : "params: #{js_literal(request)},\n"
           options << <<~JS
@@ -195,13 +214,14 @@ module HaveAPI::ClientExamples
                 return;
               }
               console.log(reply.response());
-              console.log(reply.meta());
-            }
           JS
+          options << "  console.log(reply.meta());\n" if thorough?
+          options << "}\n"
           body << "action.directInvoke(#{(args + ["{\n#{indent(options)}}"]).join(', ')});\n"
           body << "// This prints the initial response; use its action-state metadata to monitor completion.\n" if field(current_action, :blocking)
         end
-        program(body, authentication: action_authentication)
+        authentication = action_authentication
+        thorough? ? program(body, authentication:) : body
       end
     end
   end

@@ -5,6 +5,8 @@ require 'haveapi/client_example'
 module HaveAPI::ClientExamples
   class Http < HaveAPI::ClientExample
     label 'HTTP'
+    language 'http'
+    language_label 'HTTP'
     code :http
     order 100
 

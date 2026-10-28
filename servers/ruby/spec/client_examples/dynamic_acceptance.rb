@@ -11,6 +11,7 @@ require_relative '../../test_support/dynamic_documentation_api'
 
 module DynamicDocumentationAcceptance
   VARIANTS = %w[javascript-callback javascript-async typescript-callback typescript-async python-sync python-async].freeze
+  PAGES = { overview: '', authentication: '?page=authentication', resource: '?resource=constructor.resources' }.freeze
 
   def self.run!(*command, chdir:, env: {}, log_path: nil)
     output, status = Open3.capture2e(env, *command, chdir:)
@@ -28,12 +29,17 @@ module DynamicDocumentationAcceptance
     response.body
   end
 
-  def self.extract(html)
-    html.scan(%r{<div id="([^"]+)">\s*<h[46]>[^<]*</h[46]>\s*<pre><code class="([^"]+)">(.*?)</code></pre>}m).filter_map do |id, language, escaped|
-      variant = VARIANTS.find { |name| id.end_with?("-#{name}") }
-      next unless variant
+  def self.extract(html, detail: :thorough)
+    html.scan(%r{<details\b([^>]*\bdata-example-panel\b[^>]*)>(.*?)</details>}m).filter_map do |attributes, body|
+      data = attributes.scan(/([a-z][a-z0-9-]*)="([^"]*)"/).to_h
+      variant = data['data-client']
+      next unless VARIANTS.include?(variant) && data['data-detail'] == detail.to_s
 
-      { id:, variant:, language:, source: CGI.unescapeHTML(escaped) }
+      code = body.match(%r{<pre><code class="([^"]+)">(.*?)</code></pre>}m)
+      next unless code
+
+      { id: CGI.unescapeHTML(data.fetch('id')), variant:, language: code[1], detail:,
+        source: CGI.unescapeHTML(code[2]) }
     end
   end
 
@@ -63,9 +69,11 @@ module DynamicDocumentationAcceptance
             end
           end
           reader = Thread.new { File.write(File.join(output, 'fixture.log'), server_output.read) }
-          html = request("#{base}/mount/v2/")
-          File.write(File.join(output, 'documentation.html'), html)
-          panels = extract(html)
+          panels = PAGES.flat_map do |page, query|
+            html = request("#{base}/mount/v2/#{query}")
+            File.write(File.join(output, "documentation-#{page}.html"), html)
+            extract(html)
+          end
           raise 'No actual HTML code panels extracted' if panels.empty?
 
           VARIANTS.each do |variant|

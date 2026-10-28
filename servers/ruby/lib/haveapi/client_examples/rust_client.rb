@@ -34,6 +34,9 @@ module HaveAPI::ClientExamples
   class RustAsyncClient < RustClient
     id 'rust-async'
     label 'Rust (async)'
+    language 'rust'
+    language_label 'Rust'
+    variant 'Async'
     code :rust
     order 17
 
@@ -47,6 +50,9 @@ module HaveAPI::ClientExamples
   class RustBlockingClient < RustClient
     id 'rust-blocking'
     label 'Rust (blocking)'
+    language 'rust'
+    language_label 'Rust'
+    variant 'Blocking'
     code :rust
     order 18
 

@@ -3,6 +3,9 @@ require 'haveapi/client_examples/python_client'
 module HaveAPI::ClientExamples
   class PythonAsyncClient < PythonClient
     label 'Python (async)'
+    language 'python'
+    language_label 'Python'
+    variant 'Async'
     id 'python-async'
     code :python
     order 15

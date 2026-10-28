@@ -5,6 +5,9 @@ module HaveAPI::ClientExamples
     include DynamicHelpers
 
     label 'Python (sync)'
+    language 'python'
+    language_label 'Python'
+    variant 'Sync'
     id 'python-sync'
     code :python
     order 14
@@ -35,48 +38,55 @@ module HaveAPI::ClientExamples
       asynchronous? ? 'await ' : ''
     end
 
-    def program(body, imports: [], auth: nil)
-      package_imports = ([client_name, 'ActionError', 'HaveAPIError'] + imports).uniq.join(', ')
-      source = "import os\nimport json\n"
-      source << "import asyncio\n" if asynchronous?
+    def program(body, imports: [], stdlib: [], auth: nil)
+      package_imports = ([client_name] + (thorough? ? %w[ActionError HaveAPIError] : []) + imports).uniq.join(', ')
+      source = (stdlib + (asynchronous? ? ['asyncio'] : [])).uniq.map { |name| "import #{name}\n" }.join
       source << "\nfrom haveapi_client import #{package_imports}\n\n\n"
-      source << "#{'async ' if asynchronous?}def main() -> None:\n    try:\n"
+      source << "async def main() -> None:\n" if asynchronous?
+      level = asynchronous? ? 4 : 0
+      if thorough?
+        source << indent("try:\n", level)
+        level += 4
+      end
       options = ["version=#{python_literal(api_version)}"]
       options << "auth=#{auth}" if auth
-      source << "        #{'async ' if asynchronous?}with #{client_name}(#{python_literal(api_base)}, #{options.join(', ')}) as api:\n"
-      source << indent(body, 12)
-      source << indent(<<~PY, 4)
-        except ActionError as error:
-            print(error.message, error.errors)
-        except HaveAPIError as error:
-            print(error.message, error.status_code)
-      PY
-      source << "\n\nif __name__ == \"__main__\":\n    #{asynchronous? ? 'asyncio.run(main())' : 'main()'}\n"
+      source << indent("#{'async ' if asynchronous?}with #{client_name}(#{python_literal(api_base)}, #{options.join(', ')}) as api:\n", level)
+      source << indent(body, level + 4)
+      if thorough?
+        source << indent(<<~PY, level - 4)
+          except ActionError as error:
+              print(error.message, error.errors)
+          except HaveAPIError as error:
+              print(error.message, error.status_code)
+        PY
+      end
+      source << "\n\nasyncio.run(main())\n" if asynchronous?
       source
     end
 
     def init
-      code_result { program("print(\"Discovery complete\")\n") }
+      code_result { program(thorough? ? "print(\"Discovery complete\")\n" : "# Call API actions inside this block.\npass\n") }
     end
 
     def auth(method, description)
       return limitation('This authentication provider is not advertised or supported by this client.') unless supported_auth?(method)
 
       code_result do
+        body = thorough? ? "print(\"Authenticated\")\n" : "# Call API actions inside this block.\npass\n"
         case method.to_sym
         when :basic
-          program("print(\"Authenticated\")\n", imports: ['BasicAuth'],
-                                                auth: 'BasicAuth(os.environ["HAVEAPI_USER"], os.environ["HAVEAPI_PASSWORD"])')
+          program(body, imports: ['BasicAuth'], stdlib: ['os'],
+                        auth: 'BasicAuth(os.environ["HAVEAPI_USER"], os.environ["HAVEAPI_PASSWORD"])')
         when :oauth2
-          source = program("print(\"Authenticated\")\n", imports: ['OAuth2Auth'],
-                                                         auth: 'OAuth2Auth(os.environ["HAVEAPI_ACCESS_TOKEN"])')
+          source = program(body, imports: ['OAuth2Auth'], stdlib: ['os'],
+                                 auth: 'OAuth2Auth(os.environ["HAVEAPI_ACCESS_TOKEN"])')
           "# Use an existing access token; OAuth acquisition and refresh are outside this client.\n#{source}"
         when :token
           fields = token_login_fields(description).merge(token_request_fields(description).select do |_, parameter|
             field(parameter, :required)
           end)
           if fields.empty?
-            program("print(\"Authenticated\")\n", imports: ['TokenAuth'], auth: 'TokenAuth(os.environ["HAVEAPI_TOKEN"])')
+            program(body, imports: ['TokenAuth'], stdlib: ['os'], auth: 'TokenAuth(os.environ["HAVEAPI_TOKEN"])')
           else
             challenge = asynchronous? ? 'AsyncAuthenticationChallenge' : 'AuthenticationChallenge'
             input = fields.map do |name, _|
@@ -94,9 +104,9 @@ module HaveAPI::ClientExamples
                           for name in step.input if name != "token"
                       }
                       step = #{await_prefix}step.submit(values)
-              print("Authenticated")
             PY
-            program(body, imports: ['TokenAuth', challenge])
+            body << "print(\"Authenticated\")\n" if thorough?
+            program(body, imports: ['TokenAuth', challenge], stdlib: %w[json os])
           end
         end
       end
@@ -125,7 +135,8 @@ module HaveAPI::ClientExamples
         arguments << "path_params=#{python_literal(path)}" unless path.empty?
         arguments << "params=#{python_literal(request)}" unless request.nil?
         body = "response = #{await_prefix}#{resource}.actions[#{python_literal(current_action_name)}].call(#{arguments.join(', ')})\n"
-        body << "print(response.data)\nprint(response.meta)\n"
+        body << "print(response.data)\n"
+        body << "print(response.meta)\n" if thorough?
         if field(current_action, :blocking)
           body << <<~PY
             # A request timeout does not cancel a server operation.
@@ -143,11 +154,19 @@ module HaveAPI::ClientExamples
             basic: ['BasicAuth', 'BasicAuth(os.environ["HAVEAPI_USER"], os.environ["HAVEAPI_PASSWORD"])'],
             oauth2: ['OAuth2Auth', 'OAuth2Auth(os.environ["HAVEAPI_ACCESS_TOKEN"])']
           }.fetch(method)
-          program(body, imports: [provider], auth:)
+          if thorough?
+            program(body, imports: [provider], stdlib: ['os'], auth:)
+          else
+            action_fragment(body)
+          end
         else
-          program(body)
+          thorough? ? program(body) : action_fragment(body)
         end
       end
+    end
+
+    def action_fragment(body)
+      asynchronous? ? "# Run inside an async function after initializing api.\n#{body}" : body
     end
 
     def check_get_sample(request)

@@ -3,6 +3,8 @@ require 'haveapi/client_example'
 module HaveAPI::ClientExamples
   class PhpClient < HaveAPI::ClientExample
     label 'PHP'
+    language 'php'
+    language_label 'PHP'
     code :php
     order 20
 
@@ -90,7 +92,7 @@ module HaveAPI::ClientExamples
         args << format_parameters(:input, sample[:request])
       end
 
-      out = "#{init}\n"
+      out = thorough? ? "#{init}\n" : +''
       out << "$reply = $api->#{resource_path.join('->')}->#{action_name}"
       out << "(#{args.join(', ')});\n"
 

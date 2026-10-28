@@ -10,6 +10,7 @@ module HaveAPI::ClientExamples
     label 'CLI'
     language 'cli'
     language_label 'CLI'
+    detail_levels :simple
     code :bash
     order 30
 

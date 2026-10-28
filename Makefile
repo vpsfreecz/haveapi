@@ -60,6 +60,7 @@ test-performance-clients: doc
 test-documentation-assets:
 	node servers/ruby/spec/client_examples/assets/highlighter_test.cjs
 	node servers/ruby/spec/client_examples/assets/tabs_test.cjs
+	node servers/ruby/spec/client_examples/assets/documentation_test.cjs
 
 # Requires the locked Python environment prepared by release-deps.
 test-documentation-python:

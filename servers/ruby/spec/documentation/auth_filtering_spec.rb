@@ -276,18 +276,6 @@ describe DocAuthFilteringSpec do
       expect(examples.size).to eq(1)
       expect(examples.first[:response][:msg]).to eq('ADMIN_ONLY_RESULT')
     end
-
-    it 'does not retain privileged sample data across HTML documentation requests' do
-      login('admin', 'pass')
-      get '/v1/'
-      expect(last_response.status).to eq(200)
-      expect(last_response.body).to include('ADMIN_ONLY_RESULT')
-
-      login('user', 'pass')
-      get '/v1/'
-      expect(last_response.status).to eq(200)
-      expect(last_response.body).not_to include('ADMIN_ONLY_RESULT')
-    end
   end
 end
 

@@ -55,6 +55,8 @@ describe HaveAPI::Server do
       end
       %w[
         lib/haveapi/documentation_context.rb lib/haveapi/documentation_clients.rb
+        lib/haveapi/shared_documentation_helpers.rb
+        lib/haveapi/views/shared_sidebar.erb lib/haveapi/views/shared_documentation.erb
         lib/haveapi/views/version_page/client_result.erb
         lib/haveapi/public/js/highlight.pack.js lib/haveapi/public/js/highlight-LICENSE
       ].each do |name|
@@ -83,9 +85,9 @@ describe HaveAPI::Server do
         server.use_version(1)
         server.mount('/')
         request = Rack::MockRequest.new(server.app)
-        responses = %w[/doc/json-schema /doc/protocol.md /doc/create-client.md /doc/client-examples.md /js/highlight-LICENSE].to_h do |path|
+        responses = %w[/ /doc /doc/index /doc/index.md /doc/readme /doc/json-schema /doc/protocol.md /doc/create-client.md /doc/client-examples.md /js/highlight-LICENSE].to_h do |path|
           response = request.get(path, 'HTTP_HOST' => 'localhost')
-          [path, { status: response.status, type: response.content_type, body: response.body }]
+          [path, { status: response.status, type: response.content_type, cache_control: response['Cache-Control'], body: response.body }]
         end
         puts JSON.generate({
           framework: HaveAPI::Server.instance_method(:mount).source_location.first,
@@ -117,6 +119,11 @@ describe HaveAPI::Server do
       expect(File.realpath(result.fetch('framework'))).to eq(File.join(dir, 'lib/haveapi/server.rb'))
 
       {
+        '/' => 'API versions',
+        '/doc' => 'Server-side implementation',
+        '/doc/index' => 'Server-side implementation',
+        '/doc/index.md' => 'Server-side implementation',
+        '/doc/readme' => 'Server-side implementation',
         '/doc/json-schema' => 'Envelope',
         '/doc/protocol.md' => 'Protocol definition',
         '/doc/create-client.md' => 'Client definition',
@@ -127,6 +134,18 @@ describe HaveAPI::Server do
         expect(response.fetch('status')).to eq(200), "Packaged route failed: #{path}"
         expect(response.fetch('type')).to include('text/html') unless path == '/js/highlight-LICENSE'
         expect(response.fetch('body')).to include(heading)
+        next if path == '/js/highlight-LICENSE'
+
+        expect(response.fetch('cache_control')).to eq('private, no-store')
+        expect(response.fetch('body')).to include('data-docs', '/js/documentation.js', '/css/documentation.css')
+        expect(response.fetch('body')).not_to include('/js/main.js', '/css/bootstrap')
+      end
+      %w[/doc /doc/index /doc/index.md /doc/readme].each do |path|
+        body = result.fetch('responses').fetch(path).fetch('body')
+        expect(body).to include('<title>HaveAPI internals · ', 'Server framework features',
+                                '<pre><code class="ruby">', 'class User &lt; ActiveRecord::Base')
+        menu = body.match(%r{<nav aria-label="Shared documentation">(.*?)</nav>}m)[1]
+        expect(menu).not_to include('href="/doc/readme"')
       end
     end
   end

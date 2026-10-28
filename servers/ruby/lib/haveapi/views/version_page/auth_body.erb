@@ -1,17 +1,18 @@
-<h2 id="auth-<%= name %>"><%= name.to_s.humanize %></h2>
+<section data-doc-section id="auth-<%= escape_html(name) %>">
+<h2><%= name.to_s.humanize %></h2>
 <hr>
 
 <p><%= info[:description] %></p>
 
 <% if name == :token %>
-  <dl>
+  <dl class="docs-metadata">
     <dt>HTTP header:</dt>
     <dd><%= info[:http_header] %></dd>
     <dt>Query parameter:</dt>
     <dd><%= info[:query_parameter] %></dd>
   </dl>
 <% elsif name == :oauth2 %>
-  <dl>
+  <dl class="docs-metadata">
     <dt>Authorize URL:</dt>
     <dd><%= info[:authorize_url] %></dd>
     <dt>Token URL:</dt>
@@ -24,34 +25,9 @@
 <% if info[:resources] %>
   <h2>Resources</h2>
   <% sort_hash(info[:resources]).each do |resource, desc| %>
-    <%= erb :"version_page/resource_body", locals: {resource: resource.to_s, info: desc, path: [], prefix: 'root', name: nil} %>
+    <%= erb :"version_page/resource_body", locals: {resource: resource.to_s, info: desc, path: [], prefix: 'root', name: nil, authentication_resource: true, authentication_provider: name} %>
   <% end %>
 <% end %>
 
-<% baseid = "auth-#{name}" %>
-<div id="<%= baseid %>-tabbar"></div>
-
-<div id="<%= baseid %>-examples">
-  <% documentation_panels(:auth, auth_method: name, auth_description: info).each do |client, result| %>
-    <div id="<%= escape_html("#{baseid}-#{client.id}") %>">
-      <%= erb :"version_page/client_auth", locals: {client: client, result: result} %>
-    </div>
-  <% end %>
-</div>
-
-<script type="text/javascript">
-nojsTabs({
-  tabs: document.getElementById('<%= "#{baseid}-examples" %>'),
-  titleSelector: 'h4',
-  tabBar: document.getElementById('<%= "#{baseid}-tabbar" %>'),
-  hiddenClass: 'tab-hidden',
-  activeClass: 'active',
-  createElement: function (el) {
-    if (el.tagName == 'UL')
-      el.classList.add('nav', 'nav-tabs');
-
-    else if (el.tagName == 'LI')
-      el.setAttribute('role', 'presentation');
-  }
-});
-</script>
+<%= erb :'version_page/example_panels', locals: {baseid: "auth-#{name}", kind: :auth, changes: {auth_method: name, auth_description: info}} %>
+</section>

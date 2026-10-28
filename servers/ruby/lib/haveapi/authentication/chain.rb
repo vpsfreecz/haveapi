@@ -71,6 +71,11 @@ module HaveAPI::Authentication
       ret
     end
 
+    # Metadata only: no resource traversal or authentication is performed.
+    def provider_descriptions(version)
+      Array(@instances[version]).to_h { |provider| [provider.name, provider.describe] }
+    end
+
     # Return provider list for version `v`.
     # Used for registering providers to specific version, e.g.
     #   api.auth_chain[1] << MyAuthProvider

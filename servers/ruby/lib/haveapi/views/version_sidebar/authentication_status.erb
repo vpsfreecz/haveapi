@@ -1,1 +1,3 @@
+<% controls = account[:controls] %>
 <p class="docs-visibility-note"><%= account[:user] ? 'Showing resources, actions and parameters available to this account.' : 'Showing all resources, actions and parameters.' %></p>
+<% if controls && controls[:message] %><p role="status"><%= escape_html(controls[:message]) %></p><% end %>

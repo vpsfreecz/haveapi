@@ -1,15 +1,30 @@
+<% controls = account[:controls] %>
 <div class="authentication">
   <% if account[:user] %>
     <details data-account-menu>
       <summary aria-label="Account" title="Account"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-2a8 8 0 0 1 16 0v2"></path></svg></summary>
       <div class="docs-account-content">
         <span class="sr-only">Signed in as </span><span class="docs-identity"><%= escape_html(account[:user].login) %></span>
-        <a class="logout" href="<%= escape_html(logout_url) %>">Sign out</a>
+        <% if controls && controls[:signed_in] %>
+          <form method="post" action="<%= escape_html(controls[:logout_url]) %>">
+            <input type="hidden" name="csrf" value="<%= escape_html(controls[:csrf_token]) %>">
+            <button type="submit">Sign out</button>
+          </form>
+          <% if controls[:switch_user] %>
+            <form method="post" action="<%= escape_html(controls[:logout_url]) %>">
+              <input type="hidden" name="csrf" value="<%= escape_html(controls[:csrf_token]) %>">
+              <input type="hidden" name="switch_user" value="1">
+              <button type="submit">Switch user</button>
+            </form>
+          <% end %>
+        <% else %>
+          <a class="logout" href="<%= escape_html(logout_url) %>">Sign out</a>
+        <% end %>
       </div>
     </details>
   <% else %>
     <% if account[:authentication].any? %>
-      <a class="docs-sign-in login" href="<%= escape_html(url("#{root}_login")) %>" aria-label="Sign in" title="Sign in">
+      <a class="docs-sign-in<%= controls ? '' : ' login' %>" href="<%= escape_html(controls ? controls[:login_url] : url("#{root}_login")) %>"<% if controls %> data-documentation-login<% end %> aria-label="Sign in" title="Sign in">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-2a8 8 0 0 1 16 0v2"></path></svg>
       </a>
     <% end %>

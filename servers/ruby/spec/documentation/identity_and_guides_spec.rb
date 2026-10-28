@@ -52,6 +52,84 @@ describe DocumentationIdentitySpec do
     expect(response.body).not_to include('class="docs-sign-in')
   end
 
+  it 'shows actual escaped identity and scoped visibility even without a cookie CSRF session' do
+    server = app
+    server.helpers do
+      def documentation_oauth_controls
+        { signed_in: false, login_url: 'https://example.test/login', logout_url: 'https://example.test/logout', csrf_token: nil, message: nil }
+      end
+    end
+    login('<member>&', 'pass')
+    get '/v1/'
+    expect(last_response).to be_ok
+    expect(last_response.body).to include('class="docs-identity">&lt;member&gt;&amp;',
+                                          'Showing resources, actions and parameters available to this account.', 'class="logout"', 'data-account-menu')
+    expect(last_response.body).not_to include('data-documentation-login', 'name="csrf"', 'Showing all resources')
+    expect(last_response.body.scan('class="docs-identity"').length).to eq(1)
+    expect(last_response.body.index('docs-identity')).to be < last_response.body.index('docs-visibility-note')
+  end
+
+  it 'preserves existing account form and status markup while moving it beside theme' do
+    reads = 0
+    app.helpers do
+      define_method(:documentation_oauth_controls) do
+        reads += 1
+        { signed_in: true, logout_url: '/existing/logout?one=1&two=2', csrf_token: '<csrf>&', message: '<status>&' }
+      end
+    end
+    login('member', 'pass')
+    get '/v1/'
+    expect(last_response).to be_ok
+    expect(reads).to eq(1)
+    expect(last_response.body).to include('<form method="post" action="/existing/logout?one=1&amp;two=2">',
+                                          '<input type="hidden" name="csrf" value="&lt;csrf&gt;&amp;">',
+                                          '<button type="submit">Sign out</button>', '<p role="status">&lt;status&gt;&amp;</p>')
+    expect(last_response.body.index('<form method="post"')).to be < last_response.body.index('docs-visibility-note')
+    expect(last_response.body.index('docs-visibility-note')).to be < last_response.body.index('<p role="status">')
+    expect(last_response.body).not_to include('<csrf>', '<status>')
+  end
+
+  it 'preserves the existing sign-in destination and enhancement hook' do
+    app.helpers do
+      def documentation_oauth_controls
+        { signed_in: false, login_url: '/existing/login?one=1&two=2', message: nil }
+      end
+    end
+    get '/v1/'
+    expect(last_response).to be_ok
+    expect(last_response.body).to include('class="docs-sign-in" href="/existing/login?one=1&amp;two=2" data-documentation-login',
+                                          'Showing all resources, actions and parameters.')
+    expect(last_response.body).not_to include('class="docs-sign-in login"')
+  end
+
+  it 'keeps the actual identity and switch action inside the native account menu only for the cookie mode' do
+    app.helpers do
+      def documentation_oauth_controls
+        { signed_in: true, switch_user: true, logout_url: '/existing/logout', csrf_token: '<nonce>', message: nil }
+      end
+    end
+    login('member', 'pass')
+    get '/v1/'
+    menu = last_response.body.match(%r{<details data-account-menu>(.*?)</details>}m)[1]
+    expect(menu).to include('<summary aria-label="Account" title="Account">', 'class="docs-account-content"',
+                            '<span class="docs-identity">member</span>', '<button type="submit">Sign out</button>',
+                            '<button type="submit">Switch user</button>', '<input type="hidden" name="switch_user" value="1">')
+    expect(menu.scan('name="csrf" value="&lt;nonce&gt;"').length).to eq(2)
+    expect(menu).not_to include('docs-visibility-note', 'role="status"')
+  end
+
+  it 'does not offer switching or cookie logout for a user authenticated through explicit credentials' do
+    app.helpers do
+      def documentation_oauth_controls
+        { signed_in: false, switch_user: true, logout_url: '/unused-cookie-logout', message: nil }
+      end
+    end
+    login('explicit-user', 'pass')
+    get '/v1/'
+    expect(last_response.body).to include('<span class="docs-identity">explicit-user</span>', 'class="logout"')
+    expect(last_response.body).not_to include('name="switch_user"', 'name="csrf"', '/unused-cookie-logout')
+  end
+
   it 'renders only authorized parameter choices without changing anonymous description semantics' do
     get '/v1/?resource=sample'
     expect(last_response.body).to include('admin_field', 'secret-value', 'Admin choice')

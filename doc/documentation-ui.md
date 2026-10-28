@@ -57,7 +57,10 @@ queries or results in preferences or JavaScript storage.
 Anonymous documentation shows all declared resources, actions and parameters.
 Signed-in documentation and search results show only those accessible to the
 current account. Account controls sit beside the theme control at the top of the
-sidebar. Open **Account** to see the signed-in username and **Sign out**. The note below the controls states which view is shown.
+sidebar. Open **Account** to see the signed-in username and **Sign out**. Supported
+OAuth clients also offer **Switch user**, which ends the documentation session
+and starts a fresh sign-in. If that next sign-in is cancelled, the old session
+remains signed out. The note below the controls states which view is shown.
 Each API request still checks authorization
 for its particular operation; a documentation entry does not grant permission
 to execute it.
@@ -138,3 +141,26 @@ Bootstrap responses, errors and responses changing cookies remain no-store.
 There is no server snapshot cache, background permission polling or persistent
 JavaScript index. Logout does not erase private HTTP-cache files; a fresh page
 can reuse an entry only when its authorized metadata has the same content key.
+
+## Browser sign-in
+
+APIs can optionally configure an OAuth documentation client for browser sign-in.
+The server keeps its client secret and uses a secure encrypted cookie for the
+documentation session. This session applies only to HTML documentation; API
+actions still use their ordinary credentials. See the
+[OAuth setup guide](documentation-oauth.md) for configuration and HTTPS
+requirements. APIs without that configuration retain their existing sign-in
+controls.
+
+For a single-version API, the versions index uses that version's ordinary
+documentation authentication and shows its actual account controls. With
+multiple versions, the index hides account controls rather than assuming their
+authentication is compatible. Internal articles remain neutral and may link to
+the single version's authentication page without claiming a signed-in identity.
+
+Explicit API credentials take precedence over a documentation cookie. If the
+browser sends cached Basic credentials for a different user, the reference shows
+that Basic identity and does not offer OAuth switching for the ignored cookie.
+Basic authentication has no portable browser account-switch operation; its
+existing sign-out behavior depends on the browser. See the OAuth setup guide
+for enabling account selection on a dedicated documentation client.

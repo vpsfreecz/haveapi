@@ -31,7 +31,7 @@ module HaveAPI
                 else
                   @documentation_index_account
                 end
-      @documentation_account_context = context && context.merge(controls: nil)
+      @documentation_account_context = context && context.merge(controls: documentation_oauth_controls)
     end
 
     def documentation_neutral_account_url
@@ -46,7 +46,7 @@ module HaveAPI
       documentation_selection
       documentation_search_query
       @v = version
-      authenticated?(version)
+      documentation_authenticated?(version)
       @help = settings.api_server.describe_version(Context.new(
                                                      settings.api_server,
                                                      version:, user: current_user, params:

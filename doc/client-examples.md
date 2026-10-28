@@ -1,5 +1,7 @@
 # Client examples in API documentation
 
+For browser sign-in to the documentation, see [OAuth sign-in](documentation-oauth.md).
+
 The Ruby server renders examples from the current user's API description.
 JavaScript and TypeScript examples cover callback and async clients; Python
 examples cover sync and async clients. These clients need no server

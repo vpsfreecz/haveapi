@@ -56,8 +56,16 @@ load a fresh snapshot when search is used. The search enhancement does not save
 queries or results in preferences or JavaScript storage.
 
 Anonymous documentation shows all declared resources, actions and parameters.
-Each API request checks authorization for its particular operation; a
-reference entry does not grant permission to execute it.
+Signed-in documentation and search results show only those accessible to the
+current account. Open **Documentation settings** beside the API name for theme
+choices and the available OAuth sign-in or account controls. Signed-in readers
+see their username and **Sign out**. Supported OAuth clients also offer
+**Switch user**, which ends the documentation session
+and starts a fresh sign-in. If that next sign-in is cancelled, the old session
+remains signed out. The note below the controls states which view is shown.
+Each API request still checks authorization
+for its particular operation; a documentation entry does not grant permission
+to execute it.
 
 Parameter Details contain a Validation rules table with one row per advertised
 rule. Allowed values appear as typed API literals beside their display labels.
@@ -133,4 +141,29 @@ authenticates, describes the current view and checks the key before returning
 data or a conditional success. Changed views return 409 without index data.
 Bootstrap responses, errors and responses changing cookies remain no-store.
 There is no server snapshot cache, background permission polling or persistent
-JavaScript index. A fresh page can reuse an entry only when its authorized metadata has the same content key.
+JavaScript index. Logout does not erase private HTTP-cache files; a fresh page
+can reuse an entry only when its authorized metadata has the same content key.
+
+## Browser sign-in
+
+APIs can optionally configure an OAuth documentation client for browser sign-in.
+The server keeps its client secret and uses a secure encrypted cookie for the
+documentation session. This session applies only to HTML documentation; API
+actions still use their ordinary credentials. See the
+[OAuth setup guide](documentation-oauth.md) for configuration and HTTPS
+requirements. APIs without that configuration show anonymous documentation and
+no sign-in control. HTTP Basic, bearer headers and query credentials do not sign
+readers into the documentation. Their API authentication examples remain available.
+
+For a single-version API, the versions index uses that version's
+documentation authentication and shows its actual account controls. With
+multiple versions, the index hides account controls rather than assuming their
+authentication is compatible. Internal articles remain neutral and may link to
+the single version's authentication page without claiming a signed-in identity.
+
+Documentation identity comes only from its valid OAuth session cookie. Cached
+Basic credentials for another user do not change that identity or its controls;
+an absent or invalid cookie leaves the reader anonymous. Ordinary API actions
+and OPTIONS descriptions continue to use their existing authentication. See the
+OAuth setup guide for enabling account selection on a dedicated documentation
+client.

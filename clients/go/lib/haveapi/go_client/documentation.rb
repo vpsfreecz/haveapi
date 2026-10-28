@@ -411,7 +411,8 @@ module HaveAPI::GoClient
               when :basic
                 ['api.SetBasicAuthentication(os.Getenv("HAVEAPI_USER"), os.Getenv("HAVEAPI_PASSWORD"))']
               when :token
-                unless saved[:http_header] == visible[:http_header] && saved[:query_parameter] == visible[:query_parameter]
+                unless same_transport_name?(saved[:http_header], visible[:http_header]) &&
+                       same_transport_name?(saved[:query_parameter], visible[:query_parameter])
                   unsupported!('This authentication method does not match the configured Go SDK.')
                 end
                 ['api.SetExistingTokenAuth(os.Getenv("HAVEAPI_TOKEN"))',
@@ -426,6 +427,11 @@ module HaveAPI::GoClient
                 unsupported!('This authentication method is unsupported by the Go generator.')
               end
       code(program(context, ['os'], lines))
+    end
+
+    def same_transport_name?(saved, visible)
+      # Automatic profiles copy Symbol names through JSON as Strings.
+      [saved, visible].all? { |name| name.is_a?(String) || name.is_a?(Symbol) } && saved.to_s == visible.to_s
     end
 
     def program(context, imports, lines)

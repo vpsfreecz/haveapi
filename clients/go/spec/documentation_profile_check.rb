@@ -22,6 +22,13 @@ class GoDocumentationProfileCheck
     privileged_description = FIXTURE.description(server, user: :privileged)
     context = FIXTURE.context(public_description)
     adapter = profile.adapter
+    saved_token = adapter.instance_variable_get(:@description).dig(:authentication, :token)
+    visible_token = public_description.fetch(:authentication).fetch(:token)
+    assert(saved_token.fetch(:query_parameter) == '_auth_token', 'automatic profile must capture the JSON String query name')
+    assert(visible_token.fetch(:query_parameter) == :_auth_token, 'live token provider must retain its Symbol query name')
+    token_example = adapter.render(kind: :auth, context:, mode: :sync, auth_method: :token, auth_description: visible_token)
+    assert(token_example[:status] == :code, "unexpected token limitation: #{token_example[:reason]}")
+    assert(token_example.fetch(:code).include?('api.SetExistingTokenAuth(os.Getenv("HAVEAPI_TOKEN"))'), 'matching token transport must render environment-token code')
     structural = adapter.instance_variable_get(:@description).dig(:resources, :set_timeout_resource, :resources, :child, :actions, :client)
     assert(!structural.has_key?(:examples), 'the private model must not retain example payloads')
     assert(!structural.dig(:input, :parameters, :private_value).has_key?(:default), 'the private model must not retain parameter defaults')

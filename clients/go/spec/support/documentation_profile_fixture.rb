@@ -2,6 +2,8 @@
 module GoDocumentationProfileFixture
   HOSTILE = "quote\"\\\n雪</script>".freeze
 
+  class TokenConfig < HaveAPI::Authentication::Token::Config; end
+
   module Resources
     class Owner < HaveAPI::Resource
       version '7'
@@ -101,6 +103,7 @@ module GoDocumentationProfileFixture
     server = HaveAPI::Server.new(Resources)
     server.use_version('7')
     server.default_version = '7'
+    server.auth_chain << HaveAPI::Authentication::Token.with_config(TokenConfig)
     server.documentation_clients('7', go: { import_path: 'example.test/current-sdk/client', **go })
     server.mount('/mounted/')
     server

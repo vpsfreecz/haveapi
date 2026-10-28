@@ -1,0 +1,12 @@
+<% if @documentation_page == 'guide' %>
+  <nav aria-label="Breadcrumb">
+    <ol>
+      <li><a href="<%= escape_html(shared_documentation_url) %>">API versions</a></li>
+      <% unless title == 'HaveAPI internals' %>
+        <li><a href="<%= escape_html(shared_documentation_url('doc')) %>">HaveAPI internals</a></li>
+      <% end %>
+      <li aria-current="page"><%= escape_html(title) %></li>
+    </ol>
+  </nav>
+<% end %>
+<%= content %>

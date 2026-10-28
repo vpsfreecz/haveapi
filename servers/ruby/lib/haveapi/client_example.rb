@@ -9,6 +9,8 @@ module HaveAPI
   # Methods `example`, `request` and `response` take one argument, the example
   # to describe.
   class ClientExample
+    DEFAULT_DETAIL_LEVELS = %i[simple thorough].freeze
+
     class << self
       # All subclasses have to call this method to set their label and be
       # registered.
@@ -59,6 +61,19 @@ module HaveAPI
       def variant(value = nil)
         @variant = value.to_s.freeze unless value.nil?
         @variant
+      end
+
+      def detail_levels(*values)
+        unless values.empty?
+          unless [[:simple], %i[simple thorough]].include?(values)
+            raise ArgumentError, 'Example detail levels must be :simple or :simple, :thorough'
+          end
+
+          @detail_levels = values.dup.freeze
+        end
+        return @detail_levels if instance_variable_defined?(:@detail_levels)
+
+        superclass.respond_to?(:detail_levels) ? superclass.detail_levels : DEFAULT_DETAIL_LEVELS
       end
 
       def render(kind, context:, auth_method: nil, auth_description: nil)

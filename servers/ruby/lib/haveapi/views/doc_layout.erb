@@ -1,4 +1,18 @@
 <% yield %>
+<% if @documentation_ui %>
+<div data-docs data-page="<%= @documentation_page %>" data-resource="<%= escape_html(@documentation_resource && @documentation_resource[:key]) %>">
+  <a class="docs-skip-link" href="#docs-main">Skip to content</a>
+  <div class="docs-mobile-toolbar">
+    <button type="button" data-nav-toggle aria-controls="docs-navigation" aria-expanded="false">Navigation</button>
+  </div>
+  <div class="docs-layout">
+    <aside class="docs-sidebar" id="docs-navigation" data-docs-sidebar><%= @sidebar %></aside>
+    <main class="docs-main" id="docs-main" tabindex="-1"><%= @content %></main>
+  </div>
+  <script type="application/json" data-documentation-clients><%= documentation_json(@help ? documentation_client_metadata : []) %></script>
+  <script type="application/json" data-legacy-anchors><%= documentation_json(@documentation_page == 'overview' ? documentation_legacy_anchors : {}) %></script>
+</div>
+<% else %>
 <div class="row-fluid">
   <div class="col-sm-10">
     <%= @content %>
@@ -25,3 +39,5 @@
         });
     });
 </script>
+
+<% end %>

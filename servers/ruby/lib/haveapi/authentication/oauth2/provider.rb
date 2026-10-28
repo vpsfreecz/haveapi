@@ -130,7 +130,13 @@ module HaveAPI::Authentication
                   HaveAPI.t('haveapi.authentication.multiple_oauth2_tokens')
           end
 
-        token && config.find_user_by_access_token(request, token)
+        token && authenticate_access_token(request, token)
+      rescue HaveAPI::AuthenticationError
+        nil
+      end
+
+      def authenticate_access_token(request, token)
+        config.find_user_by_access_token(request, token)
       rescue HaveAPI::AuthenticationError
         nil
       end

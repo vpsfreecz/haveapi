@@ -58,7 +58,7 @@ describe HaveAPI::ClientExample::Profiles do
     expect(server).to have_received(:describe_version).once
   end
 
-  it 'loads a saved SDK once at registration with explicit package and generator versions' do
+  it 'loads a saved API client once at registration with explicit package and generator versions' do
     File.write(snapshot_path, JSON.generate(api_version: '1.0'))
     profiles.register('1.0', typescript: { package_name: 'widget-client', package_version: '1.2.3-beta.1+build.4',
                                            snapshot_path:, generator_version: HaveAPI::VERSION })

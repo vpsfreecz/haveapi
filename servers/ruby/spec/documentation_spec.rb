@@ -174,7 +174,7 @@ describe 'Documentation' do
     expect(last_response.headers['Content-Type']).to include('text/html')
 
     # servers/ruby/doc/index.md contains this heading
-    expect(last_response.body).to include('HaveAPI documentation')
+    expect(last_response.body).to include('HaveAPI internals')
   end
 
   it 'has online index doc page without a sidebar template' do
@@ -182,11 +182,11 @@ describe 'Documentation' do
 
     expect(last_response.status).to eq(200)
     expect(last_response.headers['Content-Type']).to include('text/html')
-    expect(last_response.body).to include('HaveAPI documentation')
+    expect(last_response.body).to include('HaveAPI internals')
   end
 
   it 'has online doc for every version' do
-    get '/v1/'
+    get '/v1/?resource=user'
     expect(last_response.status).to eq(200)
     expect(last_response.headers['Content-Type']).to include('text/html')
     expect(last_response.body).to include('verified by MFA backend')

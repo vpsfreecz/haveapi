@@ -30,11 +30,12 @@ describe HaveAPI::ClientExample::Context, '#with' do
   it 'shares every unchanged field and owns a different snapshot for a new request' do
     parent = parent_context(8)
     other_request = parent_context(8)
-    children = [parent.with(profile:), parent.with(sample:)]
-    fields = %i[version host base_url version_url description resource_path resource action_name action sample profile]
+    changes = [{ profile: }, { sample: }, { detail: :thorough }]
+    children = changes.map { |change| parent.with(**change) }
+    fields = described_class::FIELDS
 
     children.each_with_index do |child, index|
-      changed = index == 0 ? :profile : :sample
+      changed = changes[index].keys.first
       (fields - [changed]).each do |field|
         expect(child.public_send(field)).to equal(parent.public_send(field))
       end
@@ -51,7 +52,7 @@ describe HaveAPI::ClientExample::Context, '#with' do
   it 'keeps allocations independent of unrelated description size for small changes' do
     small = parent_context(8)
     large = parent_context(128)
-    changes = [{ profile: }, { sample: }]
+    changes = [{ profile: }, { sample: }, { detail: :thorough }]
     [small, large].each do |parent|
       changes.each { |change| 80.times { parent.with(**change) } }
     end

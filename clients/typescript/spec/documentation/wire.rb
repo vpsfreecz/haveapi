@@ -24,7 +24,7 @@ Dir.mktmpdir('haveapi-typescript-rendered-wire-') do |directory|
     cases = []
     %w[/ /mount/].each do |mount|
       schema = documentation_snapshot(mount:)
-      %w[public basic token index nested error alias].each do |kind|
+      %i[simple thorough].product(%w[public basic token index nested error alias]).each do |detail, kind|
         protected_schema = Marshal.load(Marshal.dump(schema))
         fixture_action(protected_schema)['auth'] = true if %w[basic token].include?(kind)
         context = case kind
@@ -36,15 +36,17 @@ Dir.mktmpdir('haveapi-typescript-rendered-wire-') do |directory|
         context.action_name = 'change' if kind == 'alias'
         context.sample[:status] = false if kind == 'error'
         context.sample[:request]['name'] = 'reject' if kind == 'error'
-        result = documentation_adapter(protected_schema).render(kind: :example, context:)
+        context.detail = detail
+        adapter = documentation_adapter(protected_schema)
+        result = adapter.render(kind: :example, context:)
         raise 'Wire sample unexpectedly limited' unless result[:status] == :code
 
-        cases << { code: result[:code], kind:, mount: }
+        cases << { code: executable_documentation(adapter, context, result.fetch(:code)), kind:, mount:, detail: }
       end
     end
     stdout, stderr, status = compile_documentation(directory, documentation_snapshot, cases.map { |item| item[:code] }, runtime_types:, emit: true)
     abort("#{stdout}\n#{stderr}") unless status.success?
-    File.write(File.join(directory, 'cases.json'), JSON.generate(cases.map { |item| item.slice(:kind, :mount) }))
+    File.write(File.join(directory, 'cases.json'), JSON.generate(cases.map { |item| item.slice(:kind, :mount, :detail) }))
     File.write(File.join(directory, 'ready'), '')
     IO.copy_stream(reader, $stdout)
     _, status = Process.wait2(child)

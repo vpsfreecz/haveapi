@@ -25,6 +25,27 @@ describe HaveAPI::ClientExample::Context do
     expect(child).to be_frozen
   end
 
+  it 'defaults to simple and shares owned data when changing the detail' do
+    expect(context.detail).to eq(:simple)
+    thorough = context.with(detail: :thorough)
+    expect(thorough.detail).to eq(:thorough)
+    expect(thorough).to be_frozen
+    (described_class::FIELDS - [:detail]).each do |field|
+      expect(thorough.public_send(field)).to equal(context.public_send(field))
+    end
+    expect(thorough.with(detail: :simple).detail).to eq(:simple)
+    expect(context.detail).to eq(:simple)
+  end
+
+  it 'rejects detail values outside the two explicit symbols in construction and derivation' do
+    [nil, false, 'simple', 'thorough', :unknown].each do |detail|
+      expect { context.with(detail:) }.to raise_error(ArgumentError, 'detail must be :simple or :thorough')
+      expect do
+        described_class.new(version: '1', host: 'api.test', base_url: '/', version_url: '/v1/', description: {}, detail:)
+      end.to raise_error(ArgumentError, 'detail must be :simple or :thorough')
+    end
+  end
+
   describe '#with' do
     let(:fields) do
       {
@@ -33,7 +54,7 @@ describe HaveAPI::ClientExample::Context do
         description: { 'resources' => { 'widget' => { 'label' => 'Widget' } } },
         resource_path: [:widget, 2], resource: { 'label' => 'Widget' },
         action_name: :show, action: { 'method' => 'GET' },
-        sample: { 'request' => { 'values' => [0, false, '', nil] } }, profile: Object.new
+        sample: { 'request' => { 'values' => [0, false, '', nil] } }, profile: Object.new, detail: :simple
       }
     end
     let(:parent) { described_class.new(**fields) }
@@ -45,7 +66,7 @@ describe HaveAPI::ClientExample::Context do
         resource_path: [:other, 3], resource: { 'label' => 'Other' },
         action_name: :update, action: { 'method' => 'POST' },
         sample: { 'request' => { 'values' => [false, 0, nil, ''] } },
-        profile: Object.new
+        profile: Object.new, detail: :thorough
       }
     end
 

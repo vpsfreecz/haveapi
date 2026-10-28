@@ -7,6 +7,7 @@ RSpec.describe HaveAPI::ClientExamples::GoClient do
   let(:adapter) do
     contract = Class.new do
       def render(**); end
+      def detail_levels_for(**); end
     end
     instance_double(contract, render: result)
   end
@@ -22,11 +23,23 @@ RSpec.describe HaveAPI::ClientExamples::GoClient do
 
   it 'registers the frozen Go ID and requires its configured profile' do
     expect(described_class.id).to eq('go')
+    expect(described_class.label).to eq('Go API client')
     expect(described_class.code).to eq(:go)
     expect(described_class.order).to eq(16)
     expect(described_class).to be_available(context)
     expect(described_class).not_to be_available(context.with(profile: nil))
     expect(described_class).not_to be_available(context.with(profile: Struct.new(:language).new(:rust)))
+  end
+
+  it 'delegates meaningful-detail queries with the existing rendered result and native mode' do
+    allow(adapter).to receive(:detail_levels_for).and_return([:simple].freeze)
+    expect(described_class.detail_levels_for(:init, context:, result:)).to eq([:simple])
+    expect(adapter).to have_received(:detail_levels_for).with(kind: :init, context:, result:, mode: :sync,
+                                                              auth_method: nil, auth_description: nil)
+    allow(adapter).to receive(:detail_levels_for).and_return(%i[simple thorough].freeze)
+    expect(described_class.detail_levels_for(:example, context:, result:)).to eq(%i[simple thorough])
+    allow(adapter).to receive(:detail_levels_for).and_return([:thorough])
+    expect { described_class.detail_levels_for(:example, context:, result:) }.to raise_error(ArgumentError)
   end
 
   it 'delegates initialization without requiring the optional generator gem' do
@@ -42,7 +55,7 @@ RSpec.describe HaveAPI::ClientExamples::GoClient do
   end
 
   it 'binds the selected filtered example and preserves plain limitation results' do
-    limitation = { status: :limitation, reason: 'This Go SDK input is unsupported.' }.freeze
+    limitation = { status: :limitation, reason: 'This Go API client input is unsupported.' }.freeze
     allow(adapter).to receive(:render).and_return(limitation)
     expect(described_class.render(:example, context:)).to eq(limitation)
     expect(adapter).to have_received(:render) do |**arguments|

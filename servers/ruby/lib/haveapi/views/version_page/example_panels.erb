@@ -1,0 +1,18 @@
+<% legacy_baseid ||= nil %>
+<% variants = documentation_example_variants(kind, **changes) %>
+<% details_by_client = variants.group_by { |client, _detail, _result| client.id }.transform_values { |items| items.map { |_client, detail, _result| detail.to_s } } %>
+<% if legacy_baseid %><%= documentation_reference_alias("#{legacy_baseid}-examples") %><% end %>
+<div class="docs-example" data-example data-example-details="<%= escape_html(JSON.generate(details_by_client)) %>" id="<%= escape_html("#{baseid}-examples") %>">
+  <% variants.each do |client, detail, result| %>
+    <% suffix = detail == :thorough ? '-thorough' : '' %>
+    <% if legacy_baseid %><%= documentation_reference_alias("#{legacy_baseid}-#{client.id}#{suffix}") %><% end %>
+    <% if detail == :simple && details_by_client[client.id] == ['simple'] %>
+      <%= documentation_reference_alias("#{legacy_baseid || baseid}-#{client.id}-thorough") %>
+      <% if legacy_baseid %><%= documentation_reference_alias("#{baseid}-#{client.id}-thorough") %><% end %>
+    <% end %>
+    <details data-example-panel data-client="<%= escape_html(client.id) %>" data-language="<%= escape_html(client.language) %>" data-variant="<%= escape_html(client.variant) %>" data-detail="<%= detail %>" id="<%= escape_html("#{baseid}-#{client.id}#{suffix}") %>"<% if detail == :simple %> open<% end %>>
+      <summary><%= escape_html(client.label) %> · <%= detail == :simple ? 'Simple' : 'With error handling' %></summary>
+      <%= erb :'version_page/client_result', locals: {client: client, result: result} %>
+    </details>
+  <% end %>
+</div>

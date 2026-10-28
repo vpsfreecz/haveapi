@@ -22,11 +22,12 @@ The root Git hooks also need the root shell's dependencies: prepare them with
 Overcommit hooks enabled. Do not install gems concurrently in the same gem home.
 
 From the HaveAPI root, `make test-rust-unit` runs the generator specs.
-`make test-rust` additionally runs both runtime feature configurations and the
-generated-client protocol harness. Unit specs never start a server or invoke
-Cargo. Compilation, Rust linting, server integration, MSRV and packaging checks
-can take longer; follow the development workspace's verification procedure when
-working there.
+`make test-rust` additionally runs both runtime feature configurations, the
+prepared server fixture contracts and the generated-client protocol harness.
+Quick unit specs need only the Rust component bundle; they never load the server
+application, start a listener or invoke Cargo. Compilation, Rust linting, server
+integration, MSRV and packaging checks can take longer; follow the development
+workspace's verification procedure when working there.
 
 The Nix shell supplies the development compiler and formatter. New test
 fixtures record that formatter; existing clients retain their own exact

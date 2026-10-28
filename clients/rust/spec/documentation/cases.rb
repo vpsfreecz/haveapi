@@ -61,11 +61,13 @@ module RustDocumentationCases
   end
 
   def compose_authentication(auth_source, action_source)
-    # Keep the exact emitted imports, main/runtime, builder and credentials;
-    # append the exact emitted request/result body from a rendered action panel.
-    body = action_source.split("        .build()?;\n", 2).fetch(1).split('    Ok(())', 2).first
-    raise 'Rendered authentication composition marker missing' unless auth_source.include?('    let _ = &api;')
+    # The caller renders this fragment explicitly at Simple, never parses a main.
+    compose_fragment(auth_source, action_source)
+  end
 
-    auth_source.sub('    let _ = &api;', body.rstrip)
+  def compose_fragment(setup, fragment)
+    raise 'Rendered initialization marker missing' unless setup.include?('    let _ = &api;')
+
+    setup.sub('    let _ = &api;') { fragment }
   end
 end

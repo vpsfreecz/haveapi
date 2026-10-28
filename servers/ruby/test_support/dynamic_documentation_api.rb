@@ -7,6 +7,17 @@ module DynamicDocumentationAPI
   def self.receipts
     @receipts ||= []
   end
+
+  def self.events
+    @events ||= []
+  end
+
+  def self.record_authentication(request, provider, user)
+    request.env['dynamic_documentation.provider'] = provider if user
+    events << { type: 'authentication', provider:, authenticated: !user.nil? }
+    user
+  end
+
   User = Struct.new(:login)
 
   class RequestTrace
@@ -17,7 +28,12 @@ module DynamicDocumentationAPI
 
     def call(env)
       status, headers, body = @app.call(env)
-      @output.puts("DYNAMIC_DOCUMENTATION_REQUEST #{JSON.generate({ method: env['REQUEST_METHOD'], path: env['PATH_INFO'], status: })}")
+      trace = { method: env['REQUEST_METHOD'], path: env['PATH_INFO'], status: }
+      if env['PATH_INFO'].start_with?('/mount/')
+        provider = env['dynamic_documentation.provider']
+        DynamicDocumentationAPI.events << trace.merge(type: 'request', provider:, authenticated: !provider.nil?)
+      end
+      @output.puts("DYNAMIC_DOCUMENTATION_REQUEST #{JSON.generate(trace)}")
       [status, headers, body]
     end
   end
@@ -25,21 +41,24 @@ module DynamicDocumentationAPI
   class BasicProvider < HaveAPI::Authentication::Basic::Provider
     protected
 
-    def find_user(_request, username, password)
-      User.new(username) if username == 'fixture-user' && password == 'fixture-password'
+    def find_user(request, username, password)
+      user = User.new(username) if username == 'user' && password == 'secret'
+      DynamicDocumentationAPI.record_authentication(request, 'basic', user)
     end
   end
 
   class TokenConfig < HaveAPI::Authentication::Token::Config
     request do
       handle do |request, result|
-        if request.input[:user] == 'fixture-user' && request.input[:password] == 'fixture-password'
+        if request.input[:user] == 'user' && request.input[:password] == 'secret'
           result.token = 'fixture-challenge'
           result.next_action = 'verify'
           result.complete = false
           result.valid_to = Time.now + 3600
+          DynamicDocumentationAPI.events << { type: 'token_request', provider: 'token', authenticated: false }
           result.ok
         else
+          DynamicDocumentationAPI.events << { type: 'token_request_rejected', provider: 'token', authenticated: false }
           result.error = 'Invalid fixture credentials'
           result
         end
@@ -49,12 +68,14 @@ module DynamicDocumentationAPI
     action :verify do
       input { string :code, required: true }
       handle do |request, result|
-        if request.token == 'fixture-challenge' && request.input[:code] == '123456'
-          result.token = 'fixture-token'
+        if request.token == 'fixture-challenge' && request.input[:code] == 'code'
+          result.token = 'example-token'
           result.complete = true
           result.valid_to = Time.now + 3600
+          DynamicDocumentationAPI.events << { type: 'token_verification', provider: 'token', authenticated: true }
           result.ok
         else
+          DynamicDocumentationAPI.events << { type: 'token_verification_rejected', provider: 'token', authenticated: false }
           result.error = 'Invalid fixture challenge'
           result
         end
@@ -64,8 +85,9 @@ module DynamicDocumentationAPI
     renew { handle { |_request, result| result.ok } }
     revoke { handle { |_request, result| result.ok } }
 
-    def find_user_by_token(_request, token)
-      User.new('fixture-user') if token == 'fixture-token'
+    def find_user_by_token(request, token)
+      user = User.new('user') if token == 'example-token'
+      DynamicDocumentationAPI.record_authentication(request, 'token', user)
     end
   end
 
@@ -80,7 +102,8 @@ module DynamicDocumentationAPI
 
     def authenticate(request)
       value = request.env['HTTP_X_FIXTURE_OAUTH2'] || request.env['HTTP_AUTHORIZATION']&.delete_prefix('Bearer ')
-      User.new('fixture-user') if value == 'fixture-access-token'
+      user = User.new('user') if value == 'example-access-token'
+      value ? DynamicDocumentationAPI.record_authentication(request, 'oauth2', user) : nil
     end
   end
 
@@ -137,6 +160,8 @@ module DynamicDocumentationAPI
   end
 
   def self.build
+    receipts.clear
+    events.clear
     HaveAPI.implicit_version = '2'
     api = HaveAPI::Server.new(Resources)
     api.use_version('2')
@@ -147,7 +172,7 @@ module DynamicDocumentationAPI
     api.connect_hook(:pre_mount) do |ret, _server, sinatra|
       sinatra.get '/__acceptance_receipts' do
         content_type 'application/json'
-        JSON.generate(DynamicDocumentationAPI.receipts)
+        JSON.generate(actions: DynamicDocumentationAPI.receipts, events: DynamicDocumentationAPI.events)
       end
       ret
     end

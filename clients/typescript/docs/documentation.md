@@ -69,10 +69,16 @@ input wire names map to generated input names. The DSL has no separate input
 metadata carrier, so actions requiring input metadata produce a limitation.
 Inputs preserve omission, null, false, zero and empty strings. Unsafe integer IDs,
 invalid JSON and structured Custom query values cannot be rendered. Output keys
-remain wire names, with guards for optional, null and unknown values.
+remain wire names. Simple examples print the supplied output fields directly;
+thorough examples guard optional, null and unknown values before using them.
 
-Successful examples retain `data`, `meta`, `envelope` and `httpStatus`. Rejection
-examples inspect the runtime's error receipt without printing server diagnostics.
+Simple action examples assume that initialization and authentication have
+established `api`. They use `await` in an async context and show the exact call
+and sample output. Rejection examples import the runtime's `AsyncError` class.
+**With error handling** includes setup, error handling and the response receipt's
+`data`, `meta`, `envelope` and `httpStatus`. Both levels use the same validation
+and limitations. Rejection examples inspect the runtime's error receipt without
+printing server diagnostics.
 Requests are not retried. A successful request does not establish completion of
 a server-side operation; raw receipts cannot be passed to `waitForCompletion`.
 
@@ -81,8 +87,9 @@ a server-side operation; raw receipts cannot be passed to `waitForCompletion`.
 The generator provides `HaveAPI::TypeScriptClient::Documentation` through
 `require 'haveapi/typescript_client/documentation'`. Its factories accept a full
 description or saved snapshot. `resolve` returns a frozen canonical action;
-`render` returns the server's code or limitation result. Rendering performs no
-file, network, generator or compiler work.
+`render` returns the server's code or limitation result. Its context must expose
+`detail` as `:simple` or `:thorough`. Rendering performs no file, network,
+generator or compiler work.
 
 Rendering selects the current action, authentication provider and metadata
 namespace before recursively normalizing their contents. It leaves unrelated
@@ -90,8 +97,9 @@ description descendants untouched and keeps authorization decisions local to
 each render. Deterministic work checks grow unrelated subtrees while keeping
 the selected inputs and rendered source fixed.
 
-Focused unit checks compile the actual rendered programs against generated
-fixture modules with TypeScript 6, NodeNext/ES2022, `exactOptionalPropertyTypes`,
+The compilation checks compose simple action fragments with separately rendered
+setup and compile both detail levels against generated fixture modules with
+TypeScript 6, NodeNext/ES2022, `exactOptionalPropertyTypes`,
 `noUncheckedIndexedAccess` and `verbatimModuleSyntax`. They cover aliases, nested
 paths, filtered fields, stale contracts, supported authentication and errors.
 

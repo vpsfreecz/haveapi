@@ -6,7 +6,7 @@ require_relative '../../test_support/dynamic_documentation_api'
 RSpec.describe DynamicDocumentationAPI do
   it 'uses real mounted descriptor routes for callback and async token challenges and nested actions' do
     request = Rack::MockRequest.new(described_class.build.app)
-    headers = { 'HTTP_AUTHORIZATION' => "Basic #{['fixture-user:fixture-password'].pack('m0')}" }
+    headers = { 'HTTP_AUTHORIZATION' => "Basic #{['user:secret'].pack('m0')}" }
     envelope = JSON.parse(request.options('http://example.test/mount/v2/', headers).body)
     model = envelope.fetch('response')
     token = model.fetch('authentication').fetch('token').fetch('resources').fetch('token').fetch('actions')
@@ -17,14 +17,16 @@ RSpec.describe DynamicDocumentationAPI do
     post = lambda do |path, body, extra = {}|
       response = request.post("http://example.test#{path}", extra.merge('CONTENT_TYPE' => 'application/json', input: JSON.generate(body)))
       expect(response.status).to eq(200), response.body
-      JSON.parse(response.body)
+      payload = JSON.parse(response.body)
+      expect(payload.fetch('status')).to be(true), response.body
+      payload
     end
     challenge = post.call(token.fetch('request').fetch('path'), { token: {
-      user: 'fixture-user', password: 'fixture-password', scope: 'all', lifetime: 'renewable_auto'
+      user: 'user', password: 'secret', scope: 'all', lifetime: 'renewable_auto'
     } })
-    completed = post.call(token.fetch('verify').fetch('path'), { token: { token: 'fixture-challenge', code: '123456' } })
+    completed = post.call(token.fetch('verify').fetch('path'), { token: { token: 'fixture-challenge', code: 'code' } })
     action_path = action.fetch('path').sub('{parent_id}', '7').sub('{widget_id}', 'name%20with%20space')
-    result = post.call(action_path, { widget: params }, { 'HTTP_X_HAVEAPI_AUTH_TOKEN' => 'fixture-token' })
+    result = post.call(action_path, { widget: params }, { 'HTTP_X_HAVEAPI_AUTH_TOKEN' => 'example-token' })
     data = { envelope:, challenge:, completed:, result:, params:, action_path: }
     script = <<~JS
       const assert = require('node:assert/strict');
@@ -36,7 +38,7 @@ RSpec.describe DynamicDocumentationAPI do
       async function check() {
         const callback = new HaveAPI.CallbackClient('http://example.test/mount/', {version:'2'});
         let ready = false;
-        callback.authenticate('token', {user:'fixture-user', password:'fixture-password', scope:'all', callback: () => ({code:'123456'})},
+        callback.authenticate('token', {user:'user', password:'secret', scope:'all', callback: () => ({code:'code'})},
           (_, ok) => { ready = ok; });
         // Parse actual discovery JSON inside the bundle's VM, matching the real XHR boundary.
         assert.equal(requests[0].url, 'http://example.test/mount/v2/'); requests[0].respond(data.envelope);
@@ -47,7 +49,7 @@ RSpec.describe DynamicDocumentationAPI do
         HaveAPI.CallbackClient.findAction(resource, 'new').directInvoke(7, 'name with space', {params:data.params});
         assert.equal(requests[4].url, 'http://example.test' + data.action_path); requests[4].respond(data.result);
         const api = new HaveAPI.AsyncClient('http://example.test/mount/', {version:'2'}); api.useDescription(model);
-        const authenticating = api.authenticate('token', {user:'fixture-user', password:'fixture-password', scope:'all', onChallenge: () => ({code:'123456'})});
+        const authenticating = api.authenticate('token', {user:'user', password:'secret', scope:'all', onChallenge: () => ({code:'code'})});
         await tick(); assert.equal(requests[5].url, 'http://example.test' + auth.request.path); requests[5].respond(data.challenge);
         await tick(); assert.equal(requests[6].url, 'http://example.test' + auth.verify.path); requests[6].respond(data.completed);
         await tick(); assert.equal(requests[7].url, 'http://example.test/mount/v2/'); requests[7].respond(data.envelope); await authenticating;

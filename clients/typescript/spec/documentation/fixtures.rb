@@ -6,7 +6,7 @@ require_relative '../../lib/haveapi/typescript_client/documentation'
 module TypeScriptDocumentationFixtures
   include TypeScriptEmitterFixtures
 
-  Context = Struct.new(:version, :base_url, :version_url, :description, :resource_path, :action_name, :action, :sample)
+  Context = Struct.new(:version, :base_url, :version_url, :description, :resource_path, :action_name, :action, :sample, :detail)
 
   def documentation_snapshot(mount: '/api/')
     schema = emitter_schema
@@ -32,7 +32,7 @@ module TypeScriptDocumentationFixtures
     schema
   end
 
-  def documentation_context(schema = documentation_snapshot, action_name: 'update', resource_path: ['widget'], base: 'https://api.example.test')
+  def documentation_context(schema = documentation_snapshot, action_name: 'update', resource_path: ['widget'], base: 'https://api.example.test', detail: :thorough)
     description = Marshal.load(Marshal.dump(schema.fetch('description')))
     resource = description
     resource_path.each { |name| resource = resource.fetch('resources').fetch(name) }
@@ -51,7 +51,7 @@ module TypeScriptDocumentationFixtures
              end
     mount = schema.fetch('mount_path')
     Context.new(version: schema.fetch('api_version'), base_url: "#{base}#{mount}", version_url: "#{base}#{mount}v1.0/",
-                description:, resource_path:, action_name:, action:, sample:)
+                description:, resource_path:, action_name:, action:, sample:, detail:)
   end
 
   def documentation_adapter(schema = documentation_snapshot)

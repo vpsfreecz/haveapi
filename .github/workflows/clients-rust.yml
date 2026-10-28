@@ -48,4 +48,8 @@ jobs:
       - name: Prepare fixture server dependencies
         run: nix develop .#server-ruby --command true
       - name: Generated client protocol acceptance
-        run: HAVEAPI_RUST_INTEGRATION=1 nix develop .#client-rust --command ruby clients/rust/spec/integration/run.rb
+        run: |
+          nix develop .#client-rust --command bash -euc '
+            bundle exec rspec clients/rust/spec/integration/fixture_actions_spec.rb
+            HAVEAPI_RUST_INTEGRATION=1 ruby clients/rust/spec/integration/run.rb
+          '

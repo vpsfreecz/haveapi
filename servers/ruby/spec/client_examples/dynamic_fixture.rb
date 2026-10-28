@@ -29,8 +29,9 @@ module DynamicExampleFixture
   end
 
   def token_description
-    { resources: { token: { actions: { 'request' => { input: { parameters: {
-      'login-name' => { type: 'String' }, password: { type: 'String' }, lifetime: { type: 'String' }
-    } } } } } } }
+    request = { 'login-name' => { type: 'String' }, password: { type: 'String' }, lifetime: { type: 'String' } }
+    verify = { token: { type: 'String', required: true }, code: { type: 'String', required: true } }
+    { resources: { token: { actions: { 'request' => { input: { parameters: request } },
+                                       'verify' => { input: { parameters: verify } } } } } }
   end
 end

@@ -2,13 +2,20 @@ require 'haveapi/client_example'
 
 module HaveAPI::ClientExamples
   class GoClient < HaveAPI::ClientExample
-    label 'Go'
+    label 'Go API client'
+    language 'go'
+    language_label 'Go'
     id 'go'
     code :go
     order 16
 
     def self.available?(context)
       context.profile && context.profile.language == :go
+    end
+
+    def self.detail_levels_for(kind, context:, result:, auth_method: nil, auth_description: nil)
+      adapter_detail_levels_for(adapter: context.profile.adapter, kind:, context:, result:,
+                                mode: :sync, auth_method:, auth_description:)
     end
 
     def init
@@ -27,7 +34,7 @@ module HaveAPI::ClientExamples
 
     def render_documentation(kind, sample: nil, **)
       unless context && self.class.available?(context)
-        return { status: :limitation, reason: 'A Go SDK profile is required.' }.freeze
+        return { status: :limitation, reason: 'A Go API client profile is required.' }.freeze
       end
 
       selected = kind == :example ? context.with(sample:) : context

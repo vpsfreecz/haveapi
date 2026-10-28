@@ -58,4 +58,45 @@ RSpec.describe RustClientIntegration do
       'value' => { 'nested' => [0, false, nil] }
     )
   end
+
+  it 'keeps documentation fixture literals opt-in and issues their token through the real request action' do
+    [false, true].each do |documentation_examples|
+      script = <<~RUBY
+        require 'rack/mock'
+        require 'base64'
+        require #{File.expand_path('support/haveapi_fixture', __dir__).inspect}
+        app = RustClientFixtures::Haveapi.build(documentation_examples: #{documentation_examples})
+        client = Rack::MockRequest.new(app)
+        username, password = #{documentation_examples} ? ['user', 'secret'] : ['admin', 'pass']
+        headers = { 'HTTP_HOST' => '127.0.0.1', 'HTTP_ACCEPT' => 'application/json', 'CONTENT_TYPE' => 'application/json' }
+        basic = 'Basic ' + Base64.strict_encode64([username, password].join(':'))
+        response = client.get('/v1.0/projects', headers.merge('HTTP_AUTHORIZATION' => basic))
+        raise "Basic fixture authentication failed: \#{response.status}" unless response.status == 200
+        wrong = client.get('/v1.0/projects', headers.merge('HTTP_AUTHORIZATION' => 'Basic ' + Base64.strict_encode64('user:wrong')))
+        raise 'Invalid credentials accepted' unless wrong.status == 401
+        body = JSON.generate(token: { user: username, password: password, lifetime: 'fixed' })
+        discovery = JSON.parse(client.options('/v1.0/', headers).body).fetch('response')
+        token_resource = discovery.fetch('authentication').fetch('token').fetch('resources').values.first
+        request_action = token_resource.fetch('actions').find { |name, _action| name.casecmp?('request') }.last
+        response = client.post(request_action.fetch('path'), headers.merge(input: body))
+        raise "Token request failed: \#{response.status}" unless response.status == 200
+        token = JSON.parse(response.body).fetch('response').fetch('token').fetch('token')
+        expected = #{documentation_examples} ? 'example-token' : 'token-admin'
+        raise 'Unexpected issued token' unless token == expected
+        response = client.get('/v1.0/projects', headers.merge('HTTP_X_HAVEAPI_AUTH_TOKEN' => token))
+        raise 'Issued token rejected' unless response.status == 200
+        oauth = #{documentation_examples} ? 'example-access-token' : 'oauth-user'
+        response = client.get('/v1.0/projects', headers.merge('HTTP_X_HAVEAPI_OAUTH2_TOKEN' => oauth))
+        raise 'OAuth fixture token rejected' unless response.status == 200
+        rejected = client.get('/v1.0/projects', headers.merge('HTTP_X_HAVEAPI_OAUTH2_TOKEN' => 'arbitrary'))
+        raise 'Arbitrary OAuth token accepted' unless rejected.status == 401
+      RUBY
+      output, errors, status = Bundler.with_unbundled_env do
+        Open3.capture3({ 'GEM_HOME' => RustClientIntegration::SERVER_GEM_HOME, 'GEM_PATH' => nil,
+                         'BUNDLE_GEMFILE' => RustClientIntegration::SERVER_GEMFILE, 'BUNDLE_FROZEN' => 'true' },
+                       'bundle', 'exec', RbConfig.ruby, '-e', script)
+      end
+      expect(status.success?).to be(true), "Fixture contract failed: #{output}#{errors}"
+    end
+  end
 end

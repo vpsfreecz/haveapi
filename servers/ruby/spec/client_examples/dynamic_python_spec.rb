@@ -15,15 +15,28 @@ RSpec.describe HaveAPI::ClientExamples::PythonClient do
 
   it 'renders complete parseable init, auth, action and async ownership' do
     renderers.each do |renderer|
-      results = [renderer.render(:init, context: dynamic_context), renderer.render(:example, context: dynamic_context)]
+      context = dynamic_context(detail: :thorough)
+      results = [renderer.render(:init, context:), renderer.render(:example, context:)]
       %i[basic token oauth2].each do |method|
-        results << renderer.render(:auth, context: dynamic_context, auth_method: method, auth_description: token_description)
+        results << renderer.render(:auth, context:, auth_method: method, auth_description: token_description)
       end
       results.each do |result|
         expect(result[:status]).to eq(:code), result.inspect
         expect(result).to be_frozen
-        output, status = Open3.capture2e('python', '-c', 'import ast, sys; ast.parse(sys.stdin.read())', stdin_data: result[:code])
+        output, status = Open3.capture2e('python', '-c',
+                                         'import ast, json, sys; print(json.dumps([type(node).__name__ for node in ast.parse(sys.stdin.read()).body]))',
+                                         stdin_data: result[:code])
         expect(status).to be_success, output
+        statements = JSON.parse(output)
+        expect(result[:code]).not_to include('__main__')
+        if renderer.id == 'python-async'
+          expect(statements.count('AsyncFunctionDef')).to eq(1)
+          expect(statements.last).to eq('Expr')
+          expect(result[:code]).to include("\nasyncio.run(main())\n")
+        else
+          expect(statements).to include('Try')
+          expect(statements).not_to include('FunctionDef', 'AsyncFunctionDef')
+        end
         expect(result[:code]).to include('https://api.example.test/mount/', 'version="2"')
         expect(result[:code]).to include('except ActionError', 'except HaveAPIError')
       end
@@ -36,13 +49,39 @@ RSpec.describe HaveAPI::ClientExamples::PythonClient do
       expect(source).to include('.resources["constructor"].resources["resources"].actions[',
                                 'path_params={"parent_id": 7, "widget_id": "name/with space"}',
                                 '"enabled": False', '"count": 0', '"nullable": None', '"__proto__":',
-                                'print(response.data)', 'print(response.meta)')
+                                'print(response.data)')
       if renderer.id == 'python-async'
-        expect(source).to include('async with AsyncClient', 'response = await ', 'asyncio.run(main())')
+        expect(source).to include('response = await ', 'async function')
       else
-        expect(source).to include('with Client')
+        expect(source).to include('response = api.resources')
         expect(source).not_to include('await ')
       end
+    end
+  end
+
+  it 'keeps simple setup and authentication parseable with only the imports they use' do
+    renderers.each do |renderer|
+      init = renderer.render(:init, context: dynamic_context).fetch(:code)
+      sources = [init]
+      %i[basic token oauth2].each do |method|
+        sources << renderer.render(:auth, context: dynamic_context, auth_method: method, auth_description: token_description).fetch(:code)
+      end
+      sources.each do |source|
+        output, status = Open3.capture2e('python', '-c', 'import ast, sys; ast.parse(sys.stdin.read())', stdin_data: source)
+        expect(status).to be_success, output
+        expect(source).not_to include('__main__', 'except ', 'ActionError', 'HaveAPIError', 'print("Authenticated")')
+        if renderer.id == 'python-async'
+          expect(source).to include('async def main()', "\nasyncio.run(main())\n")
+        else
+          expect(source).not_to include('def main', 'asyncio')
+        end
+      end
+      expect(init).not_to include('import os', 'import json')
+      basic = sources[1]
+      expect(basic).to include('BasicAuth("user", "secret")')
+      expect(basic).not_to include('import json')
+      expect(sources[2]).to include('begin_token_login', 'continuations', 'step.next_action')
+      expect(sources.join).not_to include('import os', 'import json', 'os.environ')
     end
   end
 
@@ -69,7 +108,7 @@ RSpec.describe HaveAPI::ClientExamples::PythonClient do
   it 'uses real token challenge APIs and advertised login fields without printing credentials' do
     renderers.each do |renderer|
       source = renderer.render(:auth, context: dynamic_context, auth_method: :token, auth_description: token_description).fetch(:code)
-      expect(source).to include('begin_token_login', 'step.input', 'step.submit(values)', 'HAVEAPI_AUTH_login-name')
+      expect(source).to include('begin_token_login', 'step.input', 'step.submit(values)', '"login-name": "login-name"')
       expect(source).not_to include('print(step.token)', 'qwertyuiop')
     end
   end
@@ -81,15 +120,14 @@ RSpec.describe HaveAPI::ClientExamples::PythonClient do
     parameters[:interval] = { type: 'Integer', required: false }
     renderers.each do |renderer|
       source = renderer.render(:auth, context: dynamic_context, auth_method: :token, auth_description: description).fetch(:code)
-      expect(source).to include('"lifetime": json.loads(os.environ["HAVEAPI_AUTH_lifetime"])')
+      expect(source).to include('"lifetime": "fixed"')
       expect(source).not_to include('HAVEAPI_AUTH_interval', 'HAVEAPI_CHALLENGE_token', 'renewable_auto')
-      expect(source).to include('if "HAVEAPI_TOKEN" in os.environ:', 'set_auth(TokenAuth(os.environ["HAVEAPI_TOKEN"]))',
-                                'for name in step.input if name != "token"', 'step.submit(values)')
+      expect(source).to include('step.next_action', 'step.submit(values)', 'name not in values')
     end
     parameters[:interval][:required] = true
     renderers.each do |renderer|
       source = renderer.render(:auth, context: dynamic_context, auth_method: :token, auth_description: description).fetch(:code)
-      expect(source).to include('"interval": json.loads(os.environ["HAVEAPI_AUTH_interval"])')
+      expect(source).to include('"interval": 1')
     end
   end
 

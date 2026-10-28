@@ -1,49 +1,60 @@
-<h1>Authentication</h1>
-<p class="authentication">
-  <% if current_user %>
-      Logged as <%= escape_html(current_user.login) %> [<a class="logout" href="<%= escape_html(logout_url) %>">logout</a>]
-  <% elsif @help[:authentication].any? %>
-      <a class="login btn btn-default" href="<%= escape_html(url("#{root}_login")) %>">Login</a>
-  <% else %>
-      Authentication disabled.
+<%= erb :'version_sidebar/brand', locals: {account: documentation_account_context} %>
+<% if (search_options = documentation_search_form_options(id: 'docs-search-sidebar')) %>
+  <%= erb :'documentation/search_form', locals: search_options %>
+<% end %>
+<nav aria-label="Documentation pages">
+  <ul>
+    <li><a href="<%= escape_html(documentation_url) %>"<% if @documentation_page == 'overview' %> aria-current="page"<% end %>>Overview</a></li>
+    <li>
+      <a href="<%= escape_html(documentation_url(page: 'authentication')) %>"<% if @documentation_page == 'authentication' %> aria-current="page"<% end %>>Authentication</a>
+      <% if @documentation_page == 'authentication' %>
+        <nav aria-label="Authentication methods" data-action-nav><%= erb :'version_sidebar/auth_nav', locals: {methods: @help[:authentication]} %></nav>
+      <% end %>
+    </li>
+    <li><a href="<%= escape_html(documentation_url(page: 'resources')) %>"<% if @documentation_page == 'resources' %> aria-current="page"<% end %> data-resource-directory-link>Resources</a></li>
+  </ul>
+</nav>
+<% if @documentation_resource %>
+  <p data-current-resource><a href="<%= escape_html(documentation_url(resource: @documentation_resource[:key])) %>"><strong><%= escape_html(@documentation_resource[:key]) %></strong></a></p>
+  <nav aria-label="Actions on this resource" data-action-nav>
+    <h2>Actions</h2>
+    <ul class="docs-action-list">
+      <% sort_hash(@documentation_resource[:info][:actions]).each do |action, info| %>
+        <% target = documentation_resource_target(resource_path: @documentation_resource[:path], action_name: action) %>
+        <li data-doc-nav-owner="<%= escape_html(target) %>">
+          <a data-doc-primary href="#<%= escape_html(target) %>"><%= escape_html(action.to_s.humanize) %></a>
+          <ul data-doc-subnav="<%= escape_html(target) %>">
+            <% documentation_action_sections(info, resource_path: @documentation_resource[:path], action_name: action).each do |section| %>
+              <li><a data-doc-subsection href="#<%= escape_html(section[:id]) %>"><%= escape_html(section[:label]) %></a></li>
+            <% end %>
+          </ul>
+        </li>
+      <% end %>
+    </ul>
+  </nav>
+  <% unless @documentation_resource[:info][:resources].empty? %>
+    <nav aria-label="Subresources">
+      <h2>Subresources</h2>
+      <ul>
+        <% sort_hash(@documentation_resource[:info][:resources]).each do |child, _child_info| %>
+          <% child_path = @documentation_resource[:path] + [child.to_s] %>
+          <li><a href="<%= escape_html(documentation_url(resource: child_path)) %>"><%= escape_html(child_path.join('.')) %></a></li>
+        <% end %>
+      </ul>
+    </nav>
   <% end %>
-</p>
-<p>
-  <% if current_user %>
-      Listing only accessible resources, actions and parameters.
-  <% else %>
-      Listing all resources, actions and parameters.
-  <% end %>
-</p>
-
-<h1>Contents</h1>
-<ul class="top-level">
-  <li><a href="#api">API v<%= @v %></a></li>
-  <li>
-    <a href="#auth">Authentication</a>
-    <%= erb :"version_sidebar/auth_nav", locals: {methods: @help[:authentication]} %>
-  </li>
-  <li><a href="#resources">Resources</a></li>
-    <% sort_hash(@help[:resources]).each do |resource, info| %>
-      <%=
-        erb :"version_sidebar/resource_nav", locals: {
-          resource: resource,
-          info: info,
-          prefix: 'root',
-        }
-      %>
-  <% end %>
-</ul>
-
-<h1>Browser</h1>
-<p>
-  Browse this API with <a href="https://github.com/vpsfreecz/haveapi-webui">haveapi-webui</a>:
-</p>
-<p>
-  <a
-    href="https://webui.haveapi.org/v<%= version %>/#<%= urlescape(base_url) %>"
-    class="btn btn-default"
-    target="_blank">
-    Connect
-  </a>
-</p>
+<% end %>
+<div class="docs-preferences">
+  <label>Language <select data-language-select>
+    <% documentation_client_metadata.uniq { |client| client[:language] }.each do |client| %>
+      <option value="<%= escape_html(client[:language]) %>"><%= escape_html(client[:language_label]) %></option>
+    <% end %>
+  </select></label>
+  <label data-variant-control>Client <select data-variant-select>
+    <% documentation_clients.each do |client| %>
+      <option value="<%= escape_html(client.id) %>"><%= escape_html(client.variant || client.language_label) %></option>
+    <% end %>
+  </select></label>
+  <label data-detail-control>Examples <select data-detail-select><option value="simple">Simple</option><option value="thorough">With error handling</option></select></label>
+  <p data-preference-status role="status"></p>
+</div>

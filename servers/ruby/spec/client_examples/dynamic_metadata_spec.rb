@@ -49,4 +49,73 @@ RSpec.describe HaveAPI::ClientExamples::DynamicHelpers do
       expect(renderer.render(:example, context:)[:status]).to eq(:code)
     end
   end
+
+  it 'uses only public typed literals and advertised finite machine choices for token inputs' do
+    description = token_description
+    fields = description[:resources][:token][:actions]['request'][:input][:parameters]
+    fields[:user] = { type: 'String', required: true, default: 'PRIVATE_USER' }
+    fields[:password][:default] = 'PRIVATE_PASSWORD'
+    fields[:count] = { type: 'Integer', required: true, default: 99 }
+    fields[:enabled] = { type: 'Boolean', required: true, validators: { accept: { value: true, message: 'PRIVATE_PROSE' } } }
+    fields[:scope] = { type: 'String', required: true, validators: { include: { values: { 'all' => 'PRIVATE_LABEL' } } } }
+    fields[:resource] = { type: 'Resource', required: true }
+    fields[:timestamp] = { type: 'Datetime', required: true }
+    fields[:custom] = { type: 'Custom', required: true }
+    fields[:interval] = { type: 'Integer', required: true }
+    before = Marshal.dump(description)
+    renderers.each do |renderer|
+      result = renderer.render(:auth, context: dynamic_context, auth_method: :token, auth_description: description)
+      expect(result[:status]).to eq(:code), result.inspect
+      expect(result[:code]).to include('secret', 'user', 'fixed', 'all', '2026-01-01T00:00:00Z')
+      expect(result[:code]).not_to include('PRIVATE_', 'os.environ', 'credential(', 'HAVEAPI_', 'node:process')
+    end
+    expect(Marshal.dump(description)).to eq(before)
+    helper = HaveAPI::ClientExamples::JsClient.new('api.test', 'https://api.test/', '2')
+    inputs = helper.send(:auth_token_credentials, description)
+    expect(inputs).to include('user' => 'user', 'password' => 'secret', 'count' => 1, 'enabled' => true,
+                              'scope' => 'all', 'resource' => 1, 'custom' => {}, 'interval' => 1, 'lifetime' => 'fixed')
+  end
+
+  it 'limits unsupported required types and input shapes instead of guessing defaults or dropping fields' do
+    descriptions = []
+    description = token_description
+    description[:resources][:token][:actions]['request'][:input][:parameters][:hidden] = {
+      type: 'Unsupported', required: true, default: 'PRIVATE_DEFAULT'
+    }
+    descriptions << description
+    description = token_description
+    description[:resources][:token][:actions]['verify'][:input][:parameters][:hidden] = {
+      type: 'Unsupported', required: true, default: 'PRIVATE_DEFAULT'
+    }
+    descriptions << description
+    description = token_description
+    description[:resources][:token][:actions]['request'][:input][:layout] = :object_list
+    descriptions << description
+    renderers.each do |renderer|
+      descriptions.each do |desc|
+        result = renderer.render(:auth, context: dynamic_context, auth_method: :token, auth_description: desc)
+        expect(result).to include(status: :limitation)
+        expect(result.inspect).not_to include('PRIVATE_DEFAULT')
+      end
+    end
+  end
+
+  it 'uses actual continuation action arguments and rejects unknown continuation or input names' do
+    renderer = HaveAPI::ClientExamples::JsClient.new('api.test', 'https://api.test/', '2')
+    options = renderer.token_login_options(token_description)
+    script = <<~JS
+      const assert = require('node:assert/strict');
+      const options = #{options};
+      assert.deepEqual(options.callback('verify', {code: {}}), {code: 'code'});
+      assert.throws(() => options.callback('missing', {code: {}}), /Unknown authentication continuation/);
+      assert.throws(() => options.callback('verify', {unexpected: {}}), /Unknown authentication input/);
+    JS
+    output, status = Open3.capture2e('node', '-e', script)
+    expect(status).to be_success, output
+    renderers.grep(Class).each do |client|
+      source = client.render(:auth, context: dynamic_context, auth_method: :token, auth_description: token_description).fetch(:code)
+      expect(source).not_to include('os.environ', 'HAVEAPI_', 'step.action')
+      expect(source).to include(client.code == :python ? 'step.next_action' : '(action, parameters)')
+    end
+  end
 end

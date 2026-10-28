@@ -49,12 +49,20 @@ module RustDocumentationAcceptance
       variants = { 'init' => source(renderer, :init, context) }
       variants.merge!(profile_initializations(renderer, context, snapshot:, config:))
       index = nil
-      RustDocumentationCases.cases.each do |entry|
-        current = RustDocumentationCases.context_for(context, entry)
+      %i[simple thorough].product(RustDocumentationCases.cases).each do |detail, entry|
+        current = RustDocumentationCases.context_for(context.with(detail:), entry)
         rendered = source(renderer, :example, current)
+        index = "#{rendered}#{entry.fetch(:assertion)}\n" if detail == :simple && entry.fetch(:name) == 'index'
+        if detail == :simple
+          provider = if current.action['auth'] != false
+                       %w[basic token oauth2].find { |name| current.description.fetch('authentication').has_key?(name) }
+                     end
+          setup = source(renderer, provider ? :auth : :init, current, auth_method: provider,
+                                                                      auth_description: current.description.fetch('authentication')[provider])
+          rendered = RustDocumentationCases.compose_fragment(setup, rendered)
+        end
         checked = RustDocumentationCases.assert_output(rendered, entry[:assertion])
-        variants[entry.fetch(:name)] = checked
-        index = checked if entry.fetch(:name) == 'index'
+        variants["#{detail}_#{entry.fetch(:name)}"] = checked
       end
       %w[basic token oauth2].each do |provider|
         auth = source(renderer, :auth, context, auth_method: provider.to_sym,
@@ -140,7 +148,7 @@ module RustDocumentationAcceptance
         root = File.join(temporary, mount == '/' ? 'root' : 'mounted-api')
         FileUtils.mkdir_p(root)
         destination = evidence_directory(evidence, mount)
-        RustClientIntegration.with_server(mount) do |base_url|
+        RustClientIntegration.with_server(mount, documentation_examples: true) do |base_url|
           snapshot = HaveAPI::RustClient::Snapshot.fetch(url: "#{base_url}v1.0/", api_version: '1.0', profile: 'documentation-fixture')
           config = {
             'crate_name' => 'haveapi-documentation-fixture', 'crate_version' => '0.1.0', 'license' => 'MIT',
@@ -160,18 +168,18 @@ module RustDocumentationAcceptance
             :rust, config.fetch('crate_name'), nil, adapter
           ).freeze
           context = HaveAPI::ClientExample::Context.new(
+            detail: :thorough,
             version: '1.0', host: '127.0.0.1', base_url:, version_url: "#{base_url}v1.0/",
             description: snapshot.fetch('description'), profile:
           )
           names = write_examples(root, context, snapshot:, config:)
-          env = { 'HAVEAPI_BASE_URL' => base_url, 'HAVEAPI_USER' => 'admin', 'HAVEAPI_PASSWORD' => 'pass',
-                  'HAVEAPI_TOKEN' => 'oauth-user' }
+          env = {}
           # Obtain the deterministic existing token through the real fixture's
           # API, rather than seeding private server state or using real secrets.
           token_snapshot = snapshot.fetch('description').fetch('authentication').fetch('token')
           token_resource = token_snapshot.fetch('resources').values.first
           token_action = token_resource.fetch('actions').find { |name, _value| name.casecmp?('request') }.last
-          request = { token_action.fetch('input').fetch('namespace') => { user: 'admin', password: 'pass', lifetime: 'fixed' } }
+          request = { token_action.fetch('input').fetch('namespace') => { user: 'user', password: 'secret', lifetime: 'fixed' } }
           response = Net::HTTP.post(URI("#{base_url.delete_suffix(mount)}#{token_action.fetch('path')}"),
                                     JSON.generate(request),
                                     'Content-Type' => 'application/json')
@@ -179,12 +187,14 @@ module RustDocumentationAcceptance
           raise 'Fixture token acquisition failed' unless envelope['status'] == true
 
           token = envelope.fetch('response').fetch(token_action.fetch('output').fetch('namespace')).fetch('token')
+          raise 'Fixture did not issue the documented token literal' unless token == 'example-token'
+
           command!('cargo', 'generate-lockfile', '--manifest-path', File.join(root, 'Cargo.toml'))
           [['cargo', {}], [msrv_cargo, { 'RUSTC' => rustc }]].each do |cargo, compiler_env|
             command!(cargo, 'check', '--locked', '--manifest-path', File.join(root, 'Cargo.toml'), '--all-features', '--examples',
                      env: compiler_env)
             names.each do |name|
-              selected_env = env.merge('HAVEAPI_TOKEN' => name.end_with?('auth_token') ? token : 'oauth-user').merge(compiler_env)
+              selected_env = env.merge(compiler_env)
               command!(cargo, 'run', '--locked', '--quiet', '--manifest-path', File.join(root, 'Cargo.toml'),
                        '--all-features', '--example', name, env: selected_env)
             end

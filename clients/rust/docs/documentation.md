@@ -110,8 +110,15 @@ Their internal structural URL is not an SDK provenance source or emitted request
 URL. Requests use the real server context. Actual SDK generation still requires
 its full versioned packaging configuration; these factories do not relax it.
 
-Both variants show a complete program and Cargo dependency comments. Async
-programs use Tokio and `.send().await?`. Blocking programs enable the SDK's
+Simple action examples assume that initialization and authentication have
+established `api`. They show the actual call and sample output. Async fragments
+belong in an async function returning `Result<(), Box<dyn std::error::Error>>`;
+blocking fragments use a synchronous function with that return type, outside
+async runtime threads. The `?` operator propagates request and conversion errors.
+Both detail levels share sample validation and limitations.
+
+**With error handling** shows a complete program and Cargo dependency comments.
+Async programs use Tokio and `.send().await?`. Blocking programs enable the SDK's
 `blocking` feature and construct, use and drop the client in a synchronous
 `main`, outside async runtime threads. `HAVEAPI_BASE_URL` can override the shown
 mounted root. Authenticated actions use advertised existing credentials from
@@ -149,13 +156,15 @@ authentication rendering separately. These lanes do not generate or compile an
 SDK. Compare the same fixture, runtime, dependency inputs and output digests
 against both implementation revisions before claiming a measured improvement.
 
-The acceptance runner extracts actual `RustAsyncClient.render` and
-`RustBlockingClient.render` source. It generates a matching temporary fixture
+The context must expose `detail` as `:simple` or `:thorough`. The acceptance runner
+extracts actual `RustAsyncClient.render` and `RustBlockingClient.render` source.
+It generates a matching temporary fixture
 SDK, compiles the emitted imports, paths, methods and types, and executes the
-programs against the existing disposable HaveAPI fixture at `/` and
-`/mounted/api/`. It adds output assertions without replacing emitted requests.
-Authentication checks compose the emitted authentication builder with the
-emitted action body. It tests both modes with the development compiler and
+programs for both detail levels against the existing disposable HaveAPI fixture
+at `/` and `/mounted/api/`. It adds output assertions without replacing emitted
+requests. Simple fragments use separately rendered setup. Authentication checks
+compose the emitted authentication builder with the emitted action body.
+It tests both modes with the development compiler and
 Rust 1.95, including zero/false/empty/null/omitted inputs, nested Custom, lists,
 nested resources, failure branches, metadata, existing credentials and an
 action-state reference. The fixture uses local test credentials and in-memory

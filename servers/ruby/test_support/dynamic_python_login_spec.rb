@@ -13,6 +13,7 @@ RSpec.describe HaveAPI::ClientExamples::PythonClient do
       response = request.options('http://example.test/mount/v2/')
       expect(response.status).to eq(200), response.body
       envelope = JSON.parse(response.body)
+      expect(envelope.fetch('status')).to be(true), envelope.inspect
       description = envelope.fetch('response')
       context = dynamic_context(description:)
       rendered = renderer.render(:auth, context:, auth_method: :token, auth_description: description.fetch('authentication').fetch('token'))
@@ -21,7 +22,6 @@ RSpec.describe HaveAPI::ClientExamples::PythonClient do
         import ast
         import json
         import sys
-        from types import SimpleNamespace
         from haveapi_client._protocol import CallContext, build_request, parse_description, parse_resources
         from haveapi_client.exceptions import ValidationError
 
@@ -30,15 +30,7 @@ RSpec.describe HaveAPI::ClientExamples::PythonClient do
         calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call)
                  and isinstance(node.func, ast.Attribute) and node.func.attr == "begin_token_login"]
         assert len(calls) == 1
-        environment = {
-            "HAVEAPI_AUTH_user": json.dumps("fixture-user"),
-            "HAVEAPI_AUTH_password": json.dumps("fixture-password"),
-            "HAVEAPI_AUTH_scope": json.dumps("all"),
-            "HAVEAPI_AUTH_lifetime": json.dumps("fixed"),
-        }
-        expression = ast.Expression(body=calls[0].args[0])
-        params = eval(compile(expression, "<rendered-login-input>", "eval"),
-                      {"json": json, "os": SimpleNamespace(environ=environment)})
+        params = ast.literal_eval(calls[0].args[0])
         description = parse_description(fixture["envelope"])
         action = parse_resources(description.authentication["token"]["resources"])["token"].actions["request"]
         assert action.input.parameters["lifetime"].required
@@ -65,7 +57,7 @@ RSpec.describe HaveAPI::ClientExamples::PythonClient do
       )
       expect(status).to be_success, output
       actual = JSON.parse(output)
-      expected = { 'user' => 'fixture-user', 'password' => 'fixture-password', 'scope' => 'all', 'lifetime' => 'fixed' }
+      expected = { 'user' => 'user', 'password' => 'secret', 'scope' => 'scope', 'lifetime' => 'fixed' }
       expect(actual.fetch('params')).to eq(expected)
       expect(actual.fetch('body')).to eq('token' => expected)
       expect(actual.fetch('url')).to eq('https://api.example.test/mount/_auth/token/tokens')

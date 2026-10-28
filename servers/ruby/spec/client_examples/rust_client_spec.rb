@@ -3,6 +3,8 @@ require 'haveapi/documentation_context'
 require 'haveapi/client_examples/rust_client'
 
 class RustDocumentationAdapterFixture
+  def detail_levels_for(kind:, context:, result:, mode:, auth_method: nil, auth_description: nil); end
+
   def render(kind:, context:, mode:, auth_method: nil, auth_description: nil); end
 end
 
@@ -61,7 +63,7 @@ describe HaveAPI::ClientExamples::RustClient do
   end
 
   it 'preserves a concise adapter limitation without fabricating source' do
-    result = { status: :limitation, reason: 'This sample needs an unsupported SDK capability.' }.freeze
+    result = { status: :limitation, reason: 'This sample needs an unsupported API client capability.' }.freeze
     allow(adapter).to receive(:render).and_return(result)
     expect(HaveAPI::ClientExamples::RustAsyncClient.render(:example, context:)).to eq(result)
   end
@@ -71,5 +73,37 @@ describe HaveAPI::ClientExamples::RustClient do
     expect(renderer.init).to include(status: :limitation)
     expect(renderer.auth(:basic, {})).to include(status: :limitation)
     expect(renderer.example({})).to include(status: :limitation)
+  end
+
+  it 'delegates each mode capability with the exact Simple result without rerendering or mutating context' do
+    description = { http_header: 'X-Token' }.freeze
+    [HaveAPI::ClientExamples::RustAsyncClient, HaveAPI::ClientExamples::RustBlockingClient].each do |renderer|
+      allow(adapter).to receive(:detail_levels_for).and_return(%i[simple thorough].freeze)
+      levels = renderer.detail_levels_for(:auth, context:, result: code,
+                                                 auth_method: :token, auth_description: description)
+      expect(levels).to eq(%i[simple thorough])
+      expect(levels).to be_frozen
+      expect(adapter).to have_received(:detail_levels_for).with(
+        kind: :auth, context:, result: code, mode: renderer.rust_mode,
+        auth_method: :token, auth_description: description
+      )
+    end
+    expect(adapter).not_to have_received(:render)
+    expect(context.detail).to eq(:simple)
+    expect(context.profile.adapter).to equal(adapter)
+  end
+
+  it 'delegates limitation policy and rejects malformed modern levels instead of falling back' do
+    renderer = HaveAPI::ClientExamples::RustAsyncClient
+    limitation = { status: :limitation, reason: 'Unsupported sample' }.freeze
+    allow(adapter).to receive(:detail_levels_for).and_return([:simple].freeze)
+    expect(renderer.detail_levels_for(:example, context:, result: limitation)).to eq([:simple])
+    expect(adapter).to have_received(:detail_levels_for).with(
+      kind: :example, context:, result: limitation, mode: :async, auth_method: nil, auth_description: nil
+    )
+    [nil, [], [:thorough], %i[thorough simple], %i[simple simple], ['simple']].each do |invalid|
+      allow(adapter).to receive(:detail_levels_for).and_return(invalid)
+      expect { renderer.detail_levels_for(:example, context:, result: code) }.to raise_error(ArgumentError)
+    end
   end
 end

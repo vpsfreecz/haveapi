@@ -117,21 +117,21 @@ describe HaveAPI::Authentication::Basic::Provider do
     expect(seen_users.last).to be_nil
   end
 
-  it 'returns an authentication error envelope from _login' do
+  it 'redirects the legacy documentation login without an authentication challenge' do
     get '/_login'
 
-    expect(last_response.status).to eq(401)
-    expect(last_response.headers['www-authenticate']).to include('Basic realm=')
-    expect(api_response).to be_failed
-    expect(api_response.message).to eq('This action requires authentication')
+    expect(last_response.status).to eq(303)
+    expect(last_response.headers['location']).to eq('/v1/')
+    expect(last_response.headers['www-authenticate']).to be_nil
+    expect(seen_users).to be_empty
   end
 
-  it 'returns an authentication error envelope from _logout' do
+  it 'redirects the legacy documentation logout without an authentication challenge' do
     get '/_logout'
 
-    expect(last_response.status).to eq(401)
-    expect(last_response.headers['www-authenticate']).to include('Basic realm=')
-    expect(api_response).to be_failed
-    expect(api_response.message).to eq('This action requires authentication')
+    expect(last_response.status).to eq(303)
+    expect(last_response.headers['location']).to eq('/v1/')
+    expect(last_response.headers['www-authenticate']).to be_nil
+    expect(seen_users).to be_empty
   end
 end

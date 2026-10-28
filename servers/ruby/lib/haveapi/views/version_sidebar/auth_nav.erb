@@ -1,20 +1,16 @@
-<ul>
+<ul class="docs-authentication-submenu">
   <% methods.each do |method, info| %>
-    <li>
-      <a href="#auth-<%= method %>"><%= method.to_s.humanize %></a>
-      <% if info[:resources] %>
-        <ul>
-          <% sort_hash(info[:resources]).each do |resource, info| %>
-            <%=
-              erb :"version_sidebar/resource_nav", locals: {
-                resource: resource.to_s,
-                info: info,
-                prefix: "auth-#{method}",
-              }
-            %>
-          <% end %>
-        </ul>
-      <% end %>
+    <% target = "auth-#{method}" %>
+    <li data-doc-nav-owner="<%= escape_html(target) %>">
+      <a data-doc-primary href="#<%= escape_html(target) %>"><%= escape_html(method.to_s.humanize) %></a>
+      <ul data-doc-subnav="<%= escape_html(target) %>">
+        <% unless (info[:resources] || {}).empty? %>
+          <li><a data-doc-subsection href="#<%= escape_html(documentation_reference_anchor(authentication: method, section: :resources)) %>">Resources</a>
+            <%= erb :'version_sidebar/auth_resource_nav', locals: {resources: info[:resources], path: [], authentication_provider: method} %>
+          </li>
+        <% end %>
+        <li><a data-doc-subsection href="#<%= escape_html(documentation_reference_anchor(authentication: method, section: :examples)) %>">Examples</a></li>
+      </ul>
     </li>
   <% end %>
 </ul>

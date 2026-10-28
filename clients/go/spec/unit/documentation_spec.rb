@@ -7,12 +7,94 @@ RSpec.describe HaveAPI::GoClient::Documentation do
   let(:action) { description.dig(:resources, :client, :resources, :child, :actions, :client) }
   let(:sample) { GoDocumentationFixture.sample }
   let(:context) do
-    Struct.new(:version, :base_url, :description, :resource_path, :action_name, :action, :sample).new(version: '7', base_url: 'https://api.example.test/mounted/', description:,
-                                                                                                      resource_path: %w[client child], action_name: 'client', action:, sample:)
+    Struct.new(:version, :base_url, :description, :resource_path, :action_name, :action, :sample, :detail).new(detail: :thorough, version: '7', base_url: 'https://api.example.test/mounted/', description:,
+                                                                                                               resource_path: %w[client child], action_name: 'client', action:, sample:)
   end
 
   def render
     adapter.render(kind: :example, context:, mode: :sync)
+  end
+
+  it 'renders a simple action with exact inputs, required error checks and no repeated setup' do
+    context.detail = :simple
+    source = render.fetch(:code)
+    expect(source).to start_with('invocation := api.Client.Child.ClientAction.Prepare()')
+    expect(source).to include('input.SetNameNil(true)', 'input.SetEnabled(false)', 'input.SetCount(0)',
+                              'response, err := invocation.Call()', 'if err != nil {', 'if !response.Status {', 'response.Output.Id')
+    expect(source).not_to include('package main', 'func main', 'client.New(', 'os.Getenv', 'NewMetaInput', 'SetUnused')
+    context.detail = :thorough
+    expect(render.fetch(:code)).to include('package main', 'client.New(', 'NewMetaInput')
+  end
+
+  it 'keeps simple and thorough limitations identical and does not change the sample' do
+    sample[:request][:count] = 'invalid'
+    before = Marshal.dump(sample)
+    results = %i[simple thorough].map do |detail|
+      context.detail = detail
+      render
+    end
+    expect(results.first).to include(status: :limitation)
+    expect(results.last).to eq(results.first)
+    expect(Marshal.dump(sample)).to eq(before)
+  end
+
+  it 'keeps a simple blocking call explicit without polling the operation automatically' do
+    action[:blocking] = true
+    context.detail = :simple
+    source = render.fetch(:code)
+    expect(source).to include('invocation.Call()', 'Request success does not establish operation completion.')
+    expect(source).not_to include('OperationStatus', 'IsBlocking')
+  end
+
+  def details_for(kind: :example, result: nil)
+    context.detail = :simple
+    result ||= adapter.render(kind:, context:, mode: :sync, auth_method: :basic, auth_description: {})
+    adapter.detail_levels_for(kind:, context:, result:, mode: :sync, auth_method: :basic, auth_description: {})
+  end
+
+  it 'offers only Simple for setup, ordinary calls, failures and limitations without rendering again' do
+    results = %i[init auth example].to_h do |kind|
+      context.detail = :simple
+      [kind, adapter.render(kind:, context:, mode: :sync, auth_method: :basic, auth_description: {})]
+    end
+    sample[:status] = false
+    results[:failure] = render
+    sample[:request][:count] = 'invalid'
+    results[:limitation] = render
+    calls = []
+    observer = TracePoint.new(:call) do |event|
+      calls << event.method_id if event.self.equal?(adapter) && event.method_id == :render
+    end
+    observer.enable do
+      results.each do |kind, result|
+        levels = details_for(kind: %i[init auth].include?(kind) ? kind : :example, result:)
+        expect(levels).to eq([:simple])
+        expect(levels).to be_frozen
+      end
+    end
+    expect(calls).to be_empty
+  end
+
+  it 'offers both details only for successful visible blocking operation status handling' do
+    action[:blocking] = true
+    action[:meta][:global][:output] = GoDocumentationFixture.io({ action_state_id: { type: 'Integer' } }, namespace: false)
+    context.detail = :simple
+    simple = render
+    expect(simple[:code]).not_to include('OperationStatus', 'IsBlocking')
+    context.detail = :thorough
+    expect(render[:code]).to include('response.IsBlocking()', 'response.OperationStatus()', 'if !state.Status', 'state.Message, state.Errors')
+    levels = details_for(result: simple)
+    expect(levels).to eq(%i[simple thorough])
+    expect(levels).to be_frozen
+    sample[:status] = false
+    expect(details_for).to eq([:simple])
+    sample[:status] = true
+    context.description = Marshal.load(Marshal.dump(description))
+    context.description[:resources].delete(:action_state)
+    expect(details_for).to eq([:simple])
+    context.description = Marshal.load(Marshal.dump(description))
+    context.description.dig(:resources, :client, :resources, :child, :actions, :client, :meta, :global, :output, :parameters).clear
+    expect(details_for).to eq([:simple])
   end
 
   it 'leaves an omitted module version unresolved and prints the Go latest selector' do
@@ -35,7 +117,7 @@ RSpec.describe HaveAPI::GoClient::Documentation do
   it 'still rejects hostile imports when the module version is omitted' do
     expect do
       described_class.new(description:, import_path: "example.test/sdk/client\npackage injected")
-    end.to raise_error(ArgumentError, 'invalid Go SDK import path or module version')
+    end.to raise_error(ArgumentError, 'invalid Go API client import path or module version')
   end
 
   it 'retains explicit version selectors and copies configuration strings' do
@@ -51,7 +133,7 @@ RSpec.describe HaveAPI::GoClient::Documentation do
     it "rejects a supplied invalid module version #{invalid.inspect}" do
       expect do
         described_class.new(description:, import_path: 'example.test/sdk/client', module_version: invalid)
-      end.to raise_error(ArgumentError, 'invalid Go SDK import path or module version')
+      end.to raise_error(ArgumentError, 'invalid Go API client import path or module version')
     end
   end
 
@@ -136,6 +218,46 @@ RSpec.describe HaveAPI::GoClient::Documentation do
     expect(render).to include(status: :limitation, reason: /scalar null/)
   end
 
+  it 'identifies only the supplied missing output field and keeps both detail limitations immutable' do
+    sample[:response] = { missing: 'PRIVATE_SAMPLE_VALUE' }
+    before = Marshal.dump([description, sample])
+    results = %i[simple thorough].map do |detail|
+      context.detail = detail
+      render
+    end
+    expect(results.first).to eq(status: :limitation, reason: 'API example field response.missing is not declared in the Go API client schema.')
+    expect(results.last).to eq(results.first)
+    expect(results.first).to be_frozen
+    expect(results.first[:reason]).to be_frozen
+    expect(results.first.to_s).not_to include('PRIVATE_SAMPLE_VALUE', 'hidden', 'secret', 'unused')
+    expect(Marshal.dump([description, sample])).to eq(before)
+  end
+
+  it 'tracks list indices through nested visible association fields without naming private resources' do
+    action[:output][:layout] = 'hash_list'
+    action[:output][:parameters][:user] = { type: 'Resource', resource: ['owner'], value_id: 'id', value_label: 'label' }
+    owner = description[:resources][:owner][:actions][:show][:output][:parameters]
+    owner[:manager] = { type: 'Resource', resource: ['private_account'], value_id: 'id', value_label: 'login' }
+    description[:resources][:private_account] = { resources: {}, actions: {
+      show: GoDocumentationFixture.action(path: '/mounted/v7/accounts/{account_id}', method: 'GET',
+                                          output: GoDocumentationFixture.io({ id: { type: 'Integer' }, login: { type: 'String' } }))
+    } }
+    sample[:response] = [{ id: 1 }, { user: { manager: { name: 'PRIVATE_SAMPLE_VALUE' } } }]
+    result = render
+    expect(result).to eq(status: :limitation, reason: 'API example field response[1].user.manager.name is not declared in the Go API client schema.')
+    expect(result.to_s).not_to include('PRIVATE_SAMPLE_VALUE', 'private_account', 'login', 'label')
+  end
+
+  it 'quotes nonidentifier visible field names, including HTML-sensitive and escaped characters' do
+    action[:output][:layout] = 'hash_list'
+    action[:output][:parameters][:user] = { type: 'Resource', resource: ['owner'], value_id: 'id', value_label: 'label' }
+    sample[:response] = [{ user: { 'display-name<&"\\' => 'PRIVATE_SAMPLE_VALUE' } }]
+    result = render
+    expect(result).to eq(status: :limitation,
+                         reason: 'API example field response[0].user["display-name<&\"\\\\"] is not declared in the Go API client schema.')
+    expect(result.to_s).not_to include('PRIVATE_SAMPLE_VALUE')
+  end
+
   it 'renders transport errors and API failures separately without invented success output' do
     sample[:status] = false
     sample[:response] = nil
@@ -160,11 +282,11 @@ RSpec.describe HaveAPI::GoClient::Documentation do
 
   it 'only renders advertised authentication and uses environment placeholders' do
     basic = adapter.render(kind: :auth, context:, mode: :sync, auth_method: :basic, auth_description: {})
-    expect(basic[:code]).to include('api.SetBasicAuthentication(os.Getenv("HAVEAPI_USER"), os.Getenv("HAVEAPI_PASSWORD"))')
+    expect(basic[:code]).to include('api.SetBasicAuthentication("user", "secret")')
     oauth = adapter.render(kind: :auth, context:, mode: :sync, auth_method: :oauth2, auth_description: {})
-    expect(oauth[:code]).to include('api.SetExistingOAuth2Auth(os.Getenv("HAVEAPI_ACCESS_TOKEN"))')
+    expect(oauth[:code]).to include('api.SetExistingOAuth2Auth("example-access-token")')
     token = adapter.render(kind: :auth, context:, mode: :sync, auth_method: :token, auth_description: {})
-    expect(token[:code]).to include('api.SetExistingTokenAuth(os.Getenv("HAVEAPI_TOKEN"))')
+    expect(token[:code]).to include('api.SetExistingTokenAuth("example-token")')
     context.description = Marshal.load(Marshal.dump(description))
     context.description[:authentication].delete(:token)
     expect(adapter.render(kind: :auth, context:, mode: :sync, auth_method: :token, auth_description: {})).to include(status: :limitation)
@@ -181,7 +303,7 @@ RSpec.describe HaveAPI::GoClient::Documentation do
 
       result = adapter.render(kind: :auth, context:, mode: :sync, auth_method: :token, auth_description: {})
       expect(result[:status]).to eq(:code)
-      expect(result[:code]).to include('api.SetExistingTokenAuth(os.Getenv("HAVEAPI_TOKEN"))')
+      expect(result[:code]).to include('api.SetExistingTokenAuth("example-token")')
     end
   end
 
@@ -192,7 +314,7 @@ RSpec.describe HaveAPI::GoClient::Documentation do
       context.description[:authentication][:token][field] = 'other'
 
       expect(adapter.render(kind: :auth, context:, mode: :sync, auth_method: :token, auth_description: {})).to include(
-        status: :limitation, reason: 'This authentication method does not match the configured Go SDK.'
+        status: :limitation, reason: 'This authentication method does not match the configured Go API client.'
       )
     end
 
@@ -205,7 +327,7 @@ RSpec.describe HaveAPI::GoClient::Documentation do
           context.description[:authentication][:token][field] = visible
 
           expect(candidate.render(kind: :auth, context:, mode: :sync, auth_method: :token, auth_description: {})).to include(
-            status: :limitation, reason: 'This authentication method does not match the configured Go SDK.'
+            status: :limitation, reason: 'This authentication method does not match the configured Go API client.'
           )
         end
       end
@@ -222,7 +344,7 @@ RSpec.describe HaveAPI::GoClient::Documentation do
 
       result = adapter.render(kind: :auth, context:, mode: :sync, auth_method: :token,
                               auth_description: missing == :descriptor ? nil : {})
-      expect(result).to include(status: :limitation, reason: 'This authentication method is unavailable in the configured Go SDK.')
+      expect(result).to include(status: :limitation, reason: 'This authentication method is unavailable in the configured Go API client.')
     end
   end
 
@@ -236,7 +358,7 @@ RSpec.describe HaveAPI::GoClient::Documentation do
     expect(render[:code]).to include('does not establish operation completion')
   end
 
-  it 'uses the origin with mounted versioned SDK paths and rejects a changed mount' do
+  it 'uses the origin with mounted versioned API client paths and rejects a changed mount' do
     expect(render[:code]).to include('client.New("https://api.example.test")')
     expect(adapter.resolve(resource_path: %w[client child], action_name: 'client').action.path).to start_with('/mounted/v7/')
     adapter
@@ -269,7 +391,7 @@ RSpec.describe HaveAPI::GoClient::Documentation do
 
   it 'rejects malformed saved schemas at initialization' do
     description[:resources][:client][:resources][:child][:actions][:client][:path] = nil
-    expect { adapter }.to raise_error(ArgumentError, /saved Go SDK action/)
+    expect { adapter }.to raise_error(ArgumentError, /saved Go API client action/)
   end
 
   it 'checks Go field and method name collisions' do
@@ -285,7 +407,7 @@ RSpec.describe HaveAPI::GoClient::Documentation do
 
   %i[global object].each do |role|
     [true, false].each do |success|
-      it "limits #{role} metadata required in the saved SDK for status #{success}" do
+      it "limits #{role} metadata required in the saved API client for status #{success}" do
         action[:meta][role] = { input: GoDocumentationFixture.io({ hidden_requirement: { type: 'Boolean', required: true, default: 'private default' } }) }
         sample[:status] = success
         adapter
@@ -382,7 +504,7 @@ RSpec.describe HaveAPI::GoClient::Documentation do
         adapter
         action[:output][:parameters][:owner][key] = value
 
-        expect(render).to include(status: :limitation, reason: 'This response field does not match the configured Go SDK.')
+        expect(render).to include(status: :limitation, reason: 'This response field does not match the configured Go API client.')
       end
     end
   end

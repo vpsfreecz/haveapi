@@ -2,6 +2,7 @@ require 'spec_helper'
 
 class TypeScriptDocumentationAdapterFixture
   def render(kind:, context:, mode:, auth_method: nil, auth_description: nil); end
+  def detail_levels_for(kind:, context:, result:, mode:, auth_method: nil, auth_description: nil); end
 end
 
 describe HaveAPI::ClientExamples::TsGeneratedClient do
@@ -17,10 +18,22 @@ describe HaveAPI::ClientExamples::TsGeneratedClient do
 
   it 'adds a separate generated variant while preserving dynamic TypeScript identifiers' do
     expect(described_class.id).to eq('typescript-generated')
-    expect(described_class.label).to eq('TypeScript (generated)')
+    expect(described_class.label).to eq('TypeScript API client')
     expect(described_class.code).to eq(:typescript)
     expect(HaveAPI::ClientExamples::TsClient.id).to eq('typescript-callback')
     expect(HaveAPI::ClientExamples::TsAsyncClient.id).to eq('typescript-async')
+  end
+
+  it 'delegates meaningful-detail queries with the rendered result, authentication and native mode' do
+    result = { status: :code, code: 'API client' }.freeze
+    allow(adapter).to receive(:detail_levels_for).and_return([:simple].freeze)
+    expect(described_class.detail_levels_for(:auth, context:, result:, auth_method: :basic, auth_description: {})).to eq([:simple])
+    expect(adapter).to have_received(:detail_levels_for).with(kind: :auth, context:, result:, mode: :async,
+                                                              auth_method: :basic, auth_description: {})
+    allow(adapter).to receive(:detail_levels_for).and_return(%i[simple thorough].freeze)
+    expect(described_class.detail_levels_for(:example, context:, result:)).to eq(%i[simple thorough])
+    allow(adapter).to receive(:detail_levels_for).and_return(nil)
+    expect { described_class.detail_levels_for(:example, context:, result:) }.to raise_error(ArgumentError)
   end
 
   it 'is available only for a matching optional profile' do
@@ -42,7 +55,7 @@ describe HaveAPI::ClientExamples::TsGeneratedClient do
 
   it 'binds only the supplied authorized sample and preserves limitations' do
     sample = { request: { label: 'public' } }
-    result = { status: :limitation, reason: 'The saved SDK does not represent this sample.' }.freeze
+    result = { status: :limitation, reason: 'The saved API client does not represent this sample.' }.freeze
     allow(adapter).to receive(:render).and_return(result)
     renderer = described_class.new('example.test', 'https://example.test/', '1.0').with_context(context)
     expect(renderer.example(sample)).to eq(result)

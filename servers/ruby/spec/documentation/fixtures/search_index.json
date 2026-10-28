@@ -1,0 +1,476 @@
+{
+  "index": {
+    "format": 1,
+    "version": "1",
+    "base_path": "/api/v1/",
+    "locale": "cs",
+    "visibility": "anonymous",
+    "resources": [
+      {
+        "path": [
+          "bulk"
+        ],
+        "label": "Bulk",
+        "authentication": null,
+        "search": [
+          "bulk",
+          "Bulk",
+          "bulk",
+          "Bulk"
+        ]
+      },
+      {
+        "path": [
+          "mywidget"
+        ],
+        "label": "Mywidget",
+        "authentication": null,
+        "search": [
+          "mywidget",
+          "Mywidget",
+          "mywidget",
+          "Mywidget"
+        ]
+      },
+      {
+        "path": [
+          "síť"
+        ],
+        "label": "Síť",
+        "authentication": null,
+        "search": [
+          "síť",
+          "Síť",
+          "síť",
+          "Síť"
+        ]
+      },
+      {
+        "path": [
+          "síť",
+          "žluťoučký"
+        ],
+        "label": "Žluťoučký",
+        "authentication": null,
+        "search": [
+          "síť",
+          "Síť",
+          "žluťoučký",
+          "Žluťoučký",
+          "síť.žluťoučký",
+          "Žluťoučký"
+        ]
+      },
+      {
+        "path": [
+          "widget"
+        ],
+        "label": "Widget",
+        "authentication": null,
+        "search": [
+          "widget",
+          "Widget",
+          "widget",
+          "Widget"
+        ]
+      },
+      {
+        "path": [
+          "token"
+        ],
+        "label": "Token",
+        "authentication": "token",
+        "search": [
+          "token",
+          "Token",
+          "token",
+          "Token",
+          "token"
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "resource": 0,
+        "name": "inspect",
+        "label": "Inspect",
+        "identifiers": [
+          "inspect",
+          "bulk.inspect"
+        ],
+        "search": [
+          "Inspect"
+        ]
+      },
+      {
+        "resource": 1,
+        "name": "widget",
+        "label": "Widget",
+        "identifiers": [
+          "widget",
+          "mywidget.widget"
+        ],
+        "search": [
+          "Widget"
+        ]
+      },
+      {
+        "resource": 1,
+        "name": "widget_long",
+        "label": "Widget long",
+        "identifiers": [
+          "widget_long",
+          "mywidget.widget_long"
+        ],
+        "search": [
+          "Widget long"
+        ]
+      },
+      {
+        "resource": 3,
+        "name": "obnovit",
+        "label": "Obnovit",
+        "identifiers": [
+          "obnovit",
+          "síť.žluťoučký.obnovit"
+        ],
+        "search": [
+          "Obnovit"
+        ]
+      },
+      {
+        "resource": 5,
+        "name": "request",
+        "label": "Request",
+        "identifiers": [
+          "request",
+          "token.request"
+        ],
+        "search": [
+          "Request"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "action": 0,
+        "name": "bulkvalue00",
+        "label": "Bulkvalue00",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue00"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue01",
+        "label": "Bulkvalue01",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue01"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue02",
+        "label": "Bulkvalue02",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue02"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue03",
+        "label": "Bulkvalue03",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue03"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue04",
+        "label": "Bulkvalue04",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue04"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue05",
+        "label": "Bulkvalue05",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue05"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue06",
+        "label": "Bulkvalue06",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue06"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue07",
+        "label": "Bulkvalue07",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue07"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue08",
+        "label": "Bulkvalue08",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue08"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue09",
+        "label": "Bulkvalue09",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue09"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue10",
+        "label": "Bulkvalue10",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue10"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue11",
+        "label": "Bulkvalue11",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue11"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue12",
+        "label": "Bulkvalue12",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue12"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue13",
+        "label": "Bulkvalue13",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue13"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue14",
+        "label": "Bulkvalue14",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue14"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue15",
+        "label": "Bulkvalue15",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue15"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue16",
+        "label": "Bulkvalue16",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue16"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue17",
+        "label": "Bulkvalue17",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue17"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue18",
+        "label": "Bulkvalue18",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue18"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue19",
+        "label": "Bulkvalue19",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue19"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue20",
+        "label": "Bulkvalue20",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue20"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue21",
+        "label": "Bulkvalue21",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue21"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue22",
+        "label": "Bulkvalue22",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue22"
+      },
+      {
+        "action": 0,
+        "name": "bulkvalue23",
+        "label": "Bulkvalue23",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Bulkvalue23"
+      },
+      {
+        "action": 1,
+        "name": "widget",
+        "label": "Widget",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Widget"
+      },
+      {
+        "action": 2,
+        "name": "widget_long",
+        "label": "Widget long",
+        "type": "String",
+        "direction": "input",
+        "humanized_name": "Widget long"
+      },
+      {
+        "action": 3,
+        "name": "číslo",
+        "label": "Číslo",
+        "type": "Integer",
+        "direction": "input",
+        "humanized_name": "Číslo"
+      },
+      {
+        "action": 3,
+        "name": "výsledek",
+        "label": "Výsledek",
+        "type": "String",
+        "direction": "output",
+        "humanized_name": "Výsledek"
+      },
+      {
+        "action": 4,
+        "name": "lifetime",
+        "label": "Lifetime",
+        "type": "Integer",
+        "direction": "input",
+        "humanized_name": "Lifetime"
+      },
+      {
+        "action": 4,
+        "name": "lifetime",
+        "label": "Lifetime",
+        "type": "Integer",
+        "direction": "output",
+        "humanized_name": "Lifetime"
+      }
+    ]
+  },
+  "queries": [
+    {
+      "query": "widget",
+      "expected": [
+        "resource::widget:::widget",
+        "resource::mywidget:::mywidget",
+        "action::mywidget:widget::widget",
+        "action::mywidget:widget_long::widget_long",
+        "parameter::mywidget:widget:input:widget",
+        "parameter::mywidget:widget_long:input:widget_long"
+      ],
+      "more": false
+    },
+    {
+      "query": "SÍŤ ČÍSLO",
+      "expected": [
+        "parameter::síť.žluťoučký:obnovit:input:číslo"
+      ],
+      "more": false
+    },
+    {
+      "query": "token lifetime",
+      "expected": [
+        "parameter:token:token:request:input:lifetime",
+        "parameter:token:token:request:output:lifetime"
+      ],
+      "more": false
+    },
+    {
+      "query": "bulkvalue",
+      "expected": [
+        "parameter::bulk:inspect:input:bulkvalue00",
+        "parameter::bulk:inspect:input:bulkvalue01",
+        "parameter::bulk:inspect:input:bulkvalue02",
+        "parameter::bulk:inspect:input:bulkvalue03",
+        "parameter::bulk:inspect:input:bulkvalue04",
+        "parameter::bulk:inspect:input:bulkvalue05",
+        "parameter::bulk:inspect:input:bulkvalue06",
+        "parameter::bulk:inspect:input:bulkvalue07",
+        "parameter::bulk:inspect:input:bulkvalue08",
+        "parameter::bulk:inspect:input:bulkvalue09",
+        "parameter::bulk:inspect:input:bulkvalue10",
+        "parameter::bulk:inspect:input:bulkvalue11",
+        "parameter::bulk:inspect:input:bulkvalue12",
+        "parameter::bulk:inspect:input:bulkvalue13",
+        "parameter::bulk:inspect:input:bulkvalue14",
+        "parameter::bulk:inspect:input:bulkvalue15",
+        "parameter::bulk:inspect:input:bulkvalue16",
+        "parameter::bulk:inspect:input:bulkvalue17",
+        "parameter::bulk:inspect:input:bulkvalue18",
+        "parameter::bulk:inspect:input:bulkvalue19"
+      ],
+      "more": true
+    },
+    {
+      "query": "absent",
+      "expected": [],
+      "more": false
+    }
+  ],
+  "display_queries": [
+    {
+      "query": "síť",
+      "expected": [
+        { "title": "Resource: síť", "context": ["Síť"] },
+        { "title": "Resource: síť.žluťoučký", "context": ["Síť · Žluťoučký"] },
+        { "title": "Action: obnovit", "context": ["síť.žluťoučký · obnovit", "Obnovit"] },
+        { "title": "Parameter: výsledek", "context": ["síť.žluťoučký · obnovit", "Output · String", "Výsledek"] },
+        { "title": "Parameter: číslo", "context": ["síť.žluťoučký · obnovit", "Input · Integer", "Číslo"] }
+      ]
+    },
+    {
+      "query": "token lifetime",
+      "expected": [
+        { "title": "Parameter: lifetime", "context": ["token · request", "Input · Integer", "Authentication: token", "Lifetime"] },
+        { "title": "Parameter: lifetime", "context": ["token · request", "Output · Integer", "Authentication: token", "Lifetime"] }
+      ]
+    }
+  ]
+}

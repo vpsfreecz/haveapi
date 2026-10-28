@@ -1,119 +1,38 @@
-<h1 id="api">API v<%= @v %></h1>
-
-<ol class="breadcrumb">
-  <li><a href="<%= escape_html(root) %>"><%= escape_html(host) %></a></li>
-  <li class="active">v<%= @v %></li>
-</ol>
-
-<p>
-  This page contains a list of resources available in API v<%= @v %>, their actions,
-  description, parameters and example usage.
-</p>
-
-<p>
-  This API is based on the <a href="https://github.com/vpsfreecz/haveapi">HaveAPI</a> framework.
-  You can access it using existing clients:
-</p>
-
-<ul>
-  <li><a href="https://github.com/vpsfreecz/haveapi/tree/master/clients/ruby" target="_blank" rel="noopener">Ruby library and CLI</a></li>
-  <li><a href="https://github.com/vpsfreecz/haveapi/tree/master/clients/js" target="_blank" rel="noopener">JavaScript and TypeScript (callback and async)</a></li>
-  <li><a href="https://github.com/vpsfreecz/haveapi/tree/master/clients/python" target="_blank" rel="noopener">Python (sync and async)</a></li>
-  <% settings.api_server.documentation_client_profiles(@v).each do |language, profile| %>
-    <li><a href="https://github.com/vpsfreecz/haveapi/tree/master/clients/<%= escape_html(language) %>" target="_blank" rel="noopener"><%= { go: 'Go', rust: 'Rust (async and blocking)', typescript: 'TypeScript (generated)' }.fetch(language) %></a>: <code><%= escape_html(profile.package_name) %></code><% if profile.package_version %> <%= escape_html(profile.package_version) %><% end %></li>
+<% if @documentation_page == 'overview' %>
+  <h1 id="api">API v<%= escape_html(@v) %><%= documentation_permalink('api', "API v#{@v}") %></h1>
+  <%= erb :'version_page/usage' %>
+  <p>Connect to <code><%= escape_html("#{base_url}#{root}") %></code> with a <a href="https://github.com/vpsfreecz/haveapi">HaveAPI client</a>.</p>
+  <%= erb :'version_page/client_overview' %>
+  <p>Examples target API v<%= escape_html(@v) %>. API clients use their own package versions and must match this API.</p>
+  <section id="initialization" data-doc-section>
+    <h2>Initialization<%= documentation_permalink('initialization', 'Initialization') %></h2>
+    <p>Initialize your client, then follow the <a href="<%= escape_html(documentation_url(page: 'authentication')) %>">authentication instructions</a> when credentials are required.</p>
+    <%= erb :'version_page/example_panels', locals: {baseid: 'init', kind: :init, changes: {}} %>
+  </section>
+  <p><a href="<%= escape_html(documentation_url(page: 'resources')) %>" data-resource-directory-link>Browse all resources</a> to find their actions, parameters and examples.</p>
+<% elsif @documentation_page == 'resources' %>
+  <%= erb :'version_page/resource_directory' %>
+<% elsif @documentation_page == 'authentication' %>
+  <nav aria-label="Breadcrumb"><ol><li><a href="<%= escape_html(documentation_url) %>">Overview</a></li><li aria-current="page">Authentication</li></ol></nav>
+  <h1 id="auth">Authentication<%= documentation_permalink('auth', 'Authentication') %></h1>
+  <p>Initialize your client using the <a href="<%= escape_html(documentation_url(anchor: 'initialization')) %>">overview examples</a>, then choose an authentication method.</p>
+  <% if @help[:authentication].empty? %><p>Authentication is disabled for this API.</p><% end %>
+  <% @help[:authentication].each do |name, info| %>
+    <%= erb :'version_page/auth_body', locals: {name: name, info: info} %>
   <% end %>
-  <li><a href="https://github.com/vpsfreecz/haveapi/tree/master/clients/php" target="_blank" rel="noopener">PHP</a></li>
-  <li>
-    <a href="https://github.com/vpsfreecz/haveapi-webui" target="_blank">Generic web interface</a>
-    (<a href="https://webui.haveapi.org/v<%= version %>/#<%= urlescape(base_url) %>" target="_blank">connect to this API</a>)
-  </li>
-</ul>
-
-<p>
-  These examples target API v<%= escape_html(@v) %>. The framework and dynamic
-  clients share HaveAPI package versions. Generated Go, Rust and TypeScript SDKs use their
-  own package versions. Their configured SDKs are expected to match this API.
-</p>
-
-<h2>Initialization</h2>
-
-<div id="init-tabbar"></div>
-
-<div id="init-examples">
-  <% documentation_panels(:init).each do |client, result| %>
-    <div id="<%= escape_html("init-#{client.id}") %>">
-      <%= erb :"version_page/client_init", locals: {client: client, result: result} %>
-    </div>
-  <% end %>
-</div>
-
-<script type="text/javascript">
-nojsTabs({
-  tabs: document.getElementById('init-examples'),
-  titleSelector: 'h4',
-  tabBar: document.getElementById('init-tabbar'),
-  hiddenClass: 'tab-hidden',
-  activeClass: 'active',
-  createElement: function (el) {
-    if (el.tagName == 'UL')
-      el.classList.add('nav', 'nav-tabs');
-
-    else if (el.tagName == 'LI')
-      el.setAttribute('role', 'presentation');
-  }
-});
-</script>
-
-<h1 id="auth">Authentication methods</h1>
-<% @help[:authentication].each do |name, info| %>
-  <%= erb :"version_page/auth_body", locals: {name: name, info: info} %>
+<% else %>
+  <% entry = @documentation_resource %>
+  <nav aria-label="Breadcrumb" data-resource-breadcrumbs>
+    <ol>
+      <li><a href="<%= escape_html(documentation_url(page: 'resources')) %>">Resources</a></li>
+      <% entry[:path].each_with_index do |part, index| %>
+        <% if index == entry[:path].length - 1 %>
+          <li aria-current="page"><%= escape_html(part.humanize) %></li>
+        <% else %>
+          <li><a href="<%= escape_html(documentation_url(resource: entry[:path][0..index])) %>"><%= escape_html(part.humanize) %></a></li>
+        <% end %>
+      <% end %>
+    </ol>
+  </nav>
+  <%= erb :'version_page/resource_body', locals: {resource: entry[:path].last, info: entry[:info], path: entry[:path][0...-1], prefix: "root#{entry[:path][0...-1].map { |part| "-#{part}" }.join}", name: entry[:key], authentication_resource: false} %>
 <% end %>
-
-<h1 id="resources">Resources</h1>
-<p>Follows a list of all resources in this API and their actions.</p>
-
-<% sort_hash(@help[:resources]).each do |resource, info| %>
-  <%=
-    erb :"version_page/resource_body", locals: {
-      resource: resource,
-      info: info,
-      path: [],
-      prefix: 'root',
-      name: nil,
-    }
-  %>
-<% end %>
-</div>
-
-<script type="text/javascript">
-  $(document).ready(function(){
-    // Login/logout user
-    $('.authentication a.login').click(function(event){
-      $.ajax({
-        type: 'GET',
-        url: this.href,
-        async: false,
-        complete: function (){
-          window.location.reload();
-        }
-      });
-
-      event.preventDefault();
-    });
-
-    $('.authentication a.logout').click(function(event){
-      $.ajax({
-        type: 'GET',
-        url: this.href,
-        async: true,
-        username: '_log',
-        password: 'out',
-        complete: function() {
-          window.location.reload();
-        }
-      });
-
-      event.preventDefault();
-    });
-  });
-</script>

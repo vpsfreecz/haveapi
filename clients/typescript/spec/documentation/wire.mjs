@@ -56,7 +56,6 @@ try {
     const previous = requests.length;
     await new Promise((resolve, reject) => {
       const child = spawn(process.execPath, [join(directory, `compiled/sample${index}.js`)], {
-        env: {...process.env, HAVEAPI_USER: 'fixture-user', HAVEAPI_PASSWORD: 'fixture-password', HAVEAPI_TOKEN: 'fixture-token'},
         stdio: ['ignore', 'pipe', 'pipe'], timeout: 10000,
       });
       let stderr = '';
@@ -89,8 +88,8 @@ try {
       assert.deepEqual(action.body.widget.custom.__proto__, {kept: true});
       assert.equal(Object.hasOwn(action.body, '_meta'), false);
     }
-    if (test.kind === 'basic') assert.equal(action.headers.authorization, `Basic ${Buffer.from('fixture-user:fixture-password').toString('base64')}`);
-    if (test.kind === 'token') assert.equal(action.headers['x-widget-token'], 'fixture-token');
+    if (test.kind === 'basic') assert.equal(action.headers.authorization, `Basic ${Buffer.from('user:secret').toString('base64')}`);
+    if (test.kind === 'token') assert.equal(action.headers['x-widget-token'], 'example-token');
   }
   console.log(`Rendered snippets passed public/Basic/existing-token root+mounted wire checks (${cases.length} snippets, ${requests.length} requests)`);
 } finally {

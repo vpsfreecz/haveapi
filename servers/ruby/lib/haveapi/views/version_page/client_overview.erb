@@ -1,0 +1,40 @@
+<% library_paths = {
+  '0' => 'clients/ruby#client-library',
+  '3' => 'clients/ruby#cli',
+  'javascript-callback' => 'clients/js#javascript-with-callbacks',
+  'javascript-async' => 'clients/js#javascript-with-async-await',
+  'typescript-callback' => 'clients/js#typescript-with-callbacks',
+  'typescript-async' => 'clients/js#typescript-with-async-await',
+  'python-sync' => 'clients/python#synchronous-client',
+  'python-async' => 'clients/python#asynchronous-client',
+  '2' => 'clients/php'
+} %>
+<% generator_paths = {
+  'go' => 'clients/go',
+  'rust-async' => 'clients/rust',
+  'rust-blocking' => 'clients/rust',
+  'typescript-generated' => 'clients/typescript'
+} %>
+<% clients = documentation_clients %>
+<% library_clients = clients.select { |client| library_paths.has_key?(client.id) || generator_paths.has_key?(client.id) } %>
+<% groups = library_clients.group_by { |client| client.language == 'cli' && library_clients.any? { |candidate| candidate.language == 'ruby' } ? 'ruby' : client.language } %>
+<section id="client-libraries">
+  <h2>Client libraries<%= documentation_permalink('client-libraries', 'Client libraries') %></h2>
+  <ul>
+    <% groups.each_value do |group| %>
+      <% variants = group.length > 1 || group.first.variant %>
+      <% profiles = group.filter_map { |client| documentation_context(client).profile if generator_paths.has_key?(client.id) }.uniq %>
+      <li>
+        <% if variants %><%= escape_html(group.first.language_label) %> (<% end %><% group.each_with_index do |client, index|
+          path = library_paths[client.id] || generator_paths.fetch(client.id)
+          label = variants ? (client.variant&.downcase&.sub(/\Aapi\b/, 'API') || (client.language == 'ruby' ? 'library' : client.language_label)) : client.language_label
+          separator = index.zero? ? '' : (index == group.length - 1 ? ' and ' : ', ')
+        %><%= separator %><a href="<%= escape_html("https://github.com/vpsfreecz/haveapi/tree/master/#{path}") %>"><%= escape_html(label) %></a><% end %><% if variants %>)<% end %><% profiles.each do |profile| %>: <code><%= escape_html(profile.package_name) %></code><% unless profile.package_version.nil? %> <%= escape_html(profile.package_version) %><% end %><% end %>
+      </li>
+    <% end %>
+  </ul>
+  <% request_formats = clients.select { |client| %w[curl http].include?(client.language) } %>
+  <% unless request_formats.empty? %>
+    <p><% request_formats.each_with_index do |client, index| %><%= index.zero? ? '' : ' and ' %><a href="<%= escape_html(documentation_url(page: 'resources')) %>"><%= escape_html(client.label) %></a><% end %> request examples are available on resource pages.</p>
+  <% end %>
+</section>

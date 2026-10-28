@@ -5,6 +5,9 @@ require 'haveapi/client_example'
 module HaveAPI::ClientExamples
   class Http < HaveAPI::ClientExample
     label 'HTTP'
+    language 'http'
+    language_label 'HTTP'
+    detail_levels :simple
     code :http
     order 100
 
@@ -27,7 +30,7 @@ module HaveAPI::ClientExamples
         END
 
       when :token
-        login = auth_token_credentials(desc).merge(lifetime: 'fixed')
+        login = auth_token_credentials(desc)
 
         <<~END
           POST /_auth/token/tokens HTTP/1.1
@@ -40,22 +43,24 @@ module HaveAPI::ClientExamples
       when :oauth2
         <<~END
           # 1) Request authorization code
-          GET #{desc[:authorize_path]}?response_type=code&client_id=$client_id&state=$state&redirect_uri=$client_redirect_uri HTTP/1.1
+          GET #{desc[:authorize_path]}?response_type=code&client_id=example-client&state=example-state&redirect_uri=https%3A%2F%2Fexample.org%2Fcallback HTTP/1.1
           Host: #{host}
 
           # 2) The user logs in using this API
 
           # 3) The API then redirects the user back to the client application
-          GET $client_redirect_uri?code=$authorization_code&state=$state
+          GET /callback?code=example-code&state=example-state
           Host: client-application
 
           # 4) The client application requests access token
           POST #{desc[:token_path]}
           Content-Type: application/x-www-form-urlencoded
 
-          grant_type=authorization_code&code=$authorization_code&redirect_uri=$client_redirect_uri&client_id=$client_id&client_secret=$client_secret
+          grant_type=authorization_code&code=example-code&redirect_uri=https%3A%2F%2Fexample.org%2Fcallback&client_id=example-client&client_secret=example-client-secret
         END
       end
+    rescue HaveAPI::ClientExample::UnsupportedAuthentication => e
+      { status: :limitation, reason: e.message }.freeze
     end
 
     def request(sample)

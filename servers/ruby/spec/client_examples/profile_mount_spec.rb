@@ -132,10 +132,12 @@ describe HaveAPI::Server, '#mount' do
     server.documentation_clients(version, go: { import_path: 'example.test/widget/client' })
   end
 
-  def request_as(user, locale)
+  def request_as(user, locale, resource: nil)
+    path = '/mounted/api/v1/'
+    path += "?resource=#{CGI.escape(resource)}" if resource
     Rack::MockRequest.new(server.app).get(
-      '/mounted/api/v1/', 'HTTP_HOST' => 'example.org', 'HTTP_ACCEPT_LANGUAGE' => locale,
-                          'HTTP_AUTHORIZATION' => "Basic #{Base64.strict_encode64("#{user}:pass")}"
+      path, 'HTTP_HOST' => 'example.org', 'HTTP_ACCEPT_LANGUAGE' => locale,
+            'HTTP_AUTHORIZATION' => "Basic #{Base64.strict_encode64("#{user}:pass")}"
     )
   end
 
@@ -193,20 +195,27 @@ describe HaveAPI::Server, '#mount' do
     ::I18n.backend.store_translations(:en, profile_mount_spec: { action: 'Visible English action' })
     ::I18n.backend.store_translations(:cs, profile_mount_spec: { action: 'Viditelna ceska akce' })
     server.mount('/mounted/api/')
-    privileged = request_as('admin', 'en')
+    privileged = request_as('admin', 'en', resource: 'widget')
     expect(privileged.status).to eq(200)
     expect(privileged.body).to include('PRIVATE_SAMPLE', 'Visible English action')
+    expect(contexts.select { |context| context.sample&.dig(:request, :secret) == 'PRIVATE_SAMPLE' }.map(&:detail))
+      .to contain_exactly(:simple, :thorough)
+    public_overview = request_as('member', 'cs')
+    expect(public_overview.status).to eq(200)
+    expect(public_overview.body).to include('init-go', 'example.test/widget/client')
+    expect(public_overview.body).not_to include('PRIVATE_DEFAULT', 'PRIVATE_SAMPLE', 'PRIVATE_RESPONSE')
     contexts.clear
-    public_response = request_as('member', 'cs')
+    public_response = request_as('member', 'cs', resource: 'widget')
     expect(public_response.status).to eq(200)
-    expect(public_response.body).to include('Viditelna ceska akce', 'init-go', 'example.test/widget/client')
+    expect(public_response.body).to include('Viditelna ceska akce', 'example-widget-show-0-go', 'example-widget-show-0-go-thorough')
     expect(public_response.body).not_to include('PRIVATE_DEFAULT', 'PRIVATE_SAMPLE', 'PRIVATE_RESPONSE', 'admin_only', 'haveapi.invalid', 'StructuralSchema')
     selected = contexts.find { |context| context.action_name == 'show' }
     expect(selected.action.dig(:input, :parameters).keys.map(&:to_s)).to eq(['visible'])
     expect(selected.description[:resources]['widget'][:actions]).not_to have_key('secret')
     expect(selected.sample[:request]).to eq(visible: 'public sample')
     expect(selected.action[:description]).to eq('Viditelna ceska akce')
-    expect(request_as('member', 'en').body).to include('Visible English action')
+    expect(contexts.select { |context| context.action_name == 'show' }.map(&:detail)).to contain_exactly(:simple, :thorough)
+    expect(request_as('member', 'en', resource: 'widget').body).to include('Visible English action')
     expect(descriptions.size).to eq(1)
   end
 
@@ -235,17 +244,23 @@ describe HaveAPI::Server, '#mount' do
     expect(private_schema).to be_frozen
     expect(JSON.generate(private_schema)).not_to include('PRIVATE_DEFAULT', 'PRIVATE_SAMPLE', 'PRIVATE_RESPONSE')
     expect(private_schema.dig('resources', 'widget', 'actions')).to have_key('secret')
-    expect(request_as('admin', 'en').body).to include('PRIVATE_SAMPLE')
+    expect(request_as('admin', 'en', resource: 'widget').body).to include('PRIVATE_SAMPLE')
+    overview = request_as('member', 'en')
+    expect(overview.status).to eq(200)
+    expect(overview.body).to include('init-typescript-generated', 'init-typescript-callback',
+                                     'init-typescript-async', '@example/widget-client')
+    expect(overview.body).not_to include('PRIVATE_SAMPLE', 'example-widget-show-0-typescript-generated')
     contexts.clear
-    response = request_as('member', 'en')
+    response = request_as('member', 'en', resource: 'widget')
     expect(response.status).to eq(200)
-    expect(response.body).to include('TypeScript (generated)', 'init-typescript-generated', 'init-typescript-callback',
-                                     'init-typescript-async', 'example-widget-show-0-typescript-generated', '@example/widget-client')
+    expect(response.body).to include('TypeScript (generated)', 'example-widget-show-0-typescript-generated',
+                                     'example-widget-show-0-typescript-generated-thorough')
     expect(response.body).not_to include('PRIVATE_DEFAULT', 'PRIVATE_SAMPLE', 'PRIVATE_RESPONSE', 'admin_only')
     selected = contexts.find { |context| context.action_name == 'show' }
     expect(selected.version_url).to eq('http://example.org/mounted/api/v1/')
     expect(selected.action.dig(:input, :parameters).keys).to eq([:visible])
     expect(selected.sample[:request]).to eq(visible: 'public sample')
+    expect(contexts.select { |context| context.action_name == 'show' }.map(&:detail)).to contain_exactly(:simple, :thorough)
     expect(documentation).to have_received(:from_description).once
   end
 

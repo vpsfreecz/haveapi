@@ -279,12 +279,12 @@ describe DocAuthFilteringSpec do
 
     it 'does not retain privileged sample data across HTML documentation requests' do
       login('admin', 'pass')
-      get '/v1/'
+      get '/v1/?resource=secure'
       expect(last_response.status).to eq(200)
       expect(last_response.body).to include('ADMIN_ONLY_RESULT')
 
       login('user', 'pass')
-      get '/v1/'
+      get '/v1/?resource=secure'
       expect(last_response.status).to eq(200)
       expect(last_response.body).not_to include('ADMIN_ONLY_RESULT')
     end

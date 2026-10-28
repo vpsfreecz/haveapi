@@ -2,5 +2,6 @@ doc/protocol.*
 doc/create-client.md
 doc/typed-input-validation.md
 doc/client-examples.md
+doc/documentation-ui.md
 doc/performance.md
 doc/json-schema.html

@@ -1,0 +1,15 @@
+<section id="resources">
+  <h1>Resources</h1>
+  <%= erb :'documentation/search_form', locals: documentation_search_form_options(id: 'docs-search-directory') %>
+  <% if documentation_search_query.empty? %>
+  <nav aria-label="Resources" data-resource-nav>
+  <ul class="docs-resource-list docs-resource-directory">
+    <% sort_hash(@help[:resources]).each do |resource, info| %>
+      <%= erb :'version_sidebar/resource_nav', locals: {resource: resource, info: info, path: []} %>
+    <% end %>
+  </ul>
+  </nav>
+  <% else %>
+    <%= erb :'documentation/search_results', locals: {search: documentation_search_results} %>
+  <% end %>
+</section>

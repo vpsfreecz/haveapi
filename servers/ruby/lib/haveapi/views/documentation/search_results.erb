@@ -1,0 +1,20 @@
+<section data-search-results aria-label="Search results">
+  <h2>Search results for <%= escape_html(search[:query]) %></h2>
+  <p data-search-status role="status">
+    <% if search[:results].empty? %>
+      No matches. Try another resource, action or parameter name.
+    <% elsif search[:more] %>
+      Showing <%= search[:results].length %> results. More matches are available; refine your search.
+    <% else %>
+      <%= search[:results].length %> <%= search[:results].length == 1 ? 'result' : 'results' %>.
+    <% end %>
+  </p>
+  <ol>
+    <% search[:results].each do |result| %>
+      <li>
+        <a href="<%= escape_html(documentation_search_result_url(result)) %>"><%= escape_html(result[:kind].to_s.capitalize) %>: <code><%= escape_html(documentation_search_result_title(result)) %></code></a>
+        <% documentation_search_result_context(result).each do |context| %><span><%= escape_html(context) %></span><% end %>
+      </li>
+    <% end %>
+  </ol>
+</section>

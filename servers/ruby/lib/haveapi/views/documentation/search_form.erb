@@ -1,0 +1,10 @@
+<form data-documentation-search method="get" action="<%= escape_html(action) %>" data-search-version="<%= escape_html(version) %>" data-search-index-url="<%= escape_html(index_url) %>" data-search-view-key="<%= escape_html(view_key) %>">
+  <input type="hidden" name="page" value="resources">
+  <label for="<%= escape_html(id) %>-query">Search API v<%= escape_html(version) %></label>
+  <input type="search" name="q" data-search-query id="<%= escape_html(id) %>-query" value="<%= escape_html(query) %>" placeholder="..." maxlength="256">
+  <button type="submit">Search</button>
+  <div data-search-suggestions role="region" aria-label="Search suggestions" hidden>
+    <p data-search-status role="status"></p>
+    <div data-search-preview></div>
+  </div>
+</form>

@@ -26,18 +26,20 @@ describe HaveAPI::Server, '#mount' do
   def request_as(user)
     contexts.clear
     Rack::MockRequest.new(server.app).get(
-      '/benchmark/api/v1/', 'HTTP_HOST' => 'example.test',
-                            'HTTP_AUTHORIZATION' => "Basic #{Base64.strict_encode64("#{user}:fixture-only")}"
+      '/benchmark/api/v1/?resource=resource0', 'HTTP_HOST' => 'example.test',
+                                               'HTTP_AUTHORIZATION' => "Basic #{Base64.strict_encode64("#{user}:fixture-only")}"
     )
   end
 
   def expect_shared_request(response)
     expect(response.status).to eq(200)
     expect(response.body).to include('PUBLIC_SAMPLE_0', 'example-resource0-action0-0',
-                                     'init-javascript-callback', 'init-javascript-async',
-                                     'init-typescript-callback', 'init-typescript-async',
-                                     'init-python-sync', 'init-python-async')
+                                     'data-client="javascript-callback"', 'data-client="javascript-async"',
+                                     'data-client="typescript-callback"', 'data-client="typescript-async"',
+                                     'data-client="python-sync"', 'data-client="python-async"')
+    expect(response.body).not_to include('id="example-resource1-', 'id="example-resource2-', 'init-examples')
     expect(contexts.length).to be > 20
+    expect(contexts.map(&:resource_path).uniq).to eq([['resource0']])
     description = contexts.first.description
     contexts.each { |context| expect(context.description).to equal(description) }
     expect(description).to be_frozen

@@ -1,7 +1,4 @@
-HaveAPI documentation
-=====================
+# HaveAPI internals
 
- - [README](doc/readme)
- - [Protocol definition](doc/protocol.md)
- - [JSON schema of the documentation protocol](doc/json-schema)
- - [How to create a client](doc/create-client.md)
+These pages describe the HaveAPI protocol and how to develop clients.
+Choose a reference from the sidebar.

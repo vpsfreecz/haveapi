@@ -1,12 +1,10 @@
-<h1>API description</h1>
-<h2>Available versions:</h2>
+<h1>API versions</h1>
 <ul>
   <% @api[:versions].each do |v, info| %>
     <% next if v == :default %>
     <li>
-      <a href="<%= info[:help] %>">Version <%= v.to_s %></a>
+      <a href="<%= escape_html(url(info[:help], false)) %>">Version <%= escape_html(v) %></a>
       <%= '(default)' if v == @api[:default_version] %>
     </li>
   <% end %>
 </ul>
-<h2><a href="/doc">Documentation</a></h2>

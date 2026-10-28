@@ -1,0 +1,26 @@
+<%= erb :'version_sidebar/brand', locals: {account: documentation_account_context} %>
+<% if (search_options = documentation_search_form_options(id: 'docs-search-sidebar')) %>
+  <%= erb :'documentation/search_form', locals: search_options %>
+<% end %>
+<nav aria-label="Documentation pages">
+  <ul>
+    <li><a href="<%= escape_html(shared_documentation_url) %>"<% if @documentation_page == 'versions' %> aria-current="page"<% end %>>API versions</a></li>
+    <% if (reference = shared_documentation_reference_url) %>
+      <li><a href="<%= escape_html(reference) %>">API reference</a></li>
+      <li><a href="<%= escape_html(shared_documentation_reference_url(page: 'resources')) %>">Resources</a></li>
+    <% end %>
+  </ul>
+</nav>
+<% if @documentation_toc && !@documentation_toc.empty? %>
+  <nav aria-label="Contents" data-action-nav><%= @documentation_toc %></nav>
+<% end %>
+<nav aria-label="Shared documentation">
+  <h2><a href="<%= escape_html(shared_documentation_url('doc')) %>">HaveAPI internals</a></h2>
+  <ul>
+    <li><a href="<%= escape_html(shared_documentation_url('doc/readme')) %>">HaveAPI</a></li>
+    <li><a href="<%= escape_html(shared_documentation_url('doc/protocol')) %>">Protocol</a></li>
+    <li><a href="<%= escape_html(shared_documentation_url('doc/json-schema')) %>">JSON schema</a></li>
+    <li><a href="<%= escape_html(shared_documentation_url('doc/create-client')) %>">Create a client</a></li>
+    <li><a href="<%= escape_html(shared_documentation_url('doc/client-examples')) %>">Client examples</a></li>
+  </ul>
+</nav>

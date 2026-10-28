@@ -26,6 +26,7 @@ RSpec.describe HaveAPI::ClientExample, '.render' do
     'typescript-generated' => :typescript
   }.freeze
   lanes = %i[init basic token oauth2 public protected failure].freeze
+  details = %i[simple thorough].freeze
   let(:matrix) { profiles }
 
   before(:all) do
@@ -39,12 +40,12 @@ RSpec.describe HaveAPI::ClientExample, '.render' do
   end
 
   after(:all) do
-    RSpec.configuration.reporter.message("ALL_CLIENT_PERFORMANCE #{JSON.generate(registry: profiles.keys.sort, lanes:, measurements: @measurements)}")
+    RSpec.configuration.reporter.message("ALL_CLIENT_PERFORMANCE #{JSON.generate(registry: profiles.keys.sort, lanes:, details:, measurements: @measurements)}")
   end
 
-  def headers(user)
+  def headers(server, user)
     { 'HTTP_HOST' => 'example.test', 'HTTP_ACCEPT_LANGUAGE' => 'en',
-      'HTTP_AUTHORIZATION' => "Basic #{Base64.strict_encode64("#{user}:fixture-only")}" }
+      'HTTP_COOKIE' => server.fixture_documentation_cookie(user) }
   end
 
   def description(server, user)
@@ -52,13 +53,13 @@ RSpec.describe HaveAPI::ClientExample, '.render' do
                                                          user: HaveAPI::DocumentationPerformanceFixture::User.new(user), params: {}))
   end
 
-  def context(description, profile, action_name: 'protected', sample_index: 0, resource_name: 'resource0')
+  def context(description, profile, action_name: 'protected', sample_index: 0, resource_name: 'resource0', detail: :simple, origin: 'http://example.test')
     resource = description.fetch(:resources).fetch(resource_name)
     action = resource.fetch(:actions).fetch(action_name)
     HaveAPI::ClientExample::Context.new(version: 1, host: 'example.test',
-                                        base_url: 'http://example.test/benchmark/api/',
-                                        version_url: 'http://example.test/benchmark/api/v1/',
-                                        description:, profile:, resource_path: [resource_name.to_s],
+                                        base_url: "#{origin}/benchmark/api/",
+                                        version_url: "#{origin}/benchmark/api/v1/",
+                                        description:, profile:, detail:, resource_path: [resource_name.to_s],
                                         resource:, action_name:, action:, sample: action.fetch(:examples).fetch(sample_index))
   end
 
@@ -113,12 +114,12 @@ RSpec.describe HaveAPI::ClientExample, '.render' do
   end
 
   profiles.each do |id, language|
-    lanes.each do |lane|
-      it "bounds #{id}/#{lane} work and allocations with unrelated descendants" do
+    lanes.product(details).each do |lane, detail|
+      it "bounds #{id}/#{lane}/#{detail} work and allocations with unrelated descendants" do
         client = described_class.clients.find { |item| item.id == id }
         expect(client).not_to be_nil
         profile = language && @profiles.fetch(language)
-        options = { action_name: lane == :public ? 'public' : 'protected', sample_index: lane == :failure ? 1 : 0 }
+        options = { action_name: lane == :public ? 'public' : 'protected', sample_index: lane == :failure ? 1 : 0, detail: }
         small = context(@description, profile, **options)
         large = context(@large_description, profile, **options)
         expect(client.available?(small)).to be(true)
@@ -131,7 +132,7 @@ RSpec.describe HaveAPI::ClientExample, '.render' do
         large_calls = calls { render(client, lane, large) }
         small_allocations = allocations { render(client, lane, small) }
         large_allocations = allocations { render(client, lane, large) }
-        @measurements << { id:, lane:, allocations: [small_allocations, large_allocations], calls: [small_calls, large_calls] }
+        @measurements << { id:, lane:, detail:, allocations: [small_allocations, large_allocations], calls: [small_calls, large_calls] }
         # Selected action/provider/sample is unchanged. Allow fixed VM/lookup
         # slack, while recursive walks of the 128 unrelated subtrees must fail.
         expect(large_calls).to be <= small_calls + 32
@@ -142,74 +143,131 @@ RSpec.describe HaveAPI::ClientExample, '.render' do
   end
 
   def expect_panel(body, anchor, result)
-    panel = body.match(%r{<div id="#{Regexp.escape(anchor)}">\s*(.*?)</div>}m)
+    panel = body.match(%r{<details\b[^>]*\bdata-example-panel\b[^>]*\bid="#{Regexp.escape(anchor)}"[^>]*>(.*?)</details>}m)
     expect(panel).not_to be_nil, "Missing #{anchor}"
     text = result.fetch(result[:status] == :code ? :code : :reason)
     expect(panel[1]).to include(CGI.escapeHTML(text))
     expect(panel[1]).to include(result[:status] == :code ? '<pre><code' : 'client-limitation')
   end
 
-  def expect_complete_page(server, user, resources)
-    desc = description(server, user)
-    response = Rack::MockRequest.new(server.app).get('/benchmark/api/v1/', **headers(user))
+  def request_page(server, user, query = '')
+    response = Rack::MockRequest.new(server.app).get("#{server.fixture_documentation_oauth.origin}/benchmark/api/v1/#{query}", **headers(server, user))
     expect(response.status).to eq(200)
     expect(response['content-type']).to start_with('text/html')
-    expect(response.body).to include('PUBLIC_SAMPLE')
+    response.body
+  end
+
+  def expect_complete_page(server, user, resources, actions: 2)
+    desc = description(server, user)
+    overview = request_page(server, user)
+    authentication = request_page(server, user, '?page=authentication')
+    directory = request_page(server, user, '?page=resources')
+    links = directory.scan(/data-resource-link="([^"]*)"/).flatten
+    expect(links.sort).to eq(resources.times.map { |index| "resource#{index}" }.sort)
+    expect(directory).not_to include('PUBLIC_SAMPLE', 'ADMIN_ONLY_REQUEST', 'ADMIN_ONLY_RESPONSE', 'id="example-')
+    expect(overview).to include('data-resource-directory-link')
+    expect(overview).not_to include('data-resource-link=')
+    pages = resources.times.to_h do |index|
+      name = "resource#{index}"
+      [name, request_page(server, user, "?resource=#{name}")]
+    end
+    expect(overview).not_to include('id="example-')
+    expect(overview).not_to include('PUBLIC_SAMPLE', 'ADMIN_ONLY_REQUEST', 'ADMIN_ONLY_RESPONSE')
+    pages.each do |name, body|
+      expect(body).to include('PUBLIC_SAMPLE')
+      expect(body).not_to include('id="init-examples"')
+      pages.each_key do |other|
+        next if other == name
+
+        expect(body).not_to include("id=\"example-#{other}-")
+      end
+    end
+    combined = [overview, authentication, directory, *pages.values].join
     %w[ADMIN_ONLY_ACTION ADMIN_ONLY_DEFAULT ADMIN_ONLY_REQUEST ADMIN_ONLY_RESPONSE ADMIN_ONLY_ACTION_SAMPLE admin_field admin_only].each do |marker|
-      expect(response.body.include?(marker)).to eq(user == 'admin'), marker
+      expect(combined.include?(marker)).to eq(user == 'admin'), marker
     end
     example_count = 0
     HaveAPI::ClientExample.clients.each do |client|
       language = matrix.fetch(client.id)
       profile = language && server.documentation_client_profiles(1).fetch(language)
-      ctx = context(desc, profile)
-      expect(client.available?(ctx)).to be(true)
-      expect_panel(response.body, "init-#{client.id}", render(client, :init, ctx))
-      desc.fetch(:authentication).each_key do |method|
-        result = render(client, method, ctx)
-        expect_result(result, client.id, method)
-        expect_panel(response.body, "auth-#{method}-#{client.id}", result)
-      end
-      resources.times do |index|
-        resource_name = "resource#{index}"
-        desc.fetch(:resources).fetch(resource_name).fetch(:actions).each do |action_name, action|
-          action.fetch(:examples).each_index do |sample_index|
-            selected = context(desc, profile, action_name: action_name.to_s, sample_index:, resource_name:)
-            result = client.render(:example, context: selected)
-            expect_result(result, client.id, :example)
-            expect_panel(response.body, "example-#{resource_name}-#{action_name}-#{sample_index}-#{client.id}", result)
-            example_count += 1
+      %i[simple thorough].each do |detail|
+        suffix = detail == :thorough ? '-thorough' : ''
+        ctx = context(desc, profile, detail:, origin: server.fixture_documentation_oauth.origin)
+        expect(client.available?(ctx)).to be(true)
+        expect_panel(overview, "init-#{client.id}#{suffix}", render(client, :init, ctx))
+        desc.fetch(:authentication).each_key do |method|
+          result = render(client, method, ctx)
+          expect_result(result, client.id, method)
+          expect_panel(authentication, "auth-#{method}-#{client.id}#{suffix}", result)
+        end
+        pages.each do |resource_name, body|
+          desc.fetch(:resources).fetch(resource_name).fetch(:actions).each do |action_name, action|
+            action.fetch(:examples).each_index do |sample_index|
+              selected = context(desc, profile, action_name: action_name.to_s, sample_index:, resource_name:, detail:, origin: server.fixture_documentation_oauth.origin)
+              result = client.render(:example, context: selected)
+              expect_result(result, client.id, :example)
+              expect_panel(body, "example-#{resource_name}-#{action_name}-#{sample_index}-#{client.id}#{suffix}", result)
+              example_count += 1
+            end
           end
         end
       end
     end
-    expected_samples = (resources * 2 * (user == 'admin' ? 3 : 2)) + (user == 'admin' ? 1 : 0)
-    expect(example_count).to eq(expected_samples * matrix.length)
-    response
+    expected_samples = (resources * actions * (user == 'admin' ? 3 : 2)) + (user == 'admin' ? 1 : 0)
+    expect(example_count).to eq(expected_samples * matrix.length * 2)
+    combined
   end
 
   it 'renders every real panel and isolates admin/member/admin pages through the same adapters' do
     first = expect_complete_page(@server, 'admin', 2)
     expect_complete_page(@server, 'member', 2)
     last = expect_complete_page(@server, 'admin', 2)
-    expect(last.body).to eq(first.body)
+    expect(last).to eq(first)
   end
 
   it 'bounds complete all-profile page allocations by linear output growth' do
     measurements = [2, 4, 8].map do |resources|
       server = HaveAPI::AllClientPerformanceFixture.build(resources:)
-      response = expect_complete_page(server, 'admin', resources)
+      correctness = expect_complete_page(server, 'admin', resources)
       request = Rack::MockRequest.new(server.app)
-      allocated = allocations(count: 1) { request.get('/benchmark/api/v1/', **headers('admin')) }
-      { resources:, bytes: response.body.bytesize, allocations: allocated }
+      # Measure the four page kinds with one selected resource. Correctness
+      # above still checks every resource and both details; adding unrelated
+      # resources must grow navigation, not action rendering on the selected page.
+      paths = ['', '?page=authentication', '?page=resources', '?resource=resource0']
+      bytes = paths.sum { |query| request.get("#{server.fixture_documentation_oauth.origin}/benchmark/api/v1/#{query}", **headers(server, 'admin')).body.bytesize }
+      allocated = allocations(count: 1) do
+        paths.each { |query| request.get("#{server.fixture_documentation_oauth.origin}/benchmark/api/v1/#{query}", **headers(server, 'admin')) }
+      end
+      { resources:, bytes:, correctness_bytes: correctness.bytesize, allocations: allocated }
     end
     @measurements << { pages: measurements }
     small, medium, large = measurements
     expect(large[:bytes]).to be > medium[:bytes]
     expect(medium[:bytes]).to be > small[:bytes]
     expect(medium[:allocations]).to be > small[:allocations]
-    # Doubling the added resources doubles actual panels/output. A 2.5x
-    # incremental allowance covers bookkeeping; quadratic copying approaches 4x.
+    # The same page kinds retain their panel count; added resources grow only
+    # authorized descriptions/navigation. Keep the existing 2.5x growth budget.
+    expect(large[:allocations] - medium[:allocations]).to be <= 2.5 * (medium[:allocations] - small[:allocations])
+  end
+
+  it 'bounds one resource page allocations as its own action panels grow' do
+    measurements = [2, 4, 8].map do |actions|
+      server = HaveAPI::AllClientPerformanceFixture.build(resources: 1, actions:)
+      expect_complete_page(server, 'admin', 1, actions:)
+      request = Rack::MockRequest.new(server.app)
+      response = request.get("#{server.fixture_documentation_oauth.origin}/benchmark/api/v1/?resource=resource0", **headers(server, 'admin'))
+      allocated = allocations(count: 1) do
+        request.get("#{server.fixture_documentation_oauth.origin}/benchmark/api/v1/?resource=resource0", **headers(server, 'admin'))
+      end
+      { actions:, bytes: response.body.bytesize, allocations: allocated }
+    end
+    @measurements << { action_pages: measurements }
+    small, medium, large = measurements
+    expect(large[:bytes]).to be > medium[:bytes]
+    expect(medium[:bytes]).to be > small[:bytes]
+    expect(medium[:allocations]).to be > small[:allocations]
+    # Both selected panels and description grow here. Repeated whole-description
+    # copying per panel approaches quadratic growth and violates the same budget.
     expect(large[:allocations] - medium[:allocations]).to be <= 2.5 * (medium[:allocations] - small[:allocations])
   end
 end

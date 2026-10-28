@@ -18,12 +18,13 @@ module RustClientIntegration
 
   module_function
 
-  def with_server(mount)
+  def with_server(mount, documentation_examples: false)
     log = Tempfile.create('rust-haveapi-fixture-log')
     command = [
       'bundle', 'exec', RbConfig.ruby,
       File.join(__dir__, 'support/haveapi_server.rb'), '--mount', mount
     ]
+    command << '--documentation-examples' if documentation_examples
     input, output, waiter = Bundler.with_unbundled_env do
       Open3.popen2(
         { 'BUNDLE_GEMFILE' => SERVER_GEMFILE, 'GEM_HOME' => SERVER_GEM_HOME, 'GEM_PATH' => nil },

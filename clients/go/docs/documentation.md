@@ -68,6 +68,12 @@ input uses `NewInput().SelectParameters()` before setters; this preserves omitte
 explicit zero, false and empty strings. Nullable fields use `SetFIELDNil(true)`.
 An empty request selects no fields. A missing request leaves input unallocated.
 
+Simple action examples assume that initialization and authentication have
+established `api`. They show the invocation, supplied values, error checks and
+sample output. Add `fmt` to the enclosing program's imports for output and error
+messages. **With error handling** includes the complete program and advertised
+metadata guidance. Both levels validate the same sample and report the same limitations.
+
 List input and general Custom fields are unsupported by the generator and show
 limitations. Global input metadata has the existing `includes` Custom exception:
 its generated setter accepts a string. Metadata guidance only names methods
@@ -106,7 +112,8 @@ result = adapter.render(kind: :example, context: context, mode: :sync)
 
 The context uses readers defined by the server's documentation context. The
 adapter does not depend on the server gem. Results have either
-`{status: :code, code: source}` or `{status: :limitation, reason: text}`. Renderers
+`{status: :code, code: source}` or `{status: :limitation, reason: text}`. The context
+must expose `detail` as `:simple` or `:thorough`. Renderers
 return source/plain text; the server template escapes HTML once.
 
 For SDK fixtures or an already captured schema, use the offline constructor.
@@ -181,8 +188,9 @@ HAVEAPI_RELEASE_TOOLS_ONLY=1 nix develop -c bash -c \
     clients/go/spec/documentation_acceptance.rb'
 ```
 
-The harness saves a local schema fixture, generates its SDK, loads the matching
-profile and writes the complete programs returned by the actual server renderer.
+The harness saves a local schema fixture, generates its SDK and loads the matching
+profile. It checks both detail levels, composing simple action fragments with
+separately rendered initialization or authentication.
 It formats, compiles and runs those programs against a disposable localhost
 server. Cases include initialization, authentication methods, mounted/versioned
 paths, nullable/false/zero/omitted inputs, list output, failures, global metadata

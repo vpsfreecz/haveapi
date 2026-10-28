@@ -1,9 +1,12 @@
 require 'pp'
+require 'shellwords'
 require 'haveapi/client_examples/http'
 
 module HaveAPI::ClientExamples
   class Curl < Http
     label 'curl'
+    language 'curl'
+    language_label 'curl'
     code :bash
     order 90
 
@@ -17,35 +20,37 @@ module HaveAPI::ClientExamples
         <<~END
           # Password is asked on standard input
           $ curl --request OPTIONS \\
-                 --user username \\
+                 --user user \\
                  '#{base_url}'
           Password: secret
 
           # Password given on the command line
           $ curl --request OPTIONS \\
-                 --user username:secret \\
+                 --user user:secret \\
                  '#{base_url}'
         END
 
       when :token
-        login = auth_token_credentials(desc).merge(lifetime: 'fixed')
+        login = auth_token_credentials(desc)
 
         <<~END
           # Acquire the token
           $ curl --request POST \\
                  --header 'Content-Type: application/json' \\
-                 --data-binary "#{format_data(token: login)}" \\
+                 --data-binary #{Shellwords.escape(JSON.generate(token: login))} \\
                  '#{File.join(base_url, '_auth', 'token', 'tokens')}'
 
           # Use a previously acquired token
           $ curl --request OPTIONS \\
-                 --header '#{desc[:http_header]}: thetoken' \\
+                 --header '#{desc[:http_header]}: example-token' \\
                  '#{base_url}'
         END
 
       when :oauth2
         '# See RFC 6749 for authorization process and RFC 6750 for access token usage.'
       end
+    rescue HaveAPI::ClientExample::UnsupportedAuthentication => e
+      { status: :limitation, reason: e.message }.freeze
     end
 
     def request(sample)

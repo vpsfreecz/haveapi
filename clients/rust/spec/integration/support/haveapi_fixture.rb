@@ -13,11 +13,24 @@ module RustClientFixtures
   module Haveapi
     module_function
 
-    def extend_token_config!
+    def extend_token_config!(documentation_examples: false)
       config = HaveAPI::ClientTestAPI::TokenConfig
       original_request = config.request.handle
       config.request do
         handle do |req, res|
+          if documentation_examples
+            if req.input[:user] == 'user' && req.input[:password] == 'secret'
+              token = 'example-token'
+              config.tokens[token] = HaveAPI::ClientTestAPI::USERS.fetch('user')
+              res.token = token
+              res.valid_to = Time.now + 3600
+              res.complete = true
+              res.ok
+            else
+              res.error = 'invalid credentials'
+            end
+            next res
+          end
           step = { 'totp' => :totp, 'reset' => :reset_password, 'unknown' => :future_step }[req.input[:password]]
           next original_request.call(req, res) unless req.input[:user] == 'user' && step
 
@@ -76,6 +89,22 @@ module RustClientFixtures
     end
 
     OAuthProvider = HaveAPI::Authentication::OAuth2.with_config(OAuthConfig)
+
+    class DocumentationBasicProvider < HaveAPI::Authentication::Basic::Provider
+      protected
+
+      def find_user(_request, username, password)
+        HaveAPI::ClientTestAPI::USERS.fetch('user') if username == 'user' && password == 'secret'
+      end
+    end
+
+    class DocumentationOAuthConfig < OAuthConfig
+      def find_user_by_access_token(_request, token)
+        HaveAPI::ClientTestAPI::USERS.fetch('user') if token == 'example-access-token'
+      end
+    end
+
+    DocumentationOAuthProvider = HaveAPI::Authentication::OAuth2.with_config(DocumentationOAuthConfig)
 
     def extend_resources!
       HaveAPI::ClientTestAPI::Resources.define_resource(:RustFixture) do
@@ -171,17 +200,17 @@ module RustClientFixtures
       end
     end
 
-    def build(mount: '/')
-      extend_token_config!
+    def build(mount: '/', documentation_examples: false)
+      extend_token_config!(documentation_examples:)
       extend_resources!
       HaveAPI.implicit_version = '1.0'
       HaveAPI::ClientTestAPI.reset!
       api = HaveAPI::Server.new(HaveAPI::ClientTestAPI::Resources)
       api.use_version(:all)
       api.default_version = '1.0'
-      api.auth_chain << HaveAPI::ClientTestAPI::BasicProvider
+      api.auth_chain << (documentation_examples ? DocumentationBasicProvider : HaveAPI::ClientTestAPI::BasicProvider)
       api.auth_chain << HaveAPI::ClientTestAPI::TokenProvider
-      api.auth_chain << OAuthProvider
+      api.auth_chain << (documentation_examples ? DocumentationOAuthProvider : OAuthProvider)
       api.action_state = HaveAPI::ClientTestAPI::ActionStateBackend
       api.mount(mount)
       api.app

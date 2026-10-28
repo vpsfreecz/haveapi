@@ -1,3 +1,4 @@
+require 'shellwords'
 module HaveAPI
   module CLI; end
 end
@@ -8,6 +9,9 @@ require 'haveapi/client_example'
 module HaveAPI::ClientExamples
   class RubyCli < HaveAPI::ClientExample
     label 'CLI'
+    language 'cli'
+    language_label 'CLI'
+    detail_levels :simple
     code :bash
     order 30
 
@@ -33,7 +37,7 @@ module HaveAPI::ClientExamples
           # Note that the client always has to call some action. APIs should provide
           # an action to get information about the current user, so that's what we're
           # calling now.
-          #{init} --auth token #{auth_token_credentials(desc, password: false).map { |k, v| "--#{k} #{v}" }.join(' ')} --save user current
+          #{init} --auth token #{auth_token_credentials(desc, password: false).map { |k, v| "#{Shellwords.escape("--#{k}")} #{Shellwords.escape(v.to_s)}" }.join(' ')} --save user current
           Password: secret
 
           # Now the token is read from disk and the user does not have to provide username
@@ -44,6 +48,8 @@ module HaveAPI::ClientExamples
       when :oauth2
         '# OAuth2 is not supported by HaveAPI Ruby CLI.'
       end
+    rescue HaveAPI::ClientExample::UnsupportedAuthentication => e
+      { status: :limitation, reason: e.message }.freeze
     end
 
     def example(sample)

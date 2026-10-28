@@ -11,9 +11,9 @@ describe HaveAPI::RustClient::Documentation do
   end
   let(:source) { { git: 'https://example.test/fixture-client', rev: 'a1' * 20 } }
   let(:context) do
-    Struct.new(:version, :base_url, :description, :resource_path, :action_name, :sample).new(
+    Struct.new(:version, :base_url, :description, :resource_path, :action_name, :sample, :detail).new(
       '1.0', 'https://visible.example.test/', schema.fetch('description'), ['widget'], 'update',
-      { path_params: [1], request: { name: 'visible' }, response: { id: 1 } }
+      { path_params: [1], request: { name: 'visible' }, response: { id: 1 } }, :thorough
     )
   end
 
@@ -31,8 +31,8 @@ describe HaveAPI::RustClient::Documentation do
     allow(HaveAPI::RustClient::Snapshot).to receive(:fetch)
     allow(Open3).to receive(:capture3)
     allow(File).to receive(:write)
-    expect(render(automatic, :async, :example)).to include('.send().await?')
-    expect(render(described_class.new(snapshot: schema, config:), :blocking, :example)).to include('.send()?')
+    expect(render(automatic, :async, :example)).to include('.send().await', 'Ok(response) => response')
+    expect(render(described_class.new(snapshot: schema, config:), :blocking, :example)).to include('.send()', 'Ok(response) => response')
     expect(HaveAPI::RustClient::Generator).not_to have_received(:new)
     expect(HaveAPI::RustClient::Snapshot).not_to have_received(:fetch)
     expect(Open3).not_to have_received(:capture3)
@@ -183,7 +183,7 @@ describe HaveAPI::RustClient::Documentation do
    { git: 'https://example.test/sdk"; secret', rev: 'a' * 40 },
    { git: :not_a_url, rev: 'a' * 40 }, { git: 'https://example.test/sdk', rev: nil }].each_with_index do |invalid, index|
     it "rejects unsupported source metadata #{index + 1} without exposing its contents" do
-      expect { automatic(source: invalid) }.to raise_error(HaveAPI::RustClient::Error, 'invalid Rust SDK source')
+      expect { automatic(source: invalid) }.to raise_error(HaveAPI::RustClient::Error, 'invalid Rust API client source')
     end
   end
 end

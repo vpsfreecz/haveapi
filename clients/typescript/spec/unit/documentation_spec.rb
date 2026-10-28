@@ -3,7 +3,132 @@ require_relative '../documentation/fixtures'
 RSpec.describe HaveAPI::TypeScriptClient::Documentation do
   include TypeScriptDocumentationFixtures
 
-  it 'copies and freezes the SDK model, resolving canonical actions and aliases without allocating names' do
+  it 'renders simple fragments using the same canonical calls and values without repeated setup' do
+    context = documentation_context(detail: :simple)
+    adapter = documentation_adapter
+    source = adapter.render(kind: :example, context:).fetch(:code)
+    expect(source).to include('const result = await api.widget.update', '"cleared":null', '"enabled":false', '"count":0',
+                              '"wire_name":"mapped"', 'console.log(result.data.name)')
+    expect(source).not_to include('AsyncClient', 'createClient', 'function main', 'credential(', 'catch', 'result.meta')
+    context.detail = :thorough
+    expect(adapter.render(kind: :example, context:).fetch(:code)).to include('createClient', 'catch (error)', 'error instanceof AsyncError')
+  end
+
+  it 'uses identifier properties and escaped literal access for actual output wire names in both layouts' do
+    schema = documentation_snapshot
+    fields = { 'class' => parameter, '雪' => parameter, 'wire-name' => parameter,
+               'quote"\\<&' => parameter, '7days' => parameter }
+    %w[update index].each { |name| schema['description']['resources']['widget']['actions'][name]['output']['parameters'].merge!(fields) }
+    adapter = documentation_adapter(schema)
+    %w[update index].product(%i[simple thorough]).each do |action_name, detail|
+      context = documentation_context(schema, action_name:, detail:)
+      row = fields.to_h { |name, _| [name, 'visible value'] }
+      context.sample[:response] = action_name == 'index' ? [row] : row
+      source = adapter.render(kind: :example, context:).fetch(:code)
+      root = action_name == 'index' || detail == :thorough ? 'item' : 'result.data'
+      expect(source).to include("#{root}.class", "#{root}.雪", "#{root}[\"wire-name\"]", "#{root}[\"7days\"]")
+      quoted_key = '["quote\\"\\\\<&"]'
+      expect(source).to include("#{root}#{quoted_key}")
+      expect(source).not_to include("#{root}.wire_name")
+    end
+  end
+
+  it 'preserves normalized canonical names, aliases and prototype-safe input literals' do
+    schema = documentation_snapshot
+    resources = schema['description']['resources']
+    resources['my-widget'] = Marshal.load(Marshal.dump(resources['widget']))
+    actions = resources['my-widget']['actions']
+    actions['do-work'] = actions.delete('update')
+    context = documentation_context(schema)
+    context.resource_path = ['my-widget']
+    context.action_name = 'change'
+    context.action = actions['do-work']
+    source = documentation_adapter(schema).render(kind: :example, context:).fetch(:code)
+    expect(source).to include('api.my_widget.do_work(', '["__proto__"]:{"kept":true}', '"wire_name":"mapped"')
+    expect(source).not_to include('api["my_widget"]', '.change(')
+  end
+
+  it 'states only configured package identity without claiming a runtime version' do
+    context = documentation_context
+    pinned = documentation_adapter
+    unversioned = described_class.from_snapshot(snapshot: documentation_snapshot, package_name: 'widget-client')
+    expect(pinned.render(kind: :init, context:).fetch(:code)).to start_with('// Configured API client: widget-client@1.2.3.')
+    expect(unversioned.render(kind: :init, context:).fetch(:code)).to start_with('// Configured API client: widget-client.')
+    [pinned, unversioned].each do |adapter|
+      %i[init auth example].each do |kind|
+        source = adapter.render(kind:, context:, auth_method: :basic, auth_description: {}).fetch(:code)
+        expect(source).not_to include('SDK', 'runtime:', 'haveapi-client@')
+        expect(source).to include("from 'haveapi-client'", 'from "widget-client"')
+      end
+    end
+  end
+
+  it 'offers Simple initialization and both awaited auth/action diagnostics without a second render' do
+    adapter = documentation_adapter
+    context = documentation_context(detail: :simple)
+    results = %i[init auth example].to_h do |kind|
+      [kind, adapter.render(kind:, context:, auth_method: :basic, auth_description: {})]
+    end
+    context.sample[:status] = false
+    results[:failure] = adapter.render(kind: :example, context:)
+    context.sample[:request]['count'] = 'invalid'
+    results[:limitation] = adapter.render(kind: :example, context:)
+    calls = []
+    observer = TracePoint.new(:call) do |event|
+      calls << event.method_id if event.self.equal?(adapter) && event.method_id == :render
+    end
+    observer.enable do
+      results.each do |kind, result|
+        levels = adapter.detail_levels_for(kind: %i[init auth].include?(kind) ? kind : :example,
+                                           context:, result:, mode: :async, auth_method: :basic, auth_description: {})
+        expect(levels).to eq(%i[auth example failure].include?(kind) ? %i[simple thorough] : [:simple])
+        expect(levels).to be_frozen
+      end
+    end
+    expect(calls).to be_empty
+    context = documentation_context
+    thorough = adapter.render(kind: :example, context:).fetch(:code)
+    expect(thorough).to include('catch (error)', 'error instanceof AsyncError', 'const value0: unknown')
+    context.sample[:status] = false
+    expect(adapter.render(kind: :example, context:).fetch(:code)).to include('error.errors, error.envelope, error.response')
+  end
+
+  it 'wraps awaited Basic and token authentication and typed action setup in the known-error handler' do
+    schema = documentation_snapshot
+    fixture_action(schema)['auth'] = true
+    context = documentation_context(schema, detail: :thorough)
+    adapter = documentation_adapter(schema)
+    %i[basic token].each do |provider|
+      source = adapter.render(kind: :auth, context:, auth_method: provider).fetch(:code)
+      expect(source).to include('try {', 'error instanceof AsyncError', 'throw error;')
+      expect(source.index('try {')).to be < source.index('await runtime.authenticate')
+      expect(source).not_to include('credential(', 'node:process', 'HAVEAPI_', 'env[')
+    end
+    action = adapter.render(kind: :example, context:).fetch(:code)
+    expect(action.index('try {')).to be < action.index('await runtime.authenticate')
+    expect(action).to include('user: "user", password: "secret"', 'api.widget.update')
+    expect(adapter.render(kind: :auth, context:, auth_method: :token).fetch(:code)).to include('token: "example-token"')
+  end
+
+  it 'uses the runtime error class for a simple documented rejection and preserves limitations' do
+    context = documentation_context(detail: :simple)
+    context.sample[:status] = false
+    adapter = documentation_adapter
+    source = adapter.render(kind: :example, context:).fetch(:code)
+    expect(source).to include("import {AsyncError} from 'haveapi-client'", 'error instanceof AsyncError', 'error.httpStatus')
+    expect(source).not_to include('result.data', 'error.envelope', 'function main')
+    context.sample[:request]['count'] = 'invalid'
+    before = Marshal.dump(context.sample)
+    results = %i[simple thorough].map do |detail|
+      context.detail = detail
+      adapter.render(kind: :example, context:)
+    end
+    expect(results.first).to include(status: :limitation)
+    expect(results.last).to eq(results.first)
+    expect(Marshal.dump(context.sample)).to eq(before)
+  end
+
+  it 'copies and freezes the API client model, resolving canonical actions and aliases without allocating names' do
     schema = documentation_snapshot
     adapter = documentation_adapter(schema)
     canonical = adapter.resolve(resource_path: [:widget], action_name: :update)
@@ -34,14 +159,14 @@ RSpec.describe HaveAPI::TypeScriptClient::Documentation do
     result = adapter.render(kind: :example, context:)
     expect(result[:status]).to eq(:code)
     expect(result[:code]).to include('new AsyncClient("https://api.example.test/api/v1.0")', 'createClient({execute: spec => runtime.request(spec)})',
-                                     'api["widget"]["update"]', '"wire_name":"mapped"', '"cleared":null', '"enabled":false', '"count":0',
+                                     'api.widget.update', '"wire_name":"mapped"', '"cleared":null', '"enabled":false', '"count":0',
                                      'result.data, result.meta, result.envelope, result.httpStatus', 'const value0: unknown')
     expect(result[:code]).not_to include('findResource', 'findAction', 'waitForCompletion', 'runtime.setup', ' as ')
     context.action_name = 'change'
-    expect(adapter.render(kind: :example, context:)[:code]).to include('api["widget"]["update"]')
+    expect(adapter.render(kind: :example, context:)[:code]).to include('api.widget.update')
   end
 
-  it 'uses only authorized fields, tolerates unrelated additions and does not expose private SDK diagnostics' do
+  it 'uses only authorized fields, tolerates unrelated additions and does not expose private API client diagnostics' do
     adapter = documentation_adapter
     context = documentation_context
     context.action['output']['parameters'].delete('custom')
@@ -59,6 +184,8 @@ RSpec.describe HaveAPI::TypeScriptClient::Documentation do
   it 'limits stale routes, versions, metadata, parameter contracts and missing required values' do
     changes = [
       ->(context) { context.version = '2.0' },
+      ->(context) { context.version_url = 'https://user:password@api.example.test/api/v1.0/' },
+      ->(context) { context.version_url += '?query=value' },
       ->(context) { context.action['path'] = '/api/v1.0/changed' },
       ->(context) { context.action['method'] = 'POST' },
       ->(context) { context.action['blocking'] = true },
@@ -75,9 +202,13 @@ RSpec.describe HaveAPI::TypeScriptClient::Documentation do
       ->(context) { context.sample[:request]['count'] = 1.5 }
     ]
     changes.each do |change|
-      context = documentation_context
-      change.call(context)
-      expect(documentation_adapter.render(kind: :example, context:)[:status]).to eq(:limitation)
+      results = %i[simple thorough].map do |detail|
+        context = documentation_context(detail:)
+        change.call(context)
+        documentation_adapter.render(kind: :example, context:)
+      end
+      expect(results.first[:status]).to eq(:limitation)
+      expect(results.last).to eq(results.first)
     end
     context = documentation_context(action_name: 'index')
     context.sample[:request]['custom'] = { 'not' => 'a scalar' }
@@ -91,7 +222,7 @@ RSpec.describe HaveAPI::TypeScriptClient::Documentation do
     adapter = documentation_adapter(schema)
     expect(adapter.render(kind: :example, context:)[:code]).to include("runtime.authenticate('basic'")
     context.description['authentication'].delete('basic')
-    expect(adapter.render(kind: :example, context:)[:code]).to include("runtime.authenticate('token'", 'credential("HAVEAPI_TOKEN")')
+    expect(adapter.render(kind: :example, context:)[:code]).to include("runtime.authenticate('token'", 'token: "example-token"')
     context.description['authentication']['token']['http_header'] = 'Wrong'
     expect(adapter.render(kind: :example, context:)[:status]).to eq(:limitation)
     expect(adapter.render(kind: :auth, context: documentation_context, auth_method: 'oauth2', auth_description: {})[:status]).to eq(:limitation)
@@ -117,7 +248,7 @@ RSpec.describe HaveAPI::TypeScriptClient::Documentation do
     context.description['authentication']['unrelated'] = unrelated
     context.description['meta']['unrelated'] = unrelated
 
-    expect(adapter.render(kind: :example, context:)[:code]).to include('api["widget"]["update"]', "runtime.authenticate('basic'")
+    expect(adapter.render(kind: :example, context:)[:code]).to include('api.widget.update', "runtime.authenticate('basic'")
     expect(adapter.render(kind: :auth, context:, auth_method: :token)[:code]).to include("runtime.authenticate('token'")
     expect(unrelated).not_to have_received(:to_h)
   end
@@ -152,7 +283,7 @@ RSpec.describe HaveAPI::TypeScriptClient::Documentation do
     expect(adapter.render(kind: :example, context:)[:status]).to eq(:limitation)
     actions.delete('other')
     actions['update']['aliases'] = [:change]
-    expect(adapter.render(kind: :example, context:)[:code]).to include('api["widget"]["update"]')
+    expect(adapter.render(kind: :example, context:)[:code]).to include('api.widget.update')
   end
 
   it 'selects advertised authentication with mixed keys and rejects changed headers and explicit descriptions' do

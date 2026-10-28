@@ -11,7 +11,10 @@ root `.gems` directory, while generation uses the Rust component's environment.
 The runner activates the component bundle itself and starts the child with a
 separate server bundle that retains Ruby's default gems.
 
-The launcher contract specs run without servers or Rust compilation:
+The launcher contract specs require both prepared bundles. The fixture-action
+spec loads the real server application through Rack under its separate server
+bundle, including normal and documentation credential modes. These specs start
+no listener and invoke no Cargo:
 
 ```sh
 nix develop .#client-rust --command bundle exec rspec \
@@ -19,6 +22,10 @@ nix develop .#client-rust --command bundle exec rspec \
   clients/rust/spec/integration/fixture_actions_spec.rb \
   clients/rust/spec/integration/fixture_contract_spec.rb
 ```
+
+CI and `make test-rust` run `fixture_actions_spec.rb` after server dependency
+preparation and before the protocol runner. `make test-rust-unit` needs only the
+Rust component bundle.
 
 From the HaveAPI root, run:
 

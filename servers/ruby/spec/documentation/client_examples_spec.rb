@@ -39,7 +39,7 @@ describe HaveAPI::ClientExample do
 
     expect(last_response.status).to eq(200)
     expect(last_response.body).not_to include('File system', 'haveapi-fs', 'FUSE-based file system')
-    expect(last_response.body).to include('Initialization', '<h4>Ruby</h4>', '<h4>PHP</h4>', '<h4>curl</h4>')
+    expect(last_response.body).to include('Initialization', '<summary>Ruby', '<summary>PHP', '<summary>curl')
   end
 
   it 'hides unconfigured generated SDKs in overview, initialization, authentication and actions' do
@@ -47,6 +47,7 @@ describe HaveAPI::ClientExample do
     expect(last_response.status).to eq(200)
     expect(last_response.body).not_to include('clients/go', 'clients/rust', 'init-go', 'init-rust', 'typescript-generated', '>Go</h', '>Rust (')
     expect(last_response.body).to include('init-javascript-callback', 'init-typescript-async', 'init-python-sync')
+    get '/v1/?resource=widget'
     expect(last_response.body).to include('example-widget-show-0-javascript-callback')
   end
 
@@ -56,13 +57,18 @@ describe HaveAPI::ClientExample do
     allow(HaveAPI::ClientExamples::GoClient).to receive(:render).and_return({ status: :limitation, reason: 'Unsupported <sample> & value' }.freeze)
     get '/v1/'
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to include('clients/go', 'init-go', 'example-widget-show-0-go', 'Unsupported &lt;sample&gt; &amp; value')
+    expect(last_response.body).to include('clients/go', 'init-go', 'Unsupported &lt;sample&gt; &amp; value')
     expect(last_response.body).not_to include('Unsupported <sample>', 'clients/rust', 'init-rust')
+    get '/v1/?resource=widget'
+    expect(last_response.body).to include('example-widget-show-0-go', 'Unsupported &lt;sample&gt; &amp; value')
   end
 
   it 'passes mounted version-aware URLs and stable canonical action data into renderers' do
     contexts = []
-    allow(HaveAPI::ClientExamples::GoClient).to receive(:available?).and_return(true)
+    allow(HaveAPI::ClientExamples::GoClient).to receive_messages(
+      available?: true,
+      detail_levels_for: HaveAPI::ClientExamples::GoClient.detail_levels
+    )
     allow(HaveAPI::ClientExamples::GoClient).to receive(:render) do |kind, context:, **_kwargs|
       contexts << [kind, context]
       { status: :code, code: context.version_url }
@@ -70,7 +76,7 @@ describe HaveAPI::ClientExample do
     server = HaveAPI::Server.new(get_opt(:api_module))
     server.use_version(1)
     server.mount('/mounted/api/')
-    response = Rack::MockRequest.new(server.app).get('/mounted/api/v1/', 'HTTP_HOST' => 'example.org')
+    response = Rack::MockRequest.new(server.app).get('/mounted/api/v1/?resource=widget', 'HTTP_HOST' => 'example.org')
     expect(response.status).to eq(200)
     selected = contexts.find { |kind, ctx| kind == :example && ctx.action_name == 'show' }.last
     expect(selected.base_url).to eq('http://example.org/mounted/api/')
@@ -86,7 +92,7 @@ describe HaveAPI::ClientExample do
     allow(HaveAPI::ClientExamples::GoClient).to receive(:render).and_return({ status: :code, code: 'example' })
     get '/v1/'
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to include('<code>example.test/&lt;client&gt;&amp;</code></li>')
+    expect(last_response.body).to include('<code>example.test/&lt;client&gt;&amp;</code>')
     expect(last_response.body).not_to include('example.test/<client>', '&amp;lt;', 'version = "latest"')
   end
 end

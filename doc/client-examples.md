@@ -8,18 +8,39 @@ Ruby, PHP, CLI, curl and HTTP examples are also available. A sample
 that a client cannot represent shows a limitation instead of dropping input or
 inventing a successful result.
 
-Go, Rust and generated TypeScript tabs require a profile for a generated SDK.
-Their package versions are independent of HaveAPI and the API version. Without a
-profile, the server
-hides those clients from the overview and all initialization, authentication and
-action panels. Install the matching generator gem only when configuring its
-profile; ordinary servers do not depend on these generators.
+Examples default to **Simple**. Action examples assume an initialized and, when
+needed, authenticated `api`; initialization and authentication examples are on
+separate pages. The Examples selector stays visible and offers **With error
+handling** when the current page has examples with additional error handling
+for that client. Examples without a distinct error-handling form remain Simple.
+Both levels preserve the same sample values, path arguments and operation
+semantics. Extra setup alone does not create another choice; built-in
+limitations have one Simple panel.
+See [the documentation UI guide](documentation-ui.md) for navigation and saved
+display preferences.
 
-## Configure a generated SDK
+Examples use placeholder credentials: `user` / `secret`, `example-token` and
+`example-access-token`. Replace them with your application's values. Renderers
+use these public literals rather than reading credentials from the environment,
+current user, profile settings or private defaults.
 
-Register profiles before mounting the server. For an SDK that matches the
-current
-API, configure its package identity:
+Token-login and challenge inputs use the authorized description's field names,
+types and finite machine-readable choices. Required inputs remain present, and
+the lifetime is explicitly fixed. Custom validation may require different
+values; an unrepresentable required field produces a limitation. Continuation
+names and inputs follow the advertised actions, while the runtime supplies and
+propagates intermediate tokens.
+
+Go, Rust and TypeScript API clients require a configured profile. Their package
+versions are independent of HaveAPI and the API version. Without a profile, the
+server omits those clients from the overview and example panels. Install the
+matching generator gem when configuring its profile; ordinary servers do not
+depend on these generators.
+
+## Configure an API client
+
+Register profiles before mounting the server. For an API client that matches the
+current API, configure its package identity:
 
 ```ruby
 api.documentation_clients('1.0',
@@ -40,30 +61,27 @@ api.mount('/api/')
 matching generator in the server's Ruby environment: `haveapi-go-client`,
 `haveapi-rust-client`, or the source-distributed `haveapi-typescript-client`.
 See the [TypeScript generator guide](../clients/typescript/README.md) for its
-setup. An explicit `generator_version` requires the installed generator to
-report
+setup. An explicit `generator_version` requires the installed generator to report
 that version; the server never downloads one. This version is independent of the
-SDK and API versions.
+API client and API versions.
 
 At the end of mount, the server builds one private structural model per
-configured
-API version. The model includes authentication resources, routes and changes
-from
-post-mount hooks, so canonical names and parent arguments use the complete API
+configured API version. The model includes authentication resources, routes and
+changes from post-mount hooks, so canonical names and parent arguments use the complete API
 declaration. The private copy excludes examples, prose and parameter defaults.
 HTML requests use the current user's authorized description, fields and samples;
 they never expose the private model or its initialization diagnostics. Without
 a configured profile, the server loads no optional generator and hides the Go,
-Rust and generated TypeScript panels. The callback and async TypeScript
+Rust and TypeScript API client panels. The callback and async TypeScript
 examples remain separate and need no profile.
 
-Automatic profiles assume that the installed SDK matches the current server's
-generation contract. A package name or version does not prove its contents.
-An older SDK can lack new actions or use different names after a collision or
-route change. Check actual SDK compatibility before advertising it; use a saved
-schema override below when the SDK represents an older or restricted API.
+Automatic profiles assume that the installed API client matches the current
+server's generation contract. A package name or version does not prove its
+contents. An older API client can lack new actions or use different names after
+a collision or route change. Check compatibility before advertising a client;
+use a saved-schema override for an older or restricted API.
 
-### Optional SDK versions and sources
+### Optional API client versions and sources
 
 Set `module_version: 'v1.2.3'` for Go, `crate_version: '1.2.3'` for Rust or
 `package_version: '1.2.3'` for TypeScript when a specific package version is
@@ -89,13 +107,15 @@ examples also show their Tokio and serde_json requirements.
 
 TypeScript accepts ordinary lowercase npm package names, including scoped names,
 and optional concrete SemVer versions. Tags, version ranges, Git URLs, local
-paths
-and custom factories are not profile options. Configure a package that users can
-install; the server does not check its availability or publish it. Generated
-snippets use the package's public `createClient` export and the published
-`haveapi-client` 0.30.2 runtime.
+paths and custom factories are not profile options. Configure a package that
+users can install; the server does not check its availability or publish it.
+TypeScript examples call the package's typed properties through its public
+`createClient` export. The profile does not detect or select the application's
+installed `haveapi-client` runtime. The installation command above uses the
+version supported by the [TypeScript generator](../clients/typescript/README.md);
+the examples do not report it as a configured runtime version.
 
-For an unpublished Rust SDK, supply an HTTPS Git URL and a full commit SHA:
+For an unpublished Rust API client, supply an HTTPS Git URL and a full commit SHA:
 
 ```ruby
 api.documentation_clients('7.0',
@@ -122,8 +142,8 @@ credentials, query strings, fragments or control characters; revisions must be
 40 hexadecimal characters. Branches, tags, local paths and custom registries are
 not supported. An explicit crate version additionally constrains the selected
 source package. The server never fetches the repository or runs these user
-installation commands. These settings do not regenerate or publish an SDK and
-do not establish that this particular SDK matches a given API surface.
+installation commands. These settings do not regenerate or publish an API client
+or establish that it matches a given API surface.
 
 ### Saved-schema overrides
 
@@ -153,9 +173,9 @@ api.documentation_clients('1.0',
 
 Paths name trusted absolute local files. `description_path` is Go's saved
 machine-readable description, not HTML. For Rust and TypeScript, `snapshot_path`
-selects the saved schema and capture metadata. These files select an exact SDK
-shape in place of the current
-server declaration. Keep the files private and retain them with the SDK release.
+selects the saved schema and capture metadata. These files select an exact API
+client shape in place of the current server declaration. Keep them private and
+retain them with the API client release.
 
 Rust's legacy `generator_config_path` supplies the crate name/version and full
 packaging configuration. It is mutually exclusive with inline `crate_name` and
@@ -174,9 +194,9 @@ server application. An older explicitly pinned generator can serve a suitable
 legacy file profile, but automatic/inline Rust mode requires the new factory
 interface and never guesses a fallback.
 
-A saved SDK can still serve examples after unrelated live additions. Each sample
-must match its saved route, layout and supplied parameter contracts; unavailable
-or stale samples show a limitation. Hidden actions, fields, defaults and samples
+A saved API client can still serve examples after unrelated live additions. Each
+sample must match its saved route, layout and supplied parameter contracts;
+unavailable or stale samples show a limitation. Hidden actions, fields, defaults and samples
 remain hidden from the current user. The server never fetches descriptions,
 regenerates packages or runs a compiler/formatter during an HTML request.
 
@@ -192,6 +212,11 @@ Existing renderer positional constructors and `init`, `auth(method, desc)` and
 The registry binds a request-local `HaveAPI::ClientExample::Context` through
 `with_context`. It holds the selected version, URLs including the API mount,
 the filtered description, and the current resource, action and sample.
+Its `detail` reader is exactly `:simple` or `:thorough`, defaulting to `:simple`.
+Both construction and `context.with(detail: ...)` reject other values, including
+strings and nil. Changing detail shares the existing owned data, as other
+context derivations do. The base renderer's `thorough?` helper reads this value;
+legacy positional renderer instances use simple behavior.
 Construction copies and freezes Hash, Array and String data without freezing
 the caller's containers. Each request owns its description snapshot.
 `context.with(...)` creates a distinct frozen context, sharing unchanged fields
@@ -215,6 +240,74 @@ strings, escaped once by the templates. A stable class `id` identifies a
 variant; `code` selects its syntax language. `available?(context)` controls the
 overview and every panel before rendering.
 
+Renderer classes declare presentation with `language 'python'`,
+`language_label 'Python'` and, for a client variant, `variant 'Async'`. These
+class methods also read the metadata. The language is a stable lower-case group
+ID, independent of the syntax lexer and exact client ID. An unspecified language
+defaults to the renderer's own `id`, its language label defaults to `label`, and
+its variant is nil. Metadata is declared on each class; a subclass without its
+own metadata gets those defaults. Keep client IDs and registry order stable.
+
+The class query `detail_levels_for(kind, context:, result:, auth_method: nil,
+auth_description: nil)` selects the meaningful levels for each example group.
+`result` is the already-rendered Simple result. Return a frozen `[:simple]` or
+`[:simple, :thorough]`; other values are errors. The base implementation returns
+the inherited `detail_levels` declaration, which defaults to both levels for
+custom renderers. A custom Simple limitation does not suppress its distinct
+thorough implementation. Direct rendering at either Context detail remains
+supported, independently of the choices advertised in HTML.
+
+Ruby and PHP offer both levels for representable initialization, authentication
+and actions. Ruby OAuth remains unsupported. Their constructors are lazy, so
+With error handling runs setup explicitly and handles validation, API,
+authentication and protocol failures. Ruby rescues `ValidationError` before its
+`ActionFailed` parent and reads response errors only from an actual `Response`.
+PHP uses its framework exceptions and `getErrors()` where supported, and
+rethrows unknown dependency exceptions. Its OAuth session, state, PKCE, redirect
+and token exchange remain part of the example.
+
+Callback JavaScript and TypeScript offer both levels for actions. Initialization
+and authentication already check the ready result and offer Simple only. Async
+JavaScript, async TypeScript and Python offer both for representable examples.
+
+Go's Simple actions already check transport and API failures. Both levels are
+available only for successful blocking actions with an authorized operation-status
+helper. Its initialization and credential setters make no request and offer
+Simple only. Rust offers both for representable code, with explicit handling of
+fallible construction and send results. Its authentication setters configure
+credentials without validating them over the network.
+
+Typed TypeScript initialization is Simple only. Supported Basic/token
+authentication and actions offer both with awaited `AsyncError` handling; OAuth
+remains a limitation. CLI, curl and HTTP offer Simple only: the CLI reports
+failures and exits nonzero, while the transcripts show protocol responses.
+All built-in limitation results offer Simple only.
+
+Go, Rust and TypeScript wrappers delegate to their configured adapter's
+`detail_levels_for(kind:, context:, result:, mode:, auth_method: nil,
+auth_description: nil)` when it implements that query. Older adapters retain
+the wrapper's declared levels, including a distinct thorough result after a
+Simple limitation. Those adapters may still offer identical code at both levels.
+A query that returns invalid levels or raises an error does not use this fallback.
+Capability queries must not render again or inspect unrelated resources.
+The HTML producer renders each advertised detail once and
+publishes its choices in the example group's `data-example-details` map. Client
+metadata contains the ordered union for the current page; clients without any
+example groups get Simple. Neither the group nor page choices change the saved
+detail preference.
+
+Simple action renderers use the established `api` and show the actual call and
+relevant result. Initialize and authenticate it using the separate examples.
+Python async fragments belong inside an async function; their comment makes that
+context explicit. Python setup examples use a minimal async function and
+`asyncio.run`, while sync examples run at top level. Neither level has a
+`__main__` guard. Thorough sync examples use top-level `try`/`except`.
+
+Translate and validate samples before selecting presentation detail. Keep exact
+names, parent arguments, false, zero, empty strings, nullable values and blocking
+operation behavior. Do not shorten examples by dropping unsupported input or
+removing lines from an already rendered program.
+
 Generated-client adapters belong to their generator gems and consume context
 readers without depending on the server gem. They resolve names using the
 complete private generator model and never run a compiler, formatter or
@@ -223,6 +316,10 @@ in an HTML request. Keep adapter rendering read-only: configured adapters are
 frozen
 and shared, while authorized description snapshots belong to individual
 requests.
+Adapters keep their existing `render(kind:, context:, mode:, ...)` signature and
+read `context.detail` directly. Test contexts must provide the reader. An older
+third-party adapter can ignore this additive field and retain the wrapper's
+declared choices without implementing the new capability query.
 Derived contexts within one request share unchanged owned data. Supplying a
 resource, action or sample still copies that supplied subtree, so a resource
 with
@@ -268,9 +365,11 @@ The target synchronizes shared documentation before running the harness.
 Standard
 output is JSON; shell/dependency preparation happens before the redirected
 command.
-No network server, database, generated SDK compilation or formatter is involved.
-The synthetic fixture uses Basic users `admin` and `member`, both with the local
-test password `fixture-only`.
+No network server, database, API client compilation or formatter is involved.
+The synthetic fixture has users `admin` and `member`. Direct-render and description
+lanes use Basic authentication with the local password `fixture-only`. HTML
+requests use real documentation OAuth cookies on supported sources, with token
+validation on each request; historical sources without that feature use Basic.
 
 Defaults measure two shapes with eight ordinary actions each: eight resources
 with one action, and one resource with eight actions. Each ordinary action also
@@ -351,8 +450,8 @@ failure class, while concentrated-resource costs and other future regressions
 still need representative measurements.
 
 Each client also has acceptance commands that check executable snippets against
-installed packages or a generated SDK. These use
-rendered source against disposable fixtures; syntax checks alone do not
+installed packages or an API client. These run rendered source against
+disposable fixtures; syntax checks alone do not
 establish that client calls or authentication work. See each client's
 development documentation for its test environment. Highlighter rebuilding is
 described in [utils/highlight](../utils/highlight/README.md).

@@ -5,9 +5,16 @@ module HaveAPI::ClientExamples
     include DynamicHelpers
 
     label 'JavaScript (callback)'
+    language 'javascript'
+    language_label 'JavaScript'
+    variant 'Callback'
     id 'javascript-callback'
     code :javascript
     order 10
+
+    def self.detail_levels_for(kind, context:, result:, auth_method: nil, auth_description: nil)
+      kind == :example && result[:status] != :limitation ? DEFAULT_DETAIL_LEVELS : SIMPLE_DETAIL_LEVELS
+    end
 
     def asynchronous?
       false
@@ -37,21 +44,24 @@ module HaveAPI::ClientExamples
       asynchronous? ? 'AsyncClient' : 'CallbackClient'
     end
 
-    def env_helper
-      type = typescript? ? ': string' : ''
-      <<~JS
-        function credential(name#{type})#{type} {
-          const value = env[name];
-          if (value === undefined) throw new Error("Set " + name + " before running this example");
-          return value;
-        }
-      JS
-    end
-
     def program(body, authentication: nil)
-      imports = "import { #{client_name}#{', AsyncError' if asynchronous?} } from \"haveapi-client\";\n"
-      imports << "import { env } from \"node:process\";\n\n#{env_helper}\n" if authentication
+      imports = "import { #{client_name}#{', AsyncError' if asynchronous? && thorough?} } from \"haveapi-client\";\n"
       declaration = "const api = new #{client_name}(#{js_literal(api_base)}, {version: #{js_literal(api_version)}});\n"
+      unless thorough?
+        return "#{imports}\n#{declaration}#{authentication || "await api.setup();\n"}#{body}" if asynchronous?
+
+        return <<~JS
+          #{imports}
+          #{declaration}
+          #{authentication || 'api.setup('}(api, ready) => {
+            if (!ready) {
+              console.error("Discovery or authentication failed");
+              return;
+            }
+          #{indent(body)}});
+        JS
+      end
+
       if asynchronous?
         <<~JS
           #{imports}
@@ -71,7 +81,7 @@ module HaveAPI::ClientExamples
         <<~JS
           #{imports}
           #{declaration}
-          #{authentication || 'api.setup('}(client, ready) => {
+          #{authentication || 'api.setup('}(api, ready) => {
             if (!ready) {
               console.error("Discovery or authentication failed");
               return;
@@ -86,7 +96,7 @@ module HaveAPI::ClientExamples
     end
 
     def init
-      code_result { program("console.log(\"Discovery complete\");\n") }
+      code_result { program(thorough? ? "console.log(\"Discovery complete\");\n" : '') }
     end
 
     def action_authentication
@@ -96,9 +106,9 @@ module HaveAPI::ClientExamples
       raise Unsupported, 'This action requires an authentication provider unsupported by this client.' unless method
 
       options = {
-        token: '{token: credential("HAVEAPI_TOKEN")}',
-        basic: '{user: credential("HAVEAPI_USER"), password: credential("HAVEAPI_PASSWORD")}',
-        oauth2: '{access_token: {access_token: credential("HAVEAPI_ACCESS_TOKEN")}}'
+        token: '{token: "example-token"}',
+        basic: '{user: "user", password: "secret"}',
+        oauth2: '{access_token: {access_token: "example-access-token"}}'
       }.fetch(method)
       if asynchronous?
         "await api.authenticate(#{js_literal(method.to_s)}, #{options});\n"
@@ -113,42 +123,41 @@ module HaveAPI::ClientExamples
       code_result do
         options = case method.to_sym
                   when :basic
-                    '{user: credential("HAVEAPI_USER"), password: credential("HAVEAPI_PASSWORD")}'
+                    '{user: "user", password: "secret"}'
                   when :token
                     if token_login_fields(description).empty?
-                      '{token: credential("HAVEAPI_TOKEN")}'
+                      '{token: "example-token"}'
                     else
-                      "env.HAVEAPI_TOKEN !== undefined ? {token: credential(\"HAVEAPI_TOKEN\")} : #{token_login_options(description)}"
+                      token_login_options(description)
                     end
                   when :oauth2
-                    '{access_token: {access_token: credential("HAVEAPI_ACCESS_TOKEN")}}'
+                    '{access_token: {access_token: "example-access-token"}}'
                   end
         authentication = if asynchronous?
                            "await api.authenticate(#{js_literal(method.to_s)}, #{options});\n"
                          else
                            "api.authenticate(#{js_literal(method.to_s)}, #{options}, "
                          end
-        source = program("console.log(\"Authenticated\");\n", authentication:)
+        source = program(thorough? ? "console.log(\"Authenticated\");\n" : '', authentication:)
         if method.to_sym == :oauth2
           source = "// Use an existing access token; this client does not run an OAuth authorization flow.\n#{source}"
-        elsif method.to_sym == :token && !token_login_fields(description).empty?
-          source = "// Set HAVEAPI_TOKEN, or use login fields; HAVEAPI_AUTH_* and HAVEAPI_CHALLENGE_* contain JSON values.\n#{source}"
         end
         source
       end
     end
 
     def token_login_options(description)
-      fields = token_login_fields(description).map do |name, _|
-        "[#{js_literal(name.to_s)}]: JSON.parse(credential(#{js_literal("HAVEAPI_AUTH_#{name}")}))"
-      end
+      fields = auth_token_credentials(description).map { |name, value| "[#{js_literal(name)}]: #{js_literal(value)}" }
+      continuations = auth_token_continuations(description)
       challenge = asynchronous? ? 'onChallenge' : 'callback'
-      annotation = typescript? ? ': Record<string, unknown>' : ''
+      annotation = typescript? ? ': Record<string, Record<string, unknown>>' : ''
       fields << <<~JS.strip
         #{challenge}: (action, parameters) => {
-          const input#{annotation} = Object.create(null);
+          const continuations#{annotation} = #{js_literal(continuations)};
+          if (!Object.prototype.hasOwnProperty.call(continuations, action)) throw new Error("Unknown authentication continuation");
+          const input = continuations[action];
           for (const name of Object.keys(parameters)) {
-            if (name !== "token") input[name] = JSON.parse(credential("HAVEAPI_CHALLENGE_" + name));
+            if (name !== "token" && !Object.prototype.hasOwnProperty.call(input, name)) throw new Error("Unknown authentication input");
           }
           return input;
         }
@@ -179,13 +188,14 @@ module HaveAPI::ClientExamples
           end.join
           options = request.nil? ? [] : ["{params: #{js_literal(request)}}"]
           body = "const result = await #{resource}.action(#{js_literal(current_action_name)})(#{(args + options).join(', ')});\n"
-          body << "console.log(result.value);\nconsole.log(result.response.meta);\n"
+          body << "console.log(result.value);\n"
+          body << "console.log(result.response.meta);\n" if thorough?
           if field(current_action, :blocking)
             body << "// Request success alone does not establish operation completion.\n"
             body << "const completed = await api.waitForCompletion(result, {timeoutMs: 300000});\nconsole.log(completed.state);\n"
           end
         else
-          body = "const resource = CallbackClient.findResource(client, #{js_literal(current_resource_path)});\n"
+          body = "const resource = CallbackClient.findResource(api, #{js_literal(current_resource_path)});\n"
           body << "const action = CallbackClient.findAction(resource, #{js_literal(current_action_name)});\n"
           options = request.nil? ? '' : "params: #{js_literal(request)},\n"
           options << <<~JS
@@ -195,13 +205,14 @@ module HaveAPI::ClientExamples
                 return;
               }
               console.log(reply.response());
-              console.log(reply.meta());
-            }
           JS
+          options << "  console.log(reply.meta());\n" if thorough?
+          options << "}\n"
           body << "action.directInvoke(#{(args + ["{\n#{indent(options)}}"]).join(', ')});\n"
           body << "// This prints the initial response; use its action-state metadata to monitor completion.\n" if field(current_action, :blocking)
         end
-        program(body, authentication: action_authentication)
+        authentication = action_authentication
+        thorough? ? program(body, authentication:) : body
       end
     end
   end

@@ -39,9 +39,10 @@ RSpec.describe HaveAPI::ClientExamples::JsClient do
 
   it 'renders complete syntax-valid initialization, authentication and hostile action programs' do
     renderers.each do |renderer|
-      results = [renderer.render(:init, context: dynamic_context), renderer.render(:example, context: dynamic_context)]
+      context = dynamic_context(detail: :thorough)
+      results = [renderer.render(:init, context:), renderer.render(:example, context:)]
       %i[basic token oauth2].each do |method|
-        results << renderer.render(:auth, context: dynamic_context, auth_method: method, auth_description: token_description)
+        results << renderer.render(:auth, context:, auth_method: method, auth_description: token_description)
       end
       results.each do |result|
         expect(result[:status]).to eq(:code), result.inspect
@@ -60,7 +61,7 @@ RSpec.describe HaveAPI::ClientExamples::JsClient do
       expect(source).to include('["enabled"]: false', '["count"]: 0', '["nullable"]: null', '["__proto__"]:')
       expect(source).to include('new\\"\\n</script>')
       if renderer.id.end_with?('-async')
-        expect(source).to include('.resource("constructor").resource("resources").action(', 'result.value', 'result.response.meta')
+        expect(source).to include('.resource("constructor").resource("resources").action(', 'result.value')
       else
         expect(source).to include('CallbackClient.findResource', 'CallbackClient.findAction', 'action.directInvoke', 'reply.message()', 'reply.envelope.errors')
       end
@@ -72,14 +73,22 @@ RSpec.describe HaveAPI::ClientExamples::JsClient do
     Dir.mktmpdir('haveapi-ts-docs-') do |directory|
       files = []
       [HaveAPI::ClientExamples::TsClient, HaveAPI::ClientExamples::TsAsyncClient].each_with_index do |renderer, index|
-        results = [renderer.render(:init, context: dynamic_context), renderer.render(:example, context: dynamic_context)]
-        %i[basic token oauth2].each do |method|
-          results << renderer.render(:auth, context: dynamic_context, auth_method: method, auth_description: token_description)
-        end
-        results.each_with_index do |result, number|
-          path = File.join(directory, "#{index}-#{number}.ts")
-          File.write(path, result.fetch(:code))
-          files << path
+        %i[simple thorough].each do |detail|
+          context = dynamic_context(detail:)
+          results = [renderer.render(:init, context:), renderer.render(:example, context:)]
+          %i[basic token oauth2].each do |method|
+            results << renderer.render(:auth, context:, auth_method: method, auth_description: token_description)
+          end
+          results.each_with_index do |result, number|
+            source = result.fetch(:code)
+            if detail == :simple && number == 1
+              client = renderer.id.end_with?('-async') ? 'AsyncClient' : 'CallbackClient'
+              source = "import { #{client} } from \"haveapi-client\";\ndeclare const api: #{client};\n#{source}"
+            end
+            path = File.join(directory, "#{index}-#{detail}-#{number}.ts")
+            File.write(path, source)
+            files << path
+          end
         end
       end
       options = { strict: true, noEmit: true, target: 'ES2020', module: 'ESNext', moduleResolution: 'node',

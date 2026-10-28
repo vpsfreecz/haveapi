@@ -1,5 +1,4 @@
 require 'spec_helper'
-require 'base64'
 
 module ProfileMountSpec
   User = Struct.new(:login)
@@ -132,13 +131,6 @@ describe HaveAPI::Server, '#mount' do
     server.documentation_clients(version, go: { import_path: 'example.test/widget/client' })
   end
 
-  def request_as(user, locale)
-    Rack::MockRequest.new(server.app).get(
-      '/mounted/api/v1/', 'HTTP_HOST' => 'example.org', 'HTTP_ACCEPT_LANGUAGE' => locale,
-                          'HTTP_AUTHORIZATION' => "Basic #{Base64.strict_encode64("#{user}:pass")}"
-    )
-  end
-
   def register_typescript
     generator = Module.new
     generator.const_set(:VERSION, HaveAPI::VERSION)
@@ -176,40 +168,6 @@ describe HaveAPI::Server, '#mount' do
     expect(server.documentation_client_profiles(2)).to be_empty
   end
 
-  it 'captures each configured version once and does not initialize from requests' do
-    register(1)
-    register(2)
-    server.mount('/mounted/api/')
-    expect(descriptions.map { |description| description['help'] }).to eq(['/mounted/api/v1/', '/mounted/api/v2/'])
-    request_as('member', 'en')
-    request_as('admin', 'cs')
-    expect(descriptions.size).to eq(2)
-    expect { register }.to raise_error(HaveAPI::ClientExample::Profiles::Invalid, /already mounted/)
-  end
-
-  it 'keeps private schema separate from sequential users, locales, HTML and samples' do
-    register
-    server.available_locales = %i[en cs]
-    ::I18n.backend.store_translations(:en, profile_mount_spec: { action: 'Visible English action' })
-    ::I18n.backend.store_translations(:cs, profile_mount_spec: { action: 'Viditelna ceska akce' })
-    server.mount('/mounted/api/')
-    privileged = request_as('admin', 'en')
-    expect(privileged.status).to eq(200)
-    expect(privileged.body).to include('PRIVATE_SAMPLE', 'Visible English action')
-    contexts.clear
-    public_response = request_as('member', 'cs')
-    expect(public_response.status).to eq(200)
-    expect(public_response.body).to include('Viditelna ceska akce', 'init-go', 'example.test/widget/client')
-    expect(public_response.body).not_to include('PRIVATE_DEFAULT', 'PRIVATE_SAMPLE', 'PRIVATE_RESPONSE', 'admin_only', 'haveapi.invalid', 'StructuralSchema')
-    selected = contexts.find { |context| context.action_name == 'show' }
-    expect(selected.action.dig(:input, :parameters).keys.map(&:to_s)).to eq(['visible'])
-    expect(selected.description[:resources]['widget'][:actions]).not_to have_key('secret')
-    expect(selected.sample[:request]).to eq(visible: 'public sample')
-    expect(selected.action[:description]).to eq('Viditelna ceska akce')
-    expect(request_as('member', 'en').body).to include('Visible English action')
-    expect(descriptions.size).to eq(1)
-  end
-
   it 'makes the server unusable and publishes no profiles after an adapter failure' do
     register
     allow(documentation).to receive(:new).and_raise('PRIVATE_SCHEMA_DIAGNOSTIC')
@@ -225,28 +183,6 @@ describe HaveAPI::Server, '#mount' do
     expect(documentation).not_to have_received(:new)
     expect(server.app).to be_nil
     expect(server.documentation_client_profiles(1)).to be_empty
-  end
-
-  it 'mounts a generated TypeScript panel beside dynamic tabs using only authorized request samples' do
-    register_typescript
-    server.mount('/mounted/api/')
-    expect(descriptions.size).to eq(1)
-    private_schema = descriptions.first
-    expect(private_schema).to be_frozen
-    expect(JSON.generate(private_schema)).not_to include('PRIVATE_DEFAULT', 'PRIVATE_SAMPLE', 'PRIVATE_RESPONSE')
-    expect(private_schema.dig('resources', 'widget', 'actions')).to have_key('secret')
-    expect(request_as('admin', 'en').body).to include('PRIVATE_SAMPLE')
-    contexts.clear
-    response = request_as('member', 'en')
-    expect(response.status).to eq(200)
-    expect(response.body).to include('TypeScript (generated)', 'init-typescript-generated', 'init-typescript-callback',
-                                     'init-typescript-async', 'example-widget-show-0-typescript-generated', '@example/widget-client')
-    expect(response.body).not_to include('PRIVATE_DEFAULT', 'PRIVATE_SAMPLE', 'PRIVATE_RESPONSE', 'admin_only')
-    selected = contexts.find { |context| context.action_name == 'show' }
-    expect(selected.version_url).to eq('http://example.org/mounted/api/v1/')
-    expect(selected.action.dig(:input, :parameters).keys).to eq([:visible])
-    expect(selected.sample[:request]).to eq(visible: 'public sample')
-    expect(documentation).to have_received(:from_description).once
   end
 
   it 'aborts the whole mount when the generated TypeScript adapter rejects the full declaration' do

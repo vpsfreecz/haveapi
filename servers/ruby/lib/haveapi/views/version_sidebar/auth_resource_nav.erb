@@ -1,0 +1,19 @@
+<ul>
+  <% sort_hash(resources).each do |resource, info| %>
+    <% resource_path = path + [resource.to_s] %>
+    <li><a data-doc-subsection href="#<%= escape_html(documentation_resource_target(resource_path: resource_path, authentication: authentication_provider)) %>"><%= escape_html(resource_path.join('.')) %></a>
+      <ul>
+        <% sort_hash(info[:actions]).each do |action, action_info| %>
+          <li><a data-doc-subsection href="#<%= escape_html(documentation_resource_target(resource_path: resource_path, action_name: action, authentication: authentication_provider)) %>"><%= escape_html(action.to_s.humanize) %></a>
+            <ul>
+              <% documentation_action_sections(action_info, resource_path: resource_path, action_name: action, authentication: authentication_provider).each do |section| %>
+                <li><a data-doc-subsection href="#<%= escape_html(section[:id]) %>"><%= escape_html(section[:label]) %></a></li>
+              <% end %>
+            </ul>
+          </li>
+        <% end %>
+      </ul>
+      <% unless info[:resources].empty? %><%= erb :'version_sidebar/auth_resource_nav', locals: {resources: info[:resources], path: resource_path, authentication_provider: authentication_provider} %><% end %>
+    </li>
+  <% end %>
+</ul>

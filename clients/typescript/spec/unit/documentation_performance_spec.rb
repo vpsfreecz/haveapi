@@ -50,7 +50,7 @@ RSpec.describe HaveAPI::TypeScriptClient::Documentation do
       small, large = contexts.map { |context| render_with_work(context, kind: :example) }
 
       expect(small.first[:status]).to eq(:code)
-      expect(small.first[:code]).to include('api["widget"]["update"]', "runtime.authenticate('basic'")
+      expect(small.first[:code]).to include('api.widget.update', "runtime.authenticate('basic'")
       expect(large.first).to eq(small.first)
       expect(small.last).to be > 10
       expect(large.last).to eq(small.last)

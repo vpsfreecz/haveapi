@@ -13,7 +13,7 @@ module HaveAPI::ClientExamples
 
     def code_result
       { status: :code, code: yield.freeze }.freeze
-    rescue Unsupported, JSON::GeneratorError => e
+    rescue Unsupported, HaveAPI::ClientExample::UnsupportedAuthentication, JSON::GeneratorError => e
       { status: :limitation, reason: e.message.freeze }.freeze
     end
 

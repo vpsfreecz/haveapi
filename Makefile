@@ -60,6 +60,7 @@ test-performance-clients: doc
 test-documentation-assets:
 	node servers/ruby/spec/client_examples/assets/highlighter_test.cjs
 	node servers/ruby/spec/client_examples/assets/tabs_test.cjs
+	node servers/ruby/spec/client_examples/assets/documentation_test.cjs
 
 # Requires the locked Python environment prepared by release-deps.
 test-documentation-python:
@@ -76,6 +77,7 @@ test-typescript:
 test-rust: test-rust-unit
 	cd clients/rust/runtime && cargo test --locked
 	cd clients/rust/runtime && cargo test --locked --features blocking
+	$(RUST_ENV) bundle exec rspec clients/rust/spec/integration/fixture_actions_spec.rb
 	$(RUST_ENV) HAVEAPI_RUST_INTEGRATION=1 ruby clients/rust/spec/integration/run.rb
 
 release-deps:

@@ -76,12 +76,22 @@ describe HaveAPI::Performance::Release do
 
   def contents(version, profile: 'quick')
     original = described_class.paths(profile).to_h { |path| [path, File.read(File.join(root, path))] }
-    own = described_class.version(original)
+    own = original.fetch('VERSION').strip
     original.to_h do |path, value|
       value = "#{version}\n" if path == 'VERSION'
       value = value.sub("VERSION = '#{own}'", "VERSION = '#{version}'") if described_class::VERSIONS.has_key?(path)
       value = value.sub("'haveapi-client', '~> #{own}'", "'haveapi-client', '~> #{version}'") if path.end_with?('.gemspec')
       [path, value]
+    end
+  end
+
+  def with_maintenance_source
+    Dir.mktmpdir('haveapi-maintenance-source-') do |source|
+      contents('0.30.2').each do |path, value|
+        FileUtils.mkdir_p(File.dirname(File.join(source, path)))
+        File.write(File.join(source, path), value)
+      end
+      yield source
     end
   end
 
@@ -192,7 +202,20 @@ describe HaveAPI::Performance::Release do
     end
   end
 
+  it 'builds maintenance fixtures from a later minor source template without broadening the release guard' do
+    Dir.mktmpdir('haveapi-later-minor-template-') do |template|
+      contents('0.32.0').each do |path, value|
+        FileUtils.mkdir_p(File.dirname(File.join(template, path)))
+        File.write(File.join(template, path), value)
+      end
+      allow(self).to receive(:root).and_return(template)
+      expect(described_class.capture(contents('0.30.2')).fetch('own_version')).to eq('0.30.2')
+      expect { described_class.capture(contents('0.32.0')) }.to raise_error(error, /Expected own 0\.30 patch version/)
+    end
+  end
+
   it 'rejects mismatched own constants, package names, constraints and minor versions' do
+    expect { described_class.capture(contents('0.31.0')) }.to raise_error(error, /Expected own 0\.30 patch version/)
     [
       ['VERSION', "0.31.2\n"],
       ['VERSION', " 0.30.2\n"],
@@ -222,18 +245,23 @@ describe HaveAPI::Performance::Release do
       expect do
         described_class.validate_json_preparation(ordinary, 'files_sha256' => preparation.fetch('raw_sha256'))
       end.not_to raise_error
-      captured = HaveAPI::Performance::Worker.inputs(root, 'quick', release: true)
-      expect(captured[:locks]).to have_key('clients/rust/Gemfile.lock')
-      expect(captured[:manifests]).to have_key('clients/rust/Gemfile')
-      expect(captured.fetch(:release_versions)).to eq(described_class.capture(contents(File.read(File.join(root, 'VERSION')).strip)))
+      %w[HaveAPI::VERSION HaveAPI::Client::VERSION HaveAPI::RustClient::VERSION].each do |name|
+        stub_const(name, '0.30.2')
+      end
       HaveAPI::Performance::BENCHMARK_INPUTS.each do |path|
         FileUtils.mkdir_p(File.dirname(File.join(harness, path)))
         FileUtils.cp(File.join(root, path), File.join(harness, path))
       end
-      benchmark = JSON.parse(JSON.generate(HaveAPI::Performance::Worker.inputs(root, 'quick', release: true, benchmark: true)))
-      expect(benchmark.fetch('manifests')).not_to have_key('flake.lock')
-      expect(benchmark.fetch('contributor_flakes')).to have_key('flake.lock')
-      expect(described_class.validate_inputs(benchmark, { 'files_sha256' => benchmark.fetch('release_versions').fetch('raw_sha256') }, 'quick')).to eq(HaveAPI::VERSION)
+      with_maintenance_source do |source|
+        captured = HaveAPI::Performance::Worker.inputs(source, 'quick', release: true)
+        expect(captured[:locks]).to have_key('clients/rust/Gemfile.lock')
+        expect(captured[:manifests]).to have_key('clients/rust/Gemfile')
+        expect(captured.fetch(:release_versions)).to eq(described_class.capture(contents('0.30.2')))
+        benchmark = JSON.parse(JSON.generate(HaveAPI::Performance::Worker.inputs(source, 'quick', release: true, benchmark: true)))
+        expect(benchmark.fetch('manifests')).not_to have_key('flake.lock')
+        expect(benchmark.fetch('contributor_flakes')).to have_key('flake.lock')
+        expect(described_class.validate_inputs(benchmark, { 'files_sha256' => benchmark.fetch('release_versions').fetch('raw_sha256') }, 'quick')).to eq('0.30.2')
+      end
       Dir.mktmpdir('haveapi-release-inputs-') do |source|
         contents('0.30.99').each do |path, value|
           FileUtils.mkdir_p(File.dirname(File.join(source, path)))
@@ -350,7 +378,7 @@ describe HaveAPI::Performance::Release do
   end
 
   it 'normalizes the actual worker HTML outside timing and retains its raw bytes' do
-    own = File.read(File.join(root, 'VERSION')).strip
+    own = '0.30.2'
     body = "<a href=\"https://webui.haveapi.org/v#{own}/#api\">Connect</a>#{framework_footer(own)}"
     scenario = HaveAPI::Performance::DocumentationScenario.allocate
     allow(scenario).to receive(:reset!)
@@ -358,13 +386,15 @@ describe HaveAPI::Performance::Release do
                                         validate!: { http_status: 200, envelope_status: nil, body_bytes: body.bytesize,
                                                      body_sha256: Digest::SHA256.hexdigest(body), canonical_sha256: Digest::SHA256.hexdigest(body) },
                                         counters: { operations: [{ queries: 0, authorizations: 0, executions: 0 }] })
-    worker = HaveAPI::Performance::Worker.new('source_root' => root, 'release_versions' => true)
-    worker.instance_variable_set(:@current_workload, 'docs.html_resources')
-    result = worker.measure(scenario, 1)
-    output = result.fetch(:outputs).first
-    expect(output.fetch('comparison')).to include('own_version' => File.read(File.join(root, 'VERSION')).strip)
-    expect(result.fetch(:bodies).values.first.fetch(:body)).to eq(body)
-    expect(output.fetch('canonical_sha256')).to eq(Digest::SHA256.hexdigest(described_class.html(body, output['comparison']['own_version'])))
+    with_maintenance_source do |source|
+      worker = HaveAPI::Performance::Worker.new('source_root' => source, 'release_versions' => true)
+      worker.instance_variable_set(:@current_workload, 'docs.html_resources')
+      result = worker.measure(scenario, 1)
+      output = result.fetch(:outputs).first
+      expect(output.fetch('comparison')).to include('own_version' => own)
+      expect(result.fetch(:bodies).values.first.fetch(:body)).to eq(body)
+      expect(output.fetch('canonical_sha256')).to eq(Digest::SHA256.hexdigest(described_class.html(body, output['comparison']['own_version'])))
+    end
   end
 
   it 'leaves lookalike attributes, other URLs, JSON and example code byte exact' do

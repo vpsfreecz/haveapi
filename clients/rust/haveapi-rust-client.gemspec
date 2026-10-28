@@ -20,6 +20,6 @@ Gem::Specification.new do |spec|
   spec.executables = ['haveapi-rust-client']
   spec.require_paths = ['lib']
   spec.add_dependency 'fiddle', '~> 1.1', '>= 1.1.8'
-  spec.add_dependency 'haveapi-client', '~> 0.31.1'
+  spec.add_dependency 'haveapi-client', '~> 0.31.2'
   spec.add_dependency 'tomlrb', '~> 2.0'
 end

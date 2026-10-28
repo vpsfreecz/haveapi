@@ -152,11 +152,22 @@ module HaveAPI
         end
       end
       if @options[:lanes].include?('html')
-        lanes << trial_lane('html', 1, method(:html_output)) { request.get(URL, **headers) }
+        if Server.method_defined?(:documentation_oauth)
+          html_server, html_setup = measure { DocumentationPerformanceFixture.build(**dimensions, rust: @options[:rust], documentation_oauth: true) }
+          html_request = Rack::MockRequest.new(html_server.app)
+          html_url = "#{html_server.fixture_documentation_oauth.origin}/benchmark/api/v1/"
+          html_headers = headers.except('HTTP_AUTHORIZATION')
+          html_headers['HTTP_COOKIE'] = html_server.fixture_documentation_cookie(@options[:user])
+        else
+          html_request = request
+          html_url = URL
+          html_headers = headers
+        end
+        lanes << trial_lane('html', 1, ->(result) { html_output(result, dimensions) }) { html_request.get(html_url, **html_headers) }
       end
       lanes.concat(rust_lanes(parent, profile)) if @options[:lanes].include?('rust')
       { shape:, dimensions:, profile_mode: @options[:rust] ? 'rust' : 'dynamic', renderers:,
-        description: body_identity(JSON.generate(description)), setup:, lanes: }
+        description: body_identity(JSON.generate(description)), setup:, html_setup:, lanes: }
     end
 
     def rust_lanes(parent, profile)
@@ -218,12 +229,24 @@ module HaveAPI
         **body_identity(JSON.generate(description: child.description, sample: child.sample)) }
     end
 
-    def html_output(response)
+    def html_output(response, dimensions)
       output = { status: response.status, **body_identity(response.body) }
-      unless response.status == 200 && response.body.include?('PUBLIC_SAMPLE_0') && response.body.include?('init-examples')
-        raise InvalidOutput.new('HTML request failed or missing sample panels', output)
-      end
+      raise InvalidOutput.new('HTML request failed', output) unless response.status == 200
 
+      body = response.body
+      if body.match?(/\bdata-docs(?:\s|=|>)/)
+        roots = body.scan(/<[^>]+\bdata-docs(?:\s|=|>)[^>]*>/)
+        links = body.scan(/<a\b([^>]*\bdata-resource-directory-link[^>]*)>/).map do |attributes|
+          attributes.first[/\bhref="([^"]*)"/, 1]
+        end
+        initialization = body.match(%r{<details\b[^>]*\bid="init-python-sync"[^>]*>(.*?)</details>}m)
+        valid = roots.length == 1 && roots.first.scan(/\bdata-page="([^"]*)"/).flatten == ['overview'] && !links.empty? && links.all? { |href| href == '/benchmark/api/v1/?page=resources' } &&
+                initialization && initialization[1].include?('<pre><code') &&
+                !body.match?(/id="example-|PUBLIC_SAMPLE_|ADMIN_ONLY_(?:REQUEST|RESPONSE|DEFAULT)|admin_field/)
+        raise InvalidOutput.new('HTML overview is incomplete or contains action data', output) unless valid
+      elsif !body.include?('PUBLIC_SAMPLE_0') || !body.include?('init-examples')
+        raise InvalidOutput.new('HTML request is missing sample panels', output)
+      end
       output
     end
 

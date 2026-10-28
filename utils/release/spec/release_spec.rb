@@ -332,6 +332,144 @@ RSpec.describe HaveAPI::Release do
     end
   end
 
+  describe 'master version policy' do
+    before do
+      original = artifacts.version
+      allow(File).to(receive(:read).and_wrap_original { |read, *args| read.call(*args).gsub(original, '0.31.2') })
+      allow(artifacts).to receive(:version).and_return('0.31.2')
+      allow(described_class).to receive(:capture).and_call_original
+    end
+
+    it 'rejects a patch version on a local master checkout' do
+      allow(described_class).to receive(:capture).with('git', 'branch', '--show-current', chdir: root).and_return("master\n")
+      expect { artifacts.check }.to raise_error(HaveAPI::Release::Error, /Master VERSION must have patch zero/)
+    end
+
+    it 'rejects a patch version in explicit detached master context' do
+      expect { artifacts.check(master: true) }.to raise_error(HaveAPI::Release::Error, /Master VERSION must have patch zero/)
+      expect(described_class).not_to have_received(:capture).with('git', 'branch', '--show-current', chdir: root)
+    end
+
+    it 'passes explicit master context through the CLI in a detached checkout' do
+      copy = File.join(tmp, 'detached-source')
+      copy_source(copy)
+      git(copy, 'init', '-q', '--initial-branch=master')
+      git(copy, 'add', '.')
+      commit(copy, 'Fixture master source')
+      git(copy, 'checkout', '--detach')
+      output, status = Open3.capture2e(RbConfig.ruby, 'utils/release/cli.rb', 'check-clean', '--master', chdir: copy)
+      expect(status.exitstatus).to eq(0), output
+      File.write(File.join(copy, 'VERSION'), "0.31.2\n")
+      output, status = Open3.capture2e(RbConfig.ruby, 'utils/release/cli.rb', 'check-clean', '--master', chdir: copy)
+      expect(status.exitstatus).to eq(1)
+      expect(output).to include('Master VERSION must have patch zero')
+    end
+
+    it 'allows patch metadata on a release branch' do
+      allow(described_class).to receive(:capture).with('git', 'branch', '--show-current', chdir: root).and_return("haveapi-0.31\n")
+      expect { artifacts.check }.not_to raise_error
+    end
+  end
+
+  describe 'tag and remote master validation' do
+    let(:master_version) { '0.31.0' }
+    let(:candidate_version) { '0.31.2' }
+
+    before do
+      allow(artifacts).to receive_messages(version: candidate_version, source: 'a' * 40)
+      allow(described_class).to receive(:capture).and_raise('Unexpected release validation command')
+      allow(described_class).to receive(:capture).with('git', 'rev-parse', "#{artifacts.tag}^{commit}", chdir: root).and_return(artifacts.source)
+      allow(described_class).to receive(:capture).with('git', 'ls-remote', 'origin', "refs/tags/#{artifacts.tag}", "refs/tags/#{artifacts.tag}^{}", chdir: root)
+                                                 .and_return("#{'b' * 40}\trefs/tags/#{artifacts.tag}\n#{artifacts.source}\trefs/tags/#{artifacts.tag}^{}\n")
+      allow(described_class).to receive(:capture).with('git', 'for-each-ref', '--format=%(refname:short)', 'refs/remotes/origin', chdir: root)
+                                                 .and_return("origin/haveapi-#{candidate_version.split('.').first(2).join('.')}\n")
+      allow(described_class).to receive(:capture).with('git', 'merge-base', '--is-ancestor', artifacts.source,
+                                                       "origin/haveapi-#{candidate_version.split('.').first(2).join('.')}", chdir: root).and_return('')
+      allow(described_class).to receive(:capture).with('git', 'fetch', '--no-tags', 'origin', '+refs/heads/master:refs/remotes/origin/master', chdir: root).and_return('')
+      allow(described_class).to receive(:capture).with('git', 'show', 'refs/remotes/origin/master:VERSION', chdir: root).and_return("#{master_version}\n")
+    end
+
+    it 'fetches master before reading its version and accepts a later candidate patch' do
+      expect { artifacts.check_tag(artifacts.tag) }.not_to raise_error
+      expect(described_class).to have_received(:capture).with('git', 'fetch', '--no-tags', 'origin', '+refs/heads/master:refs/remotes/origin/master', chdir: root).ordered
+      expect(described_class).to have_received(:capture).with('git', 'show', 'refs/remotes/origin/master:VERSION', chdir: root).ordered
+    end
+
+    [['0.32.0', '0.31.99'], ['0.100.0', '0.99.9'], ['1.0.0', '0.99.9']].each do |master, candidate|
+      context "with master #{master} and candidate #{candidate}" do
+        let(:master_version) { master }
+        let(:candidate_version) { candidate }
+
+        it 'accepts a numerically newer master line' do
+          expect { artifacts.check_tag(artifacts.tag) }.not_to raise_error
+        end
+      end
+    end
+
+    [['0.30.0', '0.31.2'], ['0.9.0', '0.10.0'], ['0.99.0', '1.0.0']].each do |master, candidate|
+      context "with master #{master} and candidate #{candidate}" do
+        let(:master_version) { master }
+        let(:candidate_version) { candidate }
+
+        it 'rejects a numerically older master line' do
+          expect { artifacts.check_tag(artifacts.tag) }.to raise_error(HaveAPI::Release::Error, /Remote master VERSION .* is behind/)
+        end
+      end
+    end
+
+    ['', '0.31', '0.31.0-rc1', '00.31.0', "0.31.0\n0.32.0"].each do |master|
+      context "with malformed master VERSION #{master.inspect}" do
+        let(:master_version) { master }
+
+        it 'rejects the remote metadata' do
+          expect { artifacts.check_tag(artifacts.tag) }.to raise_error(HaveAPI::Release::Error, /Remote master VERSION must be X.Y.Z/)
+        end
+      end
+    end
+
+    context 'with nonzero master patch' do
+      let(:master_version) { '0.32.1' }
+
+      it 'rejects master even when its release line is newer' do
+        expect { artifacts.check_tag(artifacts.tag) }.to raise_error(HaveAPI::Release::Error, /Remote master VERSION must have patch zero/)
+      end
+    end
+
+    it 'fails visibly when master cannot be fetched' do
+      allow(described_class).to receive(:capture).with('git', 'fetch', '--no-tags', 'origin', '+refs/heads/master:refs/remotes/origin/master', chdir: root)
+                                                 .and_raise(HaveAPI::Release::Error, 'master fetch failed')
+      expect { artifacts.check_tag(artifacts.tag) }.to raise_error(HaveAPI::Release::Error, /master fetch failed/)
+      expect(described_class).not_to have_received(:capture).with('git', 'show', 'refs/remotes/origin/master:VERSION', chdir: root)
+    end
+
+    it 'fails visibly when remote master has no VERSION' do
+      allow(described_class).to receive(:capture).with('git', 'show', 'refs/remotes/origin/master:VERSION', chdir: root)
+                                                 .and_raise(HaveAPI::Release::Error, 'VERSION missing')
+      expect { artifacts.check_tag(artifacts.tag) }.to raise_error(HaveAPI::Release::Error, /VERSION missing/)
+    end
+
+    it 'still rejects a moved local tag' do
+      allow(described_class).to receive(:capture).with('git', 'rev-parse', "#{artifacts.tag}^{commit}", chdir: root).and_return('b' * 40)
+      expect { artifacts.check_tag(artifacts.tag) }.to raise_error(HaveAPI::Release::Error, /Tag no longer points/)
+    end
+
+    it 'still rejects a missing or moved remote tag' do
+      allow(described_class).to receive(:capture).with('git', 'ls-remote', 'origin', "refs/tags/#{artifacts.tag}", "refs/tags/#{artifacts.tag}^{}", chdir: root).and_return('')
+      expect { artifacts.check_tag(artifacts.tag) }.to raise_error(HaveAPI::Release::Error, /Remote tag is missing or has moved/)
+    end
+
+    it 'still rejects a tag outside the newest release line' do
+      allow(described_class).to receive(:capture).with('git', 'for-each-ref', '--format=%(refname:short)', 'refs/remotes/origin', chdir: root).and_return("origin/haveapi-0.32\n")
+      expect { artifacts.check_tag(artifacts.tag) }.to raise_error(HaveAPI::Release::Error, /newest release branch/)
+    end
+
+    it 'still requires source ancestry on the release branch' do
+      allow(described_class).to receive(:capture).with('git', 'merge-base', '--is-ancestor', artifacts.source, 'origin/haveapi-0.31', chdir: root)
+                                                 .and_raise(HaveAPI::Release::Error, 'not an ancestor')
+      expect { artifacts.check_tag(artifacts.tag) }.to raise_error(HaveAPI::Release::Error, /not an ancestor/)
+    end
+  end
+
   describe 'Rust generator gem contract' do
     def rust_gem(missing: nil, corrupt: nil, fiddle: :declared)
       component = File.join(root, 'clients/rust')

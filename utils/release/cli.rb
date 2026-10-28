@@ -4,6 +4,7 @@ require_relative 'workflow'
 begin
   root = File.expand_path('../..', __dir__)
   artifacts = HaveAPI::Release::Artifacts.new(root)
+  master = ARGV.delete('--master') == '--master'
   command, argument = ARGV
   case command
   when 'artifact-state'
@@ -11,7 +12,7 @@ begin
   when 'check-activation'
     HaveAPI::Release::Workflow.check_activation
   when 'check', 'check-clean'
-    artifacts.check(clean: command == 'check-clean', release_tag: argument)
+    artifacts.check(clean: command == 'check-clean', release_tag: argument, master:)
     puts "Release metadata valid: #{artifacts.version}"
   when 'check-inputs'
     artifacts.check_inputs

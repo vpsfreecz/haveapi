@@ -6,11 +6,23 @@ metadata or running a build does not authorize publication.
 
 ## Branches and packages
 
-`master` contains the development version. For a major or minor release, create
-`haveapi-X.Y` from master. For a patch release, work on that release branch and
-backport fixes with `git cherry-pick -x`. Only the newest release branch is
-supported. The tag-triggered workflow verifies that its commit belongs to the
-newest `haveapi-X.Y` branch and that its tag agrees with VERSION.
+`master` records the latest major/minor line as `X.Y.0`, with synchronized
+component versions and internal dependency constraints. Prepare and integrate
+each major/minor bump on master before cutting `haveapi-X.Y` from it. Master
+integration requires its own authorization; preparing a release does not grant it.
+
+For a patch release, work on the release branch and backport fixes with
+`git cherry-pick -x`. Patch version bumps and their internal dependency
+constraints stay on that branch. Bring applicable release notes and general
+source/test fixes to master while retaining its `X.Y.0` metadata. Only the newest
+release branch is supported.
+
+The tag-triggered workflow verifies the tag, source commit and newest
+`haveapi-X.Y` branch. It fetches remote master and requires a numeric `X.Y.Z`
+VERSION with patch zero and a major/minor line at least as new as the release.
+Master `0.31.0` therefore permits a `0.31.2` release; a higher master line is also
+valid. Release tags need not be ancestors of master, since backports can have
+different ancestry. Missing master metadata or a failed fetch stops validation.
 
 All maintained components use the shared version and are released together:
 
@@ -106,15 +118,24 @@ resulting local locks for subsequent locked checks. `make version` updates the
 local package versions with Bundler's local resolution and the native uv
 resolver; external dependency records must stay unchanged.
 
-1. Prepare the new major/minor branch or the supported patch branch. Keep its
-   source and release metadata changes in separate commits.
-2. Run `make version VERSION=X.Y.Z`. Update CHANGELOG.md using the existing
+1. For a new major/minor line, run `make version VERSION=X.Y.0` on a master-based
+   feature branch, update the changelog, validate and commit the metadata, then
+   obtain integration authorization and integrate it into master before cutting
+   `haveapi-X.Y`. For a patch, prepare the supported release branch instead.
+   Keep source and release metadata changes in separate commits.
+2. For a patch, run `make version VERSION=X.Y.Z` on the release branch. Update
+   CHANGELOG.md using the existing
    `# <date> - version X.Y.Z` heading, followed by descriptions of changed
    components. Omit components that have no changes. Run `make release-check`
    and commit the version/changelog changes with the declared hooks enabled.
-3. Push the release branch and an annotated `vX.Y.Z` tag after obtaining
-   publication authorization. Do not move existing tags or push another release
-   tag until this release has finished. The workflow serializes tagged releases.
+3. Fetch `origin` so the supported release branch refs are current. After
+   obtaining publication authorization, push the release branch and an annotated
+   `vX.Y.Z` tag. Do not move existing tags or push another release tag until this
+   release has finished. The workflow serializes tagged releases.
+   Local tagged validation is `ruby utils/release/cli.rb check-clean vX.Y.Z`;
+   it requires the remote tag and fetches master again. The workflow performs
+   the same check independently in its full-history build and publication
+   checkouts.
 4. GitHub Actions validates the metadata, generates Ruby server documentation,
    tests all maintained components and builds the packages in the locked Nix
    toolchain. It retains `release-<run-id>` as an Actions artifact for 90 days.
@@ -147,8 +168,8 @@ release checks reject a mismatch. No package is rebuilt after approval.
 ## Build-only checks and local packaging
 
 The release workflow also runs without publication on pushes and pull requests
-that change release tooling. Its **Run workflow** button is another build-only
-entry point once the workflow exists on the default branch. These paths do not
+that change release tooling or VERSION. Its **Run workflow** button is another
+build-only entry point once the workflow exists on the default branch. These paths do not
 enter the release environment or write to registries or the PHP repository.
 
 For local verification in the top-level Nix shell:
@@ -170,6 +191,13 @@ Prepare dependencies with `make release-deps` before these checks on a fresh
 checkout. Source-only `ruby utils/release/cli.rb check-clean` works before
 preparation; `make release-check`, package building and manifest creation also
 require `check-inputs` to pass for the actual local library locks.
+
+Metadata checks reject a nonzero patch on a local master checkout. In a detached
+checkout of master, run `ruby utils/release/cli.rb check-clean --master` to supply
+the branch context; build-only master CI does this explicitly. Release branches
+may have nonzero patches. A feature branch preparing a master bump can use the
+same `--master` option before integration.
+
 Move earlier artifacts aside before building. It generates shared documentation
 for the Ruby server, builds five gems, rebuilds and packs JavaScript,
 archives the tracked PHP subtree, and builds the Python wheel and sdist with uv.
@@ -287,7 +315,10 @@ pending; it is not uploaded again. A conflict in any response stops the operatio
 
 A rerun uses the original tagged workflow and helpers. Older tags retain their
 four-gem artifact contract; verify and republish their manifests with the
-original tooling. If the correction needs changes to that source, prepare a new
+original tooling. The master-version guard applies to future tagged tooling;
+recover existing releases with their original helpers, saved artifacts and
+manifest. Do not retag, rebuild or republish accepted packages to add the guard.
+If the correction needs changes to that source, prepare a new
 patch version and obtain publication
 authorization for it. Preserve the failed tag and its original artifacts.
 

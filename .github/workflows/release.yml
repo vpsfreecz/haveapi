@@ -8,6 +8,7 @@ on:
       - '.github/workflows/release.yml'
       - 'utils/release/**'
       - 'Makefile'
+      - 'VERSION'
       - 'Gemfile'
       - 'flake.nix'
       - 'flake.lock'
@@ -23,6 +24,7 @@ on:
       - '.github/workflows/release.yml'
       - 'utils/release/**'
       - 'Makefile'
+      - 'VERSION'
       - 'Gemfile'
       - 'flake.nix'
       - 'flake.lock'
@@ -70,6 +72,8 @@ jobs:
         run: |
           if [[ -n "$RELEASE_TAG" ]]; then
             nix develop -c ruby utils/release/cli.rb check-clean "$RELEASE_TAG"
+          elif [[ "$GITHUB_REF" == refs/heads/master ]]; then
+            nix develop -c ruby utils/release/cli.rb check-clean --master
           else
             nix develop -c ruby utils/release/cli.rb check-clean
           fi

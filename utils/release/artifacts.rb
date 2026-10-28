@@ -33,6 +33,7 @@ module HaveAPI
     end
 
     class Artifacts
+      VERSION_PATTERN = /\A(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\z/
       LOCK_PATHS = %w[
         Gemfile.lock servers/ruby/Gemfile.lock clients/ruby/Gemfile.lock
         clients/go/Gemfile.lock clients/rust/Gemfile.lock clients/typescript/Gemfile.lock
@@ -45,7 +46,7 @@ module HaveAPI
       def initialize(root)
         @root = File.expand_path(root)
         @version = File.read(File.join(root, 'VERSION')).strip
-        raise Error, 'VERSION must be X.Y.Z' unless version.match?(/\A(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\z/)
+        raise Error, 'VERSION must be X.Y.Z' unless version.match?(VERSION_PATTERN)
       end
 
       def source
@@ -76,7 +77,12 @@ module HaveAPI
         "#{section.strip}\n"
       end
 
-      def check(clean: false, release_tag: nil)
+      def check(clean: false, release_tag: nil, master: false)
+        master ||= File.exist?(File.join(root, '.git')) && Release.capture('git', 'branch', '--show-current', chdir: root).strip == 'master'
+        if master && version.split('.').last != '0'
+          raise Error, 'Master VERSION must have patch zero'
+        end
+
         paths = {
           'servers/ruby/lib/haveapi/version.rb' => /\bVERSION = '([^']+)'/,
           'clients/ruby/lib/haveapi/client/version.rb' => /\bVERSION = '([^']+)'/,
@@ -167,6 +173,19 @@ module HaveAPI
         raise Error, 'Tag must belong to the newest release branch' unless line == latest
 
         Release.capture('git', 'merge-base', '--is-ancestor', source, "origin/haveapi-#{line}", chdir: root)
+        check_master_version
+      end
+
+      def check_master_version
+        Release.capture('git', 'fetch', '--no-tags', 'origin', '+refs/heads/master:refs/remotes/origin/master', chdir: root)
+        master = Release.capture('git', 'show', 'refs/remotes/origin/master:VERSION', chdir: root).strip
+        raise Error, 'Remote master VERSION must be X.Y.Z' unless master.match?(VERSION_PATTERN)
+
+        numbers = master.split('.').map(&:to_i)
+        raise Error, 'Remote master VERSION must have patch zero' unless numbers.last == 0
+        return unless (numbers.first(2) <=> version.split('.').first(2).map(&:to_i)) < 0
+
+        raise Error, "Remote master VERSION #{master} is behind release line #{version}"
       end
 
       def write_manifest(directory)

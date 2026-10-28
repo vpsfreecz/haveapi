@@ -1,3 +1,104 @@
+# Wed Oct 28 2026 - version 0.31.2
+
+## Go client generator
+
+- Fix token authentication examples in automatic documentation profiles when
+  matching transport names use Ruby String and Symbol values.
+
+# Tue Oct 27 2026 - version 0.31.1
+
+## TypeScript client generator
+
+- Normalize only the selected documentation data instead of copying the complete
+  API description for each generated example.
+
+## Development tooling
+
+- Test rendering work and allocation growth for every registered client example
+  renderer and mode, including complete documentation pages and authorization
+  filtering.
+- Require these checks before paired performance comparisons and run the
+  performance gate for changes in any client directory.
+- Allow paired checks across synchronized HaveAPI package versions while keeping
+  external dependency and runtime comparisons strict.
+
+# Tue Oct 27 2026 - version 0.31.0
+
+## Ruby server
+
+- Add generated TypeScript client examples through an optional SDK documentation
+  profile, with authorization-filtered samples and support for mounted APIs.
+
+## Ruby client
+
+- Add shared schema capture and portable snapshot validation for client
+  generators, with explicit API version selection and sanitized saved
+  descriptions.
+
+## Go and Rust client generators
+
+- Share schema capture through the `fetch` command and require an explicit API
+  version for offline `generate`. Keep Go's positional invocation supported.
+- Reject unsafe nested endpoint metadata when loading saved Rust schemas.
+
+## TypeScript client generator
+
+- Add the `haveapi-typescript-client` Ruby gem to generate typed resource and
+  action modules from saved HaveAPI protocol 2 schemas.
+- Support deterministic regeneration and `--check`, using the existing
+  `haveapi-client` runtime for requests and authentication.
+
+# Sun Oct 25 2026 - version 0.30.2
+## Ruby server
+- Reduce copying when deriving documentation contexts while preserving isolation
+  from caller-owned data.
+- Add regression tests and benchmarks for documentation rendering and API
+  endpoint performance.
+
+## Rust client generator
+- Normalize only the selected documentation data instead of traversing the
+  complete schema for each example.
+
+## Development tooling
+- Add paired endpoint performance checks with fixed regression budgets in CI.
+- Reject automated Nix input updates that cannot prove forward ancestry.
+
+# Sat Oct 24 2026 - version 0.30.1
+## Ruby server
+- Simplify Go and Rust documentation profiles: configure the SDK import path or
+  crate name, with optional SDK versions. The generator version defaults to the
+  server version.
+- Build example naming models from the complete mounted API declaration while
+  keeping displayed actions, fields and samples filtered for the current user.
+  Retain saved-schema profiles for older or restricted SDKs.
+
+## Go client generator
+- Show `go get IMPORT@latest` when no SDK module version is configured, leaving
+  version resolution to Go when the user installs the SDK.
+- Match resource association field identities across live Ruby descriptions and
+  saved JSON descriptions.
+
+## Rust client generator
+- Allow documentation examples without a crate version or packaging TOML, and
+  support an explicit HTTPS Git source with a full commit revision.
+- Declare the Fiddle dependency needed by the generator and limit generated
+  naming-lint allowances to the affected resource members.
+
+## JavaScript and TypeScript clients
+- Update TypeScript and Rollup build dependencies while preserving ES5 output
+  and the public declarations.
+- Fix build helper resolution and internal import cycles.
+- Replace the obsolete JSDoc wrapper and template tools with direct JSDoc,
+  preserve the documented Action anchor, and update its Markdown dependencies.
+
+## Release tooling
+- Confirm published package metadata and checksums with bounded reads, including
+  delayed registry visibility. Preserve uploaded artifact identities during
+  partial-publication recovery.
+- Stop tracking JavaScript, Python and Rust generator library lockfiles. Resolve
+  dependencies during setup and retain each release's resolved locks in its
+  manifest.
+
 # Thu Oct 22 2026 - version 0.30.0
 ## Ruby server
 - Add API documentation examples for JavaScript and TypeScript callback and

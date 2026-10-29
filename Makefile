@@ -1,8 +1,9 @@
 VERSION=$(shell cat VERSION)
 BENCHMARK_DOCUMENTATION_RUBY ?= bundle exec ruby
+ROOT_BUNDLE=env BUNDLE_GEMFILE="$(CURDIR)/Gemfile" bundle exec
 RUST_ENV=env -u RUBYOPT -u RUBYLIB -u BUNDLE_BIN_PATH -u BUNDLE_LOCKFILE -u BUNDLE_PATH -u BUNDLE_FROZEN -u BUNDLER_SETUP GEM_HOME="$(CURDIR)/clients/rust/.gems" GEM_PATH="$(CURDIR)/clients/rust/.gems:$$(ruby -e 'puts Gem.default_dir')" BUNDLE_GEMFILE="$(CURDIR)/clients/rust/Gemfile"
 
-.PHONY: benchmark-documentation performance performance-compare test-performance test-performance-clients doc publish release release-check release-test release-deps release-rust test test-documentation test-documentation-generated test-documentation-assets test-documentation-python test-rust test-rust-unit test-schema test-go-cli test-typescript version
+.PHONY: benchmark-documentation performance performance-compare test-performance test-performance-clients doc publish release release-check release-test release-deps release-rust test test-documentation test-documentation-generated test-documentation-assets test-documentation-python test-rust test-rust-unit test-schema test-go-cli test-typescript check-format check-rust version
 
 doc:
 	./utils/copydoc.sh servers/ruby
@@ -74,11 +75,21 @@ test-typescript:
 	bundle exec ruby -Iclients/ruby/lib -Iclients/typescript/lib -S rspec clients/typescript/spec/unit
 
 # Run in nix develop .#client-rust after the generator unit checks.
-test-rust: test-rust-unit
+test-rust: check-rust test-rust-unit
 	cd clients/rust/runtime && cargo test --locked
 	cd clients/rust/runtime && cargo test --locked --features blocking
 	$(RUST_ENV) bundle exec rspec clients/rust/spec/integration/fixture_actions_spec.rb
 	$(RUST_ENV) HAVEAPI_RUST_INTEGRATION=1 ruby clients/rust/spec/integration/run.rb
+
+# Formatting stays separate from linting, compilation and behavioral tests.
+check-rust:
+	cargo fmt --manifest-path clients/rust/runtime/Cargo.toml --all -- --check
+
+check-format: check-rust
+	$(ROOT_BUNDLE) rubocop --parallel --force-exclusion
+	npm --prefix clients/js run format:check
+	php-cs-fixer fix --dry-run --diff --using-cache=no --config=.php-cs-fixer.dist.php --path-mode=intersection clients/php
+	cd clients/python && uv run --locked python utils/run_ruff.py --config pyproject.toml format --check . ../../utils/release
 
 release-deps:
 	cd servers/ruby && bundle install
@@ -98,7 +109,7 @@ release-check:
 	ruby utils/release/cli.rb check-inputs
 
 release-test:
-	bundle exec rspec utils/release/spec
+	bundle exec rspec utils/release/spec utils/spec
 	python utils/release/spec/python_artifacts_test.py
 
 release:
@@ -121,8 +132,8 @@ version:
 	@sed -ri "s/ VERSION = '[^']+'/ VERSION = '$(VERSION)'/" clients/typescript/lib/haveapi/typescript_client/version.rb
 	@sed -ri "s/\"version\": \"[^\"]+\"/\"version\": \"$(VERSION)\"/" clients/js/package.json
 	@node -e 'const fs = require("fs"); const p = "clients/js/package-lock.json"; const lock = JSON.parse(fs.readFileSync(p, "utf8")); lock.version = lock.packages[""].version = process.argv[1]; fs.writeFileSync(p, JSON.stringify(lock, null, "\t") + "\n");' "$(VERSION)"
-	@sed -ri "s/Client\.Version = '[^']+'/Client.Version = '$(VERSION)'/" clients/js/src/haveapi/client.ts
-	@sed -ri "s/Client\.Version = '[^']+'/Client.Version = '$(VERSION)'/" clients/js/dist/haveapi-client.js
+	@sed -ri "s/Client\.Version = ['\"][^'\"]+['\"]/Client.Version = \"$(VERSION)\"/" clients/js/src/haveapi/client.ts
+	@sed -ri "s/Client\.Version = ['\"][^'\"]+['\"]/Client.Version = \"$(VERSION)\"/" clients/js/dist/haveapi-client.js
 	@sed -ri "s/\"version\": \"[^\"]+\"/\"version\": \"$(VERSION)\"/" clients/php/composer.json
 	@sed -ri "s/const VERSION = '[^']+'/const VERSION = '$(VERSION)'/" clients/php/src/Client.php
 	@sed -ri 's/^version = "[^"]+"/version = "$(VERSION)"/' clients/python/pyproject.toml

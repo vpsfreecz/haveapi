@@ -10,7 +10,7 @@ trim_trailing_whitespace = true
 indent_size = 2
 indent_style = space
 
-[*.{go.erb}]
+[*.{go,go.erb}]
 indent_size = 4
 indent_style = tab
 
@@ -22,9 +22,13 @@ indent_style = space
 indent_size = 2
 indent_style = tab
 
-[*.js]
+[*.{js,ts,cjs,mjs}]
 indent_size = 2
-indent_style = tab
+indent_style = space
+
+[*.{rs,rs.erb,py}]
+indent_size = 4
+indent_style = space
 
 [*.ex]
 indent_size = 2

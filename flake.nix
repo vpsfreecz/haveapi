@@ -19,6 +19,7 @@
         in
         {
           python-ruff-parity = import ./utils/check-ruff.nix { inherit pkgs; };
+          prettier-parity = import ./utils/check-prettier.nix { inherit pkgs; };
         });
 
       devShells = forAllSystems (system:
@@ -96,6 +97,7 @@
               gh
               go
               nodejs_24
+              prettier
               openssh
               php83
               php83Packages.composer
@@ -154,6 +156,7 @@
 
             packages = [
               pkgs.nodejs
+              pkgs.prettier
             ];
 
             shellHook = ''
@@ -194,7 +197,7 @@
             componentDir = "clients/rust";
             gemHome = "$HAVEAPI_REPO_ROOT/clients/rust/.gems";
             isolateGems = true;
-            packages = with pkgs; [ cargo rustc rustfmt clippy pkg-config openssl libffi ];
+            packages = with pkgs; [ cargo rustc rustfmt clippy gnumake pkg-config openssl libffi ];
             installBundler = "gem install --no-document bundler";
             afterInstall = ''
               export RUBOCOP_CACHE_ROOT="$HAVEAPI_REPO_ROOT/.rubocop_cache"

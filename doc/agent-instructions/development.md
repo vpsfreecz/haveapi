@@ -56,6 +56,23 @@ repository root unless explicitly stated otherwise.
 - Run `make doc` before Ruby server specs. They check shared documentation and
   build/extract a real server gem to exercise the packaged documentation routes.
 - Run the full suite from repo root with `make test` (install deps first or use `nix develop`; this starts local test servers and needs permission to bind localhost ports).
+- From the root in the default Nix shell, `make check-format` checks client
+  formatting with root-bundle RuboCop, npm `format:check`, PHP-CS-Fixer's dry-run,
+  locked Ruff `format --check`, and the Rust runtime's `cargo fmt --check`.
+  Prepare component dependencies first; these commands do not rewrite source.
+  RuboCop also reports its configured Ruby style/lint rules. Type checking,
+  compilation, Clippy and behavioral tests remain separate checks.
+- Run Ruby style checks with the root Gemfile, including generator sources:
+  `BUNDLE_GEMFILE="$PWD/Gemfile" bundle exec rubocop`. Prepare the default shell
+  before using this command; a component Gemfile may omit the root tooling.
+- The default and client-js shells supply Prettier 3.9.10. npm source scripts
+  and the TypeScript generator use the packaged
+  `clients/typescript/lib/haveapi/typescript_client/prettier.json` configuration.
+  `nix build .#checks.x86_64-linux.prettier-parity` verifies the Nix executable,
+  exact npm pin and generator version together; select the host system's check
+  on other architectures. Prettier is required for offline TypeScript generation,
+  not for documentation rendering. Prepare it before generation; generation
+  never installs tools. Do not format ERB templates directly.
 - Ruby server tests: from `servers/ruby`, run `bundle exec rspec` or `bundle exec rake spec`.
 - JS client build: from `clients/js`, run `./node_modules/.bin/gulp` after installing deps to refresh `dist/haveapi-client.js`.
 - PHP client tests: from `clients/php`, run `composer install` then `php vendor/bin/phpunit`; this boots a local Ruby test server from `servers/ruby/test_support/client_test_server.rb` and needs permission to bind a localhost port.
@@ -92,6 +109,12 @@ inspects the retained gem and runs the isolated packaged-generator smoke check.
 [Rust packaging](../../clients/rust/docs/releasing.md) for the standalone smoke
 command and generated-client release checks.
 
+`make check-rust` runs the runtime formatting check without compilation and is
+also part of `make test-rust` and Rust CI. Generator unit specs use rustfmt with
+the recorded edition/options to check emitted files and formatter failure
+preservation. The longer fixture runner separately checks its entire temporary
+crate with Cargo fmt before protocol acceptance.
+
 ## TypeScript generator
 
 The generator lives in `clients/typescript`; see its
@@ -101,7 +124,7 @@ examples. From the HaveAPI root:
 ```sh
 nix develop
 make test-typescript
-bundle exec rubocop clients/typescript/lib clients/typescript/bin \
+BUNDLE_GEMFILE="$PWD/Gemfile" bundle exec rubocop clients/typescript/lib clients/typescript/bin \
   clients/typescript/spec clients/typescript/haveapi-typescript-client.gemspec
 ```
 

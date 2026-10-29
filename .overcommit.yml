@@ -1,4 +1,26 @@
 PreCommit:
+  JsFormat:
+    enabled: true
+    required: true
+    requires_files: true
+    include:
+      - 'clients/js/**/*.ts'
+      - 'clients/js/**/*.js'
+      - 'clients/js/**/*.cjs'
+      - 'clients/js/**/*.mjs'
+      - 'clients/js/**/*.json'
+      - 'clients/js/.prettierignore'
+      - 'clients/typescript/lib/haveapi/typescript_client/prettier.json'
+      - '.git-hooks/pre_commit/js_format.rb'
+      - '.overcommit.yml'
+      - 'flake.nix'
+      - 'flake.lock'
+    exclude:
+      - 'clients/js/dist/**/*'
+      - 'clients/js/build/**/*'
+      - 'clients/js/node_modules/**/*'
+      - 'clients/js/src/haveapi/i18n_messages.js'
+      - 'clients/js/package-lock.json'
   PythonChecks:
     enabled: true
     required: true
@@ -12,6 +34,7 @@ PreCommit:
     required: true
   RuboCop:
     enabled: true
+    command: ['env', 'BUNDLE_GEMFILE=Gemfile', 'bundle', 'exec', 'rubocop']
   PhpCsFixer:
     enabled: true
     command: 'php-cs-fixer'

@@ -34,6 +34,7 @@ module HaveAPI
 
     class Artifacts
       VERSION_PATTERN = /\A(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\z/
+      JS_VERSION_PATTERN = /Client\.Version = (['"])([^'"]+)\1/
       LOCK_PATHS = %w[
         Gemfile.lock servers/ruby/Gemfile.lock clients/ruby/Gemfile.lock
         clients/go/Gemfile.lock clients/rust/Gemfile.lock clients/typescript/Gemfile.lock
@@ -89,12 +90,12 @@ module HaveAPI
           'clients/go/lib/haveapi/go_client/version.rb' => /\bVERSION = '([^']+)'/,
           'clients/rust/lib/haveapi/rust_client/version.rb' => /\bVERSION = '([^']+)'/,
           'clients/typescript/lib/haveapi/typescript_client/version.rb' => /\bVERSION = '([^']+)'/,
-          'clients/js/src/haveapi/client.ts' => /Client\.Version = '([^']+)'/,
+          'clients/js/src/haveapi/client.ts' => JS_VERSION_PATTERN,
           'clients/php/src/Client.php' => /const VERSION = '([^']+)'/,
           'clients/python/pyproject.toml' => /^version = "([^"]+)"/
         }
         paths.each do |path, pattern|
-          actual = File.read(File.join(root, path)).match(pattern)&.captures&.first
+          actual = File.read(File.join(root, path)).match(pattern)&.captures&.last
           raise Error, "Version mismatch in #{path}" unless actual == version
         end
         %w[clients/js/package.json clients/php/composer.json].each do |path|
@@ -199,6 +200,7 @@ module HaveAPI
           flag = tool == 'go' ? 'version' : '--version'
           [tool, Release.capture(tool, flag).strip]
         end
+        tools['prettier'] = Release.capture(ENV.fetch('PRETTIER', 'prettier'), '--version').strip
         manifest = { schema: 1, source:, version:, tag:, run_id: ENV.fetch('GITHUB_RUN_ID', 'local'), files:, tools:, dependency_locks: }
         File.write(File.join(directory, 'release-manifest.json'), "#{JSON.pretty_generate(manifest)}\n")
       end
@@ -381,7 +383,7 @@ module HaveAPI
 
         bundle = File.binread(File.join(directory, 'haveapi-client.js'))
         raise Error, 'npm tarball does not contain the built bundle' unless npm.fetch('package/dist/haveapi-client.js').first == bundle
-        raise Error, 'Wrong browser bundle version' unless bundle.include?("Client.Version = '#{version}'")
+        raise Error, 'Wrong browser bundle version' unless bundle.match(JS_VERSION_PATTERN)&.captures&.last == version
       end
 
       def smoke_npm(directory)

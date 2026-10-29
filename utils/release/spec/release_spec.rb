@@ -114,10 +114,15 @@ RSpec.describe HaveAPI::Release do
       expect { artifacts.check }.not_to raise_error
     end
 
-    it 'rejects a mismatched authored JavaScript client version' do
-      allow(File).to receive(:read).and_call_original
-      allow(File).to receive(:read).with(File.join(root, 'clients/js/src/haveapi/client.ts')).and_return("Client.Version = '999.0.0';")
-      expect { artifacts.check }.to raise_error(HaveAPI::Release::Error, %r{Version mismatch in clients/js/src/haveapi/client\.ts})
+    ["'", '"'].each do |quote|
+      it "accepts #{quote}-quoted authored JavaScript versions and rejects mismatches" do
+        path = File.join(root, 'clients/js/src/haveapi/client.ts')
+        allow(File).to receive(:read).and_call_original
+        allow(File).to receive(:read).with(path).and_return("Client.Version = #{quote}#{artifacts.version}#{quote};")
+        expect { artifacts.check }.not_to raise_error
+        allow(File).to receive(:read).with(path).and_return("Client.Version = #{quote}999.0.0#{quote};")
+        expect { artifacts.check }.to raise_error(HaveAPI::Release::Error, %r{Version mismatch in clients/js/src/haveapi/client\.ts})
+      end
     end
 
     ['', "module HaveAPI; module RustClient; VERSION = '999.0.0'; end; end"].each do |content|
@@ -178,14 +183,18 @@ RSpec.describe HaveAPI::Release do
       source_locks[parent_lock] = File.binread(parent_lock) if parent_lock
       python_path = File.join(copy, 'clients/python/uv.lock')
       python_before = python_lock(python_path)
+      js_source = File.join(copy, 'clients/js/src/haveapi/client.ts')
+      js_bundle = File.join(copy, 'clients/js/dist/haveapi-client.js')
+      File.write(js_source, File.read(js_source).sub(described_class::Artifacts::JS_VERSION_PATTERN, "Client.Version = '#{artifacts.version}'"))
+      File.write(js_bundle, File.read(js_bundle).sub(described_class::Artifacts::JS_VERSION_PATTERN, "Client.Version = \"#{artifacts.version}\""))
       FileUtils.ln_s(File.join(root, 'clients/rust/.gems'), File.join(copy, 'clients/rust/.gems'))
       described_class.capture({ 'BUNDLE_LOCKFILE' => File.join(root, 'Gemfile.lock') },
                               'make', 'version', 'VERSION=999.0.0', chdir: copy)
       after = File.read(path)
       expected = old_lock.merge('version' => '999.0.0', 'packages' => old_lock.fetch('packages').merge('' => old_lock.fetch('packages').fetch('').merge('version' => '999.0.0')))
       expect(JSON.parse(after)).to eq(expected)
-      dependency_start = "\t\t\"node_modules/"
-      expect(after[after.index(dependency_start)..]).to eq(before[before.index(dependency_start)..])
+      expect(File.read(js_source)).to include('Client.Version = "999.0.0"')
+      expect(File.read(js_bundle)).to include('Client.Version = "999.0.0"')
       rust_expected = rust_before.gsub(/^( {2,6}haveapi-(?:rust-)?client \((?:~> )?)[^)]+(\))$/, '\\1999.0.0\\2')
       expect(File.read(rust_path)).to eq(rust_expected)
       typescript_expected = typescript_before.gsub(/^( {2,6}haveapi-(?:typescript-)?client \((?:~> )?)[^)]+(\))$/, '\\1999.0.0\\2')
@@ -280,12 +289,15 @@ RSpec.describe HaveAPI::Release do
       expect { artifacts.verify(tmp) }.to raise_error(HaveAPI::Release::Error, /checksum mismatch/)
     end
 
-    it 'retains all ten actual dependency locks and Rust tool versions in the manifest' do
+    it 'retains all ten actual dependency locks, Rust and selected Prettier tool versions in the manifest' do
       fixture_manifest
       allow(described_class).to receive(:capture).and_call_original
       %w[ruby gem node npm go php composer python uv cargo rustc rustfmt].each do |tool|
         allow(described_class).to receive(:capture).with(tool, tool == 'go' ? 'version' : '--version').and_return("#{tool} fixture")
       end
+      allow(ENV).to receive(:fetch).and_call_original
+      allow(ENV).to receive(:fetch).with('PRETTIER', 'prettier').and_return('/prepared/prettier')
+      allow(described_class).to receive(:capture).with('/prepared/prettier', '--version').and_return("3.9.10\n")
       allow(File).to receive(:read).and_call_original
       described_class::Artifacts::LOCK_PATHS.reject { |path| %w[clients/rust/Gemfile.lock clients/typescript/Gemfile.lock clients/js/package-lock.json clients/python/uv.lock].include?(path) }.each do |path|
         allow(File).to receive(:read).with(File.join(root, path)).and_return("retained #{path}")
@@ -293,7 +305,7 @@ RSpec.describe HaveAPI::Release do
       artifacts.write_manifest(tmp)
       manifest = JSON.parse(File.read(File.join(tmp, 'release-manifest.json')))
       expect(manifest.fetch('files')).to have_key("haveapi-rust-client-#{artifacts.version}.gem")
-      expect(manifest.fetch('tools')).to include('cargo' => 'cargo fixture', 'rustc' => 'rustc fixture', 'rustfmt' => 'rustfmt fixture')
+      expect(manifest.fetch('tools')).to include('cargo' => 'cargo fixture', 'rustc' => 'rustc fixture', 'rustfmt' => 'rustfmt fixture', 'prettier' => '3.9.10')
       expect(manifest.fetch('dependency_locks').keys.sort).to eq(described_class::Artifacts::LOCK_PATHS.sort)
       expect(manifest.fetch('dependency_locks')).to include(
         'clients/rust/Gemfile.lock' => File.read(File.join(root, 'clients/rust/Gemfile.lock')),
@@ -574,6 +586,18 @@ RSpec.describe HaveAPI::Release do
   end
 
   describe 'npm package contract' do
+    ["'", '"'].each do |quote|
+      it "checks the exact #{quote}-quoted browser bundle version" do
+        files = npm_fixture
+        files['package/dist/haveapi-client.js'] = "Client.Version = #{quote}#{artifacts.version}#{quote};"
+        npm_tar(files)
+        expect { artifacts.inspect_npm(tmp) }.not_to raise_error
+        files['package/dist/haveapi-client.js'] = "Client.Version = #{quote}999.0.0#{quote};"
+        npm_tar(files)
+        expect { artifacts.inspect_npm(tmp) }.to raise_error(HaveAPI::Release::Error, /Wrong browser bundle version/)
+      end
+    end
+
     it 'accepts the retained bundle, declarations and owning documentation' do
       npm_tar(npm_fixture)
       expect { artifacts.inspect_npm(tmp) }.not_to raise_error

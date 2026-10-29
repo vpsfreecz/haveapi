@@ -223,12 +223,22 @@ guide](../../clients/rust/docs/releasing.md) for the generated crate's
 independent versioning and compatibility checks.
 
 TypeScript generator packaging includes the executable, Ruby library, templates,
-README, license, Gemfile, Rakefile and gemspec. The last three files are part of
+canonical `lib/haveapi/typescript_client/prettier.json` configuration, README,
+license, Gemfile, Rakefile and gemspec. The last three files are part of
 the generator's source identity and must travel with the gem. Package inspection
 rejects missing, extra or changed files and checks the executable declaration,
 Ruby floor and shared-client dependency. The Ruby client gem is also checked for
 the exact shared schema sources. Its coordinated release must contain that API;
 an older gem satisfying the same version range does not provide it.
+
+Prepare Prettier 3.9.10 before building, through the default Nix shell or an
+explicit `PRETTIER` executable path. The JavaScript development dependency pins
+the same version. The release manifest records the selected formatter's actual
+version, and the generator source identity includes its packaged configuration
+and formatter-version requirement. Prettier is a generation tool, not a dependency of clients
+running the emitted code. See the [generator preparation
+guide](../../clients/typescript/README.md#prepare-the-source-tools) for consumers
+using the Ruby gem outside Nix.
 
 The manifest retains the TypeScript component lock without packaging it in the
 TypeScript gem. Tools-only artifact verification uses the retained lock and does
@@ -237,7 +247,8 @@ prepares the supported published JavaScript runtime `haveapi-client@0.30.2`,
 with install scripts disabled, then runs `typescript_smoke.rb`. This check
 extracts both retained Ruby gems, clears inherited Ruby/Bundler load overrides,
 verifies loaded paths, versions and source identities, generates a saved mounted
-fixture with the packaged executable, runs `--check`, and compiles a strict
+fixture with the packaged executable and extracted Prettier configuration, checks
+formatter provenance, runs `--check`, and compiles a strict
 consumer of the emitted modules. The consumer uses the published runtime's
 package-name declarations and adapter; it makes no API requests. This runtime
 version is independent of the candidate's shared source VERSION.
@@ -251,6 +262,8 @@ ruby utils/release/typescript_smoke.rb dist /path/to/node_modules/haveapi-client
 The runtime must be the original published 0.30.2 bundle; the smoke checks its
 version and SHA-256. The release build prepares it before protected publication.
 No dependency installation or extracted consumer build runs after approval.
+Tools-only retained-artifact verification checks packaged bytes and retained
+provenance without installing or executing Prettier.
 
 The Rust runtime is embedded in generated clients; it is not a separately
 published crates.io dependency. The `haveapi-runtime-tests` harness stays private

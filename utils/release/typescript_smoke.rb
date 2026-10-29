@@ -24,8 +24,11 @@ module HaveAPI
           raise Error, 'Wrong shared Ruby client gem identity'
         end
 
+        prettier = ENV.fetch('PRETTIER', 'prettier')
+        prettier = File.expand_path(prettier) if prettier.include?(File::SEPARATOR)
         env = ENV.keys.grep(/\ABUNDLE_/).to_h { |key| [key, nil] }.merge(
-          'RUBYOPT' => nil, 'RUBYLIB' => nil, 'RUBYGEMS_GEMDEPS' => nil, 'NODE_PATH' => nil
+          'RUBYOPT' => nil, 'RUBYLIB' => nil, 'RUBYGEMS_GEMDEPS' => nil, 'NODE_PATH' => nil,
+          'PRETTIER' => prettier
         )
         identity = Release.capture(env, RbConfig.ruby, '--disable-gems',
                                    '-I', File.join(artifacts.root, 'clients/ruby/lib'),
@@ -51,11 +54,16 @@ module HaveAPI
           require 'open3'
           require 'rbconfig'
           require 'haveapi/typescript_client/cli'
+          require 'haveapi/typescript_client/formatter'
 
           extracted, shared, version, identity, runtime, compiler = ARGV
           generator = HaveAPI::TypeScriptClient::Generator
           abort 'generator loaded outside extracted artifact' unless generator::ROOT == extracted
           abort 'wrong generator version' unless HaveAPI::TypeScriptClient::VERSION == version
+          formatter = HaveAPI::TypeScriptClient::Formatter
+          unless formatter::CONFIG == File.join(extracted, 'lib/haveapi/typescript_client/prettier.json')
+            abort 'formatter config loaded outside extracted artifact'
+          end
           {'typescript_client' => extracted, 'schema' => shared, 'client/version' => shared}.each do |name, root|
             files = $LOADED_FEATURES.grep(%r{/haveapi/#{name}(?:/|\.rb)})
             unless !files.empty? && files.all? { |path| path.start_with?("#{root}/lib/") }
@@ -89,6 +97,7 @@ module HaveAPI
           end
           manifest = JSON.parse(File.read('src/generated/.haveapi-generated.json'))
           abort 'wrong generated source identity' unless manifest.fetch('generator_source_sha256') == expected.first
+          abort 'wrong formatter provenance' unless manifest.fetch('formatter') == formatter.new.provenance
           abort 'nested module missing' unless File.file?('src/generated/resources/widget/resources/part/actions/show.ts')
           FileUtils.mkdir_p('node_modules')
           File.symlink(runtime, 'node_modules/haveapi-client')

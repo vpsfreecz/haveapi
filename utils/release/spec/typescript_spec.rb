@@ -63,11 +63,12 @@ RSpec.describe HaveAPI::Release::TypeScriptSmoke do
 
   it 'accepts source-exact TypeScript content including every source digest input' do
     package = typescript_gem
-    expect(package.contents).to include('Gemfile', 'Rakefile', 'haveapi-typescript-client.gemspec')
+    expect(package.contents).to include('Gemfile', 'Rakefile', 'haveapi-typescript-client.gemspec',
+                                        'lib/haveapi/typescript_client/formatter.rb', 'lib/haveapi/typescript_client/prettier.json')
     expect { artifacts.inspect_typescript(package) }.not_to raise_error
   end
 
-  %w[Gemfile Rakefile haveapi-typescript-client.gemspec bin/haveapi-typescript-client].each do |path|
+  %w[Gemfile Rakefile haveapi-typescript-client.gemspec bin/haveapi-typescript-client lib/haveapi/typescript_client/prettier.json].each do |path|
     it "rejects missing TypeScript source input #{path}" do
       expect { artifacts.inspect_typescript(typescript_gem(missing: path)) }
         .to raise_error(HaveAPI::Release::Error, /missing or unexpected/)
@@ -81,6 +82,11 @@ RSpec.describe HaveAPI::Release::TypeScriptSmoke do
 
   it 'rejects corrupt template bytes' do
     expect { artifacts.inspect_typescript(typescript_gem(corrupt: 'template/action.ts.erb')) }
+      .to raise_error(HaveAPI::Release::Error, /differs from source/)
+  end
+
+  it 'rejects changed packaged formatter configuration' do
+    expect { artifacts.inspect_typescript(typescript_gem(corrupt: 'lib/haveapi/typescript_client/prettier.json')) }
       .to raise_error(HaveAPI::Release::Error, /differs from source/)
   end
 
@@ -103,6 +109,7 @@ RSpec.describe HaveAPI::Release::TypeScriptSmoke do
     candidate = HaveAPI::Release::Artifacts.new(tmp)
     allow(candidate).to receive(:source).and_return('a' * 40)
     allow(candidate).to receive(:inspect_packages) { candidate.inspect_typescript(package) }
+    allow(HaveAPI::Release).to receive(:capture).and_raise('Unexpected external tool during artifact verification')
     files = candidate.names.to_h do |name|
       path = File.join(tmp, name)
       File.write(path, name) unless File.file?(path)
@@ -120,6 +127,7 @@ RSpec.describe HaveAPI::Release::TypeScriptSmoke do
     File.write(File.join(tmp, 'release-manifest.json'), JSON.generate(manifest))
     expect(File).not_to exist(File.join(tmp, 'clients/typescript/Gemfile.lock'))
     expect { candidate.verify(tmp) }.not_to raise_error
+    expect(HaveAPI::Release).not_to have_received(:capture)
     locks['clients/typescript/Gemfile.lock'] = lock.sub("haveapi-typescript-client (#{artifacts.version})", 'haveapi-typescript-client (999.0.0)')
     File.write(File.join(tmp, 'release-manifest.json'), JSON.generate(manifest))
     expect { candidate.verify(tmp) }.to raise_error(HaveAPI::Release::Error, %r{typescript/Gemfile.lock})
@@ -133,7 +141,7 @@ RSpec.describe HaveAPI::Release::TypeScriptSmoke do
       .to raise_error(HaveAPI::Release::Error, /differs from source/)
   end
 
-  it 'extracts both artifacts and removes ambient load overrides before invoking the consumer' do
+  it 'extracts both artifacts with stable formatter paths and removes ambient load overrides' do
     typescript_gem
     build_gem('clients/ruby', 'haveapi-client')
     runtime = File.join(tmp, 'runtime')
@@ -144,20 +152,29 @@ RSpec.describe HaveAPI::Release::TypeScriptSmoke do
     allow(Digest::SHA256).to receive(:file).with(File.join(runtime, 'dist/haveapi-client.js'))
                                            .and_return(double(hexdigest: HaveAPI::Release::TypeScriptSmoke::RUNTIME_SHA256))
     allow(HaveAPI::Release).to receive(:capture).and_return('["source",{}]')
-    allow(HaveAPI::Release).to receive(:run) do |env, ruby, disable, shared_flag, shared_lib, flag, library, expression, _script, extracted, shared, version, identity, prepared_runtime, compiler, **options|
+    forwarded_prettier = []
+    allow(HaveAPI::Release).to receive(:run) do |env, ruby, disable, shared_flag, shared_lib, flag, library, expression, script, extracted, shared, version, identity, prepared_runtime, compiler, **options|
       expect([ruby, disable, shared_flag, flag, expression]).to eq([RbConfig.ruby, '--disable-gems', '-I', '-I', '-e'])
       expect(shared_lib).to eq(File.join(shared, 'lib'))
       expect(library).to eq(File.join(extracted, 'lib'))
       expect(File.realpath(extracted)).not_to start_with(root)
       expect(File.read(File.join(shared_lib, 'haveapi/schema.rb'))).to eq(File.read(File.join(root, 'clients/ruby/lib/haveapi/schema.rb')))
       expect(File).to exist(File.join(extracted, 'Gemfile'))
+      expect(File.read(File.join(extracted, 'lib/haveapi/typescript_client/prettier.json'))).to eq("{}\n")
       expect(env).to include('RUBYOPT' => nil, 'RUBYLIB' => nil, 'RUBYGEMS_GEMDEPS' => nil, 'NODE_PATH' => nil)
+      forwarded_prettier << env.fetch('PRETTIER')
+      expect(script).to include('formatter config loaded outside extracted artifact', "manifest.fetch('formatter') == formatter.new.provenance")
       ENV.keys.grep(/\ABUNDLE_/).each { |key| expect(env.fetch(key)).to be_nil }
       expect([version, identity, prepared_runtime]).to eq([artifacts.version, '["source",{}]', runtime])
       expect(compiler).to eq(File.join(root, 'clients/js/node_modules/typescript/bin/tsc'))
       expect(options.fetch(:chdir)).to eq(File.dirname(extracted))
     end
-    described_class.run(artifacts, tmp, runtime)
-    expect(HaveAPI::Release).to have_received(:run).once
+    allow(ENV).to receive(:fetch).and_call_original
+    ['./tools/prettier', 'prettier'].each do |prettier|
+      allow(ENV).to receive(:fetch).with('PRETTIER', 'prettier').and_return(prettier)
+      Dir.chdir(tmp) { described_class.run(artifacts, tmp, runtime) }
+    end
+    expect(forwarded_prettier).to eq([File.join(tmp, 'tools/prettier'), 'prettier'])
+    expect(HaveAPI::Release).to have_received(:run).twice
   end
 end

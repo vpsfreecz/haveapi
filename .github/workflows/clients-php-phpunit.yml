@@ -1,18 +1,63 @@
-name: clients/php PHPUnit
+name: clients/php
 
 on:
   push:
     paths:
       - "clients/php/**"
       - "servers/ruby/**"
+      - ".php-cs-fixer.dist.php"
+      - ".overcommit.yml"
+      - "flake.nix"
+      - "flake.lock"
       - ".github/workflows/clients-php-phpunit.yml"
   pull_request:
     paths:
       - "clients/php/**"
       - "servers/ruby/**"
+      - ".php-cs-fixer.dist.php"
+      - ".overcommit.yml"
+      - "flake.nix"
+      - "flake.lock"
       - ".github/workflows/clients-php-phpunit.yml"
 
 jobs:
+  format:
+    name: PHP CS Fixer
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      HAVEAPI_RELEASE_TOOLS_ONLY: "1"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Nix
+        uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+      - name: Check authored PHP formatting
+        run: |
+          nix develop --command php-cs-fixer fix --dry-run --diff --using-cache=no \
+            --config=.php-cs-fixer.dist.php --path-mode=intersection clients/php
+
+  syntax:
+    name: Shipped source syntax (PHP 8.0)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up PHP 8.0
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: "8.0"
+          tools: none
+          coverage: none
+      - name: Check shipped source syntax
+        shell: bash
+        run: |
+          find clients/php/src -type f -name '*.php' -print0 | xargs -0 -r -n 1 php -l
+          php -l clients/php/bootstrap.php
+
   phpunit:
     name: PHPUnit (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
@@ -28,18 +73,18 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
       - name: Set up PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: ${{ matrix.php }}
           tools: composer
 
       - name: Set up Ruby + Bundler cache (servers/ruby)
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
         with:
           ruby-version: "3.3"
           bundler-cache: true

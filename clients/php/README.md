@@ -5,7 +5,7 @@ haveapi-client-php is a PHP client for [HaveAPI](https://github.com/vpsfreecz/ha
 
 Requirements
 ------------
- - PHP >= 7.4
+ - PHP >= 8.0
  - [Httpful](http://phphttpclient.com/)
 
 Installation
@@ -153,6 +153,28 @@ without all necessary arguments (object IDs) results in
 `\HaveAPI\Client\Exception\UnresolvedArguments` exception.
 
 All exceptions thrown by the client are a subclass of `\HaveAPI\Client\Exception\Base`.
+
+Development
+-----------
+
+From the HaveAPI repository root, enter the locked Nix shell and check formatting:
+
+```sh
+nix develop
+php-cs-fixer fix --dry-run --diff --using-cache=no \
+  --config=.php-cs-fixer.dist.php --path-mode=intersection clients/php
+```
+
+Remove `--dry-run` to apply formatting to authored PHP sources and tests. The
+configuration uses `@PER-CS3x0` without PHP migration rules, preserving the
+PHP 8.0 syntax requirement. The generated `src/Client/I18nMessages.php` catalog
+is excluded; update its source through the repository's localization workflow.
+
+CI runs the same formatting command and checks all shipped `src/` PHP files and
+`bootstrap.php` with PHP 8.0's syntax checker. This syntax lane needs no Composer
+dependencies. PHPUnit runs separately on PHP 8.3 and 8.4 because PHPUnit 10 needs
+PHP 8.1 or newer. See the repository's
+[development commands](../../doc/agent-instructions/development.md) for test setup.
 
 Documentation
 -------------

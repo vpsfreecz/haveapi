@@ -6,7 +6,14 @@ From the HaveAPI root:
 nix develop .#client-rust
 cd clients/rust
 bundle exec rspec spec/unit
-bundle exec rubocop lib bin spec/unit spec/spec_helper.rb haveapi-rust-client.gemspec
+```
+
+Run Ruby style checks from the HaveAPI root in the default Nix shell, using the
+root bundle:
+
+```sh
+BUNDLE_GEMFILE="$PWD/Gemfile" bundle exec rubocop clients/rust/lib clients/rust/bin \
+  clients/rust/spec clients/rust/haveapi-rust-client.gemspec
 ```
 
 The component shell runs `bundle install` for this library's dependency ranges
@@ -22,12 +29,21 @@ The root Git hooks also need the root shell's dependencies: prepare them with
 Overcommit hooks enabled. Do not install gems concurrently in the same gem home.
 
 From the HaveAPI root, `make test-rust-unit` runs the generator specs.
-`make test-rust` additionally runs both runtime feature configurations, the
-prepared server fixture contracts and the generated-client protocol harness.
+The specs check generated Rust with the recorded formatter, including failures
+after a successful version probe, without starting Cargo or a server. They also
+verify that every copied runtime file retains its maintained source bytes.
+`make check-rust` runs the runtime's read-only `cargo fmt` check.
+`make test-rust` additionally checks formatting and runs both runtime feature
+configurations, the prepared server fixture contracts and the generated-client
+protocol harness.
 Quick unit specs need only the Rust component bundle; they never load the server
 application, start a listener or invoke Cargo. Compilation, Rust linting, server
 integration, MSRV and packaging checks can take longer; follow the development
 workspace's verification procedure when working there.
+
+The generated-client harness also runs `cargo fmt --check` over its complete
+temporary crate, including the copied acceptance tests. This check precedes its
+compilation and protocol tests. Clippy remains a separate runtime lint check.
 
 The Nix shell supplies the development compiler and formatter. New test
 fixtures record that formatter; existing clients retain their own exact

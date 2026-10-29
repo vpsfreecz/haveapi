@@ -107,6 +107,9 @@ module RustClientIntegration
           File.write(File.join(dir, 'Cargo.toml'), manifest)
           generator.generate(output: generated)
           generator.generate(output: generated, check: true)
+          unless system('cargo', 'fmt', '--manifest-path', File.join(dir, 'Cargo.toml'), '--all', '--', '--check')
+            raise "Generated fixture formatting failed at mount #{mount}"
+          end
 
           if ENV['HAVEAPI_RUST_NAME_LINT'] == '1'
             lint_generated_names(dir)

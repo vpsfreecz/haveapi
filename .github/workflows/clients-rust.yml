@@ -8,6 +8,7 @@ on:
       - 'servers/ruby/**'
       - 'flake.nix'
       - 'flake.lock'
+      - 'Makefile'
       - '.github/workflows/clients-rust.yml'
   pull_request:
     paths:
@@ -16,6 +17,7 @@ on:
       - 'servers/ruby/**'
       - 'flake.nix'
       - 'flake.lock'
+      - 'Makefile'
       - '.github/workflows/clients-rust.yml'
   workflow_dispatch:
 
@@ -39,8 +41,8 @@ jobs:
       - name: Runtime formatting, features and lint
         run: |
           nix develop .#client-rust --command bash -euc '
+            make check-rust
             cd clients/rust/runtime
-            cargo fmt --all -- --check
             cargo test --locked
             cargo test --locked --features blocking
             cargo clippy --locked --all-targets --all-features -- -D warnings

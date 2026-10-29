@@ -1,4 +1,5 @@
 require_relative '../spec_helper'
+require_relative '../integration/run'
 
 RSpec.describe HaveAPI::RustClient::Generator do
   include RustGeneratorFixtures
@@ -9,9 +10,9 @@ RSpec.describe HaveAPI::RustClient::Generator do
 
   after { FileUtils.remove_entry(dir) }
 
-  def files
-    Dir.glob(File.join(output, '**/*'), File::FNM_DOTMATCH).select { |path| File.file?(path) }.to_h do |path|
-      [path.delete_prefix(output), [File.binread(path), File.mtime(path)]]
+  def files(root = output)
+    Dir.glob(File.join(root, '**/*'), File::FNM_DOTMATCH).select { |path| File.file?(path) }.to_h do |path|
+      [path.delete_prefix(root), [File.binread(path), File.mtime(path)]]
     end
   end
 
@@ -85,6 +86,73 @@ RSpec.describe HaveAPI::RustClient::Generator do
     before = files
     expect { generator.generate(output: output) }.to raise_error(HaveAPI::RustClient::Error, /rustfmt version/)
     expect(files).to eq(before)
+  end
+
+  it 'preserves existing output and absent destinations when the formatter is missing' do
+    generator = described_class.new(schema: snapshot, config: config)
+    generator.generate(output: output)
+    before = files
+    missing = File.join(dir, 'missing-parent/generated')
+    allow(ENV).to receive(:fetch).and_call_original
+    allow(ENV).to receive(:fetch).with('RUSTFMT', 'rustfmt').and_return(File.join(dir, 'missing rustfmt'))
+
+    [false, true].each do |check|
+      [output, missing].each do |destination|
+        expect { generator.generate(output: destination, check:) }
+          .to raise_error(HaveAPI::RustClient::Error, %r{required generation file/tool is missing})
+      end
+    end
+    expect(files).to eq(before)
+    expect(File.exist?(File.dirname(missing))).to be(false)
+  end
+
+  it 'preserves output when formatting fails after a successful version probe' do
+    generator = described_class.new(schema: snapshot, config: config)
+    generator.generate(output: output)
+    before = files
+    missing = File.join(dir, 'missing-parent/generated')
+    formatter = File.join(dir, 'failing rustfmt')
+    File.write(formatter, <<~SH)
+      #!/bin/sh
+      if [ "$1" = "--version" ]; then
+        printf '%s\\n' '#{config.fetch('rustfmt_version')}'
+        exit 0
+      fi
+      printf '%s\\n' 'fixture formatting error' >&2
+      exit 1
+    SH
+    File.chmod(0o755, formatter)
+    allow(ENV).to receive(:fetch).and_call_original
+    allow(ENV).to receive(:fetch).with('RUSTFMT', 'rustfmt').and_return(formatter)
+
+    [false, true].each do |check|
+      [output, missing].each do |destination|
+        expect { generator.generate(output: destination, check:) }
+          .to raise_error(HaveAPI::RustClient::Error, /rustfmt failed: fixture formatting error/)
+      end
+    end
+    expect(files).to eq(before)
+    expect(File.exist?(File.dirname(missing))).to be(false)
+  end
+
+  it 'emits rustfmt-clean modules and acceptance fixtures while preserving every copied runtime file' do
+    generator = described_class.new(schema: snapshot, config: config)
+    crate = File.join(dir, 'crate')
+    RustClientIntegration.write_crate(crate)
+    File.write(File.join(crate, 'Cargo.toml'), generator.manifest_requirements)
+    generated = File.join(crate, 'src/generated')
+    generator.generate(output: generated)
+    before = files(crate)
+    stdout, stderr, status = Open3.capture3(
+      ENV.fetch('RUSTFMT', 'rustfmt'), '--check', '--edition', config.fetch('edition'),
+      '--config', 'skip_children=true', *Dir.glob(File.join(crate, '**/*.rs'))
+    )
+    expect(status.success?).to be(true), [stdout, stderr].join("\n")
+    expect(files(crate)).to eq(before)
+    runtime = File.join(described_class::ROOT, 'runtime/src/runtime')
+    Dir.glob(File.join(runtime, '**/*.rs')).each do |path|
+      expect(File.binread(File.join(generated, 'runtime', path.delete_prefix("#{runtime}/")))).to eq(File.binread(path))
+    end
   end
 
   it 'gets fixture configuration from the selected formatter executable' do

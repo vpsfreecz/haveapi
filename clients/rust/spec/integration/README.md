@@ -42,6 +42,12 @@ failed server startup retains a private diagnostic log and prints its path.
 Generation and tests require no production credentials. Ordinary unit specs do
 not invoke this runner.
 
+Before Cargo tests, the runner checks formatting across the temporary crate
+with `cargo fmt --all -- --check`. This includes generated modules, the copied
+runtime, the facade and the standalone Rust acceptance tests. Generator unit
+specs independently check emitted modules with the exact configured rustfmt
+edition/options; that formatting-only check needs no Cargo compilation or server.
+
 Coverage includes omitted/null/value input, zero/false/empty strings, JSON
 bodies, GET query namespaces, unnamespaced object input, list input/output,
 Custom JSON, nested paths, object/list metadata, action-state references,

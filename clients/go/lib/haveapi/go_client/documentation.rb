@@ -327,12 +327,12 @@ module HaveAPI::GoClient
       lines = [
         'response, err := invocation.Call()',
         'if err != nil {',
-        '  fmt.Println(err)',
-        '  return',
+        "\tfmt.Println(err)",
+        "\treturn",
         '}',
         'if !response.Status {',
-        '  fmt.Println(response.Message, response.Errors)',
-        '  return',
+        "\tfmt.Println(response.Message, response.Errors)",
+        "\treturn",
         '}'
       ]
       return lines + ['// This sample demonstrates the failure branch above.'] unless sample[:status]
@@ -341,16 +341,16 @@ module HaveAPI::GoClient
       if context.detail == :thorough && operation_visible?(action, live, context)
         lines.push(
           'if response.IsBlocking() {',
-          '  state, err := response.OperationStatus()',
-          '  if err != nil {',
-          '    fmt.Println(err)',
-          '    return',
-          '  }',
-          '  if !state.Status {',
-          '    fmt.Println(state.Message, state.Errors)',
-          '    return',
-          '  }',
-          '  // Inspect the operation status using its documented output fields.',
+          "\tstate, err := response.OperationStatus()",
+          "\tif err != nil {",
+          "\t\tfmt.Println(err)",
+          "\t\treturn",
+          "\t}",
+          "\tif !state.Status {",
+          "\t\tfmt.Println(state.Message, state.Errors)",
+          "\t\treturn",
+          "\t}",
+          "\t// Inspect the operation status using its documented output fields.",
           '}',
           '// Request success does not establish operation completion.'
         )
@@ -371,10 +371,10 @@ module HaveAPI::GoClient
         common = common_output_fields(action.output, value)
         return ['fmt.Println(len(response.Output))'] if common.empty?
 
-        ['for _, item := range response.Output {', '  if item != nil {'] +
-          output_fields(action.output, common, 'item').map { |line| "    #{line}" } + ['  }', '}']
+        ['for _, item := range response.Output {', "\tif item != nil {"] +
+          output_fields(action.output, common, 'item').map { |line| "\t\t#{line}" } + ["\t}", '}']
       else
-        ['if response.Output != nil {'] + output_fields(action.output, value, 'response.Output').map { |line| "  #{line}" } + ['}']
+        ['if response.Output != nil {'] + output_fields(action.output, value, 'response.Output').map { |line| "\t#{line}" } + ['}']
       end
     end
 
@@ -403,7 +403,7 @@ module HaveAPI::GoClient
         field = "#{variable}.#{parameter.go_name}"
         if parameter.respond_to?(:association) && value.is_a?(Hash)
           associated = parameter.association.resource.actions.find { |candidate| candidate.name == 'show' }
-          ["if #{field} != nil {"] + output_fields(associated.output, value, field).map { |line| "  #{line}" } + ['}']
+          ["if #{field} != nil {"] + output_fields(associated.output, value, field).map { |line| "\t#{line}" } + ['}']
         else
           ["fmt.Println(#{field}#{' == nil' if value.nil?})"]
         end
@@ -467,10 +467,11 @@ module HaveAPI::GoClient
       origin.path = ''
       origin.query = origin.fragment = nil
       header = ["// go get #{@import_path}@#{@module_version || 'latest'}", 'package main', '', 'import (']
-      imports.each { |name| header << "  #{go_string_literal(name)}" }
-      header << "  client #{go_string_literal(@import_path)}"
-      header.push(')', '', 'func main() {', "  api := client.New(#{go_string_literal(origin.to_s)})")
-      (header + lines.map { |line| "  #{line}" } + ['}', '']).join("\n")
+      imports.each { |name| header << "\t#{go_string_literal(name)}" }
+      header << '' unless imports.empty?
+      header << "\tclient #{go_string_literal(@import_path)}"
+      header.push(')', '', 'func main() {', "\tapi := client.New(#{go_string_literal(origin.to_s)})")
+      (header + lines.map { |line| "\t#{line}" } + ['}', '']).join("\n")
     end
 
     def literal(type, value)

@@ -1,4 +1,5 @@
 require 'haveapi/go_client/documentation'
+require 'open3'
 require_relative '../support/documentation_fixture'
 
 RSpec.describe HaveAPI::GoClient::Documentation do
@@ -13,6 +14,22 @@ RSpec.describe HaveAPI::GoClient::Documentation do
 
   def render
     adapter.render(kind: :example, context:, mode: :sync)
+  end
+
+  it 'uses gofmt-compatible tabs for complete programs and action fragments' do
+    action[:blocking] = true
+    action[:meta][:global][:output] = GoDocumentationFixture.io({ action_state_id: { type: 'Integer' } }, namespace: false)
+    %i[simple thorough].each do |detail|
+      context.detail = detail
+      sources = [adapter.render(kind: :init, context:, mode: :sync),
+                 adapter.render(kind: :auth, context:, mode: :sync, auth_method: :basic, auth_description: {}), render]
+      sources.each do |result|
+        source = result.fetch(:code)
+        formatted, status = Open3.capture2e('gofmt', stdin_data: source)
+        expect(status).to be_success, formatted
+        expect(formatted).to eq(source)
+      end
+    end
   end
 
   it 'renders a simple action with exact inputs, required error checks and no repeated setup' do

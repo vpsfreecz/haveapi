@@ -107,6 +107,18 @@ describe HaveAPI::ClientExamples do
     expect(status).to be_success, output
   end
 
+  it 'round-trips PHP data literals through plain and Thorough source without changing control bytes' do
+    renderer = HaveAPI::ClientExamples::PhpClient.new(*client_args)
+    values = ['', '$user', "quote'\"\\", "line\n    indented\r\n\t$value\\\x00\x1f\x7f ž", false, nil, 0]
+    body = "echo json_encode(#{renderer.value(values)});"
+    [body, renderer.with_error_handling(body)].each do |source|
+      output, status = Open3.capture2e('php', stdin_data: "<?php\n#{source}")
+      expect(status).to be_success, output
+      expect(JSON.parse(output)).to eq(values)
+    end
+    expect(renderer.value('public literal')).to eq("'public literal'")
+  end
+
   it 'generates shell-parseable curl requests' do
     source = HaveAPI::ClientExamples::Curl.new(*client_args).request(sample)
     status, output = syntax_check(%w[bash -n], source, '.sh')

@@ -109,8 +109,12 @@ module HaveAPI::TypeScriptClient
     end
 
     def literal(value)
-      return "{#{value.map { |key, item| "#{key == '__proto__' ? '["__proto__"]' : literal(key)}:#{literal(item)}" }.join(',')}}" if value.is_a?(Hash)
-      return "[#{value.map { |item| literal(item) }.join(',')}]" if value.is_a?(Array)
+      if value.is_a?(Hash)
+        return '{}' if value.empty?
+
+        return "{ #{value.map { |key, item| "#{key == '__proto__' ? '["__proto__"]' : literal(key)}: #{literal(item)}" }.join(', ')} }"
+      end
+      return "[#{value.map { |item| literal(item) }.join(', ')}]" if value.is_a?(Array)
 
       JSON.generate(value).gsub("\u2028", '\\u2028').gsub("\u2029", '\\u2029')
     end
@@ -123,9 +127,9 @@ module HaveAPI::TypeScriptClient
       version_url = version_url(context)
       dependencies = "// Configured API client: #{@package_name}#{"@#{@package_version}" if @package_version}."
       runtime_imports = errors ? 'AsyncClient, AsyncError' : 'AsyncClient'
-      lines = [dependencies, "import {#{runtime_imports}} from 'haveapi-client';", "import {createClient} from #{literal(@package_name)};"]
+      lines = [dependencies, "import { #{runtime_imports} } from #{literal('haveapi-client')};", "import { createClient } from #{literal(@package_name)};"]
       lines += ['', 'async function main(): Promise<void> {']
-      operation = ["const runtime = new AsyncClient(#{literal(version_url)});"] + auth + ['const api = createClient({execute: spec => runtime.request(spec)});'] + body
+      operation = ["const runtime = new AsyncClient(#{literal(version_url)});"] + auth + ['const api = createClient({ execute: spec => runtime.request(spec) });'] + body
       if errors
         operation = ['try {'] + operation.map { |line| "  #{line}" } +
                     ['} catch (error) {', '  if (!(error instanceof AsyncError)) throw error;',
@@ -155,11 +159,11 @@ module HaveAPI::TypeScriptClient
       unsupported! if description && normalize(description) != live
       case method.to_s
       when 'basic'
-        ['await runtime.authenticate(\'basic\', {user: "user", password: "secret"});']
+        ['await runtime.authenticate("basic", { user: "user", password: "secret" });']
       when 'token'
         header = live['http_header']
         unsupported! unless header.is_a?(String) && header.match?(/\A[!#$%&'*+.^_`|~0-9A-Za-z-]+\z/) && stored['http_header'] == header
-        ['await runtime.authenticate(\'token\', {token: "example-token"});']
+        ['await runtime.authenticate("token", { token: "example-token" });']
       else unsupported!
       end
     end
@@ -329,7 +333,7 @@ module HaveAPI::TypeScriptClient
         return program(context, body, auth, errors: true)
       end
 
-      imports = failure ? ["import {AsyncError} from 'haveapi-client';", ''] : []
+      imports = failure ? ["import { AsyncError } from #{literal('haveapi-client')};", ''] : []
       (imports + ['// Requires an initialized api and an async context.'] + body + ['']).join("\n")
     end
 

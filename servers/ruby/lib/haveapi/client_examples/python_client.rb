@@ -45,7 +45,8 @@ module HaveAPI::ClientExamples
     def program(body, imports: [], stdlib: [], auth: nil)
       package_imports = ([client_name] + (thorough? ? %w[ActionError HaveAPIError] : []) + imports).uniq.join(', ')
       source = (stdlib + (asynchronous? ? ['asyncio'] : [])).uniq.map { |name| "import #{name}\n" }.join
-      source << "\nfrom haveapi_client import #{package_imports}\n\n\n"
+      source << "\n" unless source.empty?
+      source << "from haveapi_client import #{package_imports}#{asynchronous? ? "\n\n\n" : "\n\n"}"
       source << "async def main() -> None:\n" if asynchronous?
       level = asynchronous? ? 4 : 0
       if thorough?

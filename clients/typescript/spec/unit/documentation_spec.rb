@@ -1,14 +1,33 @@
 require_relative '../documentation/fixtures'
+require_relative '../documentation/compilation'
 
 RSpec.describe HaveAPI::TypeScriptClient::Documentation do
   include TypeScriptDocumentationFixtures
+  include TypeScriptDocumentationCompilation
+
+  it 'type-checks conventionally spaced imports and prototype-safe values at both details' do
+    adapter = documentation_adapter
+    snippets = %i[simple thorough].flat_map do |detail|
+      context = documentation_context(detail:)
+      [adapter.render(kind: :init, context:).fetch(:code),
+       adapter.render(kind: :auth, context:, auth_method: :basic).fetch(:code),
+       adapter.render(kind: :auth, context:, auth_method: :token).fetch(:code),
+       executable_documentation(adapter, context, adapter.render(kind: :example, context:).fetch(:code))]
+    end
+    expect(snippets.first).to include('import { AsyncClient } from "haveapi-client";', 'import { createClient } from "widget-client";')
+    Dir.mktmpdir('haveapi-documentation-style-') do |directory|
+      runtime = File.expand_path('../../../js/dist/types/haveapi.d.ts', __dir__)
+      stdout, stderr, status = compile_documentation(directory, documentation_snapshot, snippets, runtime_types: runtime)
+      expect(status).to be_success, "#{stdout}\n#{stderr}"
+    end
+  end
 
   it 'renders simple fragments using the same canonical calls and values without repeated setup' do
     context = documentation_context(detail: :simple)
     adapter = documentation_adapter
     source = adapter.render(kind: :example, context:).fetch(:code)
-    expect(source).to include('const result = await api.widget.update', '"cleared":null', '"enabled":false', '"count":0',
-                              '"wire_name":"mapped"', 'console.log(result.data.name)')
+    expect(source).to include('const result = await api.widget.update', '"cleared": null', '"enabled": false', '"count": 0',
+                              '"wire_name": "mapped"', 'console.log(result.data.name)')
     expect(source).not_to include('AsyncClient', 'createClient', 'function main', 'credential(', 'catch', 'result.meta')
     context.detail = :thorough
     expect(adapter.render(kind: :example, context:).fetch(:code)).to include('createClient', 'catch (error)', 'error instanceof AsyncError')
@@ -44,7 +63,7 @@ RSpec.describe HaveAPI::TypeScriptClient::Documentation do
     context.action_name = 'change'
     context.action = actions['do-work']
     source = documentation_adapter(schema).render(kind: :example, context:).fetch(:code)
-    expect(source).to include('api.my_widget.do_work(', '["__proto__"]:{"kept":true}', '"wire_name":"mapped"')
+    expect(source).to include('api.my_widget.do_work(', '["__proto__"]: { "kept": true }', '"wire_name": "mapped"')
     expect(source).not_to include('api["my_widget"]', '.change(')
   end
 
@@ -58,7 +77,7 @@ RSpec.describe HaveAPI::TypeScriptClient::Documentation do
       %i[init auth example].each do |kind|
         source = adapter.render(kind:, context:, auth_method: :basic, auth_description: {}).fetch(:code)
         expect(source).not_to include('SDK', 'runtime:', 'haveapi-client@')
-        expect(source).to include("from 'haveapi-client'", 'from "widget-client"')
+        expect(source).to include('from "haveapi-client"', 'from "widget-client"')
       end
     end
   end
@@ -115,7 +134,7 @@ RSpec.describe HaveAPI::TypeScriptClient::Documentation do
     context.sample[:status] = false
     adapter = documentation_adapter
     source = adapter.render(kind: :example, context:).fetch(:code)
-    expect(source).to include("import {AsyncError} from 'haveapi-client'", 'error instanceof AsyncError', 'error.httpStatus')
+    expect(source).to include('import { AsyncError } from "haveapi-client"', 'error instanceof AsyncError', 'error.httpStatus')
     expect(source).not_to include('result.data', 'error.envelope', 'function main')
     context.sample[:request]['count'] = 'invalid'
     before = Marshal.dump(context.sample)
@@ -158,8 +177,8 @@ RSpec.describe HaveAPI::TypeScriptClient::Documentation do
     context = documentation_context
     result = adapter.render(kind: :example, context:)
     expect(result[:status]).to eq(:code)
-    expect(result[:code]).to include('new AsyncClient("https://api.example.test/api/v1.0")', 'createClient({execute: spec => runtime.request(spec)})',
-                                     'api.widget.update', '"wire_name":"mapped"', '"cleared":null', '"enabled":false', '"count":0',
+    expect(result[:code]).to include('new AsyncClient("https://api.example.test/api/v1.0")', 'createClient({ execute: spec => runtime.request(spec) })',
+                                     'api.widget.update', '"wire_name": "mapped"', '"cleared": null', '"enabled": false', '"count": 0',
                                      'result.data, result.meta, result.envelope, result.httpStatus', 'const value0: unknown')
     expect(result[:code]).not_to include('findResource', 'findAction', 'waitForCompletion', 'runtime.setup', ' as ')
     context.action_name = 'change'
@@ -220,9 +239,9 @@ RSpec.describe HaveAPI::TypeScriptClient::Documentation do
     fixture_action(schema)['auth'] = true
     context = documentation_context(schema)
     adapter = documentation_adapter(schema)
-    expect(adapter.render(kind: :example, context:)[:code]).to include("runtime.authenticate('basic'")
+    expect(adapter.render(kind: :example, context:)[:code]).to include('runtime.authenticate("basic"')
     context.description['authentication'].delete('basic')
-    expect(adapter.render(kind: :example, context:)[:code]).to include("runtime.authenticate('token'", 'token: "example-token"')
+    expect(adapter.render(kind: :example, context:)[:code]).to include('runtime.authenticate("token"', 'token: "example-token"')
     context.description['authentication']['token']['http_header'] = 'Wrong'
     expect(adapter.render(kind: :example, context:)[:status]).to eq(:limitation)
     expect(adapter.render(kind: :auth, context: documentation_context, auth_method: 'oauth2', auth_description: {})[:status]).to eq(:limitation)
@@ -248,8 +267,8 @@ RSpec.describe HaveAPI::TypeScriptClient::Documentation do
     context.description['authentication']['unrelated'] = unrelated
     context.description['meta']['unrelated'] = unrelated
 
-    expect(adapter.render(kind: :example, context:)[:code]).to include('api.widget.update', "runtime.authenticate('basic'")
-    expect(adapter.render(kind: :auth, context:, auth_method: :token)[:code]).to include("runtime.authenticate('token'")
+    expect(adapter.render(kind: :example, context:)[:code]).to include('api.widget.update', 'runtime.authenticate("basic"')
+    expect(adapter.render(kind: :auth, context:, auth_method: :token)[:code]).to include('runtime.authenticate("token"')
     expect(unrelated).not_to have_received(:to_h)
   end
 

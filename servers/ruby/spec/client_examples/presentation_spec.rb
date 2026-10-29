@@ -1,7 +1,38 @@
 require 'spec_helper'
 require 'tmpdir'
+require_relative 'dynamic_fixture'
 
 RSpec.describe HaveAPI::ClientExample do
+  include DynamicExampleFixture
+
+  it 'retains all registered direct lanes while keeping authored Ruby and PHP assembly separators clean' do
+    expect(described_class.clients.length).to eq(15)
+    sample = { path_params: [7], request: { name: 'widget' }, response: { id: 7 }, status: true }
+    action = dynamic_action.merge(path: '/mount/v2/widgets/{widget_id}')
+    base = dynamic_context(resource_path: ['widget'], action_name: 'show', action:, sample:)
+    lanes = [[:init, base, nil], [:auth, base, :basic], [:auth, base, :token], [:auth, base, :oauth2],
+             [:example, base, nil], [:example, base.with(action: action.merge(auth: true)), nil],
+             [:example, base.with(sample: sample.merge(status: false)), nil]]
+    described_class.clients.each do |renderer|
+      %i[simple thorough].each do |detail|
+        lanes.each do |kind, context, provider|
+          result = renderer.render(kind, context: context.with(detail:), auth_method: provider, auth_description: token_description)
+          expect(result).to include(status: satisfy { |status| %i[code limitation].include?(status) })
+          next unless result[:status] == :code && %w[ruby php].include?(renderer.language)
+
+          source = result.fetch(:code)
+          expect(source).not_to match(/\A\n|\n\n\z|\n[ \t]+\n|\n\n\n/)
+        end
+      end
+    end
+  end
+
+  it 'preserves custom renderer whitespace and literal content exactly' do
+    source = "\ncustom literal\n\n\n  content\n\n"
+    renderer = Class.new(described_class) { define_method(:init) { source } }
+    expect(renderer.render(:init, context: dynamic_context).fetch(:code)).to eq(source)
+  end
+
   it 'keeps built-in client IDs, order and language metadata together' do
     expected = [
       ['0', 'ruby', 'Ruby', nil],

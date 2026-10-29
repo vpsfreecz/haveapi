@@ -20,7 +20,7 @@ module HaveAPI::ClientExamples
     def with_error_handling(body)
       <<~RUBY
         begin
-        #{body.lines.map { |line| "  #{line}" }.join.chomp}
+        #{body.lines.map { |line| line == "\n" ? line : "  #{line}" }.join.chomp}
         rescue HaveAPI::Client::ValidationError => error
           warn error.message
           warn error.errors.inspect
@@ -48,7 +48,7 @@ module HaveAPI::ClientExamples
     def auth(method, desc)
       body = case method
              when :basic
-               'api.authenticate(:basic, user: "user", password: "secret")'
+               "api.authenticate(:basic, user: 'user', password: 'secret')"
              when :token
                input = auth_token_credentials(desc).transform_keys(&:to_sym)
                continuations = auth_token_continuations(desc)
@@ -57,21 +57,21 @@ module HaveAPI::ClientExamples
                  code << <<~RUBY
                     do |action, parameters|
                      continuations = #{continuations.inspect}
-                     input = continuations.fetch(action.to_s) { raise ArgumentError, "Unknown authentication continuation" }
-                     unless (parameters.keys.map(&:to_s) - input.keys - ["token"]).empty?
-                       raise ArgumentError, "Unknown authentication input"
+                     input = continuations.fetch(action.to_s) { raise ArgumentError, 'Unknown authentication continuation' }
+                     unless (parameters.keys.map(&:to_s) - input.keys - ['token']).empty?
+                       raise ArgumentError, 'Unknown authentication input'
                      end
                      input.transform_keys(&:to_sym)
                    end
                  RUBY
                end
-               %(#{code}\n\n# Reuse an existing token\napi.authenticate(:token, token: "example-token"))
+               %(#{code.chomp}\n\n# Reuse an existing token\napi.authenticate(:token, token: 'example-token'))
              when :oauth2
                return '# OAuth2 is not supported by HaveAPI Ruby client.'
              end
       return unless body
 
-      source = [initialization, (thorough? ? "api.setup\n" : ''), body].join("\n")
+      source = [initialization.chomp, (thorough? ? 'api.setup' : nil), body].compact.join("\n\n")
       thorough? ? with_error_handling(source) : source
     rescue HaveAPI::ClientExample::UnsupportedAuthentication => e
       { status: :limitation, reason: e.message }.freeze
@@ -81,8 +81,8 @@ module HaveAPI::ClientExamples
       return '' unless action[:auth] && context
 
       providers = auth_field(context.description, :authentication, {}).keys.map(&:to_s)
-      return %(api.authenticate(:token, token: "example-token")\n) if providers.include?('token')
-      return %(api.authenticate(:basic, user: "user", password: "secret")\n) if providers.include?('basic')
+      return "api.authenticate(:token, token: 'example-token')\n" if providers.include?('token')
+      return "api.authenticate(:basic, user: 'user', password: 'secret')\n" if providers.include?('basic')
 
       raise HaveAPI::ClientExample::UnsupportedAuthentication, 'This action requires authentication unsupported by this client.'
     end
@@ -106,7 +106,7 @@ module HaveAPI::ClientExamples
              else
                "\n# Raises exception HaveAPI::Client::ActionFailed\n"
              end
-      thorough? ? with_error_handling("#{initialization}api.setup\n#{credentials}\n#{out}") : out
+      thorough? ? with_error_handling(["#{initialization}api.setup", credentials.chomp, out].reject(&:empty?).join("\n\n")) : out
     rescue HaveAPI::ClientExample::UnsupportedAuthentication => e
       { status: :limitation, reason: e.message }.freeze
     end

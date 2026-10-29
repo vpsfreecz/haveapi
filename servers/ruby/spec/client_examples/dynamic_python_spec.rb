@@ -7,6 +7,19 @@ RSpec.describe HaveAPI::ClientExamples::PythonClient do
 
   let(:renderers) { [described_class, HaveAPI::ClientExamples::PythonAsyncClient] }
 
+  it 'separates imports, executable sync code and top-level async definitions without blank padding' do
+    %i[simple thorough].each do |detail|
+      context = dynamic_context(detail:)
+      sync = described_class.render(:init, context:).fetch(:code)
+      async = HaveAPI::ClientExamples::PythonAsyncClient.render(:init, context:).fetch(:code)
+      expect(sync).to start_with('from haveapi_client import ')
+      expect(sync).to include(detail == :simple ? "Client\n\nwith Client(" : "HaveAPIError\n\ntry:\n")
+      expect(async).to start_with("import asyncio\n\nfrom haveapi_client import ")
+      expect(async).to include("\n\n\nasync def main() -> None:\n", "\n\n\nasyncio.run(main())\n")
+      expect([sync, async]).to all(satisfy { |source| !source.start_with?("\n") && !source.end_with?("\n\n") })
+    end
+  end
+
   it 'keeps both variants available without a generated SDK profile' do
     expect(renderers.map(&:id)).to eq(%w[python-sync python-async])
     expect(renderers.map(&:order)).to eq([14, 15])

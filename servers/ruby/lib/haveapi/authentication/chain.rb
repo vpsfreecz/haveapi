@@ -48,6 +48,20 @@ module HaveAPI::Authentication
       nil
     end
 
+    # Validate an explicit documentation cookie token without API credentials.
+    def authenticate_oauth2_token(version, request, token)
+      catch(:return) do
+        Array(@instances[version]).each do |provider|
+          next unless provider.name == :oauth2 && provider.respond_to?(:authenticate_access_token)
+
+          user = provider.authenticate_access_token(request, token)
+          return user if user
+        end
+      end
+
+      nil
+    end
+
     def describe(context)
       ret = {}
 
@@ -69,6 +83,11 @@ module HaveAPI::Authentication
       end
 
       ret
+    end
+
+    # Metadata only: no resource traversal or authentication is performed.
+    def provider_descriptions(version)
+      Array(@instances[version]).to_h { |provider| [provider.name, provider.describe] }
     end
 
     # Return provider list for version `v`.

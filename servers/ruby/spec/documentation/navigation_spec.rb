@@ -110,8 +110,42 @@ describe DocumentationNavigationSpec do
   default_version 1
   auth_chain DocumentationNavigationSpec::Provider
 
+  let(:documentation_server) { HaveAPI::Server.new(get_opt(:api_module)) }
+  let(:docs_fixture) do
+    require_relative '../../test_support/documentation_oauth_fixture'
+    server = documentation_server
+    server.use_version(1)
+    server.auth_chain << DocumentationNavigationSpec::Provider
+    users = %w[member admin].to_h { |name| [name, DocumentationNavigationSpec::User.new(name)] }
+    fixture = DocumentationOAuthFixture.configure(server, users: { 1 => users })
+    server.mount('/')
+    @api = server
+    fixture
+  end
+
+  def request_as(user, path)
+    fixture = docs_fixture
+    get "#{fixture.origin}#{path}", {}, 'HTTP_COOKIE' => fixture.header_for(documentation_server, version: 1, token: user)
+  end
+
   def json_element(attribute)
     JSON.parse(last_response.body.match(%r{<script[^>]*#{attribute}[^>]*>(.*?)</script>}m)[1])
+  end
+
+  it 'renders an overview without resource actions and supplies visible legacy destinations' do
+    request_as('member', '/v1/')
+    expect(last_response).to be_ok
+    expect(last_response.headers['Cache-Control']).to eq('private, no-store')
+    expect(last_response.body).to include('data-page="overview"', 'init-0', '?resource=widget.child')
+    expect(last_response.body).not_to include('PARENT_SAMPLE', 'CHILD_SAMPLE', 'HIDDEN_RESOURCE_DESCRIPTION')
+    expect(json_element('data-legacy-anchors')).to include(
+      'root-widget-show' => '/v1/?resource=widget',
+      'root-widget-child-show' => '/v1/?resource=widget.child',
+      'example-widget.child-show-' => '/v1/?resource=widget.child',
+      'auth-basic' => '/v1/?page=authentication',
+      'auth-basic-javascript-async' => '/v1/?page=authentication'
+    )
+    expect(json_element('data-legacy-anchors').keys.join).not_to include('hidden')
   end
 
   it 'renders only the selected resource actions and preserves stable example IDs' do
@@ -140,6 +174,16 @@ describe DocumentationNavigationSpec do
     expect(last_response).to be_ok
     expect(last_response.body).to include('data-page="authentication"', 'id="auth-basic"')
     expect(last_response.body).not_to include('PARENT_SAMPLE', 'init-examples')
+  end
+
+  it 'returns the same missing response for inaccessible and absent resources' do
+    request_as('member', '/v1/?resource=hidden')
+    expect(last_response.status).to eq(404)
+    hidden_body = last_response.body
+    request_as('member', '/v1/?resource=absent')
+    expect(last_response.status).to eq(404)
+    expect(last_response.body).to eq(hidden_body)
+    expect(last_response.body).not_to include('HIDDEN_RESOURCE_DESCRIPTION')
   end
 
   it 'rejects malformed, duplicate, nested and ambiguous HTML selection' do
@@ -172,6 +216,18 @@ describe DocumentationNavigationSpec do
     get '/?resource=widget.child'
     expect(last_response).to be_ok
     expect(last_response.body).to include('CHILD_SAMPLE', 'href="/v1/?resource=widget"')
+  end
+
+  it 'keeps the complete authorized resource hierarchy on a separate directory page' do
+    request_as('member', '/v1/?page=resources')
+    expect(last_response).to be_ok
+    expect(last_response.body).to include('data-page="resources"', 'data-resource-nav', 'data-documentation-search',
+                                          'data-resource-link="widget.child"', 'data-search-query')
+    expect(last_response.body).not_to include('PARENT_SAMPLE', 'CHILD_SAMPLE', 'data-resource-link="hidden"')
+    get '/v1/'
+    expect(last_response.body).to include('data-resource-directory-link', '?page=resources')
+    expect(last_response.body).not_to include('data-resource-nav', 'data-resource-link="widget"')
+    expect(json_element('data-legacy-anchors')['resources']).to eq('/v1/?page=resources')
   end
 
   it 'links nested resource breadcrumbs to the directory and each real parent' do

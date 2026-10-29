@@ -149,4 +149,54 @@ RSpec.describe HaveAPI::DocumentationSearch::Helpers do
     expect(mounted['index']['base_path']).to eq('/rack/api/v1/')
     expect(mounted['key']).not_to eq(english['key'])
   end
+
+  context 'with OAuth documentation sessions' do
+    let(:documentation_server) do
+      HaveAPI::Server.new(DocumentationSearchIndexSpec::API).tap do |api|
+        api.use_version(1)
+        api.auth_chain << DocumentationSearchIndexSpec::Provider
+      end
+    end
+    let(:documentation_fixture) do
+      require_relative '../../test_support/documentation_oauth_fixture'
+      DocumentationOAuthFixture.configure(documentation_server, users: {
+        1 => { 'member-token' => DocumentationSearchIndexSpec::User.new('member'),
+               'admin-token' => DocumentationSearchIndexSpec::User.new('admin') }
+      }, mount_path: '/api/')
+    end
+
+    before do
+      documentation_fixture
+      server.mount('/api/')
+    end
+
+    def server
+      documentation_server
+    end
+
+    def request(path, user: nil, **headers)
+      environment = { 'HTTP_HOST' => URI(documentation_fixture.origin).host }.merge(headers)
+      environment['HTTP_COOKIE'] = documentation_fixture.header_for(server, version: 1, token: "#{user}-token") if user
+      Rack::MockRequest.new(server.app).get("#{documentation_fixture.origin}/api/v1/#{path}", environment)
+    end
+
+    it 'rechecks cookie authentication and permission changes before any 304 response' do
+      member = page_key(user: 'member')
+      admin = page_key(user: 'admin')
+      anonymous = page_key
+      expect([member, admin, anonymous].uniq.length).to eq(3)
+      original = request("?page=resources&search_index=#{member}", user: 'member')
+      expect(envelope(original)['index']['parameters'].map { |parameter| parameter['name'] }).not_to include('private_ticket')
+      expect(request("?page=resources&search_index=#{admin}", user: 'member', 'HTTP_IF_NONE_MATCH' => '*').status).to eq(409)
+      documentation_fixture.lookups.clear
+      expect(request("?page=resources&search_index=#{member}", user: 'member', 'HTTP_IF_NONE_MATCH' => %("#{member}")).status).to eq(304)
+      expect(documentation_fixture.lookups).to eq([[1, 'member-token']])
+      DocumentationSearchIndexSpec.private_visible = true
+      changed = page_key(user: 'member')
+      expect(changed).not_to eq(member)
+      stale = request("?page=resources&search_index=#{member}", user: 'member', 'HTTP_IF_NONE_MATCH' => '*')
+      expect(stale.status).to eq(409)
+      expect(stale.body).not_to include('data-documentation-search-index')
+    end
+  end
 end

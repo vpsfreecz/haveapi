@@ -1,61 +1,64 @@
 {
-	"name": "haveapi-client",
-	"version": "0.31.0",
-	"description": "Client for HaveAPI based APIs",
-	"license": "MIT",
-	"author": {
-		"name": "Jakub Skokan",
-		"email": "jakub.skokan@vpsfree.cz"
-	},
-	"files": [
-		"dist",
-		"doc-async-client.md",
-		"doc-async-resources.md",
-		"test/README.md"
-	],
-	"main": "dist/haveapi-client.js",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/vpsfreecz/haveapi",
-		"directory": "clients/js"
-	},
-	"scripts": {
-		"test": "npm run build && npm run test:compatibility && npm run test:async && npm run test:resources && npm run test:types && mocha",
-		"build": "gulp",
-		"typecheck": "tsc --noEmit",
-		"test:compatibility": "node --test test/compatibility/*.spec.cjs",
-		"test:types": "tsc -p test/types/callback.tsconfig.json && tsc -p test/types/async.tsconfig.json",
-		"test:async": "node --test test/async/*.spec.cjs",
-		"test:resources": "tsc -p test/async-resources.tsconfig.json && node --test test/async_resources/resource.spec.cjs"
-	},
-	"dependencies": {
-		"xmlhttprequest": "latest"
-	},
-	"devDependencies": {
-		"@rollup/plugin-node-resolve": "16.0.3",
-		"@types/node": "^24.19.2",
-		"acorn": "8.19.0",
-		"chai": "latest",
-		"gulp": "latest",
-		"jsdoc": "4.0.5",
-		"markdown-it": "15.0.3",
-		"markdown-it-anchor": "10.0.0",
-		"mocha": "latest",
-		"tslib": "2.8.1",
-		"typescript": "6.0.3",
-		"rollup": "4.65.0"
-	},
-	"overrides": {
-		"jsdoc": {
-			"markdown-it": "$markdown-it",
-			"markdown-it-anchor": "$markdown-it-anchor"
-		}
-	},
-	"keywords": [
-		"rest",
-		"api",
-		"client",
-		"http"
-	],
-	"types": "dist/types/haveapi.d.ts"
+  "name": "haveapi-client",
+  "version": "0.31.0",
+  "description": "Client for HaveAPI based APIs",
+  "license": "MIT",
+  "author": {
+    "name": "Jakub Skokan",
+    "email": "jakub.skokan@vpsfree.cz"
+  },
+  "files": [
+    "dist",
+    "doc-async-client.md",
+    "doc-async-resources.md",
+    "test/README.md"
+  ],
+  "main": "dist/haveapi-client.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vpsfreecz/haveapi",
+    "directory": "clients/js"
+  },
+  "scripts": {
+    "format": "prettier --config ../typescript/lib/haveapi/typescript_client/prettier.json --no-editorconfig --ignore-path .prettierignore --write \"{src,test}/**/*.{ts,js,cjs,mjs,json}\" \"*.{ts,js,cjs,mjs,json}\"",
+    "format:check": "prettier --config ../typescript/lib/haveapi/typescript_client/prettier.json --no-editorconfig --ignore-path .prettierignore --check \"{src,test}/**/*.{ts,js,cjs,mjs,json}\" \"*.{ts,js,cjs,mjs,json}\"",
+    "test": "npm run build && npm run test:compatibility && npm run test:async && npm run test:resources && npm run test:types && mocha",
+    "build": "gulp",
+    "typecheck": "tsc --noEmit",
+    "test:compatibility": "node --test test/compatibility/*.spec.cjs",
+    "test:types": "tsc -p test/types/callback.tsconfig.json && tsc -p test/types/async.tsconfig.json",
+    "test:async": "node --test test/async/*.spec.cjs",
+    "test:resources": "tsc -p test/async-resources.tsconfig.json && node --test test/async_resources/resource.spec.cjs"
+  },
+  "dependencies": {
+    "xmlhttprequest": "latest"
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "16.0.3",
+    "@types/node": "^24.19.2",
+    "acorn": "8.19.0",
+    "chai": "latest",
+    "gulp": "latest",
+    "jsdoc": "4.0.5",
+    "markdown-it": "15.0.3",
+    "markdown-it-anchor": "10.0.0",
+    "mocha": "latest",
+    "prettier": "3.9.10",
+    "tslib": "2.8.1",
+    "typescript": "6.0.3",
+    "rollup": "4.65.0"
+  },
+  "overrides": {
+    "jsdoc": {
+      "markdown-it": "$markdown-it",
+      "markdown-it-anchor": "$markdown-it-anchor"
+    }
+  },
+  "keywords": [
+    "rest",
+    "api",
+    "client",
+    "http"
+  ],
+  "types": "dist/types/haveapi.d.ts"
 }

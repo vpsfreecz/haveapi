@@ -5,11 +5,21 @@ on:
     paths:
       - "clients/js/**"
       - "servers/ruby/**"
+      - "clients/typescript/lib/haveapi/typescript_client/prettier.json"
+      - ".overcommit.yml"
+      - ".git-hooks/pre_commit/js_format.rb"
+      - "flake.nix"
+      - "flake.lock"
       - ".github/workflows/clients-js-tests.yml"
   pull_request:
     paths:
       - "clients/js/**"
       - "servers/ruby/**"
+      - "clients/typescript/lib/haveapi/typescript_client/prettier.json"
+      - ".overcommit.yml"
+      - ".git-hooks/pre_commit/js_format.rb"
+      - "flake.nix"
+      - "flake.lock"
       - ".github/workflows/clients-js-tests.yml"
 
 jobs:
@@ -22,19 +32,19 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
       - name: Set up Ruby + Bundler cache (servers/ruby)
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
         with:
           ruby-version: "3.3"
           bundler-cache: true
           working-directory: servers/ruby
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "lts/*"
 
@@ -43,6 +53,10 @@ jobs:
         shell: bash
         run: |
           npm install --no-audit --no-fund
+
+      - name: Check authored source formatting
+        working-directory: clients/js
+        run: npm run format:check
 
       - name: Run tests
         working-directory: clients/js

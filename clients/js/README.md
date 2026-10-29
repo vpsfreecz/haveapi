@@ -270,6 +270,22 @@ authentication to load translated descriptions.
 See [build preparation and checks](test/README.md) for the Nix environment,
 compiler compatibility, documentation generation and test commands.
 
+Authored TypeScript, JavaScript and JSON use Prettier 3.9.10 with its defaults.
+The npm development dependency and Nix shell provide that version. From
+`clients/js`, run:
+
+```sh
+npm run format
+npm run format:check
+```
+
+Both commands use the shared configuration at
+`clients/typescript/lib/haveapi/typescript_client/prettier.json`, without
+EditorConfig overrides. They cover source, tests and build scripts, excluding
+`dist`, `build`, dependencies and the generated `src/haveapi/i18n_messages.js`
+catalog. Edit authored files and use `npm run build` to regenerate bundles and
+declarations. Formatting checks are separate from `npm run typecheck` and tests.
+
 ## License
 
 The HaveAPI JavaScript client is released under the MIT license.

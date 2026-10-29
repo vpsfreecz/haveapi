@@ -11,7 +11,7 @@ module HaveAPI::TypeScriptClient
 
     def self.source_files
       Dir.chdir(ROOT) do
-        Dir['bin/**/*', 'lib/**/*.rb', 'template/**/*', 'Gemfile', '*.gemspec', 'Rakefile']
+        Dir['bin/**/*', 'lib/**/*.{rb,json}', 'template/**/*', 'Gemfile', '*.gemspec', 'Rakefile']
           .select { |path| File.file?(path) }.sort
       end
     end
@@ -41,12 +41,16 @@ module HaveAPI::TypeScriptClient
       require_relative 'emitter'
       files = Emitter.new(@ir, @config).files
       validate_files(files)
+      require_relative 'formatter'
+      formatter = Formatter.new
+      files = formatter.format(files)
+      validate_files(files)
       manifest = {
         'owner' => OWNER, 'format' => 1, 'generator_version' => VERSION,
         'generator_source_sha256' => self.class.source_digest,
         'schema_sha256' => Snapshot.sha256(@schema), 'api_version' => @schema.fetch('api_version'),
         'protocol_version' => @schema.fetch('protocol_version'), 'profile' => @schema.fetch('profile'),
-        'config' => @config.transform_keys(&:to_s), 'coverage' => coverage,
+        'config' => @config.transform_keys(&:to_s), 'formatter' => formatter.provenance, 'coverage' => coverage,
         'files' => files.sort.to_h.transform_values { |content| Digest::SHA256.hexdigest(content) }
       }
       candidate = files.merge(OWNER_FILE => Snapshot.canonical(manifest))

@@ -38,6 +38,22 @@ using the prepared dependencies and runs without contacting the API.
 Applications need a TypeScript compiler and the `haveapi-client` JavaScript
 runtime. The supported runtime version is exactly `0.30.2`.
 
+Both generation and `generate --check` require **Prettier 3.9.10** and Node.
+The repository's default Nix shell supplies them. For an installed Ruby gem,
+prepare the formatter in your application's tooling before generating:
+
+```sh
+npm install --save-dev --save-exact prettier@3.9.10
+export PRETTIER="$PWD/node_modules/.bin/prettier"
+```
+
+`PRETTIER` is an executable path, not a shell command. Alternatively, put the
+exact version's `prettier` executable on PATH. The Ruby gem does not install npm
+dependencies. Generation checks the formatter version and never downloads or
+installs tools. Fetch, help, library loading and documentation rendering do not
+require Prettier. Running an already generated client needs neither Prettier nor
+the Ruby generator.
+
 ## Fetch, save and generate
 
 The example API at `https://example.test/api/v1.0/` has `Widget#Update` at
@@ -68,6 +84,11 @@ version URL, including its mount prefix; it does not select a server default.
 The explicit generation version must match the saved snapshot. `--check` reports
 missing or stale output without changing it. Keep handwritten files outside
 `src/generated`.
+
+Generation formats only its temporary emitted source tree, using the packaged
+`lib/haveapi/typescript_client/prettier.json` defaults. Application Prettier
+configuration, EditorConfig and ignore files do not change generated output.
+The pure emitter and documentation adapters remain formatter-free.
 
 For Basic capture, set `WIDGET_PASSWORD` in your environment, then run:
 
@@ -190,10 +211,20 @@ Commit the whole generated tree and manifest together. Regenerate with the
 recorded schema and HaveAPI revision, and keep that generator/client pair
 together when reverting versions.
 
+The format-1 manifest records the formatter name, exact version and configuration
+SHA-256 alongside hashes of the final formatted files. Existing format-1 trees
+without formatter provenance can be regenerated normally; `--check` reports
+them as stale without writing. Missing tools, version mismatches and formatting
+errors leave the destination unchanged. Identical regeneration preserves file
+timestamps.
+
 An interrupted write can leave mixed output. Restore the committed generated
 tree before regenerating. If the first generation was interrupted before an
 ownership manifest was written, preserve that partial directory and generate
 into a fresh empty `src/generated`. Do not edit the manifest to bypass a refusal.
+When rolling back, restore the matching generator revision, generated tree and
+manifest together. An older generator's `--check` need not accept source
+formatted by a newer generator.
 
 The Ruby server can render examples using this generated interface; see
 [generated documentation profiles](docs/documentation.md).

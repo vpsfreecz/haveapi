@@ -1,4 +1,5 @@
 require_relative '../spec_helper'
+require_relative '../../lib/haveapi/typescript_client/formatter'
 
 RSpec.describe HaveAPI::TypeScriptClient::Generator do
   include TypeScriptFixtures
@@ -7,6 +8,9 @@ RSpec.describe HaveAPI::TypeScriptClient::Generator do
     emitter = Class.new
     stub_const('HaveAPI::TypeScriptClient::Emitter', emitter)
     emitter_files('index.ts' => "export {};\n", 'old.ts' => "export {};\n")
+    formatter = instance_double(HaveAPI::TypeScriptClient::Formatter, provenance: { 'name' => 'prettier', 'version' => '3.9.10', 'config_sha256' => 'a' * 64 })
+    allow(formatter).to receive(:format) { |files| files }
+    allow(HaveAPI::TypeScriptClient::Formatter).to receive(:new).and_return(formatter)
   end
 
   let(:nested_files) do
@@ -37,6 +41,7 @@ RSpec.describe HaveAPI::TypeScriptClient::Generator do
   def generator
     instance = described_class.new(schema: snapshot)
     allow(instance).to receive(:require_relative).with('emitter')
+    allow(instance).to receive(:require_relative).with('formatter')
     instance
   end
 
@@ -47,6 +52,46 @@ RSpec.describe HaveAPI::TypeScriptClient::Generator do
     expect(described_class.source_digest).not_to eq(before)
     allow(HaveAPI::Schema).to receive(:source_identity).and_return(identity.merge('version' => '999.0'))
     expect(described_class.source_digest).not_to eq(before)
+  end
+
+  it 'includes the packaged formatter policy in source identity' do
+    path = 'lib/haveapi/typescript_client/prettier.json'
+    expect(described_class.source_files).to include(path)
+    before = described_class.source_digest
+    allow(File).to receive(:binread).and_call_original
+    allow(File).to receive(:binread).with(File.join(described_class::ROOT, path)).and_return("{\"tabWidth\":4}\n")
+    expect(described_class.source_digest).not_to eq(before)
+  end
+
+  it 'accepts an old format-1 tree without formatter provenance for regeneration' do
+    Dir.mktmpdir do |root|
+      output = File.join(root, 'src/generated')
+      generator.generate(output:)
+      path = File.join(output, described_class::OWNER_FILE)
+      manifest = JSON.parse(File.read(path))
+      manifest.delete('formatter')
+      File.write(path, HaveAPI::TypeScriptClient::Snapshot.canonical(manifest))
+      before = output_state(output)
+      expect { generator.generate(output:, check: true) }.to raise_error(HaveAPI::TypeScriptClient::Error, /stale/)
+      expect(output_state(output)).to eq(before)
+      generator.generate(output:)
+      expect(JSON.parse(File.read(path)).fetch('formatter')).to include('name' => 'prettier', 'version' => '3.9.10')
+      expect(generator.generate(output:, check: true)).to be(true)
+    end
+  end
+
+  it 'validates formatted content before changing the destination' do
+    Dir.mktmpdir do |root|
+      output = File.join(root, 'src/generated')
+      generator.generate(output:)
+      before = output_state(output)
+      formatter = HaveAPI::TypeScriptClient::Formatter.new
+      allow(formatter).to receive(:format).and_return('index.ts' => "invalid\r\n")
+      [true, false].each do |check|
+        expect { generator.generate(output:, check:) }.to raise_error(HaveAPI::TypeScriptClient::Error, %r{non-UTF-8/LF})
+        expect(output_state(output)).to eq(before)
+      end
+    end
   end
 
   it 'generates deterministic owned output and removes stale owned files' do

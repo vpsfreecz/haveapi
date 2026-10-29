@@ -14,7 +14,7 @@ module HaveAPI
     end
 
     def self.build(resource_count: 4, actions_per_resource: 2, samples_per_action: 1,
-                   parameters_per_action: 2, rust: false)
+                   parameters_per_action: 2, rust: false, documentation_oauth: false)
       dimensions = [resource_count, actions_per_resource, samples_per_action, parameters_per_action]
       unless dimensions.all? { |value| value.is_a?(Integer) && value > 0 }
         raise ArgumentError, 'Fixture dimensions must be positive integers'
@@ -41,8 +41,26 @@ module HaveAPI
       if rust
         server.documentation_clients(1, rust: { crate_name: 'documentation_performance_client' })
       end
+      fixture = configure_documentation_oauth(server) if documentation_oauth
       server.mount('/benchmark/api/')
+      attach_documentation_headers(server, fixture) if fixture
       server
+    end
+
+    def self.configure_documentation_oauth(server)
+      require_relative 'documentation_oauth_fixture'
+      users = %w[admin member].to_h { |role| ["documentation-#{role}", User.new(role)] }
+      DocumentationOAuthFixture.configure(server, users: { 1 => users }, origin: 'https://example.test', mount_path: '/benchmark/api/')
+    end
+
+    def self.attach_documentation_headers(server, fixture)
+      # Mint once during setup. Each page still decrypts and validates the real
+      # token; deterministic per-role CSRF preserves repeated HTML body proof.
+      cookies = %w[admin member].to_h do |role|
+        [role, fixture.header_for(server, version: 1, token: "documentation-#{role}")]
+      end
+      server.define_singleton_method(:fixture_documentation_oauth) { fixture }
+      server.define_singleton_method(:fixture_documentation_cookie) { |role| cookies.fetch(role) }
     end
 
     def self.add_action(resource, index, samples, parameters)

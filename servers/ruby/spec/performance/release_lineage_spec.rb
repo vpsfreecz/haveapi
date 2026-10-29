@@ -279,9 +279,9 @@ describe HaveAPI::Performance::Release do
   end
 
   def served_html
-    server = HaveAPI::DocumentationPerformanceFixture.build(resource_count: 1, actions_per_resource: 1)
-    response = Rack::MockRequest.new(server.app).get('http://example.test/benchmark/api/v1/',
-                                                     'HTTP_HOST' => 'example.test', 'HTTP_AUTHORIZATION' => "Basic #{Base64.strict_encode64('admin:fixture-only')}")
+    server = HaveAPI::DocumentationPerformanceFixture.build(resource_count: 1, actions_per_resource: 1, documentation_oauth: true)
+    response = Rack::MockRequest.new(server.app).get("#{server.fixture_documentation_oauth.origin}/benchmark/api/v1/",
+                                                     'HTTP_HOST' => 'example.test', 'HTTP_COOKIE' => server.fixture_documentation_cookie('admin'))
     expect(response.status).to eq(200)
     response.body
   end

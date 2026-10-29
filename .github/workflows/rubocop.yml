@@ -5,14 +5,26 @@ on:
     paths:
       - "**/*.rb"
       - "**/*.gemspec"
-      - "Gemfile*"
-      - ".rubocop*"
+      - "**/Gemfile*"
+      - "**/Rakefile"
+      - "**/bin/**"
+      - "**/.rubocop*"
+      - ".overcommit.yml"
+      - "flake.nix"
+      - "flake.lock"
+      - ".github/workflows/rubocop.yml"
   pull_request:
     paths:
       - "**/*.rb"
       - "**/*.gemspec"
-      - "Gemfile*"
-      - ".rubocop*"
+      - "**/Gemfile*"
+      - "**/Rakefile"
+      - "**/bin/**"
+      - "**/.rubocop*"
+      - ".overcommit.yml"
+      - "flake.nix"
+      - "flake.lock"
+      - ".github/workflows/rubocop.yml"
 
 jobs:
   rubocop:
@@ -23,12 +35,12 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
       - name: Set up Ruby + Bundler cache
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1.335.0
         with:
           bundler-cache: true
 

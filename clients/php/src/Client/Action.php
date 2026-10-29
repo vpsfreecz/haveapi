@@ -116,8 +116,8 @@ class Action
             throw new Exception\UnresolvedArguments(
                 $this->client->translate(
                     'errors.unresolved_arguments',
-                    ['action' => $this->resource->getName() . '#' . $this->m_name]
-                )
+                    ['action' => $this->resource->getName() . '#' . $this->m_name],
+                ),
             );
         }
 

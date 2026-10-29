@@ -33,10 +33,10 @@ final class TokenAuthenticationI18nTest extends TestCase
                 'https://api.example',
                 null,
                 'haveapi-client-php-test',
-                ['language' => 'cs']
+                ['language' => 'cs'],
             ),
             (object) [],
-            $opts
+            $opts,
         );
     }
 }

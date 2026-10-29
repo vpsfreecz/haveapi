@@ -56,7 +56,7 @@ class Client extends Client\Resource
             'oauth2_trusted_origins' => $this->normalizeTrustedOrigins(
                 $options['oauth2_trusted_origins']
                     ?? $options['oauth2TrustedOrigins']
-                    ?? []
+                    ?? [],
             ),
         ];
         $this->setLanguage($options['language'] ?? null);
@@ -213,7 +213,7 @@ class Client extends Client\Resource
 
         if ($path[0] !== '/' || (isset($path[1]) && $path[1] === '/')) {
             throw new Client\Exception\ProtocolError(
-                'Invalid action path: expected an API-root-relative path'
+                'Invalid action path: expected an API-root-relative path',
             );
         }
 
@@ -236,13 +236,13 @@ class Client extends Client\Resource
         if ($hasScheme || $hasHost) {
             if (!$hasScheme || !$hasHost) {
                 throw new Client\Exception\ProtocolError(
-                    "Invalid $label: expected an absolute same-origin URL or a relative URL"
+                    "Invalid $label: expected an absolute same-origin URL or a relative URL",
                 );
             }
 
             if (array_key_exists('user', $parts) || array_key_exists('pass', $parts)) {
                 throw new Client\Exception\ProtocolError(
-                    "Invalid $label: userinfo is not allowed"
+                    "Invalid $label: userinfo is not allowed",
                 );
             }
 
@@ -254,7 +254,7 @@ class Client extends Client\Resource
         if ($url[0] === '/') {
             if (isset($url[1]) && $url[1] === '/') {
                 throw new Client\Exception\ProtocolError(
-                    "Invalid $label: URL authority is not allowed"
+                    "Invalid $label: URL authority is not allowed",
                 );
             }
 
@@ -280,7 +280,7 @@ class Client extends Client\Resource
         return $this->resolveDescriptionUrl(
             $url,
             $label,
-            $this->options['oauth2_trusted_origins']
+            $this->options['oauth2_trusted_origins'],
         );
     }
 
@@ -450,7 +450,7 @@ class Client extends Client\Resource
         if (isset($_SERVER['HTTP_X_FORWARDED_FOR']) && is_scalar($_SERVER['HTTP_X_FORWARDED_FOR'])) {
             $ips = array_values(array_filter(array_map(
                 'trim',
-                explode(',', (string) $_SERVER['HTTP_X_FORWARDED_FOR'])
+                explode(',', (string) $_SERVER['HTTP_X_FORWARDED_FOR']),
             )));
 
             $ip = end($ips);
@@ -569,7 +569,7 @@ class Client extends Client\Resource
         if (!isset($ret->version)) {
             throw new Client\Exception\ProtocolError(
                 "Incompatible protocol version: the client uses v" . self::PROTOCOL_VERSION
-                . " while the API server uses an unspecified version (pre 1.0)"
+                . " while the API server uses an unspecified version (pre 1.0)",
             );
         }
 
@@ -585,7 +585,7 @@ class Client extends Client\Resource
         if ($major1 != $major2) {
             throw new Client\Exception\ProtocolError(
                 "Incompatible protocol version: the client uses v" . self::PROTOCOL_VERSION
-                . " while the API server uses v" . $ret->version
+                . " while the API server uses v" . $ret->version,
             );
         }
 
@@ -715,7 +715,7 @@ class Client extends Client\Resource
                 : 'the configured API origin or a trusted OAuth2 origin';
 
             throw new Client\Exception\ProtocolError(
-                "Invalid $label: URL must use $expected"
+                "Invalid $label: URL must use $expected",
             );
         }
     }

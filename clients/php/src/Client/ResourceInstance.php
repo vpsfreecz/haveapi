@@ -122,7 +122,7 @@ class ResourceInstance extends Resource
                     $this->associations[$name] = new ResourceInstance(
                         $this->client,
                         $this->client[ implode('.', $param->resource) ]->show,
-                        $this->attrs[$name]
+                        $this->attrs[$name],
                     );
 
                 } else {
@@ -179,7 +179,7 @@ class ResourceInstance extends Resource
             'Undefined property via __get(): ' . $name
             . ' in ' . $trace[0]['file']
             . ' on line ' . $trace[0]['line'],
-            E_USER_NOTICE
+            E_USER_NOTICE,
         );
         return null;
     }

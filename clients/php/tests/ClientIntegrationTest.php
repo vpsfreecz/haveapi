@@ -207,7 +207,7 @@ final class ClientIntegrationTest extends TestCase
             self::$baseUrl,
             null,
             'haveapi-client-php-test',
-            ['language' => 'cs-CZ', 'language_header' => 'X-Language']
+            ['language' => 'cs-CZ', 'language_header' => 'X-Language'],
         );
         $request = $api->getRequest('get', self::$baseUrl . '/v1/test');
 
@@ -220,7 +220,7 @@ final class ClientIntegrationTest extends TestCase
             self::$baseUrl,
             null,
             'haveapi-client-php-test',
-            ['language' => 'cs']
+            ['language' => 'cs'],
         );
         $base = [
             'i' => 1,
@@ -247,7 +247,7 @@ final class ClientIntegrationTest extends TestCase
             self::$baseUrl,
             null,
             'haveapi-client-php-test',
-            ['language' => 'cs']
+            ['language' => 'cs'],
         );
 
         $resp = $api->test->echo_choice(['format' => 'archive']);

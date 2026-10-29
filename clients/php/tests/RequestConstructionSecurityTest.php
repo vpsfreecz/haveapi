@@ -18,7 +18,7 @@ final class RequestConstructionSecurityTest extends TestCase
 
         $this->assertStringContainsString(
             'user%5Bname%5D%3Dalice%26_meta%5Bincludes%5D=group__secret',
-            $request->uri
+            $request->uri,
         );
         $this->assertStringNotContainsString('&_meta[includes]', $request->uri);
 
@@ -41,7 +41,7 @@ final class RequestConstructionSecurityTest extends TestCase
 
         $this->assertSame(
             'token%3Dabc%26token_type_hint=refresh%2Btoken%25value',
-            $client->lastRequest->bodyValue
+            $client->lastRequest->bodyValue,
         );
 
         parse_str($client->lastRequest->bodyValue, $parsed);
@@ -50,7 +50,7 @@ final class RequestConstructionSecurityTest extends TestCase
         $this->assertArrayNotHasKey('token_type_hint', $parsed);
         $this->assertSame(
             'refresh+token%value',
-            $parsed['token=abc&token_type_hint']
+            $parsed['token=abc&token_type_hint'],
         );
     }
 
@@ -69,7 +69,7 @@ final class RequestConstructionSecurityTest extends TestCase
 
         $this->assertSame(
             ['/v1/users/42%3Fuser%5Bname%5D%3Dalice%26_meta%5Bincludes%5D%3Dgroup__secret'],
-            $client->callPaths
+            $client->callPaths,
         );
         $this->assertNull(parse_url($client->callPaths[0], PHP_URL_QUERY));
     }
@@ -91,7 +91,7 @@ final class RequestConstructionSecurityTest extends TestCase
 
         $this->assertSame(
             ['/v1/users/42%3Fuser%5Bname%5D%3Dalice%26_meta%5Bincludes%5D%3Dgroup__secret'],
-            $client->directCallPaths
+            $client->directCallPaths,
         );
         $this->assertNull(parse_url($client->directCallPaths[0], PHP_URL_QUERY));
     }
@@ -151,11 +151,11 @@ final class RequestConstructionSecurityTest extends TestCase
 
         $this->assertSame(
             'https://api.example/api/_auth/oauth2/revoke',
-            $client->lastRequest->uri
+            $client->lastRequest->uri,
         );
         $this->assertSame(
             'token=same-origin-access-token',
-            $client->lastRequest->bodyValue
+            $client->lastRequest->bodyValue,
         );
     }
 
@@ -165,7 +165,7 @@ final class RequestConstructionSecurityTest extends TestCase
             'https://api.example',
             null,
             'haveapi-client-php',
-            ['oauth2_trusted_origins' => ['https://auth.example']]
+            ['oauth2_trusted_origins' => ['https://auth.example']],
         );
         $description = (object) [
             'revoke_url' => 'https://auth.example/_auth/oauth2/revoke',
@@ -176,11 +176,11 @@ final class RequestConstructionSecurityTest extends TestCase
 
         $this->assertSame(
             'https://auth.example/_auth/oauth2/revoke',
-            $client->lastRequest->uri
+            $client->lastRequest->uri,
         );
         $this->assertSame(
             'token=trusted-origin-access-token',
-            $client->lastRequest->bodyValue
+            $client->lastRequest->bodyValue,
         );
     }
 
@@ -190,7 +190,7 @@ final class RequestConstructionSecurityTest extends TestCase
             'https://api.example',
             null,
             'haveapi-client-php',
-            ['oauth2_trusted_origins' => ['https://auth.example']]
+            ['oauth2_trusted_origins' => ['https://auth.example']],
         );
         $description = (object) [
             'revoke_url' => 'https://auth.example.evil/collect-token',
@@ -218,7 +218,7 @@ final class RequestConstructionSecurityTest extends TestCase
             new \HaveAPI\Client\Authentication\OAuth2(
                 $client,
                 $description,
-                $this->newOAuth2Options()
+                $this->newOAuth2Options(),
             );
             $this->fail('Expected ProtocolError');
         } catch (\HaveAPI\Client\Exception\ProtocolError $e) {
@@ -239,7 +239,7 @@ final class RequestConstructionSecurityTest extends TestCase
             new \HaveAPI\Client\Authentication\OAuth2(
                 $client,
                 $description,
-                $this->newOAuth2Options()
+                $this->newOAuth2Options(),
             );
             $this->fail('Expected ProtocolError');
         } catch (\HaveAPI\Client\Exception\ProtocolError $e) {
@@ -255,7 +255,7 @@ final class RequestConstructionSecurityTest extends TestCase
             'https://api.example',
             null,
             'haveapi-client-php',
-            ['oauth2_trusted_origins' => ['https://auth.example']]
+            ['oauth2_trusted_origins' => ['https://auth.example']],
         );
         $auth = new \HaveAPI\Client\Authentication\OAuth2(
             $client,
@@ -264,23 +264,23 @@ final class RequestConstructionSecurityTest extends TestCase
                 'token_url' => 'https://auth.example/_auth/oauth2/token',
                 'revoke_url' => 'https://auth.example/_auth/oauth2/revoke',
             ]),
-            $this->newOAuth2Options()
+            $this->newOAuth2Options(),
         );
         $provider = $this->genericProviderFrom($auth);
 
         $this->assertSame(
             'https://auth.example/_auth/oauth2/authorize',
-            $provider->getBaseAuthorizationUrl()
+            $provider->getBaseAuthorizationUrl(),
         );
         $this->assertSame(
             'https://auth.example/_auth/oauth2/token',
-            $provider->getBaseAccessTokenUrl([])
+            $provider->getBaseAccessTokenUrl([]),
         );
 
         $auth->revokeToken(['token' => 'trusted-origin-access-token']);
         $this->assertSame(
             'https://auth.example/_auth/oauth2/revoke',
-            $client->lastRequest->uri
+            $client->lastRequest->uri,
         );
     }
 
@@ -293,17 +293,17 @@ final class RequestConstructionSecurityTest extends TestCase
                 'authorize_url' => '/_auth/oauth2/authorize',
                 'token_url' => '/_auth/oauth2/token',
             ]),
-            $this->newOAuth2Options()
+            $this->newOAuth2Options(),
         );
         $provider = $this->genericProviderFrom($auth);
 
         $this->assertSame(
             'https://api.example/api/_auth/oauth2/authorize',
-            $provider->getBaseAuthorizationUrl()
+            $provider->getBaseAuthorizationUrl(),
         );
         $this->assertSame(
             'https://api.example/api/_auth/oauth2/token',
-            $provider->getBaseAccessTokenUrl([])
+            $provider->getBaseAccessTokenUrl([]),
         );
     }
 
@@ -359,7 +359,7 @@ final class RequestConstructionSecurityTest extends TestCase
     {
         $auth = $this->newTokenAuth(
             "X-HaveAPI-Token\r\nX-Injected-Token",
-            'vuln97-secret-token'
+            'vuln97-secret-token',
         );
         $request = \Httpful\Request::get('https://api.example/v1/projects');
 
@@ -377,7 +377,7 @@ final class RequestConstructionSecurityTest extends TestCase
     {
         $auth = $this->newTokenAuth(
             'X-HaveAPI-Token',
-            "vuln97-secret-token\r\nX-Injected-Token: yes"
+            "vuln97-secret-token\r\nX-Injected-Token: yes",
         );
         $request = \Httpful\Request::get('https://api.example/v1/projects');
 
@@ -412,7 +412,7 @@ final class RequestConstructionSecurityTest extends TestCase
             (object) [
                 'path' => '/v1/users/{user_id}',
             ],
-            []
+            [],
         );
     }
 
@@ -440,7 +440,7 @@ final class RequestConstructionSecurityTest extends TestCase
                 'actions' => (object) [],
                 'resources' => (object) [],
             ],
-            []
+            [],
         );
 
         return new \HaveAPI\Client\Action($client, $resource, 'show', $description, []);
@@ -454,7 +454,7 @@ final class RequestConstructionSecurityTest extends TestCase
                 'token_url' => 'https://api.example/_auth/oauth2/token',
                 'revoke_url' => 'https://api.example/_auth/oauth2/revoke',
             ],
-            $overrides
+            $overrides,
         );
     }
 
@@ -469,11 +469,11 @@ final class RequestConstructionSecurityTest extends TestCase
     }
 
     private function genericProviderFrom(
-        \HaveAPI\Client\Authentication\OAuth2 $auth
+        \HaveAPI\Client\Authentication\OAuth2 $auth,
     ): \League\OAuth2\Client\Provider\GenericProvider {
         $property = new ReflectionProperty(
             \HaveAPI\Client\Authentication\OAuth2::class,
-            'genericProvider'
+            'genericProvider',
         );
         $property->setAccessible(true);
 
@@ -496,7 +496,7 @@ final class RequestConstructionSecurityTest extends TestCase
         return new \HaveAPI\Client\Authentication\Token(
             new \HaveAPI\Client(),
             $description,
-            ['token' => $token]
+            ['token' => $token],
         );
     }
 }

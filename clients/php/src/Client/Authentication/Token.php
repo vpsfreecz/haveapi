@@ -76,7 +76,7 @@ class Token extends Base
     {
         $this->runAuthentication($action, array_merge(
             $input,
-            ['token' => $token]
+            ['token' => $token],
         ));
     }
 
@@ -171,7 +171,7 @@ class Token extends Base
 
         if (!isset($this->opts['callback']) || !is_callable($this->opts['callback'])) {
             throw new \BadFunctionCallException(
-                $this->client->translate('authentication.multistep_callback_required')
+                $this->client->translate('authentication.multistep_callback_required'),
             );
         }
 
@@ -179,14 +179,14 @@ class Token extends Base
             $cb = $this->opts['callback'](
                 $nextAction,
                 $token,
-                $this->getCustomActionCredentials($nextAction)
+                $this->getCustomActionCredentials($nextAction),
             );
 
             if ($cb === 'stop') {
                 return;
             } elseif (!is_array($cb)) {
                 throw new \RuntimeException(
-                    $this->client->translate('authentication.callback_invalid_return')
+                    $this->client->translate('authentication.callback_invalid_return'),
                 );
             }
 

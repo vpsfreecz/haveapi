@@ -85,11 +85,11 @@ final class ClientIpSecurityTest extends TestCase
         $auth = new \HaveAPI\Client\Authentication\OAuth2(
             new \HaveAPI\Client('https://api.example'),
             $this->newOAuth2Description(),
-            $this->newOAuth2Options()
+            $this->newOAuth2Options(),
         );
 
         $headers = $this->guzzleHeadersFrom(
-            $this->genericProviderFrom($auth)->getHttpClient()
+            $this->genericProviderFrom($auth)->getHttpClient(),
         );
 
         $this->assertSame('203.0.113.77', $headers['Client-IP']);
@@ -102,11 +102,11 @@ final class ClientIpSecurityTest extends TestCase
         $auth = new \HaveAPI\Client\Authentication\OAuth2(
             new \HaveAPI\Client('https://api.example'),
             $this->newOAuth2Description(),
-            $this->newOAuth2Options()
+            $this->newOAuth2Options(),
         );
 
         $headers = $this->guzzleHeadersFrom(
-            $this->genericProviderFrom($auth)->getHttpClient()
+            $this->genericProviderFrom($auth)->getHttpClient(),
         );
 
         $this->assertSame('203.0.113.88', $headers['Client-IP']);
@@ -131,11 +131,11 @@ final class ClientIpSecurityTest extends TestCase
     }
 
     private function genericProviderFrom(
-        \HaveAPI\Client\Authentication\OAuth2 $auth
+        \HaveAPI\Client\Authentication\OAuth2 $auth,
     ): \League\OAuth2\Client\Provider\GenericProvider {
         $property = new ReflectionProperty(
             \HaveAPI\Client\Authentication\OAuth2::class,
-            'genericProvider'
+            'genericProvider',
         );
         $property->setAccessible(true);
 

@@ -92,23 +92,23 @@ final class OAuth2AuthenticationSecurityTest extends TestCase
 
     private function newOAuth2AuthWithProvider(
         &$provider,
-        array $clientOptions = []
+        array $clientOptions = [],
     ): \HaveAPI\Client\Authentication\OAuth2 {
         $auth = new \HaveAPI\Client\Authentication\OAuth2(
             new \HaveAPI\Client(
                 'https://api.example',
                 null,
                 'haveapi-client-php-test',
-                $clientOptions
+                $clientOptions,
             ),
             (object) [],
-            []
+            [],
         );
         $provider = new OAuth2AuthenticationSecurityFakeProvider();
 
         $property = new ReflectionProperty(
             \HaveAPI\Client\Authentication\OAuth2::class,
-            'genericProvider'
+            'genericProvider',
         );
         $property->setAccessible(true);
         $property->setValue($auth, $provider);

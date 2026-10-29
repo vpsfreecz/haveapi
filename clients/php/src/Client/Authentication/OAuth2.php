@@ -55,7 +55,7 @@ class OAuth2 extends Base
                 ],
                 [
                     'httpClient' => $httpClient,
-                ]
+                ],
             );
         }
 
@@ -97,13 +97,13 @@ class OAuth2 extends Base
                 || !hash_equals($_SESSION['oauth2state'], $_GET['state'])
             ) {
                 throw new \HaveAPI\Client\Exception\AuthenticationFailed(
-                    $this->client->translate('authentication.invalid_oauth2_state')
+                    $this->client->translate('authentication.invalid_oauth2_state'),
                 );
             }
 
             if (!isset($_SESSION['oauth2pkceCode']) || !is_string($_SESSION['oauth2pkceCode'])) {
                 throw new \HaveAPI\Client\Exception\AuthenticationFailed(
-                    $this->client->translate('authentication.invalid_oauth2_pkce_verifier')
+                    $this->client->translate('authentication.invalid_oauth2_pkce_verifier'),
                 );
             }
 
@@ -176,13 +176,13 @@ class OAuth2 extends Base
     {
         if (!isset($this->description->$name)) {
             throw new \HaveAPI\Client\Exception\ProtocolError(
-                "Invalid OAuth2 $name: missing URL"
+                "Invalid OAuth2 $name: missing URL",
             );
         }
 
         return $this->client->resolveOAuth2DescriptionUrl(
             $this->description->$name,
-            "OAuth2 $name"
+            "OAuth2 $name",
         );
     }
 

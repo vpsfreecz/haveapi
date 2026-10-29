@@ -10,7 +10,7 @@ final class ResourceAssociationNameCollisionTest extends TestCase
             'https://api.example',
             null,
             'haveapi-client-php-test',
-            ['language' => 'cs']
+            ['language' => 'cs'],
         );
         $client->setDescription($this->description());
 
@@ -30,12 +30,12 @@ final class ResourceAssociationNameCollisionTest extends TestCase
                         'path_params' => [1],
                     ],
                 ],
-            ]
+            ],
         );
 
         $this->assertInstanceOf(
             \HaveAPI\Client\ResourceInstance::class,
-            $owner->language
+            $owner->language,
         );
         $this->assertSame('language', $owner->language->getName());
         $this->assertSame(1, $owner->language->id);

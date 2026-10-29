@@ -9,13 +9,7 @@ module HaveAPI
       query_parameter '_auth_token'
     end
 
-    class OAuthConfig < Authentication::OAuth2::Config
-      def base_url
-        'http://example.test'
-      end
-    end
-
-    def self.build(resources:)
+    def self.build(resources:, actions: 2)
       definitions = Module.new
       resources.times do |index|
         resource = Class.new(HaveAPI::Resource)
@@ -23,7 +17,8 @@ module HaveAPI
         resource.resource_name = "Resource#{index}"
         resource.version 1
         resource.route "resources#{index}"
-        %w[Public Protected].each { |name| add_action(resource, name) }
+        names = %w[Public Protected] + (2...actions).map { |i| "Action#{i}" }
+        names.each { |name| add_action(resource, name) }
         DocumentationPerformanceFixture.send(:add_admin_action, resource) if index == 0
       end
       server = HaveAPI::Server.new(definitions)
@@ -31,12 +26,13 @@ module HaveAPI
       server.default_version = 1
       server.auth_chain << DocumentationPerformanceFixture::BasicProvider
       server.auth_chain << Authentication::Token.with_config(TokenConfig)
-      server.auth_chain << Authentication::OAuth2.with_config(OAuthConfig)
+      fixture = DocumentationPerformanceFixture.configure_documentation_oauth(server)
       server.documentation_clients(1,
                                    go: { import_path: 'example.test/performance/client' },
                                    rust: { crate_name: 'performance_client' },
                                    typescript: { package_name: 'performance-client' })
       server.mount('/benchmark/api/')
+      DocumentationPerformanceFixture.attach_documentation_headers(server, fixture)
       server
     end
 
@@ -44,7 +40,7 @@ module HaveAPI
       resource.define_action(name) do
         route name.downcase
         http_method :post
-        auth name == 'Protected'
+        auth name != 'Public'
         input(:hash) do
           string :value
           bool :enabled

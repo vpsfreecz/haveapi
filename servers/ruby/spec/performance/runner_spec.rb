@@ -467,6 +467,7 @@ describe HaveAPI::Performance::Worker do
         expect(retained['cases'].map { |item| item['iterations'] }).to all(eq(expensive ? 1 : 4))
         expect(retained['cases'].map { |item| item['pilot']['baseline_batch_seconds'] }).to all(eq(expensive ? 2.0 : 1.0))
         requests.each do |label, request|
+          expect(request['benchmark']).to be(true)
           next if %w[pilot calibration].include?(label)
 
           expect(request['counts'].values).to all(eq(expensive ? 1 : 4))

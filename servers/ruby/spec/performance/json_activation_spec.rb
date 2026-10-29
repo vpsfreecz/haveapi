@@ -29,6 +29,83 @@ describe HaveAPI::Performance do
     end
   end
 
+  def with_console_versions(pinned: true)
+    with_newer_json do |directory, environment|
+      (pinned ? %w[0.9.4 99.0.0] : ['99.0.0']).each do |version|
+        library = File.join(directory, "gems/io-console-#{version}/lib/io")
+        FileUtils.mkdir_p(library)
+        File.write(File.join(library, 'console.rb'), "CONSOLE_ACTIVATION_CONTROL = #{version.inspect}\n")
+        spec = Gem::Specification.new do |gem|
+          gem.name = 'io-console'
+          gem.version = version
+          gem.summary = 'Owned worker activation control'
+          gem.authors = ['Fixture']
+        end
+        File.write(File.join(directory, "specifications/io-console-#{version}.gemspec"), spec.to_ruby)
+      end
+      yield directory, environment
+    end
+  end
+
+  it 'activates the exact frozen console before source loading despite a newer visible version' do
+    with_console_versions do |_directory, environment|
+      program = <<~RUBY
+        require #{File.join(root, 'servers/ruby/benchmarks/endpoints.rb').inspect}
+        visible = Gem::Specification.find_all_by_name('io-console').map { |spec| spec.version.to_s }
+        begin
+          HaveAPI::Performance::Worker.new('benchmark' => true, 'source_root' => '/missing-worker-source').run
+        rescue Errno::ENOENT
+          puts JSON.generate(visible: visible, loaded: Gem.loaded_specs.fetch('io-console').version.to_s,
+                             required: CONSOLE_ACTIVATION_CONTROL, pp_loaded: $LOADED_FEATURES.any? { |path| path.end_with?('/pp.rb') })
+        end
+      RUBY
+      output, errors, status = Open3.capture3(environment, RbConfig.ruby, '-e', program)
+      expect(status).to be_success, errors
+      result = JSON.parse(output)
+      expect(result.fetch('visible')).to include('99.0.0')
+      expect(result).to include('loaded' => '0.9.4', 'required' => '0.9.4', 'pp_loaded' => false)
+      budgets = JSON.parse(File.read(File.join(root, 'servers/ruby/benchmarks/performance_budgets.json')))
+      expect(budgets.fetch('environment').values.map { |value| value.fetch('gems').fetch('io-console').fetch('version') })
+        .to all(eq(result.fetch('loaded')))
+      lock = Bundler::LockfileParser.new(File.read(File.join(root, 'servers/ruby/benchmarks/Gemfile.lock')))
+      expect(lock.specs.find { |spec| spec.name == 'io-console' }.version.to_s).to eq(result.fetch('loaded'))
+    end
+  end
+
+  it 'leaves ordinary and non-Boolean worker console activation unchanged' do
+    with_console_versions(pinned: false) do |_directory, environment|
+      program = <<~RUBY
+        require #{File.join(root, 'servers/ruby/benchmarks/endpoints.rb').inspect}
+        before = Gem.loaded_specs['io-console']&.version&.to_s
+        [nil, false, 'true', 1].each do |flag|
+          HaveAPI::Performance::Worker.new('benchmark' => flag).send(:activate_benchmark_console)
+        end
+        puts JSON.generate(before: before, after: Gem.loaded_specs['io-console']&.version&.to_s,
+                           required: defined?(CONSOLE_ACTIVATION_CONTROL))
+      RUBY
+      output, errors, status = Open3.capture3(environment, RbConfig.ruby, '-e', program)
+      expect(status).to be_success, errors
+      expect(JSON.parse(output)).to include('before' => nil, 'after' => nil, 'required' => nil)
+    end
+  end
+
+  it 'fails frozen workers clearly when the console version is missing or already conflicting' do
+    %w[missing conflicting].each do |control|
+      with_console_versions(pinned: control == 'conflicting') do |directory, environment|
+        program = <<~RUBY
+          require #{File.join(root, 'servers/ruby/benchmarks/endpoints.rb').inspect}
+          Gem.use_paths(#{directory.inspect}, [#{directory.inspect}])
+          gem 'io-console', '= 99.0.0' if #{control.inspect} == 'conflicting'
+          HaveAPI::Performance::Worker.new('benchmark' => true).send(:activate_benchmark_console)
+        RUBY
+        _output, errors, status = Open3.capture3(environment, RbConfig.ruby, '-e', program)
+        expect(status).not_to be_success
+        expect(errors).to include('io-console', '0.9.4')
+        expect(errors).to include(control == 'missing' ? 'Could not find' : 'already activated io-console-99.0.0')
+      end
+    end
+  end
+
   it 'loads the native calibrated version in each public entry despite a newer visible gem' do
     with_newer_json do |_directory, environment|
       [comparison, File.join(root, 'utils/performance_ci.rb'), File.join(root, 'servers/ruby/benchmarks/endpoints.rb')].each do |entry|
@@ -76,7 +153,7 @@ describe HaveAPI::Performance do
       _output, errors, status = Open3.capture3(environment, RbConfig.ruby, '-e', program)
       expect(status).not_to be_success
       expect(errors).to include('json', '2.21.2', '3.1.0')
-      expect(errors).to match(/Could not find/)
+      expect(errors).to include('Could not find')
     end
   end
 

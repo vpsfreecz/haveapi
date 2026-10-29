@@ -1,1 +1,1 @@
-require('./contract/client_contract.spec');
+require("./contract/client_contract.spec");

@@ -1,1 +1,1 @@
-export { AsyncResourceList } from './resource_model';
+export { AsyncResourceList } from "./resource_model";

@@ -1,13 +1,13 @@
-import { openRequest, sendRequest } from './transport';
-import type { HttpOptions, LegacyXMLHttpRequest } from './types';
+import { openRequest, sendRequest } from "./transport";
+import type { HttpOptions, LegacyXMLHttpRequest } from "./types";
 
 export interface Http {
-	debug: number;
-	request(opts: HttpOptions): void;
+  debug: number;
+  request(opts: HttpOptions): void;
 }
 export interface HttpConstructor {
-	new(debug?: number): Http;
-	prototype: Http;
+  new (debug?: number): Http;
+  prototype: Http;
 }
 
 /**
@@ -15,7 +15,7 @@ export interface HttpConstructor {
  * @memberof HaveAPI.Client
  */
 export const Http = function Http(this: Http, debug: number) {
-	this.debug = debug;
+  this.debug = debug;
 } as unknown as HttpConstructor;
 
 /**
@@ -27,35 +27,29 @@ export const Http = function Http(this: Http, debug: number) {
 /**
  * @method HaveAPI.Client.Http#request
  */
-Http.prototype.request = function(opts) {
-	if (this.debug > 5)
-		console.log("Request to " + opts.method + " " + opts.url);
+Http.prototype.request = function (opts) {
+  if (this.debug > 5) console.log("Request to " + opts.method + " " + opts.url);
 
-	var r = openRequest(opts);
+  var r = openRequest(opts);
 
-	r.onreadystatechange = function() {
-		var state = r.readyState;
+  r.onreadystatechange = function () {
+    var state = r.readyState;
 
-		if (this.debug! > 6)
-			console.log('Request state is ' + state);
+    if (this.debug! > 6) console.log("Request state is " + state);
 
-		if (state == 4 && opts.callback !== undefined) {
-			var json = null;
+    if (state == 4 && opts.callback !== undefined) {
+      var json = null;
 
-			try {
-				json = JSON.parse(r.responseText);
+      try {
+        json = JSON.parse(r.responseText);
+      } catch (e) {
+        console.log("JSON.parse failed", e);
+      }
 
-			} catch (e) {
-				console.log('JSON.parse failed', e);
-			}
+      if (json) opts.callback(r.status, json);
+      else opts.callback(false, undefined);
+    }
+  };
 
-			if (json)
-				opts.callback(r.status, json);
-
-			else
-				opts.callback(false, undefined);
-		}
-	};
-
-	sendRequest(r, opts);
+  sendRequest(r, opts);
 };

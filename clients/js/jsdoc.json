@@ -1,11 +1,11 @@
 {
-	"source": {
-		"include": ["build", "README.md"]
-	},
-	"plugins": ["plugins/markdown"],
-	"opts": {
-		"destination": "html_doc",
-		"readme": "README.md",
-		"recurse": true
-	}
+  "source": {
+    "include": ["build", "README.md"]
+  },
+  "plugins": ["plugins/markdown"],
+  "opts": {
+    "destination": "html_doc",
+    "readme": "README.md",
+    "recurse": true
+  }
 }

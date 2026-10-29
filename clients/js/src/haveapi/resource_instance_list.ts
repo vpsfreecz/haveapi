@@ -1,24 +1,28 @@
-import { Client } from './client';
-import type { Action } from './action';
-import type { ResourceInstance } from './resource_instance';
-import type { Response } from './response';
-import type { Values } from './types';
+import { Client } from "./client";
+import type { Action } from "./action";
+import type { ResourceInstance } from "./resource_instance";
+import type { Response } from "./response";
+import type { Values } from "./types";
 
 export interface ResourceInstanceList {
-	response: Response;
-	items: ResourceInstance[];
-	length: number;
-	totalCount: unknown;
-	isOk(): boolean;
-	apiResponse(): Response;
-	each(fn: (item: ResourceInstance) => void): void;
-	itemAt(index: number): ResourceInstance | undefined;
-	first(): ResourceInstance | null;
-	last(): ResourceInstance | null;
+  response: Response;
+  items: ResourceInstance[];
+  length: number;
+  totalCount: unknown;
+  isOk(): boolean;
+  apiResponse(): Response;
+  each(fn: (item: ResourceInstance) => void): void;
+  itemAt(index: number): ResourceInstance | undefined;
+  first(): ResourceInstance | null;
+  last(): ResourceInstance | null;
 }
 export interface ResourceInstanceListConstructor {
-	new(client: Client, action: Action, response: Response): ResourceInstanceList;
-	prototype: ResourceInstanceList;
+  new (
+    client: Client,
+    action: Action,
+    response: Response,
+  ): ResourceInstanceList;
+  prototype: ResourceInstanceList;
 }
 
 /**
@@ -28,35 +32,42 @@ export interface ResourceInstanceListConstructor {
  * @see {@link HaveAPI.Client.ResourceInstance}
  * @memberof HaveAPI.Client
  */
-export const ResourceInstanceList = function ResourceInstanceList(this: ResourceInstanceList, client: Client, action: Action, response: Response) {
-	this.response = response;
+export const ResourceInstanceList = function ResourceInstanceList(
+  this: ResourceInstanceList,
+  client: Client,
+  action: Action,
+  response: Response,
+) {
+  this.response = response;
 
-	/**
-	 * @member {Array} HaveAPI.Client.ResourceInstanceList#items An array containg all items.
-	 */
-	this.items = [];
+  /**
+   * @member {Array} HaveAPI.Client.ResourceInstanceList#items An array containg all items.
+   */
+  this.items = [];
 
-	var ret = response.response() as Values[] | null | undefined;
+  var ret = response.response() as Values[] | null | undefined;
 
-	/**
-	 * @member {integer} HaveAPI.Client.ResourceInstanceList#length Number of items in the list.
-	 */
-	this.length = ret ? ret.length : 0;
+  /**
+   * @member {integer} HaveAPI.Client.ResourceInstanceList#length Number of items in the list.
+   */
+  this.length = ret ? ret.length : 0;
 
-	/**
-	 * @member {integer} HaveAPI.Client.ResourceInstanceList#totalCount Total number of items available.
-	 */
-	this.totalCount = response.meta().total_count;
+  /**
+   * @member {integer} HaveAPI.Client.ResourceInstanceList#totalCount Total number of items available.
+   */
+  this.totalCount = response.meta().total_count;
 
-	for (var i = 0; i < this.length; i++)
-		this.items.push(new Client.ResourceInstance(
-			client,
-			action.resource._private.parent,
-			action,
-			ret![i],
-			false,
-			true
-		));
+  for (var i = 0; i < this.length; i++)
+    this.items.push(
+      new Client.ResourceInstance(
+        client,
+        action.resource._private.parent,
+        action,
+        ret![i],
+        false,
+        true,
+      ),
+    );
 } as unknown as ResourceInstanceListConstructor;
 
 /**
@@ -69,8 +80,8 @@ export const ResourceInstanceList = function ResourceInstanceList(this: Resource
  * @method HaveAPI.Client.ResourceInstanceList#isOk
  * @return {Boolean}
  */
-ResourceInstanceList.prototype.isOk = function() {
-	return this.response.isOk();
+ResourceInstanceList.prototype.isOk = function () {
+  return this.response.isOk();
 };
 
 /**
@@ -78,8 +89,8 @@ ResourceInstanceList.prototype.isOk = function() {
  * @method HaveAPI.Client.ResourceInstanceList#apiResponse
  * @return {HaveAPI.Client.Response}
  */
-ResourceInstanceList.prototype.apiResponse = function() {
-	return this.response;
+ResourceInstanceList.prototype.apiResponse = function () {
+  return this.response;
 };
 
 /**
@@ -87,9 +98,10 @@ ResourceInstanceList.prototype.apiResponse = function() {
  * @param {HaveAPI.Client.ResourceInstanceList~iteratorCallback} fn
  * @method HaveAPI.Client.ResourceInstanceList#each
  */
-ResourceInstanceList.prototype.each = function(fn: (item: ResourceInstance) => void) {
-	for (var i = 0; i < this.length; i++)
-		fn( this.items[ i ] );
+ResourceInstanceList.prototype.each = function (
+  fn: (item: ResourceInstance) => void,
+) {
+  for (var i = 0; i < this.length; i++) fn(this.items[i]);
 };
 
 /**
@@ -98,8 +110,8 @@ ResourceInstanceList.prototype.each = function(fn: (item: ResourceInstance) => v
  * @param {Integer} index
  * @return {HaveAPI.Client.ResourceInstance}
  */
-ResourceInstanceList.prototype.itemAt = function(index: number) {
-	return this.items[ index ];
+ResourceInstanceList.prototype.itemAt = function (index: number) {
+  return this.items[index];
 };
 
 /**
@@ -107,11 +119,10 @@ ResourceInstanceList.prototype.itemAt = function(index: number) {
  * @method HaveAPI.Client.ResourceInstanceList#first
  * @return {HaveAPI.Client.ResourceInstance}
  */
-ResourceInstanceList.prototype.first = function() {
-	if (this.length == 0)
-		return null;
+ResourceInstanceList.prototype.first = function () {
+  if (this.length == 0) return null;
 
-	return this.items[0];
+  return this.items[0];
 };
 
 /**
@@ -119,9 +130,8 @@ ResourceInstanceList.prototype.first = function() {
  * @method HaveAPI.Client.ResourceInstanceList#last
  * @return {HaveAPI.Client.ResourceInstance}
  */
-ResourceInstanceList.prototype.last = function() {
-	if (this.length == 0)
-		return null;
+ResourceInstanceList.prototype.last = function () {
+  if (this.length == 0) return null;
 
-	return this.items[ this.length - 1 ]
+  return this.items[this.length - 1];
 };

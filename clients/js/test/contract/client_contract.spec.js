@@ -1,131 +1,136 @@
-const { expect } = require('chai');
-const server = require('../helpers/server');
-const CallbackAdapter = require('../helpers/adapter_callback');
-const AsyncAdapter = require('../helpers/adapter_async');
+const { expect } = require("chai");
+const server = require("../helpers/server");
+const CallbackAdapter = require("../helpers/adapter_callback");
+const AsyncAdapter = require("../helpers/adapter_async");
 
 for (const Adapter of [CallbackAdapter, AsyncAdapter]) {
-describe(`HaveAPI JS client contract: ${Adapter.name}`, function () {
-  this.timeout(5000);
+  describe(`HaveAPI JS client contract: ${Adapter.name}`, function () {
+    this.timeout(5000);
 
-  let baseUrl;
-  let adapter;
+    let baseUrl;
+    let adapter;
 
-  before(async () => {
-    const started = await server.start();
-    baseUrl = started.baseUrl;
-  });
+    before(async () => {
+      const started = await server.start();
+      baseUrl = started.baseUrl;
+    });
 
-  after(async () => {
-    await server.stop();
-  });
+    after(async () => {
+      await server.stop();
+    });
 
-  beforeEach(async () => {
-    await server.reset(baseUrl);
-    adapter = new Adapter(baseUrl);
-  });
+    beforeEach(async () => {
+      await server.reset(baseUrl);
+      adapter = new Adapter(baseUrl);
+    });
 
-  it('setup without auth hides protected resources', async () => {
-    await adapter.setup();
-    expect(adapter.hasProjectResource()).to.equal(false);
-  });
+    it("setup without auth hides protected resources", async () => {
+      await adapter.setup();
+      expect(adapter.hasProjectResource()).to.equal(false);
+    });
 
-  it('basic auth allows listing and creating projects', async () => {
-    await adapter.authenticateBasic('user', 'pass');
-    expect(adapter.hasProjectResource()).to.equal(true);
+    it("basic auth allows listing and creating projects", async () => {
+      await adapter.authenticateBasic("user", "pass");
+      expect(adapter.hasProjectResource()).to.equal(true);
 
-    const projects = await adapter.listProjects();
-    expect(projects.length).to.be.at.least(2);
+      const projects = await adapter.listProjects();
+      expect(projects.length).to.be.at.least(2);
 
-    const created = await adapter.createProject('Gamma');
-    expect(created.name).to.equal('Gamma');
-  });
+      const created = await adapter.createProject("Gamma");
+      expect(created.name).to.equal("Gamma");
+    });
 
-  it('token auth allows using existing token', async () => {
-    const token = await adapter.authenticateToken({ user: 'user', pass: 'pass' });
+    it("token auth allows using existing token", async () => {
+      const token = await adapter.authenticateToken({
+        user: "user",
+        pass: "pass",
+      });
 
-    const tokenAdapter = new Adapter(baseUrl);
-    await tokenAdapter.useToken(token);
+      const tokenAdapter = new Adapter(baseUrl);
+      await tokenAdapter.useToken(token);
 
-    const projects = await tokenAdapter.listProjects();
-    expect(projects.length).to.be.at.least(2);
-  });
+      const projects = await tokenAdapter.listProjects();
+      expect(projects.length).to.be.at.least(2);
+    });
 
-  it('handles nested tasks', async () => {
-    await adapter.authenticateBasic('user', 'pass');
+    it("handles nested tasks", async () => {
+      await adapter.authenticateBasic("user", "pass");
 
-    const projects = await adapter.listProjects();
-    const project = projects.first();
+      const projects = await adapter.listProjects();
+      const project = projects.first();
 
-    const task = await adapter.createTask(project.id, 'alpha');
-    expect(task.label).to.equal('alpha');
+      const task = await adapter.createTask(project.id, "alpha");
+      expect(task.label).to.equal("alpha");
 
-    const tasks = await adapter.listTasks(project.id);
-    expect(tasks.length).to.be.at.least(1);
-  });
+      const tasks = await adapter.listTasks(project.id);
+      expect(tasks.length).to.be.at.least(1);
+    });
 
-  it('handles project responses without path params', async () => {
-    await adapter.authenticateBasic('user', 'pass');
+    it("handles project responses without path params", async () => {
+      await adapter.authenticateBasic("user", "pass");
 
-    const projects = await adapter.listProjects();
-    const project = projects.first();
+      const projects = await adapter.listProjects();
+      const project = projects.first();
 
-    const publicProject = await adapter.publicProject(project.id);
-    expect(publicProject.name).to.equal('Alpha');
+      const publicProject = await adapter.publicProject(project.id);
+      expect(publicProject.name).to.equal("Alpha");
 
-    const publicProjects = await adapter.publicProjects();
-    expect(publicProjects.length).to.be.at.least(2);
-    expect(publicProjects.first().name).to.equal('Alpha');
+      const publicProjects = await adapter.publicProjects();
+      expect(publicProjects.length).to.be.at.least(2);
+      expect(publicProjects.first().name).to.equal("Alpha");
 
-    let thrown = null;
+      let thrown = null;
 
-    try {
-      if (Adapter === AsyncAdapter) {
-        await publicProjects.first().action('find')();
-      } else {
-        publicProjects.first().find({ onReply: () => {} });
+      try {
+        if (Adapter === AsyncAdapter) {
+          await publicProjects.first().action("find")();
+        } else {
+          publicProjects.first().find({ onReply: () => {} });
+        }
+      } catch (err) {
+        thrown = err;
       }
-    } catch (err) {
-      thrown = err;
-    }
 
-    if (Adapter === AsyncAdapter) expect(thrown).to.have.property('kind', 'protocol');
-    else expect(thrown).to.have.property('name', 'UnresolvedArguments');
-  });
+      if (Adapter === AsyncAdapter)
+        expect(thrown).to.have.property("kind", "protocol");
+      else expect(thrown).to.have.property("name", "UnresolvedArguments");
+    });
 
-  it('runs blocking actions and reports progress', async () => {
-    await adapter.authenticateBasic('user', 'pass');
+    it("runs blocking actions and reports progress", async () => {
+      await adapter.authenticateBasic("user", "pass");
 
-    const projects = await adapter.listProjects();
-    const project = projects.first();
-    const task = await adapter.createTask(project.id, 'runner');
+      const projects = await adapter.listProjects();
+      const project = projects.first();
+      const task = await adapter.createTask(project.id, "runner");
 
-    const result = await adapter.runTaskBlocking(project.id, task.id);
+      const result = await adapter.runTaskBlocking(project.id, task.id);
 
-    expect(result.onReplyCalled).to.equal(true);
-    expect(result.onDoneCalled).to.equal(true);
-    expect(result.progress.length).to.be.at.least(1);
-    expect(result.progress[result.progress.length - 1]).to.be.at.least(result.progress[0]);
-  });
+      expect(result.onReplyCalled).to.equal(true);
+      expect(result.onDoneCalled).to.equal(true);
+      expect(result.progress.length).to.be.at.least(1);
+      expect(result.progress[result.progress.length - 1]).to.be.at.least(
+        result.progress[0],
+      );
+    });
 
-  it('reports forced failures', async () => {
-    await adapter.setup();
+    it("reports forced failures", async () => {
+      await adapter.setup();
 
-    let failed = false;
-    try {
-      await adapter.failAction();
-    } catch (err) {
-      failed = true;
-      if (Adapter === AsyncAdapter) {
-        expect(err).to.have.property('kind', 'api');
-        expect(err.envelope.status).to.equal(false);
-      } else {
-        expect(err).to.have.property('isOk');
-        expect(err.isOk()).to.equal(false);
+      let failed = false;
+      try {
+        await adapter.failAction();
+      } catch (err) {
+        failed = true;
+        if (Adapter === AsyncAdapter) {
+          expect(err).to.have.property("kind", "api");
+          expect(err.envelope.status).to.equal(false);
+        } else {
+          expect(err).to.have.property("isOk");
+          expect(err.isOk()).to.equal(false);
+        }
       }
-    }
 
-    expect(failed).to.equal(true);
+      expect(failed).to.equal(true);
+    });
   });
-});
-
 }

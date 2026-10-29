@@ -1,8 +1,7 @@
-import { Validator } from '../validator';
+import { Validator } from "../validator";
 
 Validator.validators.exclude = function (opts, value) {
-	if (opts.values instanceof Array)
-		return opts.values.indexOf(value) === -1;
+  if (opts.values instanceof Array) return opts.values.indexOf(value) === -1;
 
-	return !opts.values!.hasOwnProperty(value as string);
+  return !opts.values!.hasOwnProperty(value as string);
 };

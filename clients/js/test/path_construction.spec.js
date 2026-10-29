@@ -1,14 +1,14 @@
-const { expect } = require('chai');
+const { expect } = require("chai");
 
 function loadHaveAPI() {
-  delete require.cache[require.resolve('../dist/haveapi-client.js')];
-  return require('../dist/haveapi-client.js');
+  delete require.cache[require.resolve("../dist/haveapi-client.js")];
+  return require("../dist/haveapi-client.js");
 }
 
-function makeClient(HaveAPI, url = 'https://api.example') {
+function makeClient(HaveAPI, url = "https://api.example") {
   const client = new HaveAPI.Client(url, {});
 
-  client.apiSettings = { meta: { namespace: '_meta' } };
+  client.apiSettings = { meta: { namespace: "_meta" } };
   client.authProvider = {
     credentials() {
       return undefined;
@@ -18,44 +18,44 @@ function makeClient(HaveAPI, url = 'https://api.example') {
     },
     queryParameters() {
       return {};
-    }
+    },
   };
 
   return client;
 }
 
-function makeAction(HaveAPI, client, path = '/v1/users/{user_id}') {
+function makeAction(HaveAPI, client, path = "/v1/users/{user_id}") {
   return new HaveAPI.Client.Action(
     client,
     {
-      _private: { name: 'user' },
+      _private: { name: "user" },
       defaultParams() {
         return {};
-      }
+      },
     },
-    'show',
+    "show",
     {
       aliases: [],
       blocking: false,
-      method: 'GET',
+      method: "GET",
       path,
       input: {
-        layout: 'hash',
-        namespace: 'user',
-        parameters: {}
+        layout: "hash",
+        namespace: "user",
+        parameters: {},
       },
       output: {
-        layout: 'hash',
-        namespace: 'user',
-        parameters: {}
-      }
+        layout: "hash",
+        namespace: "user",
+        parameters: {},
+      },
     },
-    []
+    [],
   );
 }
 
-describe('HaveAPI JS client path construction', () => {
-  it('encodes caller-supplied path arguments', () => {
+describe("HaveAPI JS client path construction", () => {
+  it("encodes caller-supplied path arguments", () => {
     const HaveAPI = loadHaveAPI();
     const client = makeClient(HaveAPI);
     const capturedUrls = [];
@@ -66,25 +66,27 @@ describe('HaveAPI JS client path construction', () => {
         status: true,
         response: { user: {}, _meta: {} },
         message: null,
-        errors: null
+        errors: null,
       });
     };
 
     const action = makeAction(HaveAPI, client);
-    const attackerPathArg = '42?user[name]=alice&_meta[includes]=group__secret';
+    const attackerPathArg = "42?user[name]=alice&_meta[includes]=group__secret";
 
     action.directInvoke(attackerPathArg, { onReply() {} });
 
     expect(capturedUrls).to.deep.equal([
-      'https://api.example/v1/users/42%3Fuser%5Bname%5D%3Dalice%26_meta%5Bincludes%5D%3Dgroup__secret'
+      "https://api.example/v1/users/42%3Fuser%5Bname%5D%3Dalice%26_meta%5Bincludes%5D%3Dgroup__secret",
     ]);
 
     const parsed = new URL(capturedUrls[0]);
-    expect(parsed.pathname).to.equal('/v1/users/42%3Fuser%5Bname%5D%3Dalice%26_meta%5Bincludes%5D%3Dgroup__secret');
-    expect(parsed.search).to.equal('');
+    expect(parsed.pathname).to.equal(
+      "/v1/users/42%3Fuser%5Bname%5D%3Dalice%26_meta%5Bincludes%5D%3Dgroup__secret",
+    );
+    expect(parsed.search).to.equal("");
   });
 
-  it('encodes API-provided path arguments', () => {
+  it("encodes API-provided path arguments", () => {
     const HaveAPI = loadHaveAPI();
     const client = makeClient(HaveAPI);
     const capturedUrls = [];
@@ -95,25 +97,25 @@ describe('HaveAPI JS client path construction', () => {
         status: true,
         response: { user: {}, _meta: {} },
         message: null,
-        errors: null
+        errors: null,
       });
     };
 
     const action = makeAction(HaveAPI, client);
-    const attackerPathArg = '42?user[name]=alice&_meta[includes]=group__secret';
+    const attackerPathArg = "42?user[name]=alice&_meta[includes]=group__secret";
 
     action.provideIdArgs([attackerPathArg]);
     action.directInvoke({ onReply() {} });
 
     expect(capturedUrls).to.deep.equal([
-      'https://api.example/v1/users/42%3Fuser%5Bname%5D%3Dalice%26_meta%5Bincludes%5D%3Dgroup__secret'
+      "https://api.example/v1/users/42%3Fuser%5Bname%5D%3Dalice%26_meta%5Bincludes%5D%3Dgroup__secret",
     ]);
 
     const parsed = new URL(capturedUrls[0]);
-    expect(parsed.search).to.equal('');
+    expect(parsed.search).to.equal("");
   });
 
-  it('clears invocation path state when the transport throws', () => {
+  it("clears invocation path state when the transport throws", () => {
     const HaveAPI = loadHaveAPI();
     const client = makeClient(HaveAPI);
     const capturedUrls = [];
@@ -124,21 +126,22 @@ describe('HaveAPI JS client path construction', () => {
 
       if (failNext) {
         failNext = false;
-        throw new Error('simulated transport failure');
+        throw new Error("simulated transport failure");
       }
 
       opts.callback(200, {
         status: true,
         response: { user: {}, _meta: {} },
         message: null,
-        errors: null
+        errors: null,
       });
     };
 
     const action = makeAction(HaveAPI, client);
 
-    expect(() => action.directInvoke(42, { onReply() {} }))
-      .to.throw('simulated transport failure');
+    expect(() => action.directInvoke(42, { onReply() {} })).to.throw(
+      "simulated transport failure",
+    );
     expect(action.preparedPath).to.equal(null);
 
     let unresolved = null;
@@ -154,15 +157,13 @@ describe('HaveAPI JS client path construction', () => {
       console.log = oldLog;
     }
 
-    expect(unresolved).to.have.property('name', 'UnresolvedArguments');
-    expect(capturedUrls).to.deep.equal([
-      'https://api.example/v1/users/42'
-    ]);
+    expect(unresolved).to.have.property("name", "UnresolvedArguments");
+    expect(capturedUrls).to.deep.equal(["https://api.example/v1/users/42"]);
   });
 
-  it('uses the advertised origin-root action path under a configured API mount', () => {
+  it("uses the advertised origin-root action path under a configured API mount", () => {
     const HaveAPI = loadHaveAPI();
-    const client = makeClient(HaveAPI, 'https://api.example/api');
+    const client = makeClient(HaveAPI, "https://api.example/api");
     const capturedUrls = [];
 
     client._private.http.request = (opts) => {
@@ -171,27 +172,25 @@ describe('HaveAPI JS client path construction', () => {
         status: true,
         response: { user: {}, _meta: {} },
         message: null,
-        errors: null
+        errors: null,
       });
     };
 
-    const action = makeAction(HaveAPI, client, '/api/v1/users/{user_id}');
+    const action = makeAction(HaveAPI, client, "/api/v1/users/{user_id}");
 
     action.directInvoke(42, { onReply() {} });
 
-    expect(capturedUrls).to.deep.equal([
-      'https://api.example/api/v1/users/42'
-    ]);
+    expect(capturedUrls).to.deep.equal(["https://api.example/api/v1/users/42"]);
   });
 
-  it('rejects description-controlled action paths that can switch authority', () => {
+  it("rejects description-controlled action paths that can switch authority", () => {
     const HaveAPI = loadHaveAPI();
     const unsafePaths = [
-      '@127.0.0.1:8080/internal-metadata',
-      '//attacker.example/internal-metadata',
-      'https://attacker.example/internal-metadata',
-      '/v1/users\\..\\tokens',
-      '/v1/users/@attacker'
+      "@127.0.0.1:8080/internal-metadata",
+      "//attacker.example/internal-metadata",
+      "https://attacker.example/internal-metadata",
+      "/v1/users\\..\\tokens",
+      "/v1/users/@attacker",
     ];
 
     unsafePaths.forEach((unsafePath) => {
@@ -200,7 +199,7 @@ describe('HaveAPI JS client path construction', () => {
         credentials: 0,
         headers: 0,
         queryParameters: 0,
-        requests: 0
+        requests: 0,
       };
 
       client.authProvider = {
@@ -210,12 +209,12 @@ describe('HaveAPI JS client path construction', () => {
         },
         headers() {
           reads.headers += 1;
-          return { 'X-HaveAPI-OAuth2-Token': 'secret-token' };
+          return { "X-HaveAPI-OAuth2-Token": "secret-token" };
         },
         queryParameters() {
           reads.queryParameters += 1;
           return {};
-        }
+        },
       };
       client._private.http.request = () => {
         reads.requests += 1;
@@ -223,13 +222,14 @@ describe('HaveAPI JS client path construction', () => {
 
       const action = makeAction(HaveAPI, client, unsafePath);
 
-      expect(() => action.directInvoke({ onReply() {} }))
-        .to.throw(HaveAPI.Client.Exceptions.ProtocolError);
+      expect(() => action.directInvoke({ onReply() {} })).to.throw(
+        HaveAPI.Client.Exceptions.ProtocolError,
+      );
       expect(reads).to.deep.equal({
         credentials: 0,
         headers: 0,
         queryParameters: 0,
-        requests: 0
+        requests: 0,
       });
     });
   });

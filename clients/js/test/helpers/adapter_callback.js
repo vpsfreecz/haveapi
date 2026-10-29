@@ -1,4 +1,4 @@
-const HaveAPI = require('../../dist/haveapi-client.js');
+const HaveAPI = require("../../dist/haveapi-client.js");
 
 class CallbackAdapter {
   constructor(baseUrl) {
@@ -12,7 +12,7 @@ class CallbackAdapter {
         if (status) {
           resolve();
         } else {
-          reject(new Error('setup failed'));
+          reject(new Error("setup failed"));
         }
       });
     });
@@ -23,17 +23,19 @@ class CallbackAdapter {
   }
 
   authenticateBasic(user, pass) {
-    return this._authenticate('basic', { user, password: pass });
+    return this._authenticate("basic", { user, password: pass });
   }
 
   authenticateToken(opts) {
-    return this._authenticate('token', { user: opts.user, password: opts.pass })
-      .then(() => this.client.authProvider.token);
+    return this._authenticate("token", {
+      user: opts.user,
+      password: opts.pass,
+    }).then(() => this.client.authProvider.token);
   }
 
   useToken(token) {
     this.client = new HaveAPI.Client(this.baseUrl);
-    return this._authenticate('token', { token });
+    return this._authenticate("token", { token });
   }
 
   listProjects() {
@@ -57,7 +59,9 @@ class CallbackAdapter {
   }
 
   createTask(projectId, label) {
-    return this._invoke(this.client.project.task.create, [projectId], { label });
+    return this._invoke(this.client.project.task.create, [projectId], {
+      label,
+    });
   }
 
   runTaskBlocking(projectId, taskId) {
@@ -79,7 +83,7 @@ class CallbackAdapter {
         onDone: (c, reply) => {
           onDoneCalled = true;
           resolve({ onReplyCalled, onDoneCalled, progress });
-        }
+        },
       });
     });
   }
@@ -102,19 +106,21 @@ class CallbackAdapter {
 
   _invoke(action, pathArgs, params) {
     return new Promise((resolve, reject) => {
-      if (typeof action !== 'function') {
-        reject(new Error('action is not callable'));
+      if (typeof action !== "function") {
+        reject(new Error("action is not callable"));
         return;
       }
 
       const args = Array.isArray(pathArgs) ? pathArgs.slice() : [];
-      const opts = { onReply: (c, reply) => {
-        if (reply && reply.isOk && !reply.isOk()) {
-          reject(reply);
-          return;
-        }
-        resolve(reply);
-      }};
+      const opts = {
+        onReply: (c, reply) => {
+          if (reply && reply.isOk && !reply.isOk()) {
+            reject(reply);
+            return;
+          }
+          resolve(reply);
+        },
+      };
 
       if (params) {
         opts.params = params;

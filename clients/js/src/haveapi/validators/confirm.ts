@@ -1,7 +1,7 @@
-import { Validator } from '../validator';
+import { Validator } from "../validator";
 
 Validator.validators.confirm = function (opts, value, params) {
-	var cond = value === params[ opts.parameter! ];
+  var cond = value === params[opts.parameter!];
 
-	return opts.equal ? cond : !cond;
+  return opts.equal ? cond : !cond;
 };

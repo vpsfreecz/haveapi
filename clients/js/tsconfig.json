@@ -1,25 +1,18 @@
 {
-	"compilerOptions": {
-		"target": "ES5",
-		"module": "ESNext",
-		"moduleResolution": "node",
-		"ignoreDeprecations": "6.0",
-		"lib": [
-			"ES2015",
-			"DOM"
-		],
-		"strict": true,
-		"declaration": true,
-		"importHelpers": true,
-		"rootDir": "src",
-		"outDir": "build",
-		"noEmitOnError": true,
-		"types": []
-	},
-	"include": [
-		"src/**/*"
-	],
-	"exclude": [
-		"src/haveapi/i18n_messages.js"
-	]
+  "compilerOptions": {
+    "target": "ES5",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
+    "lib": ["ES2015", "DOM"],
+    "strict": true,
+    "declaration": true,
+    "importHelpers": true,
+    "rootDir": "src",
+    "outDir": "build",
+    "noEmitOnError": true,
+    "types": []
+  },
+  "include": ["src/**/*"],
+  "exclude": ["src/haveapi/i18n_messages.js"]
 }

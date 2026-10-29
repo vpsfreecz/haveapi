@@ -1,16 +1,20 @@
-import { Authentication } from '../authentication';
-import './base';
-import type { Provider, AuthenticationOptions } from '../authentication';
-import type { Client, DoneCallback } from '../client';
-import type { AuthenticationDescription } from '../types';
+import { Authentication } from "../authentication";
+import "./base";
+import type { Provider, AuthenticationOptions } from "../authentication";
+import type { Client, DoneCallback } from "../client";
+import type { AuthenticationDescription } from "../types";
 
 export interface Basic extends Provider {
-	client: Client;
-	opts: AuthenticationOptions;
+  client: Client;
+  opts: AuthenticationOptions;
 }
 export interface BasicConstructor {
-	new(client: Client, opts: AuthenticationOptions, description?: AuthenticationDescription): Basic;
-	prototype: Basic;
+  new (
+    client: Client,
+    opts: AuthenticationOptions,
+    description?: AuthenticationDescription,
+  ): Basic;
+  prototype: Basic;
 }
 
 /**
@@ -20,9 +24,14 @@ export interface BasicConstructor {
  *            because of their security considerations.
  * @memberof HaveAPI.Client.Authentication
  */
-export const Basic = function Basic(this: Basic, client: Client, opts: AuthenticationOptions, description?: AuthenticationDescription) {
-	this.client = client;
-	this.opts = opts;
+export const Basic = function Basic(
+  this: Basic,
+  client: Client,
+  opts: AuthenticationOptions,
+  description?: AuthenticationDescription,
+) {
+  this.client = client;
+  this.opts = opts;
 } as unknown as BasicConstructor;
 Authentication.Basic = Basic;
 Basic.prototype = new Authentication.Base() as Basic;
@@ -31,9 +40,8 @@ Basic.prototype = new Authentication.Base() as Basic;
  * @method HaveAPI.Client.Authentication.Basic#setup
  * @param {HaveAPI.Client~doneCallback} callback
  */
-Basic.prototype.setup = function(callback?: DoneCallback) {
-	if(callback !== undefined)
-		callback(this.client, true);
+Basic.prototype.setup = function (callback?: DoneCallback) {
+  if (callback !== undefined) callback(this.client, true);
 };
 
 /**
@@ -42,6 +50,6 @@ Basic.prototype.setup = function(callback?: DoneCallback) {
  * @method HaveAPI.Client.Authentication.Basic#credentials
  * @return {Object} credentials
  */
-Basic.prototype.credentials = function() {
-	return this.opts;
+Basic.prototype.credentials = function () {
+  return this.opts;
 };

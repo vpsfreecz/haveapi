@@ -16,7 +16,7 @@ module HaveAPI::ClientExamples
     order 30
 
     def init
-      "$ haveapi-cli -u #{base_url} --version #{version}"
+      "$ haveapi-cli -u #{Shellwords.escape(base_url.to_s)} --version #{Shellwords.escape(version.to_s)}"
     end
 
     def auth(method, desc)
@@ -54,9 +54,9 @@ module HaveAPI::ClientExamples
 
     def example(sample)
       cmd = [init]
-      cmd << resource_path.join('.')
-      cmd << action_name
-      cmd.concat(sample[:path_params]) if sample[:path_params]
+      cmd << Shellwords.escape(resource_path.join('.'))
+      cmd << Shellwords.escape(action_name.to_s)
+      cmd.concat(sample[:path_params].map { |value| Shellwords.escape(value.to_s) }) if sample[:path_params]
 
       if sample[:request] && !sample[:request].empty?
         cmd << "-- \\\n"
@@ -118,10 +118,10 @@ module HaveAPI::ClientExamples
       option = name.to_s.gsub('_', '-')
 
       if action[:input][:parameters][name][:type] == 'Boolean'
-        return value ? "--#{option}" : "--no-#{name}"
+        return Shellwords.escape(value ? "--#{option}" : "--no-#{name}")
       end
 
-      "--#{option} '#{value}'"
+      "#{Shellwords.escape("--#{option}")} #{Shellwords.escape(value.to_s)}"
     end
   end
 end

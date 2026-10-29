@@ -342,7 +342,8 @@ consistent where both are supported.
 | Python | Four-space suites and the existing double-quoted data encoding. Omit empty optional import slots; use one blank line before module-level executable code and two around top-level async definitions. |
 | Go | Tabs, gofmt-compatible spacing and separate standard-library/client import groups. Keep native double-quoted string encoding. |
 | Rust | Four-space blocks, conventional Rust spacing/imports and the existing string encoder in both async and blocking examples. |
-| CLI / curl / HTTP | Preserve shell quoting, continuations and protocol/JSON whitespace, including the HTTP header/body separator. |
+| CLI / curl | Preserve shell continuations. Serialize data first, then encode every complete dynamic shell argument with `Shellwords.escape`; this includes URLs, headers, option names and values. |
+| HTTP | Preserve the protocol/JSON transcript, especially the header/body separator. Shell quoting rules do not apply. |
 
 At known fragment boundaries, omit absent fragments and separate logical blocks
 with one useful blank line, subject to the language rules above. Avoid leading
@@ -350,6 +351,13 @@ or trailing blank padding, duplicate separators and whitespace on empty lines.
 Keep formatting in the owning language renderer or adapter. Do not normalize
 whole rendered programs or custom-renderer output with a shared regex or
 formatter, or add a runtime formatter dependency. Tests may use native formatters.
+
+For CLI and curl, keep authored shell syntax separate from argument data. Encode
+each argument once after its value has been serialized; surrounding raw data
+with single or double quotes is insufficient. Check generated commands with
+temporary fake executables: require successful execution, exact captured argument
+values and order, and no unintended command execution. Parse captured curl JSON
+to verify that shell encoding preserves the complete request body.
 
 Keep encoded data separate from authored syntax. Preserve runtime values,
 Unicode, apostrophes, backslashes, dollar signs, control bytes, empty values,

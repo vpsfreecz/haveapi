@@ -1,4 +1,3 @@
-require 'pp'
 require 'shellwords'
 require 'haveapi/client_examples/http'
 
@@ -11,7 +10,7 @@ module HaveAPI::ClientExamples
     order 90
 
     def init
-      "$ curl --request OPTIONS '#{version_url}'"
+      "$ curl --request OPTIONS #{Shellwords.escape(version_url)}"
     end
 
     def auth(method, desc)
@@ -21,13 +20,13 @@ module HaveAPI::ClientExamples
           # Password is asked on standard input
           $ curl --request OPTIONS \\
                  --user user \\
-                 '#{base_url}'
+                 #{Shellwords.escape(base_url)}
           Password: secret
 
           # Password given on the command line
           $ curl --request OPTIONS \\
                  --user user:secret \\
-                 '#{base_url}'
+                 #{Shellwords.escape(base_url)}
         END
 
       when :token
@@ -38,12 +37,12 @@ module HaveAPI::ClientExamples
           $ curl --request POST \\
                  --header 'Content-Type: application/json' \\
                  --data-binary #{Shellwords.escape(JSON.generate(token: login))} \\
-                 '#{File.join(base_url, '_auth', 'token', 'tokens')}'
+                 #{Shellwords.escape(File.join(base_url, '_auth', 'token', 'tokens'))}
 
           # Use a previously acquired token
           $ curl --request OPTIONS \\
-                 --header '#{desc[:http_header]}: example-token' \\
-                 '#{base_url}'
+                 --header #{Shellwords.escape("#{desc[:http_header]}: example-token")} \\
+                 #{Shellwords.escape(base_url)}
         END
 
       when :oauth2
@@ -69,9 +68,9 @@ module HaveAPI::ClientExamples
       })
 
       <<~END
-        $ curl --request #{action[:method]} \\
-               --data-binary "#{data}" \\
-               '#{url}'
+        $ curl --request #{Shellwords.escape(action[:method].to_s)} \\
+               --data-binary #{data} \\
+               #{Shellwords.escape(url)}
       END
     end
 
@@ -85,11 +84,7 @@ module HaveAPI::ClientExamples
     end
 
     def format_data(data)
-      json = JSON.pretty_generate(data)
-      json.split("\n").map do |line|
-        out = ''
-        PP.pp(line, out).strip[1..-2]
-      end.join("\n")
+      Shellwords.escape(JSON.generate(data))
     end
   end
 end

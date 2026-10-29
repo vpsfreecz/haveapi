@@ -213,4 +213,28 @@ RSpec.describe HaveAPI::SharedDocumentationHelpers do
     get '/doc/protocol'
     expect(last_response.body).not_to include('aria-label="Account"', 'data-account-menu')
   end
+
+  context 'with documentation OAuth configured' do
+    it 'offers a neutral Account link without authenticating or describing even with a real session cookie' do
+      require_relative '../../test_support/documentation_oauth_fixture'
+      server = HaveAPI::Server.new(self.class.const_get(:ApiModule))
+      server.use_version(1)
+      user = Struct.new(:login).new('guide-user')
+      fixture = DocumentationOAuthFixture.configure(server, users: { 1 => { 'guide-token' => user } }, mount_path: '/api/')
+      server.mount('/api/')
+      allow(server).to receive(:describe).and_call_original
+      allow(server).to receive(:describe_version).and_call_original
+      allow(server.auth_chain).to receive(:authenticate).and_call_original
+      cookie = fixture.header_for(server, version: 1, token: 'guide-token')
+      response = Rack::MockRequest.new(server.app).get("#{fixture.origin}/api/doc/protocol",
+                                                       'HTTP_HOST' => URI(fixture.origin).host, 'HTTP_COOKIE' => cookie)
+      expect(response.status).to eq(200)
+      expect(response.body).to include('href="/api/v1/?page=authentication" aria-label="Account"')
+      expect(response.body).not_to include('guide-user', 'data-documentation-login', 'docs-visibility-note')
+      expect(fixture.lookups).to be_empty
+      expect(server).not_to have_received(:describe)
+      expect(server).not_to have_received(:describe_version)
+      expect(server.auth_chain).not_to have_received(:authenticate)
+    end
+  end
 end

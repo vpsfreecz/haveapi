@@ -8,6 +8,7 @@ require 'haveapi/documentation_helpers'
 require 'haveapi/documentation_validators'
 require 'haveapi/documentation_search'
 require 'haveapi/shared_documentation_helpers'
+require 'haveapi/documentation_oauth'
 
 module HaveAPI
   class Server
@@ -374,6 +375,14 @@ module HaveAPI
       @documentation_name = name.freeze
     end
 
+    def documentation_oauth(**options)
+      return @documentation_oauth if options.empty?
+      raise ArgumentError, 'Documentation OAuth is already configured' if @documentation_oauth
+      raise ArgumentError, 'Documentation OAuth must be configured before mount' if @sinatra
+
+      @documentation_oauth = DocumentationOAuth.new(**options)
+    end
+
     def documentation_clients(version, **profiles)
       @documentation_clients.register(version, **profiles)
     end
@@ -496,6 +505,7 @@ module HaveAPI
         helpers DocumentationHelpers
         helpers DocumentationSearch::Helpers
         helpers SharedDocumentationHelpers
+        helpers DocumentationOAuth::Helpers
 
         before do
           setup_request_locale
@@ -643,6 +653,7 @@ module HaveAPI
 
       @auth_chain << HaveAPI.default_authenticate if @auth_chain.empty?
       @auth_chain.setup(@versions)
+      documentation_oauth&.mount(self, @sinatra)
 
       @extensions.each { |e| e.enabled(self) }
 

@@ -73,4 +73,58 @@ describe DocumentationIdentitySpec do
     expect(last_response).to be_ok
     expect(last_response.body).not_to include('```')
   end
+
+  context 'with an actual documentation OAuth cookie' do
+    let(:documentation_server) { HaveAPI::Server.new(self.class::ApiModule) }
+    let(:users) do
+      { 1 => { 'member-token' => DocumentationIdentitySpec::User.new('<member>&'),
+               'admin-token' => DocumentationIdentitySpec::User.new('admin') } }
+    end
+    let(:fixture) do
+      require_relative '../../test_support/documentation_oauth_fixture'
+      server = documentation_server
+      server.use_version(1)
+      oauth = DocumentationOAuthFixture.configure(server, users:)
+      server.mount('/')
+      @api = server
+      oauth
+    end
+
+    before { fixture }
+
+    def cookie_request(token, path = '/v1/?resource=sample')
+      oauth = fixture
+      get "#{oauth.origin}#{path}", {}, 'HTTP_COOKIE' => oauth.header_for(documentation_server, version: 1, token:)
+    end
+
+    it 'shows visible Sign in and neutral Account labels beside their person icons' do
+      get "#{fixture.origin}/v1/"
+      expect(last_response.body).to match(%r{class="docs-sign-in"[^>]*>\s*<svg.*?</svg>\s*<span>Sign in</span>}m)
+      get "#{fixture.origin}/doc"
+      expect(last_response.body).to match(%r{class="docs-account-link"[^>]*><svg.*?</svg><span>Account</span>}m)
+      expect(fixture.lookups).to be_empty
+    end
+
+    it 'shows the actual escaped login once in the shared settings menu with CSRF sign-out' do
+      cookie_request('member-token')
+      expect(last_response).to be_ok
+      menu = last_response.body.match(%r{<details data-documentation-menu>(.*?)</details>}m)[1]
+      expect(menu).to include('data-documentation-menu-content', '<span class="docs-identity">&lt;member&gt;&amp;</span>',
+                              '<form method="post"', 'name="csrf"', '<button type="submit">Sign out</button>')
+      expect(menu).not_to include('docs-visibility-note', 'data-account-menu', 'data-theme-menu', 'name="switch_user"')
+      expect(last_response.body.scan('class="docs-identity"').length).to eq(1)
+      expect(last_response.body).to include('Showing resources, actions and parameters available to this account.')
+      expect(fixture.lookups).to eq([[1, 'member-token']])
+    end
+
+    it 'uses cookie roles for parameter choices despite conflicting Basic credentials' do
+      login('admin', 'pass')
+      cookie_request('member-token')
+      expect(last_response.body).not_to include('admin_field', 'secret-value', 'Admin choice')
+      login('member', 'pass')
+      cookie_request('admin-token')
+      expect(last_response.body).to include('admin_field', 'secret-value', 'Admin choice')
+      expect(fixture.lookups).to eq([[1, 'member-token'], [1, 'admin-token']])
+    end
+  end
 end

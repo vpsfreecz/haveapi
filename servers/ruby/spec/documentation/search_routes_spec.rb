@@ -158,4 +158,42 @@ RSpec.describe HaveAPI::DocumentationSearch::Helpers do
     expect(last_response).to be_ok
     expect(api_response[:resources]).to have_key(:widget)
   end
+
+  context 'with OAuth documentation sessions' do
+    let(:documentation_server) do
+      HaveAPI::Server.new(self.class.const_get(:ApiModule)).tap do |api|
+        api.use_version(1)
+        api.auth_chain << DocumentationSearchRoutesSpec::Provider
+      end
+    end
+    let(:documentation_fixture) do
+      require_relative '../../test_support/documentation_oauth_fixture'
+      DocumentationOAuthFixture.configure(documentation_server, users: {
+        1 => { 'member-token' => DocumentationSearchRoutesSpec::User.new('member'),
+               'admin-token' => DocumentationSearchRoutesSpec::User.new('admin') }
+      })
+    end
+
+    before do
+      documentation_fixture
+      documentation_server.mount('/')
+      @api = documentation_server
+    end
+
+    it 'uses only cookie-user accessible parameters and actions while anonymous docs retain their full view' do
+      get "#{documentation_fixture.origin}/v1/", page: 'resources', q: 'private_ticket'
+      expect(results).to include('private_ticket')
+      header 'Cookie', documentation_fixture.header_for(documentation_server, version: 1, token: 'member-token')
+      login('admin', 'pass')
+      get "#{documentation_fixture.origin}/v1/", page: 'resources', q: 'private_ticket'
+      expect(results).not_to include('<code>private_ticket</code>', 'Secret ticket', 'DEFAULT_SECRET')
+      get "#{documentation_fixture.origin}/v1/", page: 'resources', q: 'hidden'
+      expect(results).not_to include('<code>hidden</code>', 'private_response')
+      header 'Cookie', documentation_fixture.header_for(documentation_server, version: 1, token: 'admin-token')
+      login('member', 'pass')
+      get "#{documentation_fixture.origin}/v1/", page: 'resources', q: 'private_ticket'
+      expect(results).to include('<code>private_ticket</code>')
+      expect(documentation_fixture.lookups).to eq([[1, 'member-token'], [1, 'member-token'], [1, 'admin-token']])
+    end
+  end
 end

@@ -80,4 +80,30 @@ RSpec.describe HaveAPI::GoClient::Cli do
     expect(described_class.run(['generate', '--basic-password', 'test-only'], err:)).to eq(1)
     expect(err.string).to include('invalid option')
   end
+
+  context 'when formatting fails' do
+    before do
+      allow(generator).to receive(:go_fmt).and_raise('go fmt failed')
+    end
+
+    it 'propagates the failure from saved-schema generation' do
+      Dir.mktmpdir do |root|
+        path = File.join(root, 'schema.json')
+        File.write(path, HaveAPI::Schema::Snapshot.canonical(snapshot))
+
+        expect do
+          described_class.run([
+                                'generate', '--schema', path, '--api-version', '1.0',
+                                '--output', File.join(root, 'out')
+                              ], err:)
+        end.to raise_error(RuntimeError, 'go fmt failed')
+      end
+    end
+
+    it 'propagates the failure from legacy generation' do
+      expect do
+        described_class.run(['https://example.test/', 'out'], err:)
+      end.to raise_error(RuntimeError, 'go fmt failed')
+    end
+  end
 end

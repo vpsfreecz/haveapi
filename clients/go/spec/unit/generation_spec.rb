@@ -1,6 +1,7 @@
 # Exercise the real emitter offline without the component's live-server helper.
 require 'tmpdir'
 require 'stringio'
+require 'open3'
 require 'haveapi/schema'
 require 'haveapi/go_client'
 
@@ -37,6 +38,11 @@ RSpec.describe HaveAPI::GoClient::Generator do
       direct.generate
       direct.go_fmt
       expect(file_bytes(cli_output)).to eq(file_bytes(direct_output))
+      go_files = Dir.glob(File.join(cli_output, '**', '*.go'))
+      expect(go_files).not_to be_empty
+      unformatted, format_errors, format_status = Open3.capture3('gofmt', '-l', *go_files)
+      expect(format_status).to be_success, format_errors
+      expect(unformatted).to be_empty
       sources = file_bytes(cli_output).values.join
       expect(sources).to include('Widget *ResourceWidget', 'Show *ActionWidgetShow', 'func (inv *ActionWidgetShowInvocation) SetPathParamInt', 'Name string')
       expect(HaveAPI::Client::Communicator).not_to have_received(:new)

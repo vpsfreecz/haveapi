@@ -45,6 +45,11 @@ default. Generation reads the saved schema, uses the existing Go emitter and
 runs `go fmt`. It does not contact the API or install dependencies. The generated
 module contains the `client` package; keep handwritten application files elsewhere.
 
+Both saved-schema and legacy CLI generation require `go fmt` to succeed. A missing
+Go executable or a formatting error fails the command. Files have already been
+written at that point; failed formatting does not restore the previous output.
+Library callers run `generator.generate` and then `generator.go_fmt` explicitly.
+
 Public capture is the default. For Basic authentication, set `WIDGET_PASSWORD`
 in your environment, then run:
 
@@ -130,3 +135,17 @@ secrets supplied through environment variables.
 
 The Ruby server can render examples for configured generated clients; see
 [documentation profiles](docs/documentation.md).
+
+## Development checks
+
+The generator is Ruby code and uses the repository's RuboCop rules. From the
+HaveAPI root in its prepared Nix environment, select the root tools bundle:
+
+```sh
+BUNDLE_GEMFILE="$PWD/Gemfile" bundle exec rubocop --force-exclusion clients/go
+```
+
+This checks Ruby layout, style and lint rules. The CLI's `go fmt` handles generated
+Go formatting; it does not compile the client. The offline generation specs also
+check that `gofmt -l` finds no changes. The integration specs separately compile
+and exercise generated clients with `go test ./...`.

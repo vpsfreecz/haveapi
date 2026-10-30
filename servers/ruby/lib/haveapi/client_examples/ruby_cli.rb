@@ -28,7 +28,7 @@ module HaveAPI::ClientExamples
 
           # If username or password isn't provided, the user is asked on stdin
           #{init} --auth basic --user user
-          Password: secret
+          # Password: secret
         END
 
       when :token
@@ -38,7 +38,7 @@ module HaveAPI::ClientExamples
           # an action to get information about the current user, so that's what we're
           # calling now.
           #{init} --auth token #{auth_token_credentials(desc, password: false).map { |k, v| "#{Shellwords.escape("--#{k}")} #{Shellwords.escape(v.to_s)}" }.join(' ')} --save user current
-          Password: secret
+          # Password: secret
 
           # Now the token is read from disk and the user does not have to provide username
           # nor password and be authenticated
@@ -71,16 +71,16 @@ module HaveAPI::ClientExamples
 
       return response(sample, res) if sample[:status]
 
-      res << "\nAction failed: #{sample[:message]}\n"
+      display = "Action failed: #{sample[:message]}\n"
 
       if sample[:errors] && sample[:errors].any?
-        res << "Errors:\n"
+        display << "Errors:\n"
         sample[:errors].each do |param, e|
-          res << "\t#{param}: #{e.join('; ')}\n"
+          display << "\t#{param}: #{e.join('; ')}\n"
         end
       end
 
-      res
+      res << "\n" << comment_response(display)
     end
 
     def response(sample, res)
@@ -107,11 +107,8 @@ module HaveAPI::ClientExamples
         cols << col
       end
 
-      res << "\n" << HaveAPI::CLI::OutputFormatter.to_s(
-        sample[:response],
-        cols
-      )
-      res
+      display = HaveAPI::CLI::OutputFormatter.to_s(sample[:response], cols)
+      res << "\n" << comment_response(display)
     end
 
     def input_param(name, value)
@@ -122,6 +119,12 @@ module HaveAPI::ClientExamples
       end
 
       "#{Shellwords.escape("--#{option}")} #{Shellwords.escape(value.to_s)}"
+    end
+
+    private
+
+    def comment_response(fragment)
+      fragment.gsub(/\r\n?/, "\n").lines.map { |line| "# #{line.delete_suffix("\n")}\n" }.join
     end
   end
 end

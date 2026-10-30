@@ -21,6 +21,17 @@ describe HaveAPI::ClientExample do
           path_params 1
           response({ name: 'documented widget' })
         end
+
+        example 'hostile success transcript' do
+          path_params 1
+          response({ name: "$(echo unsafe)\r\n; echo '<unsafe>'\rtrailing\\" })
+        end
+
+        example 'hostile failure transcript' do
+          path_params 1
+          status false
+          message "$(echo unsafe)\r\n; echo '<unsafe>'\rtrailing\\"
+        end
         # rubocop:enable RSpec/NoExpectationExample
       end
     end
@@ -94,5 +105,22 @@ describe HaveAPI::ClientExample do
     expect(last_response.status).to eq(200)
     expect(last_response.body).to include('<code>example.test/&lt;client&gt;&amp;</code>')
     expect(last_response.body).not_to include('example.test/<client>', '&amp;lt;', 'version = "latest"')
+  end
+
+  it 'preserves inert shell response comments in actual HTML after entity and physical-line decoding' do
+    get '/v1/?resource=widget'
+    expect(last_response.status).to eq(200)
+    panels = last_response.body.scan(%r{<details\b[^>]*id="(example-widget-show-[12]-[35])"[^>]*>.*?<code[^>]*>(.*?)</code>}m).to_h
+    expect(panels.keys).to contain_exactly('example-widget-show-1-3', 'example-widget-show-1-5',
+                                           'example-widget-show-2-3', 'example-widget-show-2-5')
+    panels.each do |id, html|
+      source = CGI.unescapeHTML(html.gsub(/\r\n?/, "\n"))
+      expect(source).to start_with('$ ')
+      expect(source).to include('$(echo unsafe)', '<unsafe>', 'trailing')
+      response = source.split("\n# ", 2).fetch(1)
+      expect("# #{response}".lines).to all(start_with('# '))
+      expect(source).not_to include("\n; echo", "\ntrailing")
+      expect(source).to include('# Action failed:') if id == 'example-widget-show-2-3'
+    end
   end
 end

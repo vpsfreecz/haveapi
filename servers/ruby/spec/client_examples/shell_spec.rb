@@ -3,8 +3,11 @@ require 'fileutils'
 require 'json'
 require 'open3'
 require 'tmpdir'
+require_relative 'dynamic_fixture'
 
 RSpec.describe HaveAPI::ClientExamples do
+  include DynamicExampleFixture
+
   let(:action) do
     { method: 'POST', path: '/widgets/{widget_id}', auth: false,
       input: { layout: :hash, namespace: :widget, parameters: { name: { type: 'String' } } },
@@ -21,16 +24,99 @@ RSpec.describe HaveAPI::ClientExamples do
     FileUtils.mkdir_p(bin)
     %w[haveapi-cli curl].each do |name|
       executable = File.join(bin, name)
-      File.write(executable, "#!/bin/sh\nprintf '%s\\0' \"$@\" > \"$CAPTURE\"\n")
+      File.write(executable, "#!/bin/sh\nprintf '%s\\0' \"$@\" >> \"$CAPTURE\"\n")
       File.chmod(0o755, executable)
     end
     capture = File.join(directory, 'arguments')
+    FileUtils.rm_f(capture)
     stdout, stderr, status = Open3.capture3(
       { 'PATH' => "#{bin}:#{ENV.fetch('PATH')}", 'CAPTURE' => capture },
       'sh', '-c', source.delete_prefix('$ ')
     )
     expect(status).to be_success, "#{stdout}\n#{stderr}"
     File.binread(capture).force_encoding(Encoding::UTF_8).split("\0", -1)[0...-1]
+  end
+
+  [HaveAPI::ClientExamples::RubyCli, HaveAPI::ClientExamples::Curl].each do |type|
+    it "keeps the reported #{type.label} response substitution inert in the whole transcript", :aggregate_failures do
+      Dir.mktmpdir('haveapi-shell-response-') do |directory|
+        marker = File.join(directory, 'response-executed')
+        payload = "$(printf response-confirmed > #{marker})"
+        contract = action.merge(output: action[:output].merge(parameters: { name: { type: 'String' } }))
+        example = sample.merge(request: {}, response: { name: payload }, message: 'ok', errors: nil)
+        context = dynamic_context(base_url: 'https://docs.example/api/', version: '1', resource_path: ['widget'],
+                                  action_name: 'show', action: contract, sample: example)
+        source = type.render(:example, context:).fetch(:code)
+        argv = capture_arguments(source, directory)
+        expect(File.exist?(marker)).to be(false)
+        expect(source).to include(payload)
+        if type == HaveAPI::ClientExamples::RubyCli
+          expect(argv).to eq(['-u', 'https://docs.example/api/', '--version', '1', 'widget', 'show', '7'])
+        else
+          expect(argv).to eq(['--request', 'POST', '--data-binary', JSON.generate(widget: {}), 'https://docs.example/api/widgets/7'])
+          expect(JSON.parse(argv.fetch(3))).to eq('widget' => {})
+        end
+      end
+    end
+  end
+
+  it 'keeps complete success and failure transcripts inert at both direct details without changing request bytes' do
+    Dir.mktmpdir('haveapi-shell-transcripts-') do |directory|
+      marker = File.join(directory, 'response-executed')
+      hostile = "$(touch #{marker})\n`touch #{marker}`\r\n; touch #{marker}\r& echo '雪' \"$value\"\\\ntrailing\\"
+      request = "request\r\n雪'\"\\$(touch #{marker})"
+      parameters = { name: { type: 'String', label: hostile }, zero: { type: 'Integer' }, empty: { type: 'String' },
+                     enabled: { type: 'Boolean' }, nullable: { type: 'Custom' }, structured: { type: 'Custom' } }
+      contract = action.merge(output: action[:output].merge(parameters:))
+      values = { name: hostile, zero: 0, empty: '', enabled: false, nullable: nil, structured: { list: [false, 0, nil] } }
+      examples = [sample.merge(request: { name: request }, response: values, message: 'ok', errors: nil),
+                  sample.merge(request: { name: request }, response: [values, values], message: 'ok', errors: nil),
+                  sample.merge(request: { name: request }, response: {}, status: false, message: hostile, errors: { hostile => [hostile, 'retained diagnostic'] })]
+      [HaveAPI::ClientExamples::RubyCli, HaveAPI::ClientExamples::Curl].each do |type|
+        %i[simple thorough].each do |detail|
+          examples.each do |example|
+            context = dynamic_context(base_url: 'https://docs.example/api/', version: '1', resource_path: ['widget'],
+                                      action_name: 'show', action: contract, sample: example, detail:)
+            source = type.render(:example, context:).fetch(:code)
+            argv = capture_arguments(source, directory)
+            expect(File.exist?(marker)).to be(false)
+            expect(source).to end_with("\n")
+            if type == HaveAPI::ClientExamples::RubyCli
+              expect(argv).to eq(['-u', 'https://docs.example/api/', '--version', '1', 'widget', 'show', '7', '--', '--name', request])
+              display = source.split("\n# ", 2).fetch(1)
+              expect("# #{display}".lines).to all(start_with('# '))
+              expect(display).not_to include("\r")
+              expect(display).to include("$(touch #{marker})", "`touch #{marker}`", "; touch #{marker}", 'trailing\\')
+              expect(display).to include('Action failed:', 'Errors:', 'retained diagnostic') unless example[:status]
+              expect(display).to include('0', 'list') if example[:status]
+            else
+              expect(argv).to eq(['--request', 'POST', '--data-binary', JSON.generate(widget: { name: request }), 'https://docs.example/api/widgets/7'])
+              expect(JSON.parse(argv.fetch(3))).to eq('widget' => { 'name' => request })
+              response = source.split("\n\n", 2).fetch(1)
+              expect(response.lines).to all(start_with('# '))
+              decoded = response.lines.map { |line| line.delete_prefix('# ') }.join
+              envelope = { status: example[:status], message: example[:message], response: { widget: example[:response] }, errors: example[:errors] }
+              expect(JSON.parse(decoded)).to eq(JSON.parse(JSON.generate(envelope)))
+            end
+          end
+        end
+      end
+    end
+  end
+
+  it 'preserves direct curl JSON, raw HTTP and inherited shell response composition' do
+    example = sample.merge(response: { name: "line\r\n雪$(echo retained)" }, http_status: 200, message: 'ok', errors: nil)
+    curl = renderer(HaveAPI::ClientExamples::Curl)
+    expect(JSON.parse(curl.response(example))).to eq('status' => true, 'message' => 'ok',
+                                                     'response' => { 'widget' => { 'name' => example[:response][:name] } }, 'errors' => nil)
+    expect(curl.response(example)).not_to start_with('# ')
+    http = renderer(HaveAPI::ClientExamples::Http)
+    expect(http.request(example)).to start_with("POST /widgets/7 HTTP/1.1\nHost: docs.example\nContent-Type: application/json\n\n")
+    expect(http.response(example)).to start_with("HTTP/1.1 200 OK\nContent-Type: application/json;charset=utf-8\n")
+    context = dynamic_context(action:, sample: example)
+    [HaveAPI::ClientExamples::RubyCli, HaveAPI::ClientExamples::Curl].each do |type|
+      expect(Class.new(type).render(:example, context:)).to eq(type.render(:example, context:))
+    end
   end
 
   it 'keeps the reported CLI request-value breakout literal' do
@@ -136,7 +222,7 @@ RSpec.describe HaveAPI::ClientExamples do
       base = generator.base_url
       expect(capture_arguments(generator.init, directory)).to eq(['--request', 'OPTIONS', generator.version_url])
       basic = generator.auth(:basic, {})
-      first = basic.split("\nPassword: secret", 2).first.split('$ ', 2).last
+      first = basic.split("\n# Password: secret", 2).first.split('$ ', 2).last
       last = basic.split('# Password given on the command line', 2).last.split('$ ', 2).last
       expect(capture_arguments("$ #{first}", directory)).to eq(['--request', 'OPTIONS', '--user', 'user', base])
       expect(capture_arguments("$ #{last}", directory)).to eq(['--request', 'OPTIONS', '--user', 'user:secret', base])
@@ -163,7 +249,7 @@ RSpec.describe HaveAPI::ClientExamples do
       basic = generator.auth(:basic, {})
       first, last = basic.split("\n\n# If username", 2)
       first = first.split('$ ', 2).last
-      last = last.split('$ ', 2).last.split("\nPassword: secret", 2).first
+      last = last.split('$ ', 2).last.split("\n# Password: secret", 2).first
       prefix = ['-u', hostile, '--version', hostile]
       expect(capture_arguments("$ #{first}", directory)).to eq(prefix + %w[--auth basic --user user --password secret])
       expect(capture_arguments("$ #{last}", directory)).to eq(prefix + %w[--auth basic --user user])
@@ -171,11 +257,11 @@ RSpec.describe HaveAPI::ClientExamples do
         hostile => { type: 'String', required: true }, lifetime: { type: 'String', required: true }, password: { type: 'String' }
       } } } } } } }
       token = generator.auth(:token, description)
-      first = token.split("\nPassword: secret", 2).first.split('$ ', 2).last
+      first = token.split("\n# Password: secret", 2).first.split('$ ', 2).last
       last = token.split('# nor password and be authenticated', 2).last.split('$ ', 2).last
       expect(capture_arguments("$ #{first}", directory)).to eq(prefix + ['--auth', 'token', "--#{hostile}", hostile, '--lifetime', 'fixed', '--save', 'user', 'current'])
       expect(capture_arguments("$ #{last}", directory)).to eq(prefix + %w[user current])
-      expect(token).to include('Password: secret')
+      expect(token).to include('# Password: secret')
       expect(File.exist?(marker)).to be(false)
     end
   end

@@ -21,7 +21,7 @@ module HaveAPI::ClientExamples
           $ curl --request OPTIONS \\
                  --user user \\
                  #{Shellwords.escape(base_url)}
-          Password: secret
+          # Password: secret
 
           # Password given on the command line
           $ curl --request OPTIONS \\
@@ -50,6 +50,10 @@ module HaveAPI::ClientExamples
       end
     rescue HaveAPI::ClientExample::UnsupportedAuthentication => e
       { status: :limitation, reason: e.message }.freeze
+    end
+
+    def example(sample)
+      "#{request(sample)}\n#{comment_response(response(sample))}"
     end
 
     def request(sample)
@@ -85,6 +89,12 @@ module HaveAPI::ClientExamples
 
     def format_data(data)
       Shellwords.escape(JSON.generate(data))
+    end
+
+    private
+
+    def comment_response(fragment)
+      fragment.gsub(/\r\n?/, "\n").lines.map { |line| "# #{line.delete_suffix("\n")}\n" }.join
     end
   end
 end

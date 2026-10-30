@@ -613,7 +613,7 @@ function clipboardFixture(secure, nativeResult) {
   const win = { isSecureContext: secure, location: { protocol: secure ? 'https:' : 'http:' }, scrollX: 4, scrollY: 321,
     getSelection: () => selection, scrollTo(x, y) { this.scrollX = x; this.scrollY = y; } };
   const copied = [];
-  const doc = { body, activeElement: active,
+  const doc = { body, activeElement: active, createElementNS: elements.createElementNS,
     createElement(tag) {
       const field = element(tag);
       field.focus = options => {
@@ -642,7 +642,17 @@ function clipboardFixture(secure, nativeResult) {
 
 (async () => {
   await Promise.resolve(); assert.equal(slashRequests, 0, 'shortcut focus does not trigger the existing search intent/prefetch listener');
-  const exactText = '  <unsafe>\n\tcurrent example\n';
+  const exactText = [
+    '$ curl --request POST \\',
+    '       --data-binary \'{"widget":{"name":"雪"}}\' \\',
+    '       https://docs.example/api/widgets/7',
+    '',
+    '# NAME: $(touch marker)',
+    '# `touch marker`',
+    '# ; echo "<unsafe>" $value \\',
+    '# trailing\\',
+    ''
+  ].join('\n');
   const secure = clipboardFixture(true, true);
   const secureCalls = [];
   const secureResult = copyText(exactText, secure.win, secure.doc, { clipboard: { writeText(text) { secureCalls.push(text); return Promise.resolve(); } } });
@@ -686,6 +696,16 @@ function clipboardFixture(secure, nativeResult) {
   const button = pair => block(pair).children.find(child => child.tagName === 'BUTTON');
   const status = pair => block(pair).children.find(child => child.tagName === 'SPAN');
   const flush = () => new Promise(resolve => setImmediate(resolve));
+  for (const outcome of [true, false, 'throw']) {
+    const native = clipboardFixture(false, outcome);
+    const selected = copyPanel(exactText, false);
+    const root = { querySelectorAll() { return [selected.code]; } };
+    exampleCopyControls(root, native.win, native.doc, {});
+    button(selected).listeners.click(); await flush();
+    assert.deepEqual(native.copied, [exactText], 'real Copy handler preserves the complete commented shell transcript through native fallback');
+    assert.equal(status(selected).textContent, outcome === true ? 'Copied' : 'Select the code and copy it.');
+    assert.equal(selected.code.textContent, exactText); native.assertRestored();
+  }
   assert.equal(button(simple).attributes['aria-label'], 'Copy example');
   assert.equal(button(simple).type, 'button');
   assert.equal(status(simple).attributes['aria-live'], 'polite');

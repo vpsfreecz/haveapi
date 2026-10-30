@@ -184,7 +184,7 @@ RSpec.describe HaveAPI::ClientExamples do
       malicious_option = "option'; touch #{marker}; #"
       contract[:input][:parameters][malicious_option] = { type: 'String' }
       argv = capture_arguments(generator.example(sample.merge(request: { malicious_option => hostile })), directory)
-      expect(argv.last(3)).to eq(['--', "--#{malicious_option}", hostile])
+      expect(argv.last(3)).to eq(['--', "--#{malicious_option.tr('_', '-')}", hostile])
       expect(File.exist?(marker)).to be(false)
     end
   end

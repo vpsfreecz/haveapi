@@ -1,3 +1,5 @@
+require 'shellwords'
+
 module HaveAPI::CLI
   module ExampleFormatter
     def self.format_examples(cli, action, out = $>)
@@ -5,7 +7,7 @@ module HaveAPI::CLI
         out << ' > ' << example[:title] << ":\n" unless example[:title].empty?
 
         # request
-        out << "$ #{$0} #{action.resource_path.join('.')} #{action.name}"
+        out << "$ #{Shellwords.escape($0)} #{Shellwords.escape(action.resource_path.join('.'))} #{Shellwords.escape(action.name.to_s)}"
 
         params = example[:request]
 
@@ -36,15 +38,15 @@ module HaveAPI::CLI
 
       case desc[:type]
       when 'Boolean'
-        value ? "--#{option}" : "--no-#{option}"
+        Shellwords.escape(value ? "--#{option}" : "--no-#{option}")
 
       else
-        "--#{option} #{example_value(value)}"
+        "#{Shellwords.escape("--#{option}")} #{example_value(value)}"
       end
     end
 
     def self.example_value(v)
-      v.is_a?(String) && (v.empty? || v.index(' ')) ? "\"#{v}\"" : v
+      Shellwords.escape(v.to_s)
     end
   end
 end

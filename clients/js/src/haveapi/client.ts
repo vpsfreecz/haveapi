@@ -222,7 +222,7 @@ export const Client = function Client(
 } as unknown as ClientConstructor;
 
 /** @constant HaveAPI.Client.Version */
-Client.Version = "0.31.0";
+Client.Version = "0.32.0";
 
 /** @constant HaveAPI.Client.ProtocolVersion */
 Client.ProtocolVersion = "2.0";

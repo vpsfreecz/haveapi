@@ -1,6 +1,6 @@
 [project]
 name = "haveapi-client"
-version = "0.31.0"
+version = "0.32.0"
 description = "Dynamic synchronous and asynchronous clients for HaveAPI APIs"
 readme = "README.md"
 requires-python = ">=3.11"

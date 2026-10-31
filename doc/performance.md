@@ -312,8 +312,15 @@ Missing event/source evidence fails even when no relevant path can be establishe
 The immutable accepted reference is
 `b85ec364057f536940d689b09e612512ffffaf82`. Required ancestry is checked. The
 reference and budgets never move automatically. Deleted branches, malformed or
-missing commits, unavailable new-branch fallback, partial manual pairs and equal
-endpoints fail. PRs use the head commit, never the synthetic merge commit. An
+missing commits, unavailable new-branch fallback and partial manual pairs fail.
+Equal endpoints also fail, except for a validated quick branch push with a zero
+`before` whose merge-base with the captured default equals the candidate. This
+includes branches created at the default head or an older commit already
+contained in it. The resolver retains the exact candidate, baseline and
+captured-default SHAs, an explanatory reason and empty changed paths, and sets
+`relevant: false`. The workflow records `no-work` without running benchmarks or
+reporting a measured performance result. The campaign runner still requires
+distinct sources. PRs use the head commit, never the synthetic merge commit. An
 existing branch push uses `before`, never `HEAD^` or a guessed fallback. A quick
 push can compare a nonancestor before/after pair after a force push; its exact
 event pair is carried through all ancestry guards. Direct CLI use of that

@@ -81,6 +81,22 @@ RSpec.describe HaveAPI::PerformanceCI do
       expect(result[:push_pair]).to be_nil
       expect(repository).to have_received(:paths).with(base, candidate)
     end
+
+    it "selects no work for an equal new-branch merge-base with created=#{created}" do
+      event.merge!('ref' => 'refs/heads/feature', 'after' => candidate,
+                   'before' => '0' * 40, 'created' => created)
+      allow(repository).to receive(:merge_base).with(candidate, default).and_return(candidate)
+      allow(repository).to receive(:paths).with(candidate, candidate).and_return([])
+
+      expect(resolve('push', event)).to include(schema_version: 1, event_name: 'push', profile: 'quick',
+                                                baseline_sha: candidate, candidate_sha: candidate, captured_default_sha: default,
+                                                relevant: false, changed_paths: [], push_pair: nil,
+                                                reason: /candidate already contained in captured default, no source changes/)
+      expect(repository).to have_received(:commit!).with(default)
+      expect(repository).to have_received(:commit!).with(candidate)
+      expect(repository).to have_received(:release_lineage).with(candidate).at_least(:once)
+      expect(repository).to have_received(:ancestor?).with(candidate, candidate)
+    end
   end
 
   it 'does not guess a fallback when the captured default commit is unavailable' do
@@ -89,10 +105,58 @@ RSpec.describe HaveAPI::PerformanceCI do
     expect { resolve('push', event, default_sha: default) }.to raise_error(described_class::Error, /unavailable default/)
   end
 
-  it 'rejects a new branch whose captured-default merge-base equals its head' do
-    event.merge!('ref' => 'refs/heads/master', 'after' => candidate, 'before' => '0' * 40)
+  it 'resolves default and ancestral branch creation without work using real Git history' do
+    Dir.mktmpdir('haveapi-new-branch-history-') do |directory|
+      git = lambda do |*arguments, input: ''|
+        env = { 'GIT_AUTHOR_NAME' => 'Fixture', 'GIT_AUTHOR_EMAIL' => 'fixture@example.test',
+                'GIT_COMMITTER_NAME' => 'Fixture', 'GIT_COMMITTER_EMAIL' => 'fixture@example.test' }
+        output, error, status = Open3.capture3(env, 'git', '-C', directory, *arguments, stdin_data: input)
+        raise error unless status.success?
+
+        output.strip
+      end
+      git.call('init', '--quiet', '--initial-branch=master')
+      commit = lambda do |body, parent = nil|
+        blob = git.call('hash-object', '-w', '--stdin', input: body)
+        tree = git.call('mktree', input: "100644 blob #{blob}\tGemfile\n")
+        git.call('commit-tree', tree, *[('-p' if parent), parent].compact, input: "fixture\n")
+      end
+      older = commit.call('older')
+      captured = commit.call('default', older)
+      changed = commit.call('changed', captured)
+      git.call('update-ref', 'refs/remotes/origin/master', captured)
+      stub_const('HaveAPI::Performance::REFERENCE', older)
+      real_resolver = described_class::Resolver.new(described_class::Repository.new(directory))
+      event.merge!('ref' => 'refs/heads/haveapi-0.32', 'before' => '0' * 40, 'created' => true)
+
+      [captured, older, changed].each do |head|
+        result = real_resolver.resolve(event_name: 'push', event: event.merge('after' => head), event_sha: head)
+        expect(result).to include(candidate_sha: head, captured_default_sha: captured, release_lineage: nil, push_pair: nil,
+                                  baseline_sha: head == changed ? captured : head,
+                                  relevant: head == changed, changed_paths: head == changed ? ['Gemfile'] : [])
+      end
+    end
+  end
+
+  it 'retains lineage and ancestry rejection for an equal new-branch merge-base' do
+    event.merge!('ref' => 'refs/heads/haveapi-0.30', 'after' => candidate, 'before' => '0' * 40)
     allow(repository).to receive(:merge_base).with(candidate, default).and_return(candidate)
+    expect { resolve('push', event) }.to raise_error(described_class::Error, /Unproven/)
+    event['ref'] = 'refs/heads/feature'
+    allow(repository).to receive(:ancestor?).with(candidate, candidate).and_return(false)
+    expect { resolve('push', event) }.to raise_error(described_class::Error, /ancestor/)
+  end
+
+  it 'rejects equal endpoints for PRs and fixed-reference profiles' do
+    event['pull_request'] = { 'head' => { 'sha' => candidate }, 'base' => { 'sha' => default } }
+    allow(repository).to receive(:merge_base).with(candidate, default).and_return(candidate)
+    expect { resolve('pull_request', event) }.to raise_error(described_class::Error, /differ/)
+    event.merge!('ref' => 'refs/heads/feature', 'after' => described_class::REFERENCE, 'before' => '0' * 40,
+                 'inputs' => { 'profile' => 'weekly' })
+    allow(repository).to receive(:merge_base).with(described_class::REFERENCE, default).and_return(described_class::REFERENCE)
     expect { resolve('push', event) }.to raise_error(described_class::Error, /differ/)
+    expect { resolver.resolve(event_name: 'schedule', event:, event_sha: described_class::REFERENCE) }
+      .to raise_error(described_class::Error, /differ/)
   end
 
   it 'does not replace an unavailable new-branch merge-base with another commit' do
@@ -320,6 +384,37 @@ RSpec.describe HaveAPI::PerformanceCI do
     end
     [nil, '', 'unknown'].each do |outcome|
       expect { described_class.aggregate!('success', outcome) }.to raise_error(described_class::Error)
+    end
+  end
+
+  it 'records no-work without requiring benchmark artifacts or the client contract' do
+    path = File.expand_path('../../../../.github/workflows/servers-ruby-performance.yml', __dir__)
+    steps = YAML.load_file(path).fetch('jobs').fetch('performance').fetch('steps')
+    comparison = steps.find { |step| step['name'] == 'Run the selected pair outside Bundler' }
+    expect(comparison.fetch('if')).to eq("steps.resolve.outputs.relevant == 'true'")
+    completion = steps.find { |step| step['id'] == 'completion' }
+    Dir.mktmpdir('haveapi-no-work-gate-') do |directory|
+      File.write(File.join(directory, 'selection.json'), JSON.generate(relevant: false))
+      output = File.join(directory, 'output')
+      environment = { 'RELEVANT' => 'false', 'CLIENT_CONTRACT' => '',
+                      'PERFORMANCE_EVIDENCE' => directory, 'GITHUB_OUTPUT' => output }
+      _output, _error, status = Open3.capture3(environment, 'bash', '-euo', 'pipefail', '-c', completion.fetch('run'))
+      expect(status.success?).to be(true)
+      expect(File.read(output)).to eq("outcome=no-work\n")
+      File.unlink(File.join(directory, 'selection.json'))
+      _output, _error, status = Open3.capture3(environment, 'bash', '-euo', 'pipefail', '-c', completion.fetch('run'))
+      expect(status.success?).to be(false)
+    end
+  end
+
+  it 'keeps equal endpoints out of the campaign even if marked relevant' do
+    Dir.mktmpdir('haveapi-no-work-campaign-') do |directory|
+      selection = { 'schema_version' => 1, 'relevant' => true, 'profile' => 'quick', 'event_name' => 'push',
+                    'candidate_sha' => candidate, 'baseline_sha' => candidate, 'push_pair' => nil }
+      campaign = described_class::Campaign.new(repository:, selection:,
+                                               evidence: File.join(directory, 'evidence'), sources: File.join(directory, 'sources'))
+      expect { campaign.run }.to raise_error(described_class::Error, /ancestry/)
+      expect(File).not_to exist(File.join(directory, 'sources'))
     end
   end
 

@@ -94,6 +94,8 @@ module HaveAPI
           if event.fetch('before') == '0' * 40
             baseline = @repository.merge_base(candidate, default_sha)
             reason = 'new-branch merge-base against captured default'
+            no_work = profile == 'quick' && baseline == candidate
+            reason += '; candidate already contained in captured default, no source changes' if no_work
           else
             baseline = @repository.commit!(event.fetch('before'))
             reason = 'push event before/after batch'
@@ -122,7 +124,7 @@ module HaveAPI
         if profile == 'weekly' && baseline != REFERENCE
           raise Error, 'Weekly comparisons require the fixed accepted reference'
         end
-        raise Error, 'Baseline and candidate must differ' if baseline == candidate
+        raise Error, 'Baseline and candidate must differ' if baseline == candidate && !no_work
 
         lineage ||= @repository.release_lineage(candidate)
         unless push_pair || @repository.ancestor?(baseline, candidate) || (profile == 'weekly' && baseline == REFERENCE && lineage)

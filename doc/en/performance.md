@@ -291,6 +291,17 @@ This rule permits coordinated package-version changes without changing baseline
 selection or the separate historical 0.30 maintenance-lineage proof. Response
 changes remain diagnostics under the existing per-revision stability policy.
 
+Ordinary `source_versions` capture also normalizes one reviewed server-gemspec
+packaging change: the exact shallow `doc/*` file-list assignment and its exact
+recursive `doc/**/*` form with `File.file?` filtering. Only one matching
+assignment is accepted; unknown or duplicate statements retain their strict
+bytes. The receipt records `file_selection: documentation-files-v1`, preserves
+raw contents and hashes, and is reconstructed during replay. Removing or changing
+the marker fails validation. Legacy receipts still use their original raw
+file-selection rule. All other gemspec bytes, evaluated dependencies and Ruby
+requirements, runtime and lock inputs remain strict. The historical maintenance
+comparison does not use this packaging normalization.
+
 ## GitHub workflow and baseline selection
 
 The `servers/ruby performance` workflow runs on pushes, ordinary pull requests,

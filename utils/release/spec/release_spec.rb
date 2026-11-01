@@ -223,7 +223,7 @@ RSpec.describe HaveAPI::Release do
       %w[clients/js/package-lock.json clients/python/uv.lock clients/rust/Gemfile.lock clients/typescript/Gemfile.lock].each do |path|
         expect(File.exist?(File.join(copy, path))).to be(false)
       end
-      git(copy, 'init', '-q')
+      git(copy, 'init', '-q', '--initial-branch=release-fixture')
       git(copy, 'add', '.')
       commit(copy, 'Fixture source')
       candidate = described_class::Artifacts.new(copy)
@@ -365,6 +365,11 @@ RSpec.describe HaveAPI::Release do
     it 'passes explicit master context through the CLI in a detached checkout' do
       copy = File.join(tmp, 'detached-source')
       copy_source(copy)
+      source_version = File.binread(File.join(copy, 'VERSION')).strip
+      git(root, 'grep', '-Ilz', '-F', source_version).split("\0").each do |path|
+        target = File.join(copy, path)
+        File.binwrite(target, File.binread(target).gsub(source_version, '999.0.0'))
+      end
       git(copy, 'init', '-q', '--initial-branch=master')
       git(copy, 'add', '.')
       commit(copy, 'Fixture master source')

@@ -116,7 +116,6 @@ input::placeholder { color: var(--docs-muted); }
 .docs-theme-choices [aria-pressed="true"] { color: var(--docs-accent); border-color: var(--docs-accent); background: var(--docs-active); }
 .docs-mobile-toolbar { display: none; }
 [data-nav-toggle] { display: none; }
-[data-docs]:not([data-docs-enhanced]) .docs-preferences,
 [data-docs]:not([data-docs-enhanced]) .docs-theme-label,
 [data-docs]:not([data-docs-enhanced]) .docs-theme-choices,
 [data-docs]:not([data-docs-enhanced]) [data-resource-nav] > label { display: none; }
@@ -198,6 +197,7 @@ input::placeholder { color: var(--docs-muted); }
 .docs-preferences label:has([data-detail-select]) { grid-column: 1 / -1; }
 .docs-preferences:has([data-variant-control][hidden]) label:has([data-language-select]) { grid-column: 1 / -1; }
 .docs-preferences select { width: 100%; margin-top: .3rem; padding-right: .2rem; font-size: .875rem; }
+.docs-preferences [data-apply-examples] { grid-column: 1 / -1; }
 .docs-preferences [data-preference-status] { grid-column: 1 / -1; margin: 0; font-size: .8rem; }
 .docs-resource-list { margin: 1.5rem 0; padding: 0; list-style: none; }
 .docs-resource-list ul { margin: .2rem 0 .6rem; padding-left: 1.5rem; list-style: none; }

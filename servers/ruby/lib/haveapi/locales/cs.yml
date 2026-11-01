@@ -298,6 +298,7 @@ cs:
         aliases: Aliasy
         api_reference: Referenční příručka API
         api_versions: Verze API
+        apply_examples: Použít
         apply_language: Použít jazyk
         authentication: Autentizace
         authentication_required: Vyžaduje autentizaci

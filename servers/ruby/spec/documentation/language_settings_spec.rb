@@ -63,9 +63,9 @@ describe HaveAPI::Server do
 
   it 'uses the short Czech label only for the programming language selector' do
     response = request('/api/v1/?doc_lang=cs')
-    expect(response.body).to include('<label>Jazyk <select data-language-select>')
+    expect(response.body).to include('<label>Jazyk <select data-language-select name="example_language">')
     expect(response.body).not_to include('Programovací jazyk <select')
-    expect(request('/api/v1/?doc_lang=en').body).to include('<label>Programming language <select data-language-select>')
+    expect(request('/api/v1/?doc_lang=en').body).to include('<label>Programming language <select data-language-select name="example_language">')
   end
 
   it 'styles every breadcrumb with the same marker while translating its accessible name' do

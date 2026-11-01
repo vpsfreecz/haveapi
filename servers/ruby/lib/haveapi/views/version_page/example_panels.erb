@@ -1,6 +1,8 @@
 <% legacy_baseid ||= nil %>
 <% variants = documentation_example_variants(kind, **changes) %>
 <% details_by_client = variants.group_by { |client, _detail, _result| client.id }.transform_values { |items| items.map { |_client, detail, _result| detail.to_s } } %>
+<% selection = documentation_example_selection %>
+<% selected_details = selection[:client] && details_by_client[selection[:client].id] %>
 <% if legacy_baseid %><%= documentation_reference_alias("#{legacy_baseid}-examples") %><% end %>
 <div class="docs-example" data-example data-example-details="<%= escape_html(JSON.generate(details_by_client)) %>" id="<%= escape_html("#{baseid}-examples") %>">
   <% variants.each do |client, detail, result| %>
@@ -10,9 +12,10 @@
       <%= documentation_reference_alias("#{legacy_baseid || baseid}-#{client.id}-thorough") %>
       <% if legacy_baseid %><%= documentation_reference_alias("#{baseid}-#{client.id}-thorough") %><% end %>
     <% end %>
-    <details data-example-panel data-client="<%= escape_html(client.id) %>" data-language="<%= escape_html(client.language) %>" data-variant="<%= escape_html(client.variant) %>" data-detail="<%= detail %>" id="<%= escape_html("#{baseid}-#{client.id}#{suffix}") %>"<% if detail == :simple %> open<% end %>>
+    <details data-example-panel data-client="<%= escape_html(client.id) %>" data-language="<%= escape_html(client.language) %>" data-variant="<%= escape_html(client.variant) %>" data-detail="<%= detail %>" id="<%= escape_html("#{baseid}-#{client.id}#{suffix}") %>"<% if selection[:client] == client && detail.to_s == documentation_example_detail(details_by_client[client.id]) %> open<% end %>>
       <summary><%= escape_html(documentation_client_label(client)) %> · <%= escape_html(documentation_t(detail == :simple ? 'labels.simple' : 'labels.thorough')) %></summary>
       <%= erb :'version_page/client_result', locals: {client: client, result: result} %>
     </details>
   <% end %>
+  <% unless selected_details %><p class="docs-notice" data-example-unavailable><%= escape_html(documentation_t('browser.example_unavailable')) %></p><% end %>
 </div>

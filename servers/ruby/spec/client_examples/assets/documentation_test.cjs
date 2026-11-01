@@ -534,6 +534,38 @@ assert.equal(detailSelect.disabled, false); assert.equal(detailWrapper.hidden, f
 assert.deepEqual(values(detailSelect), ['simple', 'thorough']);
 assert.equal(detailPanels.find(panel => !panel.hidden).detail, 'thorough', 'missing metadata keeps legacy two-level markup');
 
+function examplePreferenceDisplay(selection) {
+  const apply = element('button');
+  const form = Object.assign(element('form'), {
+    getAttribute: name => name === 'data-example-selection' ? selection : null,
+    querySelector: selector => selector === '[data-apply-examples]' ? apply : null
+  });
+  const language = Object.assign(element('select'), { closest: () => null });
+  const variant = Object.assign(element('select'), { closest: () => null });
+  const detail = Object.assign(element('select'), { closest: () => null });
+  const fixture = browserFixture('missing', false, { metadata: clients,
+    saved: { theme: 'dark', language: 'python', clients: { python: 'python-async' }, detail: 'simple' },
+    matches: { '[data-example-preferences]': [form], '[data-language-select]': [language],
+      '[data-variant-select]': [variant], '[data-detail-select]': [detail] } });
+  return { apply, form, language, variant, detail, fixture };
+}
+const nativeChoices = examplePreferenceDisplay(JSON.stringify({ language: 'python', client: 'python-sync', detail: 'thorough' }));
+assert.equal(nativeChoices.variant.value, 'python-sync', 'explicit native selection initializes ahead of saved client');
+assert.equal(nativeChoices.detail.value, 'thorough');
+assert.equal(nativeChoices.fixture.attributes['data-docs-theme'], 'dark', 'native example choices preserve saved theme');
+assert.equal(nativeChoices.fixture.writes.length, 0, 'native query initialization never persists preferences');
+assert.equal(nativeChoices.apply.hidden, true, 'Apply is hidden after its real native form is enhanced');
+let nativeSubmitPrevented = false;
+nativeChoices.form.listeners.submit({ preventDefault() { nativeSubmitPrevented = true; } });
+assert(nativeSubmitPrevented, 'enhanced Enter submission keeps immediate selection and does not navigate');
+nativeChoices.variant.value = 'python-async'; nativeChoices.variant.listeners.change();
+assert.equal(JSON.parse(nativeChoices.fixture.writes.at(-1).value).clients.python, 'python-async', 'actual JS changes still persist immediately');
+const savedChoices = examplePreferenceDisplay(null);
+assert.equal(savedChoices.variant.value, 'python-async', 'without native query the saved client retains precedence');
+assert.equal(savedChoices.detail.value, 'simple');
+assert.equal(savedChoices.fixture.writes.length, 0);
+assert(!stylesheet.includes('[data-docs]:not([data-docs-enhanced]) .docs-preferences'), 'native example controls remain visible without enhancement');
+
 function declaredGroup(levels, panels) {
   const unavailable = { hidden: true };
   return { isConnected: true, getAttribute: () => levels,

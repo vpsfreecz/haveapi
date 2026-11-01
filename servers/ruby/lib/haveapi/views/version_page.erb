@@ -1,30 +1,30 @@
 <% if @documentation_page == 'overview' %>
   <h1 id="api">API v<%= escape_html(@v) %><%= documentation_permalink('api', "API v#{@v}") %></h1>
   <%= erb :'version_page/usage' %>
-  <p>Connect to <code><%= escape_html("#{base_url}#{root}") %></code> with a <a href="https://github.com/vpsfreecz/haveapi">HaveAPI client</a>.</p>
+  <p><%= escape_html(documentation_t('overview.api_address')) %> <code><%= escape_html("#{base_url}#{root}") %></code>.</p>
   <%= erb :'version_page/client_overview' %>
-  <p>Examples target API v<%= escape_html(@v) %>. API clients use their own package versions and must match this API.</p>
+  <p><%= escape_html(documentation_t('overview.versions', version: @v)) %></p>
   <section id="initialization" data-doc-section>
-    <h2>Initialization<%= documentation_permalink('initialization', 'Initialization') %></h2>
-    <p>Initialize your client, then follow the <a href="<%= escape_html(documentation_url(page: 'authentication')) %>">authentication instructions</a> when credentials are required.</p>
+    <h2><%= escape_html(documentation_t('labels.initialization')) %><%= documentation_permalink('initialization', documentation_t('labels.initialization')) %></h2>
+    <p><%= escape_html(documentation_t('overview.initialize_before')) %> <a href="<%= escape_html(documentation_url(page: 'authentication')) %>"><%= escape_html(documentation_t('overview.authentication_link')) %></a> <%= escape_html(documentation_t('overview.initialize_after')) %></p>
     <%= erb :'version_page/example_panels', locals: {baseid: 'init', kind: :init, changes: {}} %>
   </section>
-  <p><a href="<%= escape_html(documentation_url(page: 'resources')) %>" data-resource-directory-link>Browse all resources</a> to find their actions, parameters and examples.</p>
+  <p><a href="<%= escape_html(documentation_url(page: 'resources')) %>" data-resource-directory-link><%= escape_html(documentation_t('overview.browse_link')) %></a> <%= escape_html(documentation_t('overview.browse_after')) %></p>
 <% elsif @documentation_page == 'resources' %>
   <%= erb :'version_page/resource_directory' %>
 <% elsif @documentation_page == 'authentication' %>
-  <nav aria-label="Breadcrumb"><ol><li><a href="<%= escape_html(documentation_url) %>">Overview</a></li><li aria-current="page">Authentication</li></ol></nav>
-  <h1 id="auth">Authentication<%= documentation_permalink('auth', 'Authentication') %></h1>
-  <p>Initialize your client using the <a href="<%= escape_html(documentation_url(anchor: 'initialization')) %>">overview examples</a>, then choose an authentication method.</p>
-  <% if @help[:authentication].empty? %><p>Authentication is disabled for this API.</p><% end %>
+  <nav class="docs-breadcrumb" aria-label="<%= escape_html(documentation_t('accessibility.breadcrumb')) %>"><ol><li><a href="<%= escape_html(documentation_url) %>"><%= escape_html(documentation_t('labels.overview')) %></a></li><li aria-current="page"><%= escape_html(documentation_t('labels.authentication')) %></li></ol></nav>
+  <h1 id="auth"><%= escape_html(documentation_t('labels.authentication')) %><%= documentation_permalink('auth', documentation_t('labels.authentication')) %></h1>
+  <p><%= escape_html(documentation_t('authentication.initialize_before')) %> <a href="<%= escape_html(documentation_url(anchor: 'initialization')) %>"><%= escape_html(documentation_t('authentication.overview_link')) %></a><%= escape_html(documentation_t('authentication.initialize_after')) %></p>
+  <% if @help[:authentication].empty? %><p><%= escape_html(documentation_t('authentication.disabled')) %></p><% end %>
   <% @help[:authentication].each do |name, info| %>
     <%= erb :'version_page/auth_body', locals: {name: name, info: info} %>
   <% end %>
 <% else %>
   <% entry = @documentation_resource %>
-  <nav aria-label="Breadcrumb" data-resource-breadcrumbs>
+  <nav class="docs-breadcrumb" aria-label="<%= escape_html(documentation_t('accessibility.breadcrumb')) %>" data-resource-breadcrumbs>
     <ol>
-      <li><a href="<%= escape_html(documentation_url(page: 'resources')) %>">Resources</a></li>
+      <li><a href="<%= escape_html(documentation_url(page: 'resources')) %>"><%= escape_html(documentation_t('labels.resources')) %></a></li>
       <% entry[:path].each_with_index do |part, index| %>
         <% if index == entry[:path].length - 1 %>
           <li aria-current="page"><%= escape_html(part.humanize) %></li>

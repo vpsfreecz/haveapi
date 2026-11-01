@@ -20,34 +20,34 @@
         <<%= action_heading %>><%= escape_html(action.capitalize) %><%= documentation_permalink(action_target, action.to_s.capitalize) %></<%= action_heading %>>
         <div class="action">
           <dl class="docs-metadata">
-            <dt>Path</dt><dd><%= info[:method] %> <%= info[:path] %></dd>
-            <dt>Description</dt><dd><%= info[:description] %></dd>
-            <dt>Authentication required</dt><dd><%= info[:auth] ? 'yes' : 'no' %></dd>
-            <dt>Scope</dt><dd><%= info[:scope] %></dd>
-            <dt>Aliases</dt><dd><%= info[:aliases].join(', ') %></dd>
-            <dt>Blocking</dt><dd><%= info[:blocking] ? 'yes' : 'no' %></dd>
+            <dt><%= escape_html(documentation_t('labels.path')) %></dt><dd><%= info[:method] %> <%= info[:path] %></dd>
+            <dt><%= escape_html(documentation_t('labels.description')) %></dt><dd><%= info[:description] %></dd>
+            <dt><%= escape_html(documentation_t('labels.authentication_required')) %></dt><dd><%= escape_html(info[:auth] ? documentation_t('labels.yes') : documentation_t('labels.no')) %></dd>
+            <dt><%= escape_html(documentation_t('labels.scope')) %></dt><dd><%= info[:scope] %></dd>
+            <dt><%= escape_html(documentation_t('labels.aliases')) %></dt><dd><%= info[:aliases].join(', ') %></dd>
+            <dt><%= escape_html(documentation_t('labels.blocking')) %></dt><dd><%= escape_html(info[:blocking] ? documentation_t('labels.yes') : documentation_t('labels.no')) %></dd>
           </dl>
-          <<%= parameter_heading %> id="<%= escape_html(sections[0][:id]) %>">Input parameters<%= documentation_permalink(sections[0][:id], 'Input parameters') %></<%= parameter_heading %>>
+          <<%= parameter_heading %> id="<%= escape_html(sections[0][:id]) %>"><%= escape_html(documentation_t('labels.input_parameters')) %><%= documentation_permalink(sections[0][:id], documentation_t('labels.input_parameters')) %></<%= parameter_heading %>>
           <% if info[:input][:parameters].empty? %>
-            <p>No parameters.</p>
+            <p><%= escape_html(documentation_t('labels.no_parameters')) %></p>
           <% else %>
             <dl class="docs-metadata">
-              <dt>Layout</dt><dd><%= info[:input][:layout] %></dd>
-              <dt>Namespace</dt><dd><%= info[:input][:namespace] %></dd>
+              <dt><%= escape_html(documentation_t('labels.layout')) %></dt><dd><%= info[:input][:layout] %></dd>
+              <dt><%= escape_html(documentation_t('labels.namespace')) %></dt><dd><%= info[:input][:namespace] %></dd>
             </dl>
-            <div class="docs-table-scroll" tabindex="0" role="region" aria-label="Input parameters">
+            <div class="docs-table-scroll" tabindex="0" role="region" aria-label="<%= escape_html(documentation_t('labels.input_parameters')) %>">
               <table class="docs-input-parameters">
-                <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Details</th></tr></thead>
+                <thead><tr><th><%= escape_html(documentation_t('labels.parameter')) %></th><th><%= escape_html(documentation_t('labels.type')) %></th><th><%= escape_html(documentation_t('labels.required')) %></th><th><%= escape_html(documentation_t('labels.details')) %></th></tr></thead>
                 <tbody>
                   <% info[:input][:parameters].each do |param, parameter| %>
                     <tr id="<%= escape_html(documentation_parameter_anchor(resource_path: resource_path, action_name: action, direction: :input, parameter_name: param, authentication: authentication_provider)) %>">
                       <td class="docs-param-name"><code><%= escape_html(param) %></code><% if parameter[:label].to_s != param.to_s %><div><%= parameter[:label] %></div><% end %></td>
                       <td><%= format_param_type(parameter) %></td>
-                      <td><%= parameter[:required] ? 'yes' : 'no' %></td>
+                      <td><%= escape_html(parameter[:required] ? documentation_t('labels.yes') : documentation_t('labels.no')) %></td>
                       <td class="docs-param-details">
                         <% if parameter[:description] %><p><%= escape_html(parameter[:description]) %></p><% end %>
                         <% if parameter.has_key?(:default) && parameter[:default] != :_nil %>
-                          <p><strong>Default:</strong> <code><%= escape_html(parameter[:default].nil? ? 'null' : parameter[:default] == '' ? '""' : parameter[:default]) %></code></p>
+                          <p><strong><%= escape_html(documentation_t('labels.default')) %></strong> <code><%= escape_html(parameter[:default].nil? ? 'null' : parameter[:default] == '' ? '""' : parameter[:default]) %></code></p>
                         <% end %>
                         <%= format_validators(parameter[:validators], type: parameter[:type]) %>
                       </td>
@@ -57,17 +57,17 @@
               </table>
             </div>
           <% end %>
-          <<%= parameter_heading %> id="<%= escape_html(sections[1][:id]) %>">Output parameters<%= documentation_permalink(sections[1][:id], 'Output parameters') %></<%= parameter_heading %>>
+          <<%= parameter_heading %> id="<%= escape_html(sections[1][:id]) %>"><%= escape_html(documentation_t('labels.output_parameters')) %><%= documentation_permalink(sections[1][:id], documentation_t('labels.output_parameters')) %></<%= parameter_heading %>>
           <% if info[:output][:parameters].empty? && info[:output][:format].nil? %>
-            <p>No parameters.</p>
+            <p><%= escape_html(documentation_t('labels.no_parameters')) %></p>
           <% else %>
             <dl class="docs-metadata">
-              <dt>Layout</dt><dd><%= info[:output][:layout] %></dd>
-              <dt>Namespace</dt><dd><%= info[:output][:namespace] %></dd>
+              <dt><%= escape_html(documentation_t('labels.layout')) %></dt><dd><%= info[:output][:layout] %></dd>
+              <dt><%= escape_html(documentation_t('labels.namespace')) %></dt><dd><%= info[:output][:namespace] %></dd>
             </dl>
-            <div class="docs-table-scroll" tabindex="0" role="region" aria-label="Output parameters">
+            <div class="docs-table-scroll" tabindex="0" role="region" aria-label="<%= escape_html(documentation_t('labels.output_parameters')) %>">
               <table class="docs-output-parameters">
-                <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+                <thead><tr><th><%= escape_html(documentation_t('labels.parameter')) %></th><th><%= escape_html(documentation_t('labels.type')) %></th><th><%= escape_html(documentation_t('labels.description')) %></th></tr></thead>
                 <tbody>
                   <% info[:output][:parameters].each do |param, parameter| %>
                     <tr id="<%= escape_html(documentation_parameter_anchor(resource_path: resource_path, action_name: action, direction: :output, parameter_name: param, authentication: authentication_provider)) %>">
@@ -81,10 +81,10 @@
             </div>
           <% end %>
           <% unless info[:examples].empty? %>
-            <<%= parameter_heading %> id="<%= escape_html(sections[2][:id]) %>">Examples<%= documentation_permalink(sections[2][:id], 'Examples') %></<%= parameter_heading %>>
-            <p>Examples use an initialized <code>api</code> client, authenticated when required. See <a href="<%= escape_html(documentation_url(anchor: 'initialization')) %>">initialization</a> and <a href="<%= escape_html(documentation_url(page: 'authentication')) %>">authentication</a>.</p>
+            <<%= parameter_heading %> id="<%= escape_html(sections[2][:id]) %>"><%= escape_html(documentation_t('labels.examples')) %><%= documentation_permalink(sections[2][:id], documentation_t('labels.examples')) %></<%= parameter_heading %>>
+            <p><%= escape_html(documentation_t('example.initialized')) %> <%= escape_html(documentation_t('example.see')) %> <a href="<%= escape_html(documentation_url(anchor: 'initialization')) %>"><%= escape_html(documentation_t('example.initialization')) %></a> <%= escape_html(documentation_t('example.and')) %> <a href="<%= escape_html(documentation_url(page: 'authentication')) %>"><%= escape_html(documentation_t('example.authentication')) %></a>.</p>
             <% info[:examples].each_with_index do |example, index| %>
-              <% example_title = example[:title].empty? ? "Example ##{index}" : example[:title] %>
+              <% example_title = example[:title].empty? ? documentation_t('example.title', index: index) : example[:title] %>
               <% example_target = documentation_reference_anchor(resource_path: resource_path, action_name: action, authentication: authentication_provider, section: :example_title, example_index: index) %>
               <h4 id="<%= escape_html(example_target) %>"><%= escape_html(example_title) %><%= documentation_permalink(example_target, example_title) %></h4>
               <p><%= example[:comment] %></p>
@@ -99,7 +99,7 @@
   </div>
   <% unless info[:resources].empty? %>
     <% children_target = documentation_reference_anchor(resource_path: resource_path, authentication: authentication_provider, section: :children) %>
-    <h2 id="<%= escape_html(children_target) %>">Subresources<%= documentation_permalink(children_target, 'Subresources') %></h2>
+    <h2 id="<%= escape_html(children_target) %>"><%= escape_html(documentation_t('labels.subresources')) %><%= documentation_permalink(children_target, documentation_t('labels.subresources')) %></h2>
     <% if authentication_resource %>
       <% sort_hash(info[:resources]).each do |child, child_info| %>
         <%= erb :'version_page/resource_body', locals: {resource: child, info: child_info, path: resource_path, prefix: "#{prefix}-#{resource}", name: "#{name} / #{child.humanize}", authentication_resource: true, authentication_provider: authentication_provider} %>

@@ -57,6 +57,19 @@ RSpec.describe HaveAPI::ClientExample, '.render' do
     end
   end
 
+  it 'localizes built-in limitation prose while preserving executable code' do
+    translated = %i[en cs].map do |locale|
+      ::I18n.with_locale(locale) do
+        renderer = HaveAPI::ClientExamples::JsClient
+        { code: renderer.render(:example, context: dynamic_context).fetch(:code),
+          reason: renderer.render(:example, context: dynamic_context(sample: { request: nil, response: nil })).fetch(:reason) }
+      end
+    end
+    expect(translated.last[:code]).to eq(translated.first[:code])
+    expect(translated.last[:reason]).to eq(::I18n.t('haveapi.documentation.limitations.prose_only', locale: :cs))
+    expect(translated.last[:reason]).not_to eq(translated.first[:reason])
+  end
+
   it 'keeps Python async fragments in an explicit async context without adding executable wrappers' do
     source = HaveAPI::ClientExamples::PythonAsyncClient.render(:example, context: dynamic_context).fetch(:code)
     script = 'import ast, sys; ast.parse("async def example():\n" + "".join("    " + line for line in sys.stdin))'

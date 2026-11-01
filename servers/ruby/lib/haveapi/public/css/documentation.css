@@ -106,6 +106,10 @@ input::placeholder { color: var(--docs-muted); }
 [data-documentation-menu-content] form { margin: 0; }
 [data-documentation-menu-content] form + form { margin-top: .4rem; }
 .docs-theme-choices { display: flex; gap: .2rem; }
+[data-documentation-language] { padding-bottom: .75rem; margin-bottom: .75rem !important; border-bottom: 1px solid var(--docs-border); }
+[data-documentation-language] label { display: block; margin-bottom: .4rem; color: var(--docs-muted); font-size: .8125rem; font-weight: 600; }
+[data-documentation-language] select { width: 100%; margin-bottom: .4rem; }
+[data-documentation-language] button { width: 100%; }
 .docs-theme-label { display: block; margin-bottom: .4rem; color: var(--docs-muted); font-size: .8125rem; font-weight: 600; }
 .docs-theme-choices button { display: grid; place-items: center; width: 2.75rem; min-height: 2.75rem; padding: .4rem; background: transparent; }
 .docs-theme-choices svg { width: 1rem; height: 1rem; }
@@ -218,9 +222,9 @@ input::placeholder { color: var(--docs-muted); }
 .docs-main p { max-width: 85ch; margin: .75rem 0; overflow-wrap: anywhere; }
 .docs-main li { overflow-wrap: anywhere; }
 .docs-main > nav { color: var(--docs-muted); font-size: .875rem; margin-bottom: 1.5rem; }
-.docs-main nav[aria-label="Breadcrumb"] ol { display: flex; flex-wrap: wrap; gap: .35rem .6rem; margin: 0; padding: 0; list-style: none; }
-.docs-main nav[aria-label="Breadcrumb"] li + li::before { content: "/"; margin-right: .6rem; color: var(--docs-muted); }
-.docs-main nav[aria-label="Breadcrumb"] [aria-current="page"] { color: var(--docs-text); }
+.docs-main .docs-breadcrumb ol { display: flex; flex-wrap: wrap; gap: .35rem .6rem; margin: 0; padding: 0; list-style: none; }
+.docs-main .docs-breadcrumb li + li::before { content: "/"; margin-right: .6rem; color: var(--docs-muted); }
+.docs-main .docs-breadcrumb [aria-current="page"] { color: var(--docs-text); }
 .docs-main hr { margin: 1.5rem 0; border: 0; border-top: 1px solid var(--docs-border); }
 .docs-main [data-doc-section] { margin: 2.5rem 0 0; padding-top: 2rem; border-top: 1px solid var(--docs-border); }
 .docs-main dl { margin: 1rem 0; }

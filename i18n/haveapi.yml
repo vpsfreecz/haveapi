@@ -1,5 +1,450 @@
 en:
   haveapi:
+    documentation:
+      generated:
+        go:
+          mode: This Go API client example mode is unsupported.
+          unavailable: This Go API client example is unavailable.
+          action: This action is unavailable in the configured Go API client.
+          structured_sample: This sample does not describe a structured request and response.
+          route: The configured Go API client does not match this action route.
+          layout: The configured Go API client does not match this action layout.
+          metadata: This action requires metadata that is absent from the sample.
+          list_input: The Go generator does not support list input in documentation examples.
+          response: This response is unavailable in the configured Go API client.
+          output_layout: The Go generator does not support this output layout.
+          sample_output_layout: This sample does not match the Go API client output layout.
+          custom: The Go generator does not support Custom fields in this sample.
+          name_collision: The Go generator cannot represent these parameter name collisions.
+          response_field: This response field does not match the configured Go API client.
+          null_output: The Go API client cannot distinguish scalar null output from its
+            zero value.
+          associated_object: The Go API client requires an object for an associated response
+            field.
+          associated_response: This associated response is unavailable in the visible Go
+            API client documentation.
+          path_parameters: This sample does not supply all Go API client path parameters.
+          int64_range: This path value is outside the Go int64 range.
+          path_type: This Go API client path parameter must be an integer or string.
+          object_input: The Go generator supports object input only.
+          input: This input is unavailable in the configured Go API client.
+          input_field: This input field does not match the configured Go API client.
+          null_input: This Go API client input field does not accept null.
+          authentication: This authentication method is unavailable in the configured Go
+            API client.
+          authentication_mismatch: This authentication method does not match the configured
+            Go API client.
+          authentication_unsupported: This authentication method is unsupported by the Go
+            generator.
+          value: This sample value cannot be represented by the Go API client field type.
+          undeclared_field: API example field %{path} is not declared in the Go API client
+            schema.
+        rust:
+          mode: Unsupported Rust execution mode.
+          version: The Rust API client targets a different API version.
+          section: Unsupported Rust documentation section.
+          authentication: This authentication provider is unavailable in the authorized
+            Rust API client profile.
+          authentication_description: The authentication description differs from the authorized
+            help.
+          authentication_header: The Rust API client authentication header differs from
+            this API.
+          authentication_unsupported: This authentication provider is unsupported by the
+            Rust client.
+          action: This action is unavailable in the authorized Rust API client profile.
+          structured_sample: This sample has no structured request or response to render.
+          path_parameters: The sample path arguments cannot be represented by this Rust
+            API client.
+          action_authentication: This action requires authentication unavailable in the
+            authorized Rust API client profile.
+          route: The Rust API client route or HTTP method differs from this API action.
+          layout: The Rust API client input or output layout differs from this API action.
+          action_metadata: This Rust API client action requires metadata that is absent
+            from the sample.
+          sample_metadata: This action requires metadata that is absent from the sample.
+          input: This Rust API client action cannot represent the sample input.
+          get_list: Rust GET requests do not support list input.
+          input_layout: The sample input does not match the Rust API client layout.
+          parameter: A sample parameter is unavailable or has changed in this Rust API client.
+          value: A sample value cannot be represented by this Rust API client.
+          get_custom: Rust GET requests do not support nested Custom query values.
+          required_input: The sample omits a required Rust API client input.
+          response: The sample response does not match this Rust API client.
+          response_layout: The sample response does not match this Rust API client layout.
+        typescript:
+          unavailable: This sample is unavailable or incompatible with the configured TypeScript
+            API client.
+        labels:
+          go: Go API client
+          rust_async: Rust API client (async)
+          rust_blocking: Rust API client (blocking)
+          typescript: TypeScript API client
+        variants:
+          api_client: API client
+          async: Async
+          blocking: Blocking
+      comments:
+        reuse_token: Reuse an existing token
+        ruby_oauth_unsupported: OAuth2 is not supported by HaveAPI Ruby client.
+        cli_oauth_unsupported: OAuth2 is not supported by HaveAPI Ruby CLI.
+        raises_exception: Raises exception %{exception}
+        throws_exception: Throws exception %{exception}
+        instance_of: "%{variable} is an instance of %{type}"
+        response_hash: "%{call} returns a hash of output parameters:"
+        response_hashes: "%{call} returns an array of hashes:"
+        response_associative: "%{call} returns an associative array of output parameters:"
+        response_associative_arrays: "%{call} returns an array of associative arrays:"
+        array_subclass: which is a subclass of Array
+        custom_type: "%{variable} is a custom type"
+        dependency_failures: Dependency failures still propagate to the application.
+        token_credentials: Get token using username and password
+        token_reuse_next: Next time, the client can authenticate using the token directly
+        oauth_session: OAuth2 requires session
+        client_instance: Client instance
+        oauth_check_token: Check if we already have an access token
+        oauth_reuse_token: We're already authenticated, reuse the existing access token
+        oauth_code_flow: |-
+          Follow the OAuth2 authorization process to get an access token using
+          authorization code
+        oauth_client_credentials: Client id and secret are given by the API server
+        oauth_callback_url: This example code should run on the URL below
+        oauth_scopes: Scopes are specific to the API implementation
+        oauth_need_code: We don't have authorization code yet, request one
+        oauth_redirect: Redirect the user to the authorization endpoint
+        oauth_request_token: Request access token using the token endpoint
+        oauth_store_token: Store the access token in the session
+        python_actions: Call API actions inside this block.
+        python_existing_oauth: Use an existing access token; OAuth acquisition and refresh
+          are outside this client.
+        js_existing_oauth: Use an existing access token; this client does not run an OAuth
+          authorization flow.
+        timeout_no_cancel: A request timeout does not cancel a server operation.
+        python_async_context: Run inside an async function after initializing api.
+        js_request_completion: Request success alone does not establish operation completion.
+        js_initial_response: This prints the initial response; use its action-state metadata
+          to monitor completion.
+        cli_credentials: Provide credentials on command line
+        cli_ask_stdin: If username or password isn't provided, the user is asked on stdin
+        cli_save_token: Get token using username and password and save it to disk
+        cli_action_required: |-
+          Note that the client always has to call some action. APIs should provide
+          an action to get information about the current user, so that's what we're
+          calling now.
+        cli_read_token: |-
+          Now the token is read from disk and the user does not have to provide username
+          nor password and be authenticated
+        curl_password_stdin: Password is asked on standard input
+        curl_password_argument: Password given on the command line
+        acquire_token: Acquire the token
+        use_previous_token: Use a previously acquired token
+        oauth_rfc: See RFC 6749 for authorization process and RFC 6750 for access token
+          usage.
+        http_oauth_code: 1) Request authorization code
+        http_oauth_login: 2) The user logs in using this API
+        http_oauth_redirect: 3) The API then redirects the user back to the client application
+        http_oauth_token: 4) The client application requests access token
+        go_metadata: 'To supply advertised global metadata, select only the fields you set:'
+        go_metadata_type: value has type %{type}
+        failure_branch: This sample demonstrates the failure branch above.
+        operation_status_fields: Inspect the operation status using its documented output
+          fields.
+        request_completion: Request success does not establish operation completion.
+        go_existing_token: Use a token obtained through the advertised authentication provider.
+        go_existing_oauth: Obtain the access token through the OAuth2 provider before running
+          this program.
+        rust_blocking_context: Construct, use and drop this blocking client outside async
+          runtime threads.
+        rust_credentials: Configure existing credentials only; building does not validate
+          them with the server.
+        rust_diagnostics: Inspect these explicitly; server diagnostics can contain sensitive
+          values.
+        rust_completion: Request success or a timeout does not establish completion of a
+          server-side operation.
+        rust_action_state: Use only the separately documented action-state action; this
+          API client has no automatic wait helper.
+        rust_async_function: Use inside an async function returning %{type}.
+        rust_sync_function: Use inside a synchronous function outside async runtime threads
+          returning %{type}.
+        typescript_package: 'Configured API client: %{package}.'
+        typescript_completion: Request success does not establish completion of a server-side
+          operation.
+        typescript_async_context: Requires an initialized api and an async context.
+      errors:
+        selection: Invalid documentation selection
+        resource_not_found: Documentation resource not found
+        search_query: Invalid documentation search query
+        query: Invalid documentation query
+      limitations:
+        token_object_input: This token example requires object input.
+        token_input_type: This token example has an unsupported input type.
+        token_input_choice_missing: This token example has no advertised input choice.
+        token_input_value: This token client cannot send the advertised login input value.
+        token_input_choice: This token example cannot represent its advertised input choice.
+        object_key: This sample has a non-string object key.
+        duplicate_object_keys: This sample has duplicate serialized object keys.
+        non_finite_number: This sample has a non-finite number.
+        literal: This sample contains a value without a supported literal representation.
+        prose_only: This example contains prose only; no executable request is supplied.
+        input_metadata: This action requires input metadata that the sample format cannot
+          supply.
+        path_arguments_missing: The sample does not supply every action path argument.
+        path_argument_type: Action path arguments must be strings or integers.
+        input_description_missing: The sample supplies input for an action without an input
+          description.
+        input_hidden: The sample contains input parameters absent from the visible description.
+        go_profile: A Go API client profile is required.
+        javascript_integer: This sample contains an integer outside JavaScript's exact integer range.
+        action_authentication: This action requires an authentication provider unsupported
+          by this client.
+        authentication_provider: This authentication provider is not advertised or supported
+          by this client.
+        javascript_list_input: This JavaScript client accepts object input only; list input
+          cannot be represented without dropping values.
+        javascript_object_input: This JavaScript client requires object input.
+        callback_parameter_name: This callback client cannot safely represent this input
+          parameter name.
+        javascript_nested_query: This JavaScript client cannot preserve nested values in
+          query input.
+        python_method: This Python client supports GET, POST, PUT and DELETE actions only.
+        python_input: This Python client requires object or list input.
+        python_list_namespace: This Python client requires a namespace for list input.
+        python_get_input: Python GET examples support flat scalar input with bracket-free
+          names; Custom values must be strings or nullable nulls.
+        rust_profile: A Rust API client documentation profile is required.
+        typescript_profile: A TypeScript API client documentation profile is required.
+      oauth:
+        sign_out_invalid: Invalid documentation sign-out request
+        switch_invalid: Invalid documentation switch request
+        origin_required: Documentation sign-in requires its configured HTTPS origin
+        sign_out_incomplete: Local sign-out succeeded, but the server session may remain until
+          it expires.
+        return: Return to documentation
+        sign_in_failed: Documentation sign-in failed.
+        try_again: Try again
+        session_ended: Your documentation session ended. Sign in again.
+      labels:
+        api_versions: API versions
+        api_reference: API reference
+        overview: Overview
+        authentication: Authentication
+        resources: Resources
+        actions: Actions
+        subresources: Subresources
+        contents: Contents
+        examples: Examples
+        input_parameters: Input parameters
+        output_parameters: Output parameters
+        programming_language: Programming language
+        client: Client
+        simple: Simple
+        thorough: With error handling
+        account: Account
+        sign_out: Sign out
+        switch_user: Switch user
+        sign_in: Sign in
+        settings: Documentation settings
+        language: Language
+        apply_language: Apply language
+        theme: Theme
+        theme_auto: Automatic theme
+        theme_light: Light theme
+        theme_dark: Dark theme
+        path: Path
+        description: Description
+        authentication_required: Authentication required
+        scope: Scope
+        aliases: Aliases
+        blocking: Blocking
+        'yes': 'yes'
+        'no': 'no'
+        layout: Layout
+        namespace: Namespace
+        parameter: Parameter
+        type: Type
+        required: Required
+        details: Details
+        default: 'Default:'
+        no_parameters: No parameters.
+        initialization: Initialization
+        client_libraries: Client libraries
+        usage: Using this reference
+        http_header: 'HTTP header:'
+        query_parameter: 'Query parameter:'
+        authorize_url: 'Authorize URL:'
+        token_url: 'Token URL:'
+        revoke_url: 'Revoke URL:'
+      accessibility:
+        skip: Skip to content
+        navigation: Navigation
+        breadcrumb: Breadcrumb
+        pages: Documentation pages
+        shared: Shared documentation
+        authentication_methods: Authentication methods
+        resource_actions: Actions on this resource
+        link_to: Link to %{label}
+        documentation_table: Documentation table
+      footer:
+        generated: Generated by
+      version:
+        label: Version %{version}
+        default: "(default)"
+      example:
+        title: 'Example #%{index}'
+        initialized: Examples use an initialized API client, authenticated when required.
+        see: See
+        initialization: initialization
+        authentication: authentication
+        and: and
+      visibility:
+        account: Showing resources, actions and parameters available to this account.
+        all: Showing all resources, actions and parameters.
+      articles:
+        readme: HaveAPI internals
+        protocol: Protocol
+        json_schema: JSON schema
+        create_client: Create a client
+        client_examples: Client examples
+        typed_input_validation: Typed input validation
+        documentation_ui: Browsing API documentation
+        documentation_oauth: Documentation OAuth
+        performance: Performance
+      article:
+        fallback: This article is available in English.
+      schema:
+        envelope: Envelope
+      overview:
+        api_address: The API is available at
+        versions: Examples target API v%{version}. API clients use their own package versions
+          and must match this API.
+        initialize_before: Initialize your client, then follow the
+        authentication_link: authentication instructions
+        initialize_after: when credentials are required.
+        browse_link: Browse all resources
+        browse_after: to find their actions, parameters and examples.
+      authentication:
+        initialize_before: Initialize your client using the
+        overview_link: overview examples
+        initialize_after: ", then choose an authentication method."
+        disabled: Authentication is disabled for this API.
+      client:
+        and: " and "
+        library: library
+        request_examples: request examples are available on resource pages.
+      usage:
+        choose: Choose a Programming language and Client variant for the examples. The Examples
+          menu offers the selected client's supported formats. Your choices apply to every
+          example and stay selected as you browse.
+        start: Start with
+        below: below and
+        credentials: for credentials. Open
+        browse: to browse the API, then choose a resource to see its actions, parameters
+          and examples.
+        search: Search finds resources, actions and input or output parameters. Follow
+          a result to its reference entry.
+        signed_out: While signed out, the reference shows all declared resources, actions
+          and parameters.
+        sign_in: Sign in to show only those available to your account.
+      search:
+        label: Search API v%{version}
+        placeholder: Resource...
+        submit: Search
+        suggestions: Search suggestions
+        results: Search results
+        results_for: Search results for %{query}
+        changed: Search has changed. Reload this page or submit to open current results.
+      titles:
+        search: 'Search API v%{version}: %{query}'
+      browser:
+        copy_example: Copy example
+        copied: Copied
+        copy_failed: Select the code and copy it.
+        simple: Simple
+        thorough: With error handling
+        saved_example_unavailable: Your saved example is unavailable. Showing %{client}.
+        example_unavailable: This example is unavailable for the selected client.
+        search_empty: No matches. Try another resource, action or parameter name.
+        search_more: Showing %{count} results. More matches are available; refine your
+          search.
+        search_count: "%{count} results."
+        search_one: "%{count} result."
+        search_loading: Loading search…
+        search_failed: Search could not be loaded. Submit to open the results page.
+        resource: Resource
+        action: Action
+        parameter: Parameter
+        input: Input
+        output: Output
+        authentication: 'Authentication: %{provider}'
+      toc:
+        protocol_definition: Protocol definition
+        self_description: Self-description
+        description_format: Description format
+        version: Version
+        http_basic_authentication: HTTP basic authentication
+        token_authentication: Token authentication
+        layouts: Layouts
+        parameters: Parameters
+        data_types: Data types
+        resource_associations: Resource associations
+        list_api_versions: List API versions
+        describe_default_version: Describe default version
+        describe_the_whole_api: Describe the whole API
+        authorization: Authorization
+        input_output_formats: Input/output formats
+        request: Request
+        response: Response
+        client_definition: Client definition
+        design_rules: Design rules
+        necessary_features_to_implement: Necessary features to implement
+        resource_tree: Resource tree
+        input_output_parameters: Input/output parameters
+        object_like_access: Object-like access
+        supplemental_features: Supplemental features
+        client_side_validations: Client-side validations
+      validators:
+        caption: Validation rules
+        rule: Rule
+        details: Details
+        message: 'Validation error message:'
+        additional: Additional details
+        metadata: 'Supplied validator metadata:'
+        custom: 'Application-specific rule: %{rule}'
+        accept: Must equal %{value}.
+        confirm_equal: Must equal parameter %{parameter}.
+        confirm_different: Must differ from parameter %{parameter}.
+        format_match: 'Must match this regular expression:'
+        format_no_match: 'Must not match this regular expression:'
+        present: Must be supplied and cannot be null.
+        empty_allowed: Empty values are allowed.
+        empty_disallowed: Must not be empty; strings must contain a non-whitespace character.
+        allowed: Allowed values
+        disallowed: Disallowed values
+        empty_set: The set is empty.
+        number: Must be a number after parameter type conversion.
+        minimum: 'Minimum: %{value} (inclusive).'
+        maximum: 'Maximum: %{value} (inclusive).'
+        step: 'Step: %{value}, measured from %{start}.'
+        multiple: Must be a multiple of %{value}, measured from zero.
+        odd: Must be odd.
+        even: Must be even.
+        odd_disabled: 'Odd-only restriction: disabled.'
+        even_disabled: 'Even-only restriction: disabled.'
+        length_equal: Length must equal %{value}%{unit}.
+        length_minimum: 'Minimum length: %{value}%{unit} (inclusive).'
+        length_maximum: 'Maximum length: %{value}%{unit} (inclusive).'
+        characters: " characters"
+        items: " items"
+        ruby_value: Ruby value
+        names:
+          present: Present
+          include: Include
+          exclude: Exclude
+          accept: Accept
+          confirm: Confirm
+          number: Number
+          length: Length
+          format: Format
+          custom: Custom
     action_state:
       cancellation_failed: Action cancellation failed
       not_found: Action state not found
@@ -233,6 +678,453 @@ en:
       validation_failed_with_errors: "validation failed: %{errors}"
 cs:
   haveapi:
+    documentation:
+      generated:
+        go:
+          mode: Tento režim příkladu API klienta pro Go není podporovaný.
+          unavailable: Tento příklad API klienta pro Go není dostupný.
+          action: Tato akce není v nastaveném API klientovi pro Go dostupná.
+          structured_sample: Příklad nepopisuje strukturovaný požadavek a odpověď.
+          route: Nastavený API klient pro Go neodpovídá cestě této akce.
+          layout: Nastavený API klient pro Go neodpovídá rozložení této akce.
+          metadata: Tato akce vyžaduje metadata, která v příkladu chybí.
+          list_input: Generátor Go nepodporuje v dokumentačních příkladech vstupní seznamy.
+          response: Tato odpověď není v nastaveném API klientovi pro Go dostupná.
+          output_layout: Generátor Go nepodporuje toto rozložení výstupu.
+          sample_output_layout: Příklad neodpovídá rozložení výstupu API klienta pro Go.
+          custom: Generátor Go nepodporuje v tomto příkladu pole typu Custom.
+          name_collision: Generátor Go nedokáže vyjádřit tyto kolize názvů parametrů.
+          response_field: Toto pole odpovědi neodpovídá nastavenému API klientovi pro Go.
+          null_output: API klient pro Go nedokáže rozlišit skalární výstup null od nulové
+            hodnoty jeho typu.
+          associated_object: API klient pro Go vyžaduje u souvisejícího pole odpovědi objekt.
+          associated_response: Tato související odpověď není ve viditelné dokumentaci API
+            klienta pro Go dostupná.
+          path_parameters: Příklad neposkytuje všechny parametry cesty API klienta pro Go.
+          int64_range: Hodnota cesty je mimo rozsah int64 v Go.
+          path_type: Tento parametr cesty API klienta pro Go musí být celé číslo nebo řetězec.
+          object_input: Generátor Go podporuje pouze objektový vstup.
+          input: Tento vstup není v nastaveném API klientovi pro Go dostupný.
+          input_field: Toto vstupní pole neodpovídá nastavenému API klientovi pro Go.
+          null_input: Toto vstupní pole API klienta pro Go nepřijímá null.
+          authentication: Tato autentizační metoda není v nastaveném API klientovi pro Go
+            dostupná.
+          authentication_mismatch: Tato autentizační metoda neodpovídá nastavenému API klientovi
+            pro Go.
+          authentication_unsupported: Generátor Go tuto autentizační metodu nepodporuje.
+          value: Typ pole API klienta pro Go nedokáže vyjádřit tuto hodnotu příkladu.
+          undeclared_field: Pole příkladu API %{path} není deklarované ve schématu API klienta
+            pro Go.
+        rust:
+          mode: Nepodporovaný režim spouštění Rustu.
+          version: API klient pro Rust cílí na jinou verzi API.
+          section: Nepodporovaná část dokumentace Rustu.
+          authentication: Tento poskytovatel autentizace není v autorizovaném profilu API
+            klienta pro Rust dostupný.
+          authentication_description: Popis autentizace se liší od autorizované dokumentace.
+          authentication_header: Autentizační hlavička API klienta pro Rust se liší od tohoto
+            API.
+          authentication_unsupported: Klient pro Rust tohoto poskytovatele autentizace nepodporuje.
+          action: Tato akce není v autorizovaném profilu API klienta pro Rust dostupná.
+          structured_sample: Příklad neobsahuje strukturovaný požadavek ani odpověď k zobrazení.
+          path_parameters: Tento API klient pro Rust nedokáže vyjádřit argumenty cesty v
+            příkladu.
+          action_authentication: Tato akce vyžaduje autentizaci, která není v autorizovaném
+            profilu API klienta pro Rust dostupná.
+          route: Cesta nebo HTTP metoda API klienta pro Rust se liší od této akce API.
+          layout: Rozložení vstupu nebo výstupu API klienta pro Rust se liší od této akce
+            API.
+          action_metadata: Tato akce API klienta pro Rust vyžaduje metadata, která v příkladu
+            chybí.
+          sample_metadata: Tato akce vyžaduje metadata, která v příkladu chybí.
+          input: Tato akce API klienta pro Rust nedokáže vyjádřit vstup příkladu.
+          get_list: Požadavky GET v Rustu nepodporují vstupní seznamy.
+          input_layout: Vstup příkladu neodpovídá rozložení API klienta pro Rust.
+          parameter: Parametr příkladu není dostupný nebo se v tomto API klientovi pro Rust
+            změnil.
+          value: Tento API klient pro Rust nedokáže vyjádřit hodnotu příkladu.
+          get_custom: Požadavky GET v Rustu nepodporují vnořené hodnoty Custom v query stringu.
+          required_input: V příkladu chybí povinný vstup API klienta pro Rust.
+          response: Odpověď příkladu neodpovídá tomuto API klientovi pro Rust.
+          response_layout: Odpověď příkladu neodpovídá rozložení tohoto API klienta pro
+            Rust.
+        typescript:
+          unavailable: Tento příklad není dostupný nebo není kompatibilní s nastaveným API
+            klientem pro TypeScript.
+        labels:
+          go: Klient API pro Go
+          rust_async: Klient API pro Rust (asynchronní)
+          rust_blocking: Klient API pro Rust (blokující)
+          typescript: Klient API pro TypeScript
+        variants:
+          api_client: Klient API
+          async: Asynchronní
+          blocking: Blokující
+      comments:
+        reuse_token: Použití existujícího tokenu
+        ruby_oauth_unsupported: Ruby klient HaveAPI nepodporuje OAuth2.
+        cli_oauth_unsupported: Ruby CLI HaveAPI nepodporuje OAuth2.
+        raises_exception: Vyvolá výjimku %{exception}
+        throws_exception: Vyvolá výjimku %{exception}
+        instance_of: "%{variable} je instance %{type}"
+        response_hash: "%{call} vrací hash výstupních parametrů:"
+        response_hashes: "%{call} vrací pole hashů:"
+        response_associative: "%{call} vrací asociativní pole výstupních parametrů:"
+        response_associative_arrays: "%{call} vrací pole asociativních polí:"
+        array_subclass: která je podtřídou Array
+        custom_type: "%{variable} má vlastní datový typ"
+        dependency_failures: Chyby závislostí se nadále předávají aplikaci.
+        token_credentials: Získání tokenu pomocí uživatelského jména a hesla
+        token_reuse_next: Příště se klient může přihlásit přímo pomocí tokenu
+        oauth_session: OAuth2 vyžaduje relaci
+        client_instance: Instance klienta
+        oauth_check_token: Ověření, zda už je k dispozici přístupový token
+        oauth_reuse_token: Přihlášení už proběhlo, použije se existující přístupový token
+        oauth_code_flow: Získání přístupového tokenu pomocí autorizačního kódu v procesu
+          OAuth2
+        oauth_client_credentials: ID klienta a tajný klíč poskytuje API server
+        oauth_callback_url: Tento příklad má běžet na níže uvedené URL
+        oauth_scopes: Rozsahy oprávnění závisí na implementaci API
+        oauth_need_code: Autorizační kód zatím není k dispozici, je potřeba si ho vyžádat
+        oauth_redirect: Přesměrování uživatele na autorizační endpoint
+        oauth_request_token: Vyžádání přístupového tokenu přes token endpoint
+        oauth_store_token: Uložení přístupového tokenu do relace
+        python_actions: Akce API volej uvnitř tohoto bloku.
+        python_existing_oauth: Použij existující přístupový token; tento klient nezajišťuje
+          získání ani obnovu tokenu OAuth.
+        js_existing_oauth: Použij existující přístupový token; tento klient neprovádí autorizační
+          proces OAuth.
+        timeout_no_cancel: Vypršení časového limitu požadavku nezruší operaci na serveru.
+        python_async_context: Spusť uvnitř asynchronní funkce po inicializaci api.
+        js_request_completion: Samotný úspěch požadavku neznamená dokončení operace.
+        js_initial_response: Tím se vypíše počáteční odpověď; dokončení sleduj pomocí jejích
+          metadat o stavu akce.
+        cli_credentials: Přihlašovací údaje na příkazovém řádku
+        cli_ask_stdin: Pokud chybí uživatelské jméno nebo heslo, klient se na ně zeptá na
+          standardním vstupu
+        cli_save_token: Získání tokenu pomocí uživatelského jména a hesla a uložení na disk
+        cli_action_required: |-
+          Klient musí vždy zavolat nějakou akci. API by mělo poskytovat akci pro získání
+          informací o aktuálním uživateli, kterou zde voláme.
+        cli_read_token: |-
+          Token se nyní načte z disku a uživatel se přihlásí bez zadávání
+          uživatelského jména a hesla
+        curl_password_stdin: Na heslo se klient zeptá na standardním vstupu
+        curl_password_argument: Heslo zadané na příkazovém řádku
+        acquire_token: Získání tokenu
+        use_previous_token: Použití dříve získaného tokenu
+        oauth_rfc: Autorizační proces popisuje RFC 6749 a použití přístupového tokenu RFC
+          6750.
+        http_oauth_code: 1) Vyžádání autorizačního kódu
+        http_oauth_login: 2) Uživatel se přihlásí pomocí tohoto API
+        http_oauth_redirect: 3) API přesměruje uživatele zpět do klientské aplikace
+        http_oauth_token: 4) Klientská aplikace si vyžádá přístupový token
+        go_metadata: 'Pro předání nabízených globálních metadat vyber pouze pole, která
+          nastavuješ:'
+        go_metadata_type: value má typ %{type}
+        failure_branch: Tento příklad ukazuje větev pro chybu uvedenou výše.
+        operation_status_fields: Stav operace ověř pomocí jejích dokumentovaných výstupních
+          polí.
+        request_completion: Úspěch požadavku neznamená dokončení operace.
+        go_existing_token: Použij token získaný od nabízeného poskytovatele autentizace.
+        go_existing_oauth: Před spuštěním programu získej přístupový token od poskytovatele
+          OAuth2.
+        rust_blocking_context: Tohoto blokujícího klienta vytvářej, používej a uvolňuj mimo
+          vlákna asynchronního běhového prostředí.
+        rust_credentials: Nastav pouze existující přihlašovací údaje; vytvoření klienta
+          je neověřuje na serveru.
+        rust_diagnostics: Tyto údaje kontroluj explicitně; diagnostika serveru může obsahovat
+          citlivé hodnoty.
+        rust_completion: Úspěch požadavku ani vypršení časového limitu neznamenají dokončení
+          operace na serveru.
+        rust_action_state: Použij pouze samostatně dokumentovanou akci pro stav operace;
+          tento API klient nemá automatickou pomocnou metodu pro čekání.
+        rust_async_function: Použij uvnitř asynchronní funkce vracející %{type}.
+        rust_sync_function: Použij uvnitř synchronní funkce, která vrací %{type}, mimo
+          vlákna asynchronního běhového prostředí.
+        typescript_package: 'Nastavený API klient: %{package}.'
+        typescript_completion: Úspěch požadavku neznamená dokončení operace na serveru.
+        typescript_async_context: Vyžaduje inicializované api a asynchronní kontext.
+      errors:
+        selection: Neplatný výběr dokumentace
+        resource_not_found: Zdroj dokumentace nebyl nalezen
+        search_query: Neplatný vyhledávací dotaz dokumentace
+        query: Neplatný dotaz dokumentace
+      limitations:
+        token_object_input: Tento příklad s tokenem vyžaduje objektový vstup.
+        token_input_type: Tento příklad s tokenem má nepodporovaný typ vstupu.
+        token_input_choice_missing: Tento příklad s tokenem nemá zveřejněnou volbu vstupu.
+        token_input_value: Tento klient s tokenem nemůže odeslat zveřejněnou hodnotu přihlašovacího
+          vstupu.
+        token_input_choice: Tento příklad s tokenem nemůže vyjádřit zveřejněnou volbu vstupu.
+        object_key: Tato ukázka má klíč objektu, který není řetězec.
+        duplicate_object_keys: Tato ukázka má duplicitní klíče serializovaného objektu.
+        non_finite_number: Tato ukázka obsahuje číslo, které není konečné.
+        literal: Tato ukázka obsahuje hodnotu bez podporovaného zápisu literálu.
+        prose_only: Tento příklad obsahuje pouze text, nikoli spustitelný požadavek.
+        input_metadata: Tato akce vyžaduje vstupní metadata, která formát ukázky nedokáže
+          poskytnout.
+        path_arguments_missing: Ukázka neobsahuje všechny argumenty cesty akce.
+        path_argument_type: Argumenty cesty akce musí být řetězce nebo celá čísla.
+        input_description_missing: Ukázka poskytuje vstup pro akci bez popisu vstupu.
+        input_hidden: Ukázka obsahuje vstupní parametry, které nejsou ve viditelném popisu.
+        go_profile: Je vyžadován profil klienta API pro Go.
+        javascript_integer: Tato ukázka obsahuje celé číslo mimo rozsah přesně reprezentovatelných
+          celých čísel v JavaScriptu.
+        action_authentication: Tato akce vyžaduje poskytovatele autentizace, kterého tento
+          klient nepodporuje.
+        authentication_provider: Tento poskytovatel autentizace není zveřejněn nebo ho tento
+          klient nepodporuje.
+        javascript_list_input: Tento klient JavaScriptu přijímá pouze objektový vstup; seznam
+          nelze vyjádřit bez ztráty hodnot.
+        javascript_object_input: Tento klient JavaScriptu vyžaduje objektový vstup.
+        callback_parameter_name: Tento klient s callbacky nemůže bezpečně vyjádřit název
+          tohoto vstupního parametru.
+        javascript_nested_query: Tento klient JavaScriptu nemůže zachovat vnořené hodnoty
+          ve vstupu dotazu.
+        python_method: Tento klient Pythonu podporuje pouze akce GET, POST, PUT a DELETE.
+        python_input: Tento klient Pythonu vyžaduje vstup ve formě objektu nebo seznamu.
+        python_list_namespace: Tento klient Pythonu vyžaduje jmenný prostor pro vstup ve
+          formě seznamu.
+        python_get_input: Příklady GET v Pythonu podporují plochý skalární vstup s názvy
+          bez hranatých závorek; hodnoty Custom musí být řetězce nebo povolené hodnoty null.
+        rust_profile: Je vyžadován profil dokumentace klienta API pro Rust.
+        typescript_profile: Je vyžadován profil dokumentace klienta API pro TypeScript.
+      oauth:
+        sign_out_invalid: Neplatný požadavek na odhlášení z dokumentace
+        switch_invalid: Neplatný požadavek na změnu uživatele dokumentace
+        origin_required: Přihlášení do dokumentace vyžaduje nastavený HTTPS origin
+        sign_out_incomplete: Místní odhlášení proběhlo, ale relace na serveru může zůstat
+          aktivní do vypršení platnosti.
+        return: Zpět do dokumentace
+        sign_in_failed: Přihlášení do dokumentace se nezdařilo.
+        try_again: Zkus to znovu
+        session_ended: Relace dokumentace skončila. Přihlas se znovu.
+      labels:
+        api_versions: Verze API
+        api_reference: Referenční příručka API
+        overview: Přehled
+        authentication: Autentizace
+        resources: Zdroje
+        actions: Akce
+        subresources: Podřízené zdroje
+        contents: Obsah
+        examples: Příklady
+        input_parameters: Vstupní parametry
+        output_parameters: Výstupní parametry
+        programming_language: Jazyk
+        client: Klient
+        simple: Jednoduché
+        thorough: S ošetřením chyb
+        account: Účet
+        sign_out: Odhlásit se
+        switch_user: Změnit uživatele
+        sign_in: Přihlásit se
+        settings: Nastavení dokumentace
+        language: Jazyk
+        apply_language: Použít jazyk
+        theme: Motiv
+        theme_auto: Automatický motiv
+        theme_light: Světlý motiv
+        theme_dark: Tmavý motiv
+        path: Cesta
+        description: Popis
+        authentication_required: Vyžaduje autentizaci
+        scope: Rozsah
+        aliases: Aliasy
+        blocking: Blokující
+        'yes': ano
+        'no': ne
+        layout: Rozložení
+        namespace: Jmenný prostor
+        parameter: Parametr
+        type: Typ
+        required: Povinný
+        details: Podrobnosti
+        default: 'Výchozí hodnota:'
+        no_parameters: Žádné parametry.
+        initialization: Inicializace
+        client_libraries: Klientské knihovny
+        usage: Použití této příručky
+        http_header: 'HTTP hlavička:'
+        query_parameter: 'Parametr dotazu:'
+        authorize_url: 'Autorizační URL:'
+        token_url: 'URL pro token:'
+        revoke_url: 'URL pro odvolání tokenu:'
+      accessibility:
+        skip: Přejít na obsah
+        navigation: Navigace
+        breadcrumb: Drobečková navigace
+        pages: Stránky dokumentace
+        shared: Společná dokumentace
+        authentication_methods: Metody autentizace
+        resource_actions: Akce tohoto zdroje
+        link_to: Odkaz na %{label}
+        documentation_table: Tabulka dokumentace
+      footer:
+        generated: Vygenerováno pomocí
+      version:
+        label: Verze %{version}
+        default: "(výchozí)"
+      example:
+        title: Příklad č. %{index}
+        initialized: Příklady používají inicializovaného klienta API, v případě potřeby
+          přihlášeného.
+        see: Viz
+        initialization: inicializaci
+        authentication: autentizaci
+        and: a
+      visibility:
+        account: Zobrazené zdroje, akce a parametry jsou dostupné tomuto účtu.
+        all: Zobrazeny jsou všechny zdroje, akce a parametry.
+      articles:
+        readme: Vnitřní fungování HaveAPI
+        protocol: Protokol
+        json_schema: JSON schéma
+        create_client: Tvorba klienta
+        client_examples: Příklady klientů
+        typed_input_validation: Validace typovaných vstupů
+        documentation_ui: Procházení dokumentace API
+        documentation_oauth: OAuth pro dokumentaci
+        performance: Výkon
+      article:
+        fallback: Tento článek je dostupný v angličtině.
+      schema:
+        envelope: Obálka
+      overview:
+        api_address: API je dostupné na
+        versions: Příklady jsou pro API v%{version}. Klienti API mají vlastní verze balíčků
+          a musí být s tímto API kompatibilní.
+        initialize_before: Inicializuj klienta a poté postupuj podle
+        authentication_link: pokynů k autentizaci
+        initialize_after: v případě potřeby přihlášení.
+        browse_link: Projdi si všechny zdroje
+        browse_after: a jejich akce, parametry a příklady.
+      authentication:
+        initialize_before: Inicializuj klienta podle
+        overview_link: příkladů v přehledu
+        initialize_after: " a poté zvol metodu autentizace."
+        disabled: Autentizace je pro toto API vypnutá.
+      client:
+        and: " a "
+        library: knihovna
+        request_examples: příklady požadavků jsou dostupné na stránkách zdrojů.
+      usage:
+        choose: Zvol programovací jazyk a variantu klienta pro příklady. Nabídka Příklady
+          obsahuje formáty podporované zvoleným klientem. Volby platí pro všechny příklady
+          a zůstávají vybrané při procházení dokumentace.
+        start: Začni sekcí
+        below: níže a sekcí
+        credentials: pro přihlašovací údaje. Otevři
+        browse: a vyber zdroj s jeho akcemi, parametry a příklady.
+        search: Vyhledávání hledá zdroje, akce a vstupní i výstupní parametry. Výsledek
+          vede na příslušné místo v příručce.
+        signed_out: Bez přihlášení příručka zobrazuje všechny deklarované zdroje, akce
+          a parametry.
+        sign_in: Po přihlášení uvidíš jen ty, které jsou dostupné tvému účtu.
+      search:
+        label: Hledat v API v%{version}
+        placeholder: Zdroj…
+        submit: Hledat
+        suggestions: Návrhy vyhledávání
+        results: Výsledky vyhledávání
+        results_for: Výsledky hledání pro %{query}
+        changed: Vyhledávání se změnilo. Obnov stránku nebo odešli dotaz pro aktuální
+          výsledky.
+      titles:
+        search: 'Hledání v API v%{version}: %{query}'
+      browser:
+        copy_example: Kopírovat příklad
+        copied: Zkopírováno
+        copy_failed: Označ kód a zkopíruj ho.
+        simple: Jednoduché
+        thorough: S ošetřením chyb
+        saved_example_unavailable: Uložený příklad není dostupný. Zobrazuje se %{client}.
+        example_unavailable: Tento příklad není pro zvoleného klienta dostupný.
+        search_empty: Nic nenalezeno. Zkus jiný název zdroje, akce nebo parametru.
+        search_more: 'Zobrazených výsledků: %{count}. Existují další shody; upřesni dotaz.'
+        search_count: 'Počet výsledků: %{count}.'
+        search_one: "%{count} výsledek."
+        search_loading: Načítání vyhledávání…
+        search_failed: Vyhledávání se nepodařilo načíst. Odešli dotaz a otevři stránku
+          s výsledky.
+        resource: Zdroj
+        action: Akce
+        parameter: Parametr
+        input: Vstup
+        output: Výstup
+        authentication: 'Autentizace: %{provider}'
+      toc:
+        protocol_definition: Definice protokolu
+        self_description: Popis API
+        description_format: Formát popisu
+        version: Verze
+        http_basic_authentication: HTTP Basic autentizace
+        token_authentication: Tokenová autentizace
+        layouts: Rozložení
+        parameters: Parametry
+        data_types: Datové typy
+        resource_associations: Vazby na zdroje
+        list_api_versions: Seznam verzí API
+        describe_default_version: Popis výchozí verze
+        describe_the_whole_api: Popis celého API
+        authorization: Autorizace
+        input_output_formats: Vstupní a výstupní formáty
+        request: Požadavek
+        response: Odpověď
+        client_definition: Definice klienta
+        design_rules: Pravidla návrhu
+        necessary_features_to_implement: Nezbytné funkce
+        resource_tree: Strom zdrojů
+        input_output_parameters: Vstupní a výstupní parametry
+        object_like_access: Objektový přístup
+        supplemental_features: Doplňkové funkce
+        client_side_validations: Validace na straně klienta
+      validators:
+        caption: Validační pravidla
+        rule: Pravidlo
+        details: Podrobnosti
+        message: 'Chybová zpráva validace:'
+        additional: Další podrobnosti
+        metadata: 'Poskytnutá metadata validátoru:'
+        custom: 'Pravidlo aplikace: %{rule}'
+        accept: Musí se rovnat %{value}.
+        confirm_equal: Musí se rovnat parametru %{parameter}.
+        confirm_different: Musí se lišit od parametru %{parameter}.
+        format_match: 'Musí odpovídat tomuto regulárnímu výrazu:'
+        format_no_match: 'Nesmí odpovídat tomuto regulárnímu výrazu:'
+        present: Musí být uvedeno a nesmí být null.
+        empty_allowed: Prázdné hodnoty jsou povolené.
+        empty_disallowed: Nesmí být prázdné; řetězce složené pouze z bílých znaků
+          nejsou povolené.
+        allowed: Povolené hodnoty
+        disallowed: Zakázané hodnoty
+        empty_set: Množina je prázdná.
+        number: Po převodu typu parametru musí jít o číslo.
+        minimum: 'Minimum: %{value} (včetně).'
+        maximum: 'Maximum: %{value} (včetně).'
+        step: 'Krok: %{value}, počítáno od %{start}.'
+        multiple: Musí být násobkem %{value}, počítáno od nuly.
+        odd: Musí být liché.
+        even: Musí být sudé.
+        odd_disabled: 'Omezení na lichá čísla: vypnuto.'
+        even_disabled: 'Omezení na sudá čísla: vypnuto.'
+        length_equal: Délka musí být rovna %{value}%{unit}.
+        length_minimum: 'Minimální délka: %{value}%{unit} (včetně).'
+        length_maximum: 'Maximální délka: %{value}%{unit} (včetně).'
+        characters: " znaků"
+        items: " položek"
+        ruby_value: Hodnota Ruby
+        names:
+          present: Přítomnost
+          include: Povolené hodnoty
+          exclude: Zakázané hodnoty
+          accept: Přijetí
+          confirm: Potvrzení
+          number: Číslo
+          length: Délka
+          format: Formát
+          custom: Vlastní
     action_state:
       cancellation_failed: Zrušení akce se nezdařilo
       not_found: Stav akce nebyl nalezen

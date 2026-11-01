@@ -194,7 +194,7 @@ module HaveAPI
       info = auth_field(auth_token_actions(description), action, {})
       input = auth_field(info, :input, {})
       unless [nil, :hash, 'hash', :object, 'object'].include?(auth_field(input, :layout))
-        raise UnsupportedAuthentication, 'This token example requires object input.'
+        raise UnsupportedAuthentication, HaveAPI.t('haveapi.documentation.limitations.token_object_input')
       end
 
       auth_field(input, :parameters, {})
@@ -211,7 +211,7 @@ module HaveAPI
               when 'Boolean' then excluding.include?(false)
               when 'Datetime' then '2026-01-01T00:00:00Z'
               when 'Custom' then {}
-              else raise UnsupportedAuthentication, 'This token example has an unsupported input type.'
+              else raise UnsupportedAuthentication, HaveAPI.t('haveapi.documentation.limitations.token_input_type')
               end
       validators = auth_field(parameter, :validators, {})
       inclusion = auth_field(auth_field(validators, :include, {}), :values)
@@ -220,14 +220,14 @@ module HaveAPI
       if acceptance.is_a?(Hash) && (acceptance.has_key?(:value) || acceptance.has_key?('value'))
         value = auth_field(acceptance, :value)
       elsif values.is_a?(Array)
-        raise UnsupportedAuthentication, 'This token example has no advertised input choice.' if values.empty?
+        raise UnsupportedAuthentication, HaveAPI.t('haveapi.documentation.limitations.token_input_choice_missing') if values.empty?
 
         value = values.find { |choice| !excluding.include?(choice) }
       end
       value = 'fixed' if name.to_s == 'lifetime'
       value = value.to_s if value.is_a?(Symbol) && %w[String Text].include?(type)
       if excluding.include?(value)
-        raise UnsupportedAuthentication, 'This token client cannot send the advertised login input value.'
+        raise UnsupportedAuthentication, HaveAPI.t('haveapi.documentation.limitations.token_input_value')
       end
 
       compatible = case type
@@ -240,7 +240,7 @@ module HaveAPI
                    end
       compatible &&= values.map { |item| item.is_a?(Symbol) ? item.to_s : item }.include?(value) if values.is_a?(Array)
       compatible &&= value == auth_field(acceptance, :value) if acceptance.is_a?(Hash)
-      raise UnsupportedAuthentication, 'This token example cannot represent its advertised input choice.' unless compatible
+      raise UnsupportedAuthentication, HaveAPI.t('haveapi.documentation.limitations.token_input_choice') unless compatible
 
       value
     end

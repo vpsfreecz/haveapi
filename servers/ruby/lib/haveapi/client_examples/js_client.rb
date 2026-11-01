@@ -32,7 +32,7 @@ module HaveAPI::ClientExamples
       when Array
         "[#{value.map { |entry| js_literal(entry) }.join(', ')}]"
       when Integer
-        raise Unsupported, 'This sample contains an integer outside JavaScript exact precision.' if value.abs > 9_007_199_254_740_991
+        raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.javascript_integer') if value.abs > 9_007_199_254_740_991
 
         value.to_s
       else
@@ -103,7 +103,7 @@ module HaveAPI::ClientExamples
       return nil unless field(current_action, :auth)
 
       method = %i[token basic oauth2].find { |name| supported_auth?(name) }
-      raise Unsupported, 'This action requires an authentication provider unsupported by this client.' unless method
+      raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.action_authentication') unless method
 
       options = {
         token: '{token: "example-token"}',
@@ -118,7 +118,7 @@ module HaveAPI::ClientExamples
     end
 
     def auth(method, description)
-      return limitation('This authentication provider is not advertised or supported by this client.') unless supported_auth?(method)
+      return limitation(HaveAPI.t('haveapi.documentation.limitations.authentication_provider')) unless supported_auth?(method)
 
       code_result do
         options = case method.to_sym
@@ -169,16 +169,16 @@ module HaveAPI::ClientExamples
       code_result do
         path, request = structured_sample(sample)
         if request.is_a?(Array)
-          raise Unsupported, 'This JavaScript client accepts object input only; list input cannot be represented without dropping values.'
+          raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.javascript_list_input')
         end
         if !request.nil? && !request.is_a?(Hash)
-          raise Unsupported, 'This JavaScript client requires object input.'
+          raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.javascript_object_input')
         end
         if !asynchronous? && field(field(current_action, :input), :parameters, {}).keys.any? { |name| %w[hasOwnProperty __proto__].include?(name.to_s) }
-          raise Unsupported, 'This callback client cannot safely represent this input parameter name.'
+          raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.callback_parameter_name')
         end
         if request && %w[GET OPTIONS].include?(field(current_action, :method).to_s.upcase) && request.values.any? { |value| value.is_a?(Hash) || value.is_a?(Array) }
-          raise Unsupported, 'This JavaScript client cannot preserve nested values in query input.'
+          raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.javascript_nested_query')
         end
 
         args = path.values.map { |value| js_literal(value) }

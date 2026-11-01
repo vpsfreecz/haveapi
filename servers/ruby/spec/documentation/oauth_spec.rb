@@ -137,6 +137,25 @@ describe HaveAPI::DocumentationOAuth do
     authorization
   end
 
+  it 'localizes failed browser sign-in without saving a detected language or leaking the thread locale' do
+    previous = ::I18n.locale
+    get 'https://docs.example/api/_documentation/oauth/callback', {}, 'HTTP_ACCEPT_LANGUAGE' => 'cs-CZ'
+    expect(last_response.status).to eq(400)
+    expect(last_response.body).to include(::I18n.t('haveapi.documentation.oauth.sign_in_failed', locale: :cs))
+    expect(cookie_headers).not_to include('haveapi.docs.locale')
+    expect(::I18n.locale).to eq(previous)
+  end
+
+  it 'localizes expired-session notices after authentication resolves the API locale' do
+    set_cookie 'haveapi.docs.locale=cs; path=/api/', URI('https://docs.example/api/')
+    sign_in
+    DocumentationOAuthSpec::Config.users = {}
+    get 'https://docs.example/api/v1/'
+    expect(last_response.status).to eq(200)
+    expect(last_response.body).to include(::I18n.t('haveapi.documentation.oauth.session_ended', locale: :cs))
+    expect(last_response.body).not_to include('PRIVATE_ACCESS_TOKEN')
+  end
+
   def cookie_headers
     Array(last_response.headers['set-cookie']).join("\n")
   end

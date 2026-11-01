@@ -12,7 +12,7 @@ RSpec.describe HaveAPI::DocumentationSearch do
     { resources: { widget: { actions: { renew: action }, resources: {} } },
       authentication: { token: { resources: { token: { actions: { request: action }, resources: {} } } } } }
   end
-  let(:presentation) { Object.new.extend(described_class::Helpers) }
+  let(:presentation) { Object.new.extend(HaveAPI::DocumentationLocale).extend(described_class::Helpers) }
 
   def search(query, source = description)
     index = described_class::Index.new(description: source, base_path: '/v1/', version: '1', locale: 'en', visibility: 'anonymous')

@@ -1,12 +1,15 @@
 <% if @documentation_page == 'guide' %>
-  <nav aria-label="Breadcrumb">
+  <nav class="docs-breadcrumb" aria-label="<%= escape_html(documentation_t('accessibility.breadcrumb')) %>">
     <ol>
-      <li><a href="<%= escape_html(shared_documentation_url) %>">API versions</a></li>
-      <% unless title == 'HaveAPI internals' %>
-        <li><a href="<%= escape_html(shared_documentation_url('doc')) %>">HaveAPI internals</a></li>
+      <li><a href="<%= escape_html(shared_documentation_url) %>"><%= escape_html(documentation_t('labels.api_versions')) %></a></li>
+      <% unless @documentation_article_id == 'readme' %>
+        <li><a href="<%= escape_html(shared_documentation_url('doc')) %>"><%= escape_html(documentation_t('articles.readme')) %></a></li>
       <% end %>
       <li aria-current="page"><%= escape_html(title) %></li>
     </ol>
   </nav>
 <% end %>
-<%= content %>
+<% if @documentation_article_locale && @documentation_article_locale != documentation_locale %>
+  <p class="docs-article-fallback"><%= escape_html(documentation_t('article.fallback')) %></p>
+<% end %>
+<div lang="<%= escape_html(@documentation_article_locale || documentation_locale) %>"><%= content %></div>

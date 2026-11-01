@@ -43,6 +43,472 @@ en:
       token_required: This action requires token authentication
     authorization:
       insufficient_permissions: Access denied. Insufficient permissions.
+    documentation:
+      accessibility:
+        authentication_methods: Authentication methods
+        breadcrumb: Breadcrumb
+        documentation_table: Documentation table
+        link_to: Link to %{label}
+        navigation: Navigation
+        pages: Documentation pages
+        resource_actions: Actions on this resource
+        shared: Shared documentation
+        skip: Skip to content
+      article:
+        fallback: This article is available in English.
+      articles:
+        client_examples: Client examples
+        create_client: Create a client
+        documentation_oauth: Documentation OAuth
+        documentation_ui: Browsing API documentation
+        json_schema: JSON schema
+        performance: Performance
+        protocol: Protocol
+        readme: HaveAPI internals
+        typed_input_validation: Typed input validation
+      authentication:
+        disabled: Authentication is disabled for this API.
+        initialize_after: ", then choose an authentication method."
+        initialize_before: Initialize your client using the
+        overview_link: overview examples
+      browser:
+        action: Action
+        authentication: 'Authentication: %{provider}'
+        copied: Copied
+        copy_example: Copy example
+        copy_failed: Select the code and copy it.
+        example_unavailable: This example is unavailable for the selected client.
+        input: Input
+        output: Output
+        parameter: Parameter
+        resource: Resource
+        saved_example_unavailable: Your saved example is unavailable. Showing %{client}.
+        search_count: "%{count} results."
+        search_empty: No matches. Try another resource, action or parameter name.
+        search_failed: Search could not be loaded. Submit to open the results page.
+        search_loading: Loading search…
+        search_more: Showing %{count} results. More matches are available; refine
+          your search.
+        search_one: "%{count} result."
+        simple: Simple
+        thorough: With error handling
+      client:
+        and: " and "
+        library: library
+        request_examples: request examples are available on resource pages.
+      comments:
+        acquire_token: Acquire the token
+        array_subclass: which is a subclass of Array
+        cli_action_required: |-
+          Note that the client always has to call some action. APIs should provide
+          an action to get information about the current user, so that's what we're
+          calling now.
+        cli_ask_stdin: If username or password isn't provided, the user is asked on
+          stdin
+        cli_credentials: Provide credentials on command line
+        cli_oauth_unsupported: OAuth2 is not supported by HaveAPI Ruby CLI.
+        cli_read_token: |-
+          Now the token is read from disk and the user does not have to provide username
+          nor password and be authenticated
+        cli_save_token: Get token using username and password and save it to disk
+        client_instance: Client instance
+        curl_password_argument: Password given on the command line
+        curl_password_stdin: Password is asked on standard input
+        custom_type: "%{variable} is a custom type"
+        dependency_failures: Dependency failures still propagate to the application.
+        failure_branch: This sample demonstrates the failure branch above.
+        go_existing_oauth: Obtain the access token through the OAuth2 provider before
+          running this program.
+        go_existing_token: Use a token obtained through the advertised authentication
+          provider.
+        go_metadata: 'To supply advertised global metadata, select only the fields
+          you set:'
+        go_metadata_type: value has type %{type}
+        http_oauth_code: 1) Request authorization code
+        http_oauth_login: 2) The user logs in using this API
+        http_oauth_redirect: 3) The API then redirects the user back to the client
+          application
+        http_oauth_token: 4) The client application requests access token
+        instance_of: "%{variable} is an instance of %{type}"
+        js_existing_oauth: Use an existing access token; this client does not run
+          an OAuth authorization flow.
+        js_initial_response: This prints the initial response; use its action-state
+          metadata to monitor completion.
+        js_request_completion: Request success alone does not establish operation
+          completion.
+        oauth_callback_url: This example code should run on the URL below
+        oauth_check_token: Check if we already have an access token
+        oauth_client_credentials: Client id and secret are given by the API server
+        oauth_code_flow: |-
+          Follow the OAuth2 authorization process to get an access token using
+          authorization code
+        oauth_need_code: We don't have authorization code yet, request one
+        oauth_redirect: Redirect the user to the authorization endpoint
+        oauth_request_token: Request access token using the token endpoint
+        oauth_reuse_token: We're already authenticated, reuse the existing access
+          token
+        oauth_rfc: See RFC 6749 for authorization process and RFC 6750 for access
+          token usage.
+        oauth_scopes: Scopes are specific to the API implementation
+        oauth_session: OAuth2 requires session
+        oauth_store_token: Store the access token in the session
+        operation_status_fields: Inspect the operation status using its documented
+          output fields.
+        python_actions: Call API actions inside this block.
+        python_async_context: Run inside an async function after initializing api.
+        python_existing_oauth: Use an existing access token; OAuth acquisition and
+          refresh are outside this client.
+        raises_exception: Raises exception %{exception}
+        request_completion: Request success does not establish operation completion.
+        response_associative: "%{call} returns an associative array of output parameters:"
+        response_associative_arrays: "%{call} returns an array of associative arrays:"
+        response_hash: "%{call} returns a hash of output parameters:"
+        response_hashes: "%{call} returns an array of hashes:"
+        reuse_token: Reuse an existing token
+        ruby_oauth_unsupported: OAuth2 is not supported by HaveAPI Ruby client.
+        rust_action_state: Use only the separately documented action-state action;
+          this API client has no automatic wait helper.
+        rust_async_function: Use inside an async function returning %{type}.
+        rust_blocking_context: Construct, use and drop this blocking client outside
+          async runtime threads.
+        rust_completion: Request success or a timeout does not establish completion
+          of a server-side operation.
+        rust_credentials: Configure existing credentials only; building does not validate
+          them with the server.
+        rust_diagnostics: Inspect these explicitly; server diagnostics can contain
+          sensitive values.
+        rust_sync_function: Use inside a synchronous function outside async runtime
+          threads returning %{type}.
+        throws_exception: Throws exception %{exception}
+        timeout_no_cancel: A request timeout does not cancel a server operation.
+        token_credentials: Get token using username and password
+        token_reuse_next: Next time, the client can authenticate using the token directly
+        typescript_async_context: Requires an initialized api and an async context.
+        typescript_completion: Request success does not establish completion of a
+          server-side operation.
+        typescript_package: 'Configured API client: %{package}.'
+        use_previous_token: Use a previously acquired token
+      errors:
+        query: Invalid documentation query
+        resource_not_found: Documentation resource not found
+        search_query: Invalid documentation search query
+        selection: Invalid documentation selection
+      example:
+        and: and
+        authentication: authentication
+        initialization: initialization
+        initialized: Examples use an initialized API client, authenticated when required.
+        see: See
+        title: 'Example #%{index}'
+      footer:
+        generated: Generated by
+      generated:
+        go:
+          action: This action is unavailable in the configured Go API client.
+          associated_object: The Go API client requires an object for an associated
+            response field.
+          associated_response: This associated response is unavailable in the visible
+            Go API client documentation.
+          authentication: This authentication method is unavailable in the configured
+            Go API client.
+          authentication_mismatch: This authentication method does not match the configured
+            Go API client.
+          authentication_unsupported: This authentication method is unsupported by
+            the Go generator.
+          custom: The Go generator does not support Custom fields in this sample.
+          input: This input is unavailable in the configured Go API client.
+          input_field: This input field does not match the configured Go API client.
+          int64_range: This path value is outside the Go int64 range.
+          layout: The configured Go API client does not match this action layout.
+          list_input: The Go generator does not support list input in documentation
+            examples.
+          metadata: This action requires metadata that is absent from the sample.
+          mode: This Go API client example mode is unsupported.
+          name_collision: The Go generator cannot represent these parameter name collisions.
+          null_input: This Go API client input field does not accept null.
+          null_output: The Go API client cannot distinguish scalar null output from
+            its zero value.
+          object_input: The Go generator supports object input only.
+          output_layout: The Go generator does not support this output layout.
+          path_parameters: This sample does not supply all Go API client path parameters.
+          path_type: This Go API client path parameter must be an integer or string.
+          response: This response is unavailable in the configured Go API client.
+          response_field: This response field does not match the configured Go API
+            client.
+          route: The configured Go API client does not match this action route.
+          sample_output_layout: This sample does not match the Go API client output
+            layout.
+          structured_sample: This sample does not describe a structured request and
+            response.
+          unavailable: This Go API client example is unavailable.
+          undeclared_field: API example field %{path} is not declared in the Go API
+            client schema.
+          value: This sample value cannot be represented by the Go API client field
+            type.
+        labels:
+          go: Go API client
+          rust_async: Rust API client (async)
+          rust_blocking: Rust API client (blocking)
+          typescript: TypeScript API client
+        rust:
+          action: This action is unavailable in the authorized Rust API client profile.
+          action_authentication: This action requires authentication unavailable in
+            the authorized Rust API client profile.
+          action_metadata: This Rust API client action requires metadata that is absent
+            from the sample.
+          authentication: This authentication provider is unavailable in the authorized
+            Rust API client profile.
+          authentication_description: The authentication description differs from
+            the authorized help.
+          authentication_header: The Rust API client authentication header differs
+            from this API.
+          authentication_unsupported: This authentication provider is unsupported
+            by the Rust client.
+          get_custom: Rust GET requests do not support nested Custom query values.
+          get_list: Rust GET requests do not support list input.
+          input: This Rust API client action cannot represent the sample input.
+          input_layout: The sample input does not match the Rust API client layout.
+          layout: The Rust API client input or output layout differs from this API
+            action.
+          mode: Unsupported Rust execution mode.
+          parameter: A sample parameter is unavailable or has changed in this Rust
+            API client.
+          path_parameters: The sample path arguments cannot be represented by this
+            Rust API client.
+          required_input: The sample omits a required Rust API client input.
+          response: The sample response does not match this Rust API client.
+          response_layout: The sample response does not match this Rust API client
+            layout.
+          route: The Rust API client route or HTTP method differs from this API action.
+          sample_metadata: This action requires metadata that is absent from the sample.
+          section: Unsupported Rust documentation section.
+          structured_sample: This sample has no structured request or response to
+            render.
+          value: A sample value cannot be represented by this Rust API client.
+          version: The Rust API client targets a different API version.
+        typescript:
+          unavailable: This sample is unavailable or incompatible with the configured
+            TypeScript API client.
+        variants:
+          api_client: API client
+          async: Async
+          blocking: Blocking
+      labels:
+        account: Account
+        actions: Actions
+        aliases: Aliases
+        api_reference: API reference
+        api_versions: API versions
+        apply_language: Apply language
+        authentication: Authentication
+        authentication_required: Authentication required
+        authorize_url: 'Authorize URL:'
+        blocking: Blocking
+        client: Client
+        client_libraries: Client libraries
+        contents: Contents
+        default: 'Default:'
+        description: Description
+        details: Details
+        examples: Examples
+        http_header: 'HTTP header:'
+        initialization: Initialization
+        input_parameters: Input parameters
+        language: Language
+        layout: Layout
+        namespace: Namespace
+        'no': 'no'
+        no_parameters: No parameters.
+        output_parameters: Output parameters
+        overview: Overview
+        parameter: Parameter
+        path: Path
+        programming_language: Programming language
+        query_parameter: 'Query parameter:'
+        required: Required
+        resources: Resources
+        revoke_url: 'Revoke URL:'
+        scope: Scope
+        settings: Documentation settings
+        sign_in: Sign in
+        sign_out: Sign out
+        simple: Simple
+        subresources: Subresources
+        switch_user: Switch user
+        theme: Theme
+        theme_auto: Automatic theme
+        theme_dark: Dark theme
+        theme_light: Light theme
+        thorough: With error handling
+        token_url: 'Token URL:'
+        type: Type
+        usage: Using this reference
+        'yes': 'yes'
+      limitations:
+        action_authentication: This action requires an authentication provider unsupported
+          by this client.
+        authentication_provider: This authentication provider is not advertised or
+          supported by this client.
+        callback_parameter_name: This callback client cannot safely represent this
+          input parameter name.
+        duplicate_object_keys: This sample has duplicate serialized object keys.
+        go_profile: A Go API client profile is required.
+        input_description_missing: The sample supplies input for an action without
+          an input description.
+        input_hidden: The sample contains input parameters absent from the visible
+          description.
+        input_metadata: This action requires input metadata that the sample format
+          cannot supply.
+        javascript_integer: This sample contains an integer outside JavaScript's exact
+          integer range.
+        javascript_list_input: This JavaScript client accepts object input only; list
+          input cannot be represented without dropping values.
+        javascript_nested_query: This JavaScript client cannot preserve nested values
+          in query input.
+        javascript_object_input: This JavaScript client requires object input.
+        literal: This sample contains a value without a supported literal representation.
+        non_finite_number: This sample has a non-finite number.
+        object_key: This sample has a non-string object key.
+        path_argument_type: Action path arguments must be strings or integers.
+        path_arguments_missing: The sample does not supply every action path argument.
+        prose_only: This example contains prose only; no executable request is supplied.
+        python_get_input: Python GET examples support flat scalar input with bracket-free
+          names; Custom values must be strings or nullable nulls.
+        python_input: This Python client requires object or list input.
+        python_list_namespace: This Python client requires a namespace for list input.
+        python_method: This Python client supports GET, POST, PUT and DELETE actions
+          only.
+        rust_profile: A Rust API client documentation profile is required.
+        token_input_choice: This token example cannot represent its advertised input
+          choice.
+        token_input_choice_missing: This token example has no advertised input choice.
+        token_input_type: This token example has an unsupported input type.
+        token_input_value: This token client cannot send the advertised login input
+          value.
+        token_object_input: This token example requires object input.
+        typescript_profile: A TypeScript API client documentation profile is required.
+      oauth:
+        origin_required: Documentation sign-in requires its configured HTTPS origin
+        return: Return to documentation
+        session_ended: Your documentation session ended. Sign in again.
+        sign_in_failed: Documentation sign-in failed.
+        sign_out_incomplete: Local sign-out succeeded, but the server session may
+          remain until it expires.
+        sign_out_invalid: Invalid documentation sign-out request
+        switch_invalid: Invalid documentation switch request
+        try_again: Try again
+      overview:
+        api_address: The API is available at
+        authentication_link: authentication instructions
+        browse_after: to find their actions, parameters and examples.
+        browse_link: Browse all resources
+        initialize_after: when credentials are required.
+        initialize_before: Initialize your client, then follow the
+        versions: Examples target API v%{version}. API clients use their own package
+          versions and must match this API.
+      schema:
+        envelope: Envelope
+      search:
+        changed: Search has changed. Reload this page or submit to open current results.
+        label: Search API v%{version}
+        placeholder: Resource...
+        results: Search results
+        results_for: Search results for %{query}
+        submit: Search
+        suggestions: Search suggestions
+      titles:
+        search: 'Search API v%{version}: %{query}'
+      toc:
+        authorization: Authorization
+        client_definition: Client definition
+        client_side_validations: Client-side validations
+        data_types: Data types
+        describe_default_version: Describe default version
+        describe_the_whole_api: Describe the whole API
+        description_format: Description format
+        design_rules: Design rules
+        http_basic_authentication: HTTP basic authentication
+        input_output_formats: Input/output formats
+        input_output_parameters: Input/output parameters
+        layouts: Layouts
+        list_api_versions: List API versions
+        necessary_features_to_implement: Necessary features to implement
+        object_like_access: Object-like access
+        parameters: Parameters
+        protocol_definition: Protocol definition
+        request: Request
+        resource_associations: Resource associations
+        resource_tree: Resource tree
+        response: Response
+        self_description: Self-description
+        supplemental_features: Supplemental features
+        token_authentication: Token authentication
+        version: Version
+      usage:
+        below: below and
+        browse: to browse the API, then choose a resource to see its actions, parameters
+          and examples.
+        choose: Choose a Programming language and Client variant for the examples.
+          The Examples menu offers the selected client's supported formats. Your choices
+          apply to every example and stay selected as you browse.
+        credentials: for credentials. Open
+        search: Search finds resources, actions and input or output parameters. Follow
+          a result to its reference entry.
+        sign_in: Sign in to show only those available to your account.
+        signed_out: While signed out, the reference shows all declared resources,
+          actions and parameters.
+        start: Start with
+      validators:
+        accept: Must equal %{value}.
+        additional: Additional details
+        allowed: Allowed values
+        caption: Validation rules
+        characters: " characters"
+        confirm_different: Must differ from parameter %{parameter}.
+        confirm_equal: Must equal parameter %{parameter}.
+        custom: 'Application-specific rule: %{rule}'
+        details: Details
+        disallowed: Disallowed values
+        empty_allowed: Empty values are allowed.
+        empty_disallowed: Must not be empty; strings must contain a non-whitespace
+          character.
+        empty_set: The set is empty.
+        even: Must be even.
+        even_disabled: 'Even-only restriction: disabled.'
+        format_match: 'Must match this regular expression:'
+        format_no_match: 'Must not match this regular expression:'
+        items: " items"
+        length_equal: Length must equal %{value}%{unit}.
+        length_maximum: 'Maximum length: %{value}%{unit} (inclusive).'
+        length_minimum: 'Minimum length: %{value}%{unit} (inclusive).'
+        maximum: 'Maximum: %{value} (inclusive).'
+        message: 'Validation error message:'
+        metadata: 'Supplied validator metadata:'
+        minimum: 'Minimum: %{value} (inclusive).'
+        multiple: Must be a multiple of %{value}, measured from zero.
+        names:
+          accept: Accept
+          confirm: Confirm
+          custom: Custom
+          exclude: Exclude
+          format: Format
+          include: Include
+          length: Length
+          number: Number
+          present: Present
+        number: Must be a number after parameter type conversion.
+        odd: Must be odd.
+        odd_disabled: 'Odd-only restriction: disabled.'
+        present: Must be supplied and cannot be null.
+        ruby_value: Ruby value
+        rule: Rule
+        step: 'Step: %{value}, measured from %{start}.'
+      version:
+        default: "(default)"
+        label: Version %{version}
+      visibility:
+        account: Showing resources, actions and parameters available to this account.
+        all: Showing all resources, actions and parameters.
     errors:
       action_not_found: Action not found
       bad_accept_header: Invalid Accept header

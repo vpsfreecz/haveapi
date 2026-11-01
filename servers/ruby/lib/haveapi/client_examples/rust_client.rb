@@ -33,7 +33,7 @@ module HaveAPI::ClientExamples
 
     def render_rust(kind, rendering_context: context, **)
       unless self.class.available?(rendering_context)
-        return { status: :limitation, reason: 'A Rust API client documentation profile is required.' }.freeze
+        return { status: :limitation, reason: HaveAPI.t('haveapi.documentation.limitations.rust_profile') }.freeze
       end
 
       rendering_context.profile.adapter.render(kind:, context: rendering_context, mode: rust_mode, **)

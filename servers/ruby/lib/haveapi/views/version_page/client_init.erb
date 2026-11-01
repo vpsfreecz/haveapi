@@ -1,2 +1,2 @@
-<h4><%= escape_html(client.label) %></h4>
+<h4><%= escape_html(documentation_client_label(client)) %></h4>
 <%= erb :"version_page/client_result", locals: {client: client, result: result} %>

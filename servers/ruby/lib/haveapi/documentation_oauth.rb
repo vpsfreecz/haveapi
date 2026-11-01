@@ -135,9 +135,9 @@ module HaveAPI
       @purposes = %w[pending session].to_h { |kind| [kind, "haveapi.docs.#{binding}.#{kind}"] }.freeze
       @names = %w[pending session].to_h { |kind| [kind, "haveapi_docs_#{Digest::SHA256.hexdigest(@path)[0, 12]}_#{kind}"] }.freeze
       that = self
-      sinatra.get(@routes.fetch('login')) { that.login(self) }
-      sinatra.get(@routes.fetch('callback')) { that.callback(self) }
-      sinatra.post(@routes.fetch('logout')) { that.logout(self) }
+      sinatra.get(@routes.fetch('login')) { with_documentation_locale(persist: false) { that.login(self) } }
+      sinatra.get(@routes.fetch('callback')) { with_documentation_locale(persist: false) { that.callback(self) } }
+      sinatra.post(@routes.fetch('logout')) { with_documentation_locale(persist: false) { that.logout(self) } }
     end
 
     def authenticate(handler, version)
@@ -153,7 +153,7 @@ module HaveAPI
         handler.instance_variable_set(:@documentation_oauth_csrf, session.fetch('csrf'))
       else
         clear_cookie(handler, 'session')
-        handler.instance_variable_set(:@documentation_oauth_message, 'Your documentation session ended. Sign in again.')
+        handler.instance_variable_set(:@documentation_oauth_message, HaveAPI.message('haveapi.documentation.oauth.session_ended'))
       end
       user
     end
@@ -228,7 +228,7 @@ module HaveAPI
       session = read_cookie(handler, 'session')
       csrf = handler.params['csrf']
       unless handler.request.env['HTTP_ORIGIN'] == @origin && session && nonce?(csrf) && secure_equal?(csrf, session['csrf'])
-        handler.halt(403, 'Invalid documentation sign-out request')
+        handler.halt(403, handler.documentation_t('oauth.sign_out_invalid'))
       end
       clear_cookie(handler, 'session')
       clear_cookie(handler, 'pending')
@@ -238,8 +238,8 @@ module HaveAPI
         @transport.post(@endpoints.fetch(:revoke), parameters)
       rescue Failure
         handler.halt(502, { 'content-type' => 'text/html; charset=utf-8' },
-                     '<p>Local sign-out succeeded, but the server session may remain until it expires.</p>' \
-                     "<p><a href=\"#{CGI.escapeHTML(destination_url('version' => @server.default_version.to_s))}\">Return to documentation</a></p>")
+                     "<p>#{CGI.escapeHTML(handler.documentation_t('oauth.sign_out_incomplete'))}</p>" \
+                     "<p><a href=\"#{CGI.escapeHTML(destination_url('version' => @server.default_version.to_s))}\">#{CGI.escapeHTML(handler.documentation_t('oauth.return'))}</a></p>")
       end
       if switch_user
         handler.redirect("#{@origin}#{@routes.fetch('login')}?#{URI.encode_www_form(version: @server.default_version.to_s)}", 303)
@@ -274,7 +274,7 @@ module HaveAPI
     end
 
     def require_origin(handler)
-      handler.halt(400, 'Documentation sign-in requires its configured HTTPS origin') unless documentation_origin?(handler)
+      handler.halt(400, handler.documentation_t('oauth.origin_required')) unless documentation_origin?(handler)
     end
 
     def protect_response(handler, referrer_policy: 'no-referrer')
@@ -339,12 +339,12 @@ module HaveAPI
 
       unless @switch_user && selected == [%w[switch_user 1]] && parameters['switch_user'] == '1' &&
              [nil, 'application/x-www-form-urlencoded'].include?(request.media_type)
-        handler.halt(403, 'Invalid documentation switch request')
+        handler.halt(403, handler.documentation_t('oauth.switch_invalid'))
       end
 
       true
     rescue ArgumentError
-      handler.halt(403, 'Invalid documentation switch request')
+      handler.halt(403, handler.documentation_t('oauth.switch_invalid'))
     end
 
     def nonce?(value)
@@ -392,7 +392,7 @@ module HaveAPI
       payload
     rescue ActiveSupport::MessageEncryptor::InvalidMessage, Failure, ArgumentError, TypeError
       clear_cookie(handler, kind)
-      handler.instance_variable_set(:@documentation_oauth_message, 'Your documentation session ended. Sign in again.') if kind == 'session'
+      handler.instance_variable_set(:@documentation_oauth_message, HaveAPI.message('haveapi.documentation.oauth.session_ended')) if kind == 'session'
       nil
     end
 
@@ -405,7 +405,7 @@ module HaveAPI
       protect_response(handler)
       link = "#{@origin}#{@routes.fetch('login')}"
       handler.halt(400, { 'content-type' => 'text/html; charset=utf-8' },
-                   "<p>Documentation sign-in failed. <a href=\"#{CGI.escapeHTML(link)}\">Try again</a>.</p>")
+                   "<p>#{CGI.escapeHTML(handler.documentation_t('oauth.sign_in_failed'))} <a href=\"#{CGI.escapeHTML(link)}\">#{CGI.escapeHTML(handler.documentation_t('oauth.try_again'))}</a>.</p>")
     end
   end
 end

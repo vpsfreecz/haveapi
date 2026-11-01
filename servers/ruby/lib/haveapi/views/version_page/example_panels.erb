@@ -11,7 +11,7 @@
       <% if legacy_baseid %><%= documentation_reference_alias("#{baseid}-#{client.id}-thorough") %><% end %>
     <% end %>
     <details data-example-panel data-client="<%= escape_html(client.id) %>" data-language="<%= escape_html(client.language) %>" data-variant="<%= escape_html(client.variant) %>" data-detail="<%= detail %>" id="<%= escape_html("#{baseid}-#{client.id}#{suffix}") %>"<% if detail == :simple %> open<% end %>>
-      <summary><%= escape_html(client.label) %> · <%= detail == :simple ? 'Simple' : 'With error handling' %></summary>
+      <summary><%= escape_html(documentation_client_label(client)) %> · <%= escape_html(documentation_t(detail == :simple ? 'labels.simple' : 'labels.thorough')) %></summary>
       <%= erb :'version_page/client_result', locals: {client: client, result: result} %>
     </details>
   <% end %>

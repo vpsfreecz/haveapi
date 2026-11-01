@@ -74,7 +74,7 @@ module HaveAPI::ClientExamples
     end
 
     def auth(method, description)
-      return limitation('This authentication provider is not advertised or supported by this client.') unless supported_auth?(method)
+      return limitation(HaveAPI.t('haveapi.documentation.limitations.authentication_provider')) unless supported_auth?(method)
 
       code_result do
         body = thorough? ? "print(\"Authenticated\")\n" : "# Call API actions inside this block.\npass\n"
@@ -112,13 +112,13 @@ module HaveAPI::ClientExamples
         path, request = structured_sample(sample)
         method = field(current_action, :method).to_s.upcase
         unless %w[GET POST PUT DELETE].include?(method)
-          raise Unsupported, 'This Python client supports GET, POST, PUT and DELETE actions only.'
+          raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.python_method')
         end
         unless request.nil? || request.is_a?(Hash) || request.is_a?(Array)
-          raise Unsupported, 'This Python client requires object or list input.'
+          raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.python_input')
         end
         if request.is_a?(Array) && field(field(current_action, :input), :namespace).to_s.empty?
-          raise Unsupported, 'This Python client requires a namespace for list input.'
+          raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.python_list_namespace')
         end
 
         check_get_sample(request) if method == 'GET'
@@ -142,7 +142,7 @@ module HaveAPI::ClientExamples
         end
         if field(current_action, :auth)
           method = %i[token basic oauth2].find { |name| supported_auth?(name) }
-          raise Unsupported, 'This action requires an authentication provider unsupported by this client.' unless method
+          raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.action_authentication') unless method
 
           provider, auth = {
             token: ['TokenAuth', 'TokenAuth("example-token")'],
@@ -180,7 +180,7 @@ module HaveAPI::ClientExamples
       end)
       return if safe_namespace && safe_request
 
-      raise Unsupported, 'Python GET examples support flat scalar input with bracket-free names; Custom values must be strings or nullable nulls.'
+      raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.python_get_input')
     end
   end
 end

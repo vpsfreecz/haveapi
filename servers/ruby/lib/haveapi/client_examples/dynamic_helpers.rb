@@ -47,9 +47,9 @@ module HaveAPI::ClientExamples
         result = {}
         value.each do |key, entry|
           unless key.is_a?(String) || key.is_a?(Symbol)
-            raise Unsupported, 'This sample has a non-string object key.'
+            raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.object_key')
           end
-          raise Unsupported, 'This sample has duplicate serialized object keys.' if result.has_key?(key.to_s)
+          raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.duplicate_object_keys') if result.has_key?(key.to_s)
 
           result[key.to_s] = json_data(entry)
         end
@@ -59,17 +59,17 @@ module HaveAPI::ClientExamples
       when String, Integer, TrueClass, FalseClass, NilClass
         value
       when Float
-        raise Unsupported, 'This sample has a non-finite number.' unless value.finite?
+        raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.non_finite_number') unless value.finite?
 
         value
       else
-        raise Unsupported, 'This sample contains a value without a supported literal representation.'
+        raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.literal')
       end
     end
 
     def structured_sample(sample)
       unless sample.is_a?(Hash) && (!field(sample, :request).nil? || !field(sample, :response).nil?)
-        raise Unsupported, 'This example contains prose only; no executable request is supplied.'
+        raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.prose_only')
       end
 
       %i[global object].each do |scope|
@@ -77,29 +77,29 @@ module HaveAPI::ClientExamples
 
         input = field(field(field(current_action, :meta), scope), :input)
         if field(input, :parameters, {}).values.any? { |parameter| field(parameter, :required) }
-          raise Unsupported, 'This action requires input metadata that the sample format cannot supply.'
+          raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.input_metadata')
         end
       end
 
       placeholders = field(current_action, :path, '').scan(/\{([a-zA-Z0-9_-]+)\}/).flatten
       values = field(sample, :path_params, []) || []
       unless values.is_a?(Array) && values.length == placeholders.length
-        raise Unsupported, 'The sample does not supply every action path argument.'
+        raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.path_arguments_missing')
       end
       unless values.all? { |value| value.is_a?(String) || value.is_a?(Integer) }
-        raise Unsupported, 'Action path arguments must be strings or integers.'
+        raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.path_argument_type')
       end
 
       request = field(sample, :request)
       input = field(current_action, :input)
       if !request.nil? && input.nil? && request != {}
-        raise Unsupported, 'The sample supplies input for an action without an input description.'
+        raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.input_description_missing')
       end
 
       if request.is_a?(Hash) && input
         known = field(input, :parameters, {}).keys.map(&:to_s)
         unless (request.keys.map(&:to_s) - known).empty?
-          raise Unsupported, 'The sample contains input parameters absent from the visible description.'
+          raise Unsupported, HaveAPI.t('haveapi.documentation.limitations.input_hidden')
         end
       end
       [placeholders.zip(values).to_h, json_data(request)]

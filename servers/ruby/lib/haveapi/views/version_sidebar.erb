@@ -2,22 +2,22 @@
 <% if (search_options = documentation_search_form_options(id: 'docs-search-sidebar')) %>
   <%= erb :'documentation/search_form', locals: search_options %>
 <% end %>
-<nav aria-label="Documentation pages">
+<nav aria-label="<%= escape_html(documentation_t('accessibility.pages')) %>">
   <ul>
-    <li><a href="<%= escape_html(documentation_url) %>"<% if @documentation_page == 'overview' %> aria-current="page"<% end %>>Overview</a></li>
+    <li><a href="<%= escape_html(documentation_url) %>"<% if @documentation_page == 'overview' %> aria-current="page"<% end %>><%= escape_html(documentation_t('labels.overview')) %></a></li>
     <li>
-      <a href="<%= escape_html(documentation_url(page: 'authentication')) %>"<% if @documentation_page == 'authentication' %> aria-current="page"<% end %>>Authentication</a>
+      <a href="<%= escape_html(documentation_url(page: 'authentication')) %>"<% if @documentation_page == 'authentication' %> aria-current="page"<% end %>><%= escape_html(documentation_t('labels.authentication')) %></a>
       <% if @documentation_page == 'authentication' %>
-        <nav aria-label="Authentication methods" data-action-nav><%= erb :'version_sidebar/auth_nav', locals: {methods: @help[:authentication]} %></nav>
+        <nav aria-label="<%= escape_html(documentation_t('accessibility.authentication_methods')) %>" data-action-nav><%= erb :'version_sidebar/auth_nav', locals: {methods: @help[:authentication]} %></nav>
       <% end %>
     </li>
-    <li><a href="<%= escape_html(documentation_url(page: 'resources')) %>"<% if @documentation_page == 'resources' %> aria-current="page"<% end %> data-resource-directory-link>Resources</a></li>
+    <li><a href="<%= escape_html(documentation_url(page: 'resources')) %>"<% if @documentation_page == 'resources' %> aria-current="page"<% end %> data-resource-directory-link><%= escape_html(documentation_t('labels.resources')) %></a></li>
   </ul>
 </nav>
 <% if @documentation_resource %>
   <p data-current-resource><a href="<%= escape_html(documentation_url(resource: @documentation_resource[:key])) %>"><strong><%= escape_html(@documentation_resource[:key]) %></strong></a></p>
-  <nav aria-label="Actions on this resource" data-action-nav>
-    <h2>Actions</h2>
+  <nav aria-label="<%= escape_html(documentation_t('accessibility.resource_actions')) %>" data-action-nav>
+    <h2><%= escape_html(documentation_t('labels.actions')) %></h2>
     <ul class="docs-action-list">
       <% sort_hash(@documentation_resource[:info][:actions]).each do |action, info| %>
         <% target = documentation_resource_target(resource_path: @documentation_resource[:path], action_name: action) %>
@@ -33,8 +33,8 @@
     </ul>
   </nav>
   <% unless @documentation_resource[:info][:resources].empty? %>
-    <nav aria-label="Subresources">
-      <h2>Subresources</h2>
+    <nav aria-label="<%= escape_html(documentation_t('labels.subresources')) %>">
+      <h2><%= escape_html(documentation_t('labels.subresources')) %></h2>
       <ul>
         <% sort_hash(@documentation_resource[:info][:resources]).each do |child, _child_info| %>
           <% child_path = @documentation_resource[:path] + [child.to_s] %>
@@ -45,16 +45,16 @@
   <% end %>
 <% end %>
 <div class="docs-preferences">
-  <label>Language <select data-language-select>
+  <label><%= escape_html(documentation_t('labels.programming_language')) %> <select data-language-select>
     <% documentation_client_metadata.uniq { |client| client[:language] }.each do |client| %>
       <option value="<%= escape_html(client[:language]) %>"><%= escape_html(client[:language_label]) %></option>
     <% end %>
   </select></label>
-  <label data-variant-control>Client <select data-variant-select>
+  <label data-variant-control><%= escape_html(documentation_t('labels.client')) %> <select data-variant-select>
     <% documentation_clients.each do |client| %>
-      <option value="<%= escape_html(client.id) %>"><%= escape_html(client.variant || client.language_label) %></option>
+      <option value="<%= escape_html(client.id) %>"><%= escape_html(documentation_client_variant(client) || client.language_label) %></option>
     <% end %>
   </select></label>
-  <label data-detail-control>Examples <select data-detail-select><option value="simple">Simple</option><option value="thorough">With error handling</option></select></label>
+  <label data-detail-control><%= escape_html(documentation_t('labels.examples')) %> <select data-detail-select><option value="simple"><%= escape_html(documentation_t('labels.simple')) %></option><option value="thorough"><%= escape_html(documentation_t('labels.thorough')) %></option></select></label>
   <p data-preference-status role="status"></p>
 </div>

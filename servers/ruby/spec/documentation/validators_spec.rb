@@ -120,4 +120,29 @@ describe HaveAPI::DocumentationValidators do
     expect(render(payload, { 'extra' => payload })).to include('<th scope="row">&lt;script&gt;&amp;&quot;</th>')
     expect(Marshal.dump(options)).to eq(before)
   end
+
+  it 'localizes framework presentation while preserving metadata and machine values' do
+    validators = {
+      present: { empty: false }, include: { values: { 'ready' => 'Application label' } },
+      number: { min: 2, step: 3, even: true }, length: { min: 2, max: 8 },
+      custom: 'Application rule', extension: { 'supplied' => 'Untranslated metadata' }
+    }
+    before = Marshal.dump(validators)
+    html = I18n.with_locale(:cs) { described_class.render(validators, type: 'String') }
+
+    expect(html).to include('<caption>Validační pravidla</caption>', '<th scope="col">Pravidlo</th>',
+                            '<th scope="col">Podrobnosti</th>', 'Musí být uvedeno', 'Povolené hodnoty',
+                            '<code>ready</code>: Application label', 'Application rule', 'Untranslated metadata')
+    expect(html).not_to include('Validation rules', 'Allowed values', 'Minimum length:')
+    expect(Marshal.dump(validators)).to eq(before)
+  end
+
+  it 'escapes translated text and interpolated metadata independently' do
+    html = I18n.with_locale(:cs) do
+      render(:confirm, { parameter: '<script>&', equal: false })
+    end
+
+    expect(html).to include('Musí se lišit od parametru <code>&lt;script&gt;&amp;</code>.')
+    expect(html).not_to include('<script>', '&amp;lt;')
+  end
 end

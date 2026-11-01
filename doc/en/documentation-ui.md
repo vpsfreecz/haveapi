@@ -138,6 +138,16 @@ Use the copy icon inside a code block's top-right corner to copy its displayed c
 If the browser cannot copy it, select the code and copy it manually. Copying an
 example does not change the selected language, detail or scroll position.
 
+Without JavaScript, choose a programming language and press **Apply**. The page
+reloads with that language's client variants. Choose the variant and example
+detail, then press **Apply** again. The selected example opens in each group;
+other examples stay available in their disclosure panels. These GET submissions
+retain the current page, search query and explicit documentation language, and
+may drop the fragment. They do not save example preferences. With JavaScript,
+changes apply immediately and the Apply button is hidden. Explicit example
+choices in a URL take precedence over saved choices for that page without
+saving them on load.
+
 The browser stores theme, programming language, client variant and example detail
 in `haveapi.docs.preferences.v1`; its `language` field selects the programming
 language. The documentation language uses its separate cookie. Preference

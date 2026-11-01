@@ -44,17 +44,32 @@
     </nav>
   <% end %>
 <% end %>
-<div class="docs-preferences">
-  <label><%= escape_html(documentation_t('labels.programming_language')) %> <select data-language-select>
-    <% documentation_client_metadata.uniq { |client| client[:language] }.each do |client| %>
-      <option value="<%= escape_html(client[:language]) %>"><%= escape_html(client[:language_label]) %></option>
+<% selection = documentation_example_selection %>
+<% if selection[:client] %>
+<% metadata = documentation_client_metadata %>
+<% variants = metadata.select { |entry| entry[:language] == selection[:language] } %>
+<% levels = metadata.find { |entry| entry[:id] == selection[:client].id }.fetch(:details) %>
+<% detail = documentation_example_detail(levels) %>
+<form class="docs-preferences" data-example-preferences method="get" action="<%= escape_html(request.path) %>"<% if selection[:explicit] %> data-example-selection="<%= escape_html(documentation_json(language: selection[:language], client: selection[:client].id, detail:)) %>"<% end %>>
+  <% documentation_example_form_parameters.each do |key, value| %>
+    <input type="hidden" name="<%= escape_html(key) %>" value="<%= escape_html(value) %>">
+  <% end %>
+  <label><%= escape_html(documentation_t('labels.programming_language')) %> <select data-language-select name="example_language">
+    <% metadata.uniq { |entry| entry[:language] }.each do |entry| %>
+      <option value="<%= escape_html(entry[:language]) %>"<% if entry[:language] == selection[:language] %> selected<% end %>><%= escape_html(entry[:language_label]) %></option>
     <% end %>
   </select></label>
-  <label data-variant-control><%= escape_html(documentation_t('labels.client')) %> <select data-variant-select>
-    <% documentation_clients.each do |client| %>
-      <option value="<%= escape_html(client.id) %>"><%= escape_html(documentation_client_variant(client) || client.language_label) %></option>
+  <label data-variant-control><%= escape_html(documentation_t('labels.client')) %> <select data-variant-select name="example_client"<% if variants.length < 2 %> disabled<% end %>>
+    <% variants.each do |entry| %>
+      <option value="<%= escape_html(entry[:id]) %>"<% if entry[:id] == selection[:client].id %> selected<% end %>><%= escape_html(entry[:variant] || entry[:language_label]) %></option>
     <% end %>
   </select></label>
-  <label data-detail-control><%= escape_html(documentation_t('labels.examples')) %> <select data-detail-select><option value="simple"><%= escape_html(documentation_t('labels.simple')) %></option><option value="thorough"><%= escape_html(documentation_t('labels.thorough')) %></option></select></label>
+  <% if variants.length < 2 %><input type="hidden" name="example_client" value="<%= escape_html(selection[:client].id) %>"><% end %>
+  <label data-detail-control><%= escape_html(documentation_t('labels.examples')) %> <select data-detail-select name="example_detail"<% if levels.length < 2 %> disabled<% end %>>
+    <% levels.each do |level| %><option value="<%= escape_html(level) %>"<% if level == detail %> selected<% end %>><%= escape_html(documentation_t(level == 'thorough' ? 'labels.thorough' : 'labels.simple')) %></option><% end %>
+  </select></label>
+  <% if levels.length < 2 %><input type="hidden" name="example_detail" value="<%= escape_html(detail) %>"><% end %>
+  <button type="submit" data-apply-examples><%= escape_html(documentation_t('labels.apply_examples')) %></button>
   <p data-preference-status role="status"></p>
-</div>
+</form>
+<% end %>

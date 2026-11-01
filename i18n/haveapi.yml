@@ -245,6 +245,7 @@ en:
         settings: Documentation settings
         language: Language
         apply_language: Apply language
+        apply_examples: Apply
         theme: Theme
         theme_auto: Automatic theme
         theme_light: Light theme
@@ -923,6 +924,7 @@ cs:
         settings: Nastavení dokumentace
         language: Jazyk
         apply_language: Použít jazyk
+        apply_examples: Použít
         theme: Motiv
         theme_auto: Automatický motiv
         theme_light: Světlý motiv

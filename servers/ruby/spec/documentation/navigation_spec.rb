@@ -232,7 +232,7 @@ describe DocumentationNavigationSpec do
 
   it 'links nested resource breadcrumbs to the directory and each real parent' do
     get '/v1/?resource=widget.child'
-    breadcrumb = last_response.body.match(%r{<nav aria-label="Breadcrumb" data-resource-breadcrumbs>(.*?)</nav>}m)[1]
+    breadcrumb = last_response.body.match(%r{<nav class="docs-breadcrumb"[^>]*data-resource-breadcrumbs>(.*?)</nav>}m)[1]
     expect(breadcrumb).to include('href="/v1/?page=resources"', 'href="/v1/?resource=widget"',
                                   '<li aria-current="page">Child</li>')
     expect(last_response.body.index('data-action-nav')).to be < last_response.body.index('docs-preferences')

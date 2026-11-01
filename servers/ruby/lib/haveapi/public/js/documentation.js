@@ -593,6 +593,20 @@
         && typeof client.language_label === 'string' && client.id && client.language
         && list.findIndex(function (entry) { return entry && entry.id === client.id; }) === index;
     }) : [];
+    all('[data-example-preferences]').forEach(function (form) {
+      try {
+        var selected = JSON.parse(form.getAttribute('data-example-selection'));
+        var client = selected && clients.find(function (entry) { return entry.id === selected.client && entry.language === selected.language; });
+        if (client) {
+          state.language = client.language;
+          state.clients[client.language] = client.id;
+          state.detail = selected.detail === 'thorough' ? 'thorough' : 'simple';
+        }
+      } catch (error) { /* Invalid optional selection leaves saved preferences available. */ }
+      form.addEventListener('submit', function (event) { event.preventDefault(); });
+      var apply = form.querySelector('[data-apply-examples]');
+      if (apply) apply.hidden = true;
+    });
     var sidebar = root.querySelector('[data-docs-sidebar]');
     var examples = all('[data-example]');
     var sections = all('[data-doc-section]');

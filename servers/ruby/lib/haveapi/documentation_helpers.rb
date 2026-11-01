@@ -72,6 +72,7 @@ module HaveAPI
       return render_documentation_search_index if documentation_search_index_request?
 
       select_documentation_page
+      documentation_example_selection
       @documentation_ui = true
       content_type 'text/html'
       erb :doc_layout, layout: :main_layout do
@@ -176,6 +177,52 @@ module HaveAPI
 
     def documentation_permalink(id, label)
       "<a class=\"docs-permalink\" href=\"##{escape_html(id)}\" aria-label=\"#{escape_html(documentation_t('accessibility.link_to', label:))}\"><span aria-hidden=\"true\">#</span></a>"
+    end
+
+    def documentation_example_selection
+      return @documentation_example_selection if defined?(@documentation_example_selection)
+
+      keys = %w[example_language example_client example_detail]
+      pairs = URI.decode_www_form(request.query_string, Encoding::ASCII_8BIT).map do |key, value|
+        [key.force_encoding(Encoding::UTF_8), value.force_encoding(Encoding::UTF_8)]
+      end
+      selected = pairs.select { |key, _| key.match?(/\Aexample_(?:language|client|detail)(?:\[|\z)/) }
+      unless selected.all? { |key, value| keys.include?(key) && key.valid_encoding? && value.valid_encoding? } &&
+             selected.map(&:first).uniq.length == selected.length
+        halt 400, documentation_t('errors.selection')
+      end
+      requested = selected.to_h
+      clients = documentation_clients
+      client = clients.find { |entry| entry.id == requested['example_client'] }
+      language = if requested.has_key?('example_language')
+                   requested['example_language']
+                 else
+                   client&.language
+                 end
+      group = clients.select { |entry| entry.language == language }
+      if group.empty?
+        language = clients.first&.language
+        group = clients.select { |entry| entry.language == language }
+      end
+      client = group.find { |entry| entry.id == requested['example_client'] } || group.first
+      @documentation_example_selection = {
+        client:, language:, detail: requested['example_detail'] == 'thorough' ? 'thorough' : 'simple',
+        explicit: selected.any?
+      }
+    rescue ArgumentError
+      halt 400, documentation_t('errors.selection')
+    end
+
+    def documentation_example_detail(levels)
+      requested = documentation_example_selection[:detail]
+      levels.include?(requested) ? requested : 'simple'
+    end
+
+    def documentation_example_form_parameters
+      parameters = documentation_selection.to_a
+      parameters << ['q', documentation_search_query] unless documentation_search_query.empty?
+      parameters << ['doc_lang', documentation_locale_override] if documentation_locale_override
+      parameters
     end
 
     def documentation_client_metadata

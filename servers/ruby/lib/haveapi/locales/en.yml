@@ -299,6 +299,7 @@ en:
         aliases: Aliases
         api_reference: API reference
         api_versions: API versions
+        apply_examples: Apply
         apply_language: Apply language
         authentication: Authentication
         authentication_required: Authentication required

@@ -44,7 +44,7 @@ module HaveAPI::TypeScriptClient
     def walk(map, parents, authentication: false)
       fail_at('resources must be an object', parents) unless map.is_a?(Hash)
 
-      scope = Naming::Scope.new
+      scope = Naming::Scope.new(parents.empty? && !authentication ? Naming::RESERVED + ['describe'] : Naming::RESERVED)
       map.sort.map do |name, desc|
         path = parents + [name]
         fail_at('resource must be an object', path) unless desc.is_a?(Hash)
@@ -71,7 +71,7 @@ module HaveAPI::TypeScriptClient
       fail_at('action must be an object', path) unless desc.is_a?(Hash)
       accessor = scope.add(Naming.identifier(name), path.join('/'))
       export = Naming.export(path)
-      %w[Path Input Output GlobalInput GlobalOutput ObjectInput ObjectOutput Options].each do |suffix|
+      %w[Path Input Output GlobalInput GlobalOutput ObjectInput ObjectOutput Options DescribeOptions Action].each do |suffix|
         @exports.add("#{export}#{suffix}", "#{path.join('/')} (#{suffix})")
       end
       aliases = desc.fetch('aliases', [])
@@ -88,7 +88,8 @@ module HaveAPI::TypeScriptClient
       placeholders.each { |item| placeholder_scope.add(Naming.identifier(item), (path + ['path', item]).join('/')) }
       action = {
         schema_path: path, export_name: export, accessor_name: accessor, aliases:, method: desc['method'],
-        path_template: route, placeholders:, auth: desc.fetch('auth', true) != false, blocking: desc['blocking'] == true,
+        path_template: route, help_path: help_route(desc, route, path, placeholders, authentication:),
+        placeholders:, auth: desc.fetch('auth', true) != false, blocking: desc['blocking'] == true,
         input: io(desc['input'], path + ['input'], input: true), output: io(desc['output'], path + ['output'])
       }
       metadata = desc['meta'] || {}
@@ -184,6 +185,22 @@ module HaveAPI::TypeScriptClient
         fail_at('unsupported action path template', schema_path)
       end
       "/#{relative}"
+    end
+
+    def help_route(desc, action_route, path, placeholders, authentication:)
+      return "#{action_route}?method=#{desc['method']}" unless desc.has_key?('help')
+
+      help = desc['help']
+      fail_at('invalid action help route', path) unless help.is_a?(String)
+      help_path, query = help.split('?', -1)
+      unless query == "method=#{desc['method']}"
+        fail_at('action help method differs from action method', path)
+      end
+      relative = route(help_path, path + ['help'], authentication:)
+      unless relative.scan(/\{([^}]+)\}/).flatten.uniq.sort == placeholders.sort
+        fail_at('action help placeholders differ from action path', path)
+      end
+      "#{relative}?#{query}"
     end
 
     def freeze_data(value)

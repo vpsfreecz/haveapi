@@ -5,7 +5,7 @@ module HaveAPI::TypeScriptClient
   # Templates are source inputs loaded once, outside the pure emission seam.
   class Emitter
     TEMPLATE_ROOT = File.expand_path('../../../template', __dir__).freeze
-    TEMPLATES = %w[action api index resource runtime types].to_h do |name|
+    TEMPLATES = %w[action api descriptions index resource runtime types].to_h do |name|
       [name, File.read(File.join(TEMPLATE_ROOT, "#{name}.ts.erb"), encoding: 'UTF-8').freeze]
     end.freeze
     IO_SUFFIXES = {
@@ -35,7 +35,7 @@ module HaveAPI::TypeScriptClient
     private
 
     def file_plan
-      plan = %w[api index runtime types].map { |name| { path: "#{name}.ts", template: name, origin: "generated root #{name}" } }
+      plan = %w[api descriptions index runtime types].map { |name| { path: "#{name}.ts", template: name, origin: "generated root #{name}" } }
       walk = lambda do |items, parent|
         items.each do |resource|
           directory = "#{parent}resources/#{resource.fetch(:accessor_name)}/"
@@ -89,7 +89,7 @@ module HaveAPI::TypeScriptClient
         [@resource_paths.fetch(resource.fetch(:schema_path)), ["#{resource.fetch(:export_name)}Resource"]]
       end
       action_exports = @ir.fetch(:actions).map do |action|
-        names = [*IO_SUFFIXES.values, 'Path', 'Options'].map { |suffix| action_type(action, suffix) }
+        names = [*IO_SUFFIXES.values, 'Path', 'Options', 'DescribeOptions', 'Action'].map { |suffix| action_type(action, suffix) }
         [@action_paths.fetch(action.fetch(:schema_path)), names]
       end
       (resource_exports + action_exports).sort.map do |path, names|
@@ -178,7 +178,8 @@ module HaveAPI::TypeScriptClient
         elsif key == :output && io && io.fetch(:layout) == 'object_list' && action[:object_output]
           lines << "  #{literal(@ir.fetch(:metadata_namespace))}?: #{action_type(action, 'ObjectOutput')} | null;"
         end
-        shape = lines.empty? ? 'Record<string, never>' : "{\n#{lines.join("\n")}\n}"
+        empty = key == :global_output ? 'Record<never, never>' : 'Record<string, never>'
+        shape = lines.empty? ? empty : "{\n#{lines.join("\n")}\n}"
         shape = "Array<#{shape}>" if io && io.fetch(:layout).end_with?('_list')
         shape = 'unknown' if key == :output && io.nil?
         declarations << "export type #{action_type(action, suffix)} = #{shape};"
@@ -198,6 +199,13 @@ module HaveAPI::TypeScriptClient
       options << "  signal?: RequestSpec['signal'];"
       options << "  timeoutMs?: RequestSpec['timeoutMs'];"
       declarations << "export interface #{action_type(action, 'Options')} {\n#{options.join("\n")}\n}"
+      declarations << "export interface #{action_type(action, 'DescribeOptions')} extends DescribeOptions {\n  path#{'?' if paths.empty?}: #{paths.empty? ? 'undefined' : action_type(action, 'Path')};\n}"
+      declarations << <<~TS.chomp
+        export interface #{action_type(action, 'Action')} {
+          (options#{'?' unless options_required?(action)}: #{action_type(action, 'Options')}): Promise<ActionResult<#{action_type(action, 'Output')}, #{action_type(action, 'GlobalOutput')}>>;
+          describe(options#{'?' if paths.empty?}: #{action_type(action, 'DescribeOptions')}): Promise<ActionResult<ActionDescription>>;
+        }
+      TS
       declarations.join("\n\n")
     end
 
@@ -211,7 +219,7 @@ module HaveAPI::TypeScriptClient
       end
       resource.fetch(:actions).each do |action|
         action_names(action).each do |name|
-          members << "  readonly #{literal(name)}: (options#{'?' unless options_required?(action)}: #{action_type(action, 'Options')}) => Promise<RequestResult<#{action_type(action, 'Output')}>>;"
+          members << "  readonly #{literal(name)}: #{action_type(action, 'Action')};"
         end
       end
       "export interface #{resource.fetch(:export_name)}Resource {\n#{members.join("\n")}\n}"
@@ -226,13 +234,16 @@ module HaveAPI::TypeScriptClient
     end
 
     def action_definition(action)
+      object_output = action[:object_output] && action[:output]&.fetch(:layout) == 'object_list'
       {
-        method: action.fetch(:method), path: action.fetch(:path_template),
+        method: action.fetch(:method), path: action.fetch(:path_template), helpPath: action.fetch(:help_path),
         placeholders: action.fetch(:placeholders).map { |name| [name, Naming.identifier(name)] },
         inputNamespace: (action[:input] && action[:input][:namespace]) || nil,
         outputNamespace: (action[:output] && action[:output][:namespace]) || nil,
         metaNamespace: @ir.fetch(:metadata_namespace), input: field_definitions(action[:input]),
-        globalInput: field_definitions(action[:global_input]), objectInput: field_definitions(action[:object_input])
+        globalInput: field_definitions(action[:global_input]), objectInput: field_definitions(action[:object_input]),
+        outputNames: object_output ? action[:output].fetch(:parameters).map { |field| field.fetch(:wire_name) } : nil,
+        objectOutput: object_output
       }
     end
   end

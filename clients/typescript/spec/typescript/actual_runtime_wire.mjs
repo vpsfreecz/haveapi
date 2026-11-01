@@ -6,10 +6,10 @@ import {createRequire} from 'node:module';
 import {pathToFileURL} from 'node:url';
 
 const [generated, runtimeFile] = process.argv.slice(2);
-// Exact bundle from the published npm haveapi-client@0.30.2 tarball. The test
+// Exact bundle from the published npm haveapi-client@0.32.0 tarball. The test
 // accepts a prepared installation and never downloads or vendors a runtime.
 assert.equal(createHash('sha256').update(await readFile(runtimeFile)).digest('hex'),
-  '96450c40a55ec7b7af4fca903d045bd0fc7ba1216efe12c3fee9b3e6a09e9198');
+  '9285eab56e435ee86a501a24808e15496d44521881a032090003a1108511f016');
 const {AsyncClient, AsyncError} = createRequire(import.meta.url)(runtimeFile);
 const {createClient} = await import(pathToFileURL(generated).href);
 const received = [];
@@ -27,15 +27,28 @@ const server = createServer(async (request, response) => {
     return;
   }
   response.setHeader('Content-Type', 'application/json');
-  if (url.pathname.endsWith('/widgets/empty')) {
+  const metaNamespace = request.headers['x-meta-namespace'] || '_meta';
+  if (request.method === 'OPTIONS') {
+    if (url.pathname.endsWith('/widget-help/denied')) {
+      response.statusCode = 403;
+      response.end(JSON.stringify({status: false, message: 'description denied', response: null}));
+    } else if (url.pathname.endsWith('/widget-help/malformed')) {
+      response.end('{not JSON');
+    } else {
+      response.end(JSON.stringify({status: true, version: '2.0', response: {
+        authentication: {}, resources: {}, meta: {namespace: metaNamespace},
+        input: {parameters: {name: {type: 'String', required: true, nullable: false}}},
+      }}));
+    }
+  } else if (url.pathname.endsWith('/widgets/empty')) {
     response.statusCode = 422;
     response.end(JSON.stringify({status: false, message: 'fixture rejection', errors: {name: ['rejected']}, response: {}}));
   } else if (url.searchParams.get('custom') === 'missing') {
     response.end(JSON.stringify({status: true, response: {_meta: {count: 0}}}));
   } else if (request.method === 'GET') {
-    response.end(JSON.stringify({status: true, response: {widgets: [{name: null, _meta: {revision: 2}}], _meta: {count: 1}}}));
+    response.end(JSON.stringify({status: true, response: {widgets: [{name: null, [metaNamespace]: {revision: 2}}], [metaNamespace]: {count: 1}}}));
   } else {
-    response.end(JSON.stringify({status: true, response: {widget: {id: 9, name: null}, _meta: {count: 1}}}));
+    response.end(JSON.stringify({status: true, response: {widget: {id: 9, name: null}, [metaNamespace]: {count: 1}}}));
   }
 });
 
@@ -86,15 +99,40 @@ try {
   });
   assert.equal(received.length, 4, 'errors must not replay requests');
 
+  const root = await client.describe({timeoutMs});
+  assert.equal(received.at(-1).url.pathname, '/mount/v1.0/');
+  assert.equal(received.at(-1).method, 'OPTIONS');
+  assert.equal(root.data.meta.namespace, '_meta');
+  assert.equal(root.data, root.envelope.response);
+  const capability = await client.widget.update.describe({path: {widget_id: 'a/b'}, timeoutMs});
+  assert.equal(received.at(-1).url.pathname, '/mount/v1.0/widget-help/a%2Fb');
+  assert.equal(received.at(-1).url.search, '?method=PUT');
+  assert.equal(capability.data.input.parameters.name.required, true);
+  for (const [widget_id, kind] of [['denied', 'api'], ['malformed', 'protocol']]) {
+    const previous = received.length;
+    await assert.rejects(() => client.widget.update.describe({path: {widget_id}, timeoutMs}), error => error instanceof AsyncError && error.kind === kind);
+    assert.equal(received.length, previous + 1, 'description errors do not retry');
+  }
+  const custom = createClient({execute: spec => runtime.request(spec), metaNamespace: 'wire_meta'});
+  const namespaceHeaders = {'X-Meta-Namespace': 'wire_meta'};
+  await custom.widget.update({path: {widget_id: 9}, params: {name: 'custom', _meta: {revision: 0}}, meta: {notify: false}, headers: namespaceHeaders, timeoutMs});
+  assert.deepEqual(received.at(-1).body, {widget: {name: 'custom', wire_meta: {revision: 0}}, wire_meta: {notify: false}});
+  const customList = await custom.widget.index({meta: {notify: false}, headers: namespaceHeaders, timeoutMs});
+  assert.equal(received.at(-1).url.searchParams.get('wire_meta[notify]'), 'false');
+  assert.equal(customList.data[0]._meta.revision, 2);
+  assert.equal(customList.envelope.response.widgets[0]._meta, undefined);
+  assert.equal(customList.envelope.response.widgets[0].wire_meta.revision, 2);
+  assert.equal(customList.meta.count, 1);
+
   const controller = new AbortController();
   const pending = client.widget.update({path: {widget_id: 'slow'}, params: {name: 'accepted-or-uncertain'}, signal: controller.signal, timeoutMs});
   const rejected = assert.rejects(pending, error => error instanceof AsyncError && error.kind === 'aborted');
   await Promise.race([slowRequest, pending.then(() => {throw new Error('Slow write unexpectedly completed');})]);
   controller.abort();
   await rejected;
-  assert.equal(received.length, 5, 'aborting a write must not replay it');
+  assert.equal(received.length, 11, 'aborting a write must not replay it');
   // Observation abort does not prove whether the server accepted the write.
-  console.log('published 0.30.2 AsyncClient wire integration passed (5 single sends)');
+  console.log('published 0.32.0 AsyncClient wire integration passed (11 single sends)');
 } finally {
   if (slowResponse) slowResponse.destroy();
   server.closeAllConnections();

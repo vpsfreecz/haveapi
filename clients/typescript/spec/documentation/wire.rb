@@ -1,4 +1,4 @@
-# Postreview only. Supply the prepared published haveapi-client@0.30.2 bundle:
+# Postreview only. Supply the prepared published haveapi-client@0.32.0 bundle:
 # HAVEAPI_TYPESCRIPT_RUNTIME=/absolute/path/to/haveapi-client/dist/haveapi-client.js
 # nix develop --command bundle exec ruby clients/typescript/spec/documentation/wire.rb
 require 'rspec/core'

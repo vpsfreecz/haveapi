@@ -1,4 +1,4 @@
-# Run after independent review, with a prepared exact npm 0.30.2 installation:
+# Run after independent review, with a prepared exact npm 0.32.0 installation:
 # HAVEAPI_TYPESCRIPT_RUNTIME=/absolute/path/to/haveapi-client/dist/haveapi-client.js
 # nix develop --command bundle exec ruby clients/typescript/spec/typescript/wire.rb
 require 'rspec/core'

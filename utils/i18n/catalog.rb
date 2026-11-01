@@ -40,12 +40,21 @@ module HaveAPI
         }
       ].freeze
 
+      DOCUMENTATION_ADAPTERS = %w[
+        clients/go/lib/haveapi/go_client/documentation.rb
+        clients/rust/lib/haveapi/rust_client/documentation.rb
+        clients/typescript/lib/haveapi/typescript_client/documentation.rb
+      ].freeze
+
       SCAN_GLOBS = [
         'servers/ruby/lib/haveapi/**/*.rb',
+        'servers/ruby/lib/haveapi/views/**/*.erb',
+        'servers/ruby/lib/haveapi/public/js/documentation.js',
         'clients/ruby/lib/**/*.rb',
         'clients/php/src/**/*.php',
         'clients/js/src/**/*.js',
-        'clients/go/template/**/*.erb'
+        'clients/go/template/**/*.erb',
+        *DOCUMENTATION_ADAPTERS
       ].freeze
 
       SCAN_EXCLUDES = [
@@ -62,6 +71,13 @@ module HaveAPI
 
       KEY_PATTERN = /[a-z0-9_]+(?:\.[a-z0-9_]+)+/
       FULL_KEY_LITERAL_PATTERN = /['"]((?:haveapi|haveapi_client)\.#{KEY_PATTERN})['"]/
+      # Cookie/localStorage names are identifiers, not framework message keys.
+      NON_MESSAGE_LITERALS = %w[haveapi.docs.locale haveapi.docs.preferences.v1].freeze
+      DOCUMENTATION_KEY_LITERAL_PATTERN = /documentation_t\(\s*['"]([a-z0-9_]+(?:\.[a-z0-9_]+)*)['"]/
+      DOCUMENTATION_BROWSER_KEY_LITERAL_PATTERN = /documentationMessage\(\s*['"]([a-z0-9_]+)['"]/
+      DOCUMENTATION_VALIDATOR_KEY_LITERAL_PATTERN = /\btext\(\s*['"]([a-z0-9_]+(?:\.[a-z0-9_]+)*)['"]/
+      DOCUMENTATION_COMMENT_KEY_LITERAL_PATTERN = /\bexample_comment(?:\(\s*|\s+)['"]([a-z0-9_]+(?:\.[a-z0-9_]+)*)['"]/
+      DOCUMENTATION_MESSAGE_KEY_LITERAL_PATTERN = /\b(?:documentation_message|unsupported!)(?:\(\s*|\s+)['"]([a-z0-9_]+(?:\.[a-z0-9_]+)*)['"]/
       CLIENT_KEY_LITERAL_PATTERNS = [
         /client_message\(\s*['"](#{KEY_PATTERN})['"]/,
         /translate\(\s*['"](#{KEY_PATTERN})['"]/,
@@ -161,7 +177,12 @@ module HaveAPI
       def used_key_errors
         keys = flatten_keys(catalog.fetch(DEFAULT_LOCALE))
 
-        (used_keys - keys).sort.map { |key| "missing translation key #{key}" }
+        # A whole subtree can be resolved for safe browser JSON embedding.
+        valid_keys = keys.flat_map do |key|
+          parts = key.split('.')
+          (1..parts.length).map { |length| parts.first(length).join('.') }
+        end
+        (used_keys - valid_keys).sort.map { |key| "missing translation key #{key}" }
       end
 
       def raw_message_errors
@@ -397,7 +418,9 @@ module HaveAPI
       end
 
       def server_source_files
-        source_files.select { |file| relative_path(file).start_with?('servers/ruby/lib/haveapi/') }
+        source_files.select do |file|
+          relative_path(file).start_with?('servers/ruby/lib/haveapi/') && file.end_with?('.rb')
+        end
       end
 
       def used_keys
@@ -405,7 +428,7 @@ module HaveAPI
           rel = relative_path(file)
           text = File.read(file)
 
-          full_keys = text.scan(FULL_KEY_LITERAL_PATTERN).flatten
+          full_keys = text.scan(FULL_KEY_LITERAL_PATTERN).flatten - NON_MESSAGE_LITERALS
           client_keys = if rel.start_with?('clients/')
                           CLIENT_KEY_LITERAL_PATTERNS.flat_map do |pattern|
                             text.scan(pattern).flatten.map { |key| "haveapi_client.#{key}" }
@@ -414,7 +437,27 @@ module HaveAPI
                           []
                         end
 
-          full_keys + client_keys
+          documentation_keys = if rel.start_with?('servers/ruby/')
+                                 text.scan(DOCUMENTATION_KEY_LITERAL_PATTERN).flatten.map { |key| "haveapi.documentation.#{key}" } +
+                                   text.scan(DOCUMENTATION_BROWSER_KEY_LITERAL_PATTERN).flatten.map { |key| "haveapi.documentation.browser.#{key}" }
+                               else
+                                 []
+                               end
+          if rel == 'servers/ruby/lib/haveapi/documentation_validators.rb'
+            documentation_keys += text.scan(DOCUMENTATION_VALIDATOR_KEY_LITERAL_PATTERN).flatten.map do |key|
+              "haveapi.documentation.validators.#{key}"
+            end
+          end
+          if rel.start_with?('servers/ruby/') || DOCUMENTATION_ADAPTERS.include?(rel)
+            documentation_keys += text.scan(DOCUMENTATION_COMMENT_KEY_LITERAL_PATTERN).flatten.map do |key|
+              "haveapi.documentation.comments.#{key}"
+            end
+            documentation_keys += text.scan(DOCUMENTATION_MESSAGE_KEY_LITERAL_PATTERN).flatten.map do |key|
+              "haveapi.documentation.#{key}"
+            end
+          end
+
+          full_keys + client_keys + documentation_keys
         end.uniq
       end
 

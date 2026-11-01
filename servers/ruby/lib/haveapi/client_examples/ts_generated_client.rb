@@ -35,7 +35,7 @@ module HaveAPI::ClientExamples
 
     def render_documentation(kind, rendering_context: context, **)
       unless self.class.available?(rendering_context)
-        return { status: :limitation, reason: 'A TypeScript API client documentation profile is required.' }.freeze
+        return { status: :limitation, reason: HaveAPI.t('haveapi.documentation.limitations.typescript_profile') }.freeze
       end
 
       rendering_context.profile.adapter.render(kind:, context: rendering_context, mode: :async, **)

@@ -84,7 +84,7 @@ module HaveAPI::ClientExamples
       return "api.authenticate(:token, token: 'example-token')\n" if providers.include?('token')
       return "api.authenticate(:basic, user: 'user', password: 'secret')\n" if providers.include?('basic')
 
-      raise HaveAPI::ClientExample::UnsupportedAuthentication, 'This action requires authentication unsupported by this client.'
+      raise HaveAPI::ClientExample::UnsupportedAuthentication, HaveAPI.t('haveapi.documentation.limitations.action_authentication')
     end
 
     def example(sample)

@@ -151,7 +151,7 @@ module HaveAPI::ClientExamples
       return "$api->authenticate('basic', ['user' => 'user', 'password' => 'secret']);" if providers.include?('basic')
       return "$api->authenticate('oauth2', ['access_token' => ['access_token' => 'example-access-token']]);" if providers.include?('oauth2')
 
-      raise HaveAPI::ClientExample::UnsupportedAuthentication, 'This action requires authentication unsupported by this client.'
+      raise HaveAPI::ClientExample::UnsupportedAuthentication, HaveAPI.t('haveapi.documentation.limitations.action_authentication')
     end
 
     def example(sample)

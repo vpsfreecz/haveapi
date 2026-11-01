@@ -6,31 +6,31 @@
 
 <% if name == :token %>
   <dl class="docs-metadata">
-    <dt>HTTP header:</dt>
+    <dt><%= escape_html(documentation_t('labels.http_header')) %></dt>
     <dd><%= info[:http_header] %></dd>
-    <dt>Query parameter:</dt>
+    <dt><%= escape_html(documentation_t('labels.query_parameter')) %></dt>
     <dd><%= info[:query_parameter] %></dd>
   </dl>
 <% elsif name == :oauth2 %>
   <dl class="docs-metadata">
-    <dt>Authorize URL:</dt>
+    <dt><%= escape_html(documentation_t('labels.authorize_url')) %></dt>
     <dd><%= info[:authorize_url] %></dd>
-    <dt>Token URL:</dt>
+    <dt><%= escape_html(documentation_t('labels.token_url')) %></dt>
     <dd><%= info[:token_url] %></dd>
-    <dt>Revoke URL:</dt>
+    <dt><%= escape_html(documentation_t('labels.revoke_url')) %></dt>
     <dd><%= info[:revoke_url] %></dd>
   </dl>
 <% end %>
 
 <% unless (info[:resources] || {}).empty? %>
   <% resources_target = documentation_reference_anchor(authentication: name, section: :resources) %>
-  <h2 id="<%= escape_html(resources_target) %>">Resources<%= documentation_permalink(resources_target, 'Resources') %></h2>
+  <h2 id="<%= escape_html(resources_target) %>"><%= escape_html(documentation_t('labels.resources')) %><%= documentation_permalink(resources_target, documentation_t('labels.resources')) %></h2>
   <% sort_hash(info[:resources]).each do |resource, desc| %>
     <%= erb :"version_page/resource_body", locals: {resource: resource.to_s, info: desc, path: [], prefix: 'root', name: nil, authentication_resource: true, authentication_provider: name} %>
   <% end %>
 <% end %>
 
 <% examples_target = documentation_reference_anchor(authentication: name, section: :examples) %>
-<h3 id="<%= escape_html(examples_target) %>">Examples<%= documentation_permalink(examples_target, 'Examples') %></h3>
+<h3 id="<%= escape_html(examples_target) %>"><%= escape_html(documentation_t('labels.examples')) %><%= documentation_permalink(examples_target, documentation_t('labels.examples')) %></h3>
 <%= erb :'version_page/example_panels', locals: {baseid: "auth-#{name}", kind: :auth, changes: {auth_method: name, auth_description: info}} %>
 </section>

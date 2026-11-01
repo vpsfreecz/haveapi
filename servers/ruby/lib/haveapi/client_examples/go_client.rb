@@ -34,7 +34,7 @@ module HaveAPI::ClientExamples
 
     def render_documentation(kind, sample: nil, **)
       unless context && self.class.available?(context)
-        return { status: :limitation, reason: 'A Go API client profile is required.' }.freeze
+        return { status: :limitation, reason: HaveAPI.t('haveapi.documentation.limitations.go_profile') }.freeze
       end
 
       selected = kind == :example ? context.with(sample:) : context

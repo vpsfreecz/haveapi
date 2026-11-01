@@ -19,7 +19,7 @@
 <% library_clients = clients.select { |client| library_paths.has_key?(client.id) || generator_paths.has_key?(client.id) } %>
 <% groups = library_clients.group_by { |client| client.language == 'cli' && library_clients.any? { |candidate| candidate.language == 'ruby' } ? 'ruby' : client.language } %>
 <section id="client-libraries">
-  <h2>Client libraries<%= documentation_permalink('client-libraries', 'Client libraries') %></h2>
+  <h2><%= escape_html(documentation_t('labels.client_libraries')) %><%= documentation_permalink('client-libraries', documentation_t('labels.client_libraries')) %></h2>
   <ul>
     <% groups.each_value do |group| %>
       <% variants = group.length > 1 || group.first.variant %>
@@ -27,14 +27,16 @@
       <li>
         <% if variants %><%= escape_html(group.first.language_label) %> (<% end %><% group.each_with_index do |client, index|
           path = library_paths[client.id] || generator_paths.fetch(client.id)
-          label = variants ? (client.variant&.downcase&.sub(/\Aapi\b/, 'API') || (client.language == 'ruby' ? 'library' : client.language_label)) : client.language_label
-          separator = index.zero? ? '' : (index == group.length - 1 ? ' and ' : ', ')
-        %><%= separator %><a href="<%= escape_html("https://github.com/vpsfreecz/haveapi/tree/master/#{path}") %>"><%= escape_html(label) %></a><% end %><% if variants %>)<% end %><% profiles.each do |profile| %>: <code><%= escape_html(profile.package_name) %></code><% unless profile.package_version.nil? %> <%= escape_html(profile.package_version) %><% end %><% end %>
+          variant = documentation_client_variant(client)
+          overview_variant = variant == client.variant ? variant&.downcase&.sub(/\Aapi\b/, 'API') : variant&.sub(/\A./) { |letter| letter.downcase }
+          label = variants ? (overview_variant || (client.language == 'ruby' ? documentation_t('client.library') : client.language_label)) : client.language_label
+          separator = index.zero? ? '' : (index == group.length - 1 ? documentation_t('client.and') : ', ')
+        %><%= escape_html(separator) %><a href="<%= escape_html("https://github.com/vpsfreecz/haveapi/tree/master/#{path}") %>"><%= escape_html(label) %></a><% end %><% if variants %>)<% end %><% profiles.each do |profile| %>: <code><%= escape_html(profile.package_name) %></code><% unless profile.package_version.nil? %> <%= escape_html(profile.package_version) %><% end %><% end %>
       </li>
     <% end %>
   </ul>
   <% request_formats = clients.select { |client| %w[curl http].include?(client.language) } %>
   <% unless request_formats.empty? %>
-    <p><% request_formats.each_with_index do |client, index| %><%= index.zero? ? '' : ' and ' %><a href="<%= escape_html(documentation_url(page: 'resources')) %>"><%= escape_html(client.label) %></a><% end %> request examples are available on resource pages.</p>
+    <p><% request_formats.each_with_index do |client, index| %><%= escape_html(index.zero? ? '' : documentation_t('client.and')) %><a href="<%= escape_html(documentation_url(page: 'resources')) %>"><%= escape_html(client.label) %></a><% end %> <%= escape_html(documentation_t('client.request_examples')) %></p>
   <% end %>
 </section>

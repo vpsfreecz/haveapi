@@ -142,4 +142,26 @@ describe HaveAPI::DocumentationHelpers, '#render_version_documentation' do
     expect(body).to include('href="/rack/mounted/api/v1/?page=resources">HTTP</a>')
     expect(body).to include('href="https://github.com/vpsfreecz/haveapi/tree/master/clients/ruby#client-library">library</a>')
   end
+
+  it 'checks each registered renderer availability once for the complete request' do
+    HaveAPI::ClientExample.clients.each { |client| allow(client).to receive(:available?).and_call_original }
+    get '/v1/'
+    expect(last_response.status).to eq(200)
+    expect(HaveAPI::ClientExample.clients).to all(have_received(:available?).once)
+    metadata = JSON.parse(last_response.body.match(%r{data-documentation-clients>(.*?)</script>}m)[1])
+    expect(metadata.map { |client| client['id'] }).to eq(HaveAPI::ClientExample.clients.reject do |client|
+      %w[go rust-async rust-blocking typescript-generated].include?(client.id)
+    end.map(&:id))
+  end
+
+  it 'retains an empty available list for one request and evaluates it afresh on the next' do
+    HaveAPI::ClientExample.clients.each { |client| allow(client).to receive(:available?).and_return(false) }
+    2.times do
+      get '/v1/'
+      expect(last_response.status).to eq(200)
+      expect(last_response.body).to include('data-documentation-clients>[]</script>')
+      expect(last_response.body).not_to include('data-example-preferences')
+    end
+    expect(HaveAPI::ClientExample.clients).to all(have_received(:available?).twice)
+  end
 end

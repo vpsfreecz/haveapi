@@ -3,6 +3,29 @@
 
   var storageKey = 'haveapi.docs.preferences.v1';
 
+  var messages = Object.create(null);
+
+  function setDocumentationMessages(value) {
+    messages = value && typeof value === 'object' && !Array.isArray(value) ? value : Object.create(null);
+  }
+
+  function documentationMessage(key, values) {
+    var text = typeof messages[key] === 'string' ? messages[key] : key;
+    return text.replace(/%\{([a-z_]+)\}/g, function (placeholder, name) {
+      return values && Object.prototype.hasOwnProperty.call(values, name) ? String(values[name]) : placeholder;
+    });
+  }
+
+  function documentationLanguageURL(href, locale) {
+    if (['en', 'cs'].indexOf(locale) < 0) return null;
+    try {
+      var destination = new URL(href);
+      if (!/^https?:$/.test(destination.protocol)) return null;
+      destination.searchParams.set('doc_lang', locale);
+      return destination.href;
+    } catch (error) { return null; }
+  }
+
   function preferences(value) {
     var source = value && typeof value === 'object' ? value : {};
     var clients = Object.create(null);
@@ -131,8 +154,8 @@
       var button = doc.createElement('button');
       button.type = 'button';
       button.setAttribute('data-copy-example', '');
-      button.setAttribute('aria-label', 'Copy example');
-      button.title = 'Copy example';
+      button.setAttribute('aria-label', documentationMessage('copy_example'));
+      button.title = documentationMessage('copy_example');
       var icon = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
       icon.setAttribute('viewBox', '0 0 24 24');
       icon.setAttribute('aria-hidden', 'true');
@@ -160,7 +183,7 @@
         var current = generation;
         copyText(code.textContent, win, doc, navigator).then(function (success) {
           if (current !== generation || visibleExampleCode(panel) !== code) return;
-          status.textContent = success ? 'Copied' : 'Select the code and copy it.';
+          status.textContent = success ? documentationMessage('copied') : documentationMessage('copy_failed');
         });
       });
     });
@@ -324,12 +347,13 @@
       if (!/^https?:$/.test(base.protocol) || base.origin !== current.origin || base.username || base.password
         || base.search || base.hash || !base.pathname.endsWith('/') || url.origin !== base.origin
         || url.pathname !== base.pathname || url.username || url.password || url.hash
-        || Array.from(url.searchParams).length !== 2 || url.searchParams.getAll('page').length !== 1
+        || Array.from(url.searchParams).length !== (url.searchParams.has('doc_lang') ? 3 : 2)
+        || (url.searchParams.has('doc_lang') && (url.searchParams.getAll('doc_lang').length !== 1 || ['en', 'cs'].indexOf(url.searchParams.get('doc_lang')) < 0)) || url.searchParams.getAll('page').length !== 1
         || url.searchParams.get('page') !== 'resources' || url.searchParams.getAll('search_index').length !== 1
         || typeof version !== 'string' || !version || (key !== '' && !/^[a-f0-9]{64}$/.test(key))) return null;
       if (url.searchParams.get('search_index') !== (key || 'current')) return null;
       if (bootstrap) { url.searchParams.set('search_index', 'current'); key = ''; }
-      return { url: url.href, origin: base.origin, base_path: base.pathname, version: version, key: key };
+      return { url: url.href, origin: base.origin, base_path: base.pathname, version: version, key: key, locale: url.searchParams.get('doc_lang') };
     } catch (error) { return null; }
   }
 
@@ -355,6 +379,7 @@
     var index = envelope.index;
     shape(index, ['format', 'version', 'base_path', 'locale', 'visibility', 'resources', 'actions', 'parameters']);
     if (index.format !== 1 || index.version !== expected.version || index.base_path !== expected.base_path
+      || (expected.locale && index.locale !== expected.locale)
       || ['anonymous', 'authenticated'].indexOf(index.visibility) < 0) fail();
     ['version', 'base_path', 'locale', 'visibility'].forEach(function (field) { string(index[field]); });
     if (!Array.isArray(index.resources) || !Array.isArray(index.actions) || !Array.isArray(index.parameters)) fail();
@@ -462,7 +487,7 @@
     var link = doc.createElement('a');
     var name = result.kind === 'resource' ? result.resource_path.join('.') : result.name;
     link.href = searchResultURL(index, result, origin);
-    link.textContent = result.kind.charAt(0).toUpperCase() + result.kind.slice(1) + ': ';
+    link.textContent = documentationMessage(result.kind) + ': ';
     var code = doc.createElement('code');
     code.textContent = name;
     link.appendChild(code);
@@ -473,8 +498,8 @@
     } else {
       context.push(result.resource_path.join('.') + (result.action_name !== null ? ' · ' + result.action_name : ''));
     }
-    if (result.kind === 'parameter') context.push(result.direction.charAt(0).toUpperCase() + result.direction.slice(1) + ' · ' + result.type);
-    if (result.authentication !== null) context.push('Authentication: ' + result.authentication);
+    if (result.kind === 'parameter') context.push(documentationMessage(result.direction) + ' · ' + result.type);
+    if (result.authentication !== null) context.push(documentationMessage('authentication', { provider: result.authentication }));
     if (result.kind !== 'resource' && typeof result.label === 'string' && result.label !== result.name) context.push(result.label);
     context.forEach(function (text) {
       var detail = doc.createElement('span');
@@ -523,7 +548,7 @@
 
   // Pure helpers keep saved-state and legacy-link contracts independently testable.
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { preferences: preferences, readPreferences: readPreferences, clientChoice: clientChoice,
+    module.exports = { setDocumentationMessages: setDocumentationMessages, documentationLanguageURL: documentationLanguageURL, documentationMessage: documentationMessage, preferences: preferences, readPreferences: readPreferences, clientChoice: clientChoice,
       detailLevels: detailLevels, effectiveDetail: effectiveDetail, exampleDetail: exampleDetail, copyText: copyText,
       exampleCopyControls: exampleCopyControls, disclosureMenus: disclosureMenus,
       legacyTarget: legacyTarget, loginTarget: loginTarget,
@@ -561,6 +586,7 @@
       try { return element ? JSON.parse(element.textContent) : fallback; }
       catch (error) { return fallback; }
     };
+    setDocumentationMessages(json('[data-documentation-messages]', {}));
     var metadata = json('[data-documentation-clients]', []);
     var clients = Array.isArray(metadata) ? metadata.filter(function (client, index, list) {
       return client && typeof client.id === 'string' && typeof client.language === 'string'
@@ -685,7 +711,7 @@
       all('[data-detail-select]').forEach(function (select) {
         var levels = choice ? detailLevels(choice) : [];
         select.replaceChildren();
-        levels.forEach(function (detail) { option(select, detail, detail === 'thorough' ? 'With error handling' : 'Simple'); });
+        levels.forEach(function (detail) { option(select, detail, documentationMessage(detail === 'thorough' ? 'thorough' : 'simple')); });
         (select.closest('[data-detail-control]') || select).hidden = false;
         select.disabled = levels.length < 2;
         select.value = effectiveDetail(state, choice);
@@ -696,8 +722,8 @@
       if (status) {
         var fallback = choice && ((state.language && state.language !== choice.language)
           || (state.clients[choice.language] && state.clients[choice.language] !== choice.id));
-        status.textContent = fallback ? 'Your saved example is unavailable. Showing ' + choice.language_label
-          + (choice.variant ? ' (' + choice.variant + ')' : '') + '.' : '';
+        status.textContent = fallback ? documentationMessage('saved_example_unavailable', { client: choice.language_label
+          + (choice.variant ? ' (' + choice.variant + ')' : '') }) : '';
         status.hidden = !fallback;
       }
     }
@@ -724,7 +750,7 @@
           unavailable = document.createElement('p');
           unavailable.setAttribute('data-example-unavailable', '');
           unavailable.className = 'docs-notice';
-          unavailable.textContent = 'No example is available for this client.';
+          unavailable.textContent = documentationMessage('example_unavailable');
           example.appendChild(unavailable);
         }
         unavailable.hidden = !!chosen;
@@ -762,6 +788,20 @@
       });
     }
 
+    all('[data-documentation-language]').forEach(function (form) {
+      var select = form.querySelector('[name="doc_lang"]');
+      if (!select) return;
+      function navigate(event) {
+        var destination = documentationLanguageURL(window.location.href, select.value);
+        if (!destination) return;
+        if (event) event.preventDefault();
+        window.location.assign(destination);
+      }
+      form.addEventListener('submit', navigate);
+      select.addEventListener('change', navigate);
+      var submit = form.querySelector('[data-documentation-language-submit]');
+      if (submit) submit.hidden = true;
+    });
     all('[data-language-select]').forEach(function (select) {
       select.addEventListener('change', function () { state.language = select.value; persist(); updatePreservingPosition(select); });
     });
@@ -841,9 +881,8 @@
           list.appendChild(renderSearchResult(document, snapshot.index, result, window.location.origin));
         });
         preview.replaceChildren(list);
-        searchStatus.textContent = !results.results.length ? 'No matches. Try another resource, action or parameter name.'
-          : results.more ? 'Showing ' + results.results.length + ' results. More matches are available; refine your search.'
-            : results.results.length + (results.results.length === 1 ? ' result.' : ' results.');
+        searchStatus.textContent = documentationMessage(!results.results.length ? 'search_empty' : results.more ? 'search_more'
+          : results.results.length === 1 ? 'search_one' : 'search_count', { count: results.results.length });
         suggestions.hidden = false;
       }
       function intent() {
@@ -853,18 +892,18 @@
         var config = searchConfiguration(form.action, form.getAttribute('data-search-index-url'),
           form.getAttribute('data-search-view-key'), form.getAttribute('data-search-version'), window.location.href, bootstrapSearch);
         if (!config) {
-          if (query) { suggestions.hidden = false; searchStatus.textContent = 'Search could not be loaded. Submit to open the results page.'; }
+          if (query) { suggestions.hidden = false; searchStatus.textContent = documentationMessage('search_failed'); }
           return;
         }
         var loaded = indexLoader.peek(config);
         if (loaded) { if (query && Array.from(query).length <= 256) render(loaded, query); return; }
-        if (query) { suggestions.hidden = false; searchStatus.textContent = 'Loading search…'; }
+        if (query) { suggestions.hidden = false; searchStatus.textContent = documentationMessage('search_loading'); }
         indexLoader.load(config).then(function (snapshot) {
           if (current !== generation || input.value.trim() !== query || !query || Array.from(query).length > 256) return;
           render(snapshot, query);
         }).catch(function () {
           if (current === generation && query) {
-            searchStatus.textContent = 'Search could not be loaded. Submit to open the results page.';
+            searchStatus.textContent = documentationMessage('search_failed');
             suggestions.hidden = false;
           }
         });

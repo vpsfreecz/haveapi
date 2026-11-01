@@ -5,9 +5,21 @@ const path = require('node:path');
 const vm = require('node:vm');
 const filename = path.resolve(__dirname, '../../../lib/haveapi/public/js/documentation.js');
 const stylesheet = fs.readFileSync(path.resolve(__dirname, '../../../lib/haveapi/public/css/documentation.css'), 'utf8');
-const { preferences, readPreferences, clientChoice, detailLevels, effectiveDetail, exampleDetail, copyText, exampleCopyControls,
+const { setDocumentationMessages, documentationLanguageURL, documentationMessage, preferences, readPreferences, clientChoice, detailLevels, effectiveDetail, exampleDetail, copyText, exampleCopyControls,
   disclosureMenus, legacyTarget, loginTarget, highlighterTarget, activeSection, navigationTargets, referenceNavigation, searchShortcut,
   searchConfiguration, validateSearchIndex, searchMatcher, searchResultURL, renderSearchResult, searchIndexLoader } = require(filename);
+const catalogs = JSON.parse(require('node:child_process').execFileSync('ruby', ['-ryaml', '-rjson', '-e',
+  'print JSON.generate(YAML.load_file(ARGV[0]).transform_values { |v| v.fetch("haveapi").fetch("documentation").fetch("browser") })',
+  path.resolve(__dirname, '../../../../../i18n/haveapi.yml')], { encoding: 'utf8' }));
+setDocumentationMessages(catalogs.en);
+const localeURL = documentationLanguageURL('https://docs.example/api/v1/?resource=widget&q=a%20b&doc_lang=en#root-widget-show', 'cs');
+assert.equal(localeURL, 'https://docs.example/api/v1/?resource=widget&q=a+b&doc_lang=cs#root-widget-show');
+assert.equal(documentationLanguageURL('https://docs.example/api/v1/?page=authentication', 'auto'), null);
+assert.equal(documentationLanguageURL('javascript:alert(1)', 'cs'), null);
+setDocumentationMessages(catalogs.cs);
+assert.equal(documentationMessage('copy_example'), catalogs.cs.copy_example);
+assert.equal(documentationMessage('saved_example_unavailable', { client: '<Client>' }), catalogs.cs.saved_example_unavailable.replace('%{client}', '<Client>'));
+setDocumentationMessages(catalogs.en);
 const clients = [
   { id: '0', language: 'ruby', language_label: 'Ruby', variant: null },
   { id: 'python-sync', language: 'python', language_label: 'Python', variant: 'Sync' },
@@ -30,6 +42,9 @@ assert(!/padding(?:-top|-block)|margin|line-height|grid/.test(sourceLayout), 'or
 assert(/padding-inline-end:/.test(sourceLayout), 'code can pan into a clear inline-end gutter');
 assert(/position: absolute/.test(buttonLayout) && /width: 2\.75rem/.test(buttonLayout) && /height: 2\.75rem/.test(buttonLayout), 'small visual icon keeps an out-of-flow44px hit area');
 assert(/position: absolute/.test(statusLayout) && /inset-block-start: 100%/.test(statusLayout), 'live status stays outside readable code and does not move it');
+const breadcrumbLayout = cssRule('.docs-main .docs-breadcrumb ol');
+assert(/display: flex/.test(breadcrumbLayout) && /list-style: none/.test(breadcrumbLayout), 'breadcrumbs stay horizontal and unnumbered in both locales');
+assert(!/\[aria-label[\^$*~|]?=/.test(stylesheet), 'documentation style must not depend on translated accessibility labels');
 
 assert.equal(preferences(null).theme, 'auto');
 assert.equal(preferences(null).detail, 'simple');
@@ -309,7 +324,8 @@ function browserFixture(workerMode, blockedStorage, display) {
   const visibleCode = code(true, false);
   const codes = [visibleCode, code(false, false), code(true, true)];
   const root = {
-    querySelector: selector => display && selector === '[data-documentation-clients]' ? { textContent: JSON.stringify(display.metadata) }
+    querySelector: selector => selector === '[data-documentation-messages]' ? { textContent: JSON.stringify(catalogs.en) }
+      : display && selector === '[data-documentation-clients]' ? { textContent: JSON.stringify(display.metadata) }
       : display && selector === '[data-docs-sidebar]' ? display.sidebar
         : display && selector === '[data-nav-toggle]' ? display.toggle : display && selector === '.docs-main' ? display.main : null,
     querySelectorAll: selector => display && display.matches[selector] ? display.matches[selector]
@@ -343,7 +359,7 @@ function browserFixture(workerMode, blockedStorage, display) {
   };
   if (workerMode !== 'missing') window.Worker = Worker;
   vm.runInNewContext(fs.readFileSync(filename, 'utf8'), { window, document, Worker, URL, console });
-  return { attributes, messages, worker, visibleCode, themeButtons, writes, themeMedia, document, documentEvents, windowEvents };
+  return { attributes, messages, worker, visibleCode, themeButtons, writes, themeMedia, document, documentEvents, windowEvents, window };
 }
 for (const mode of ['missing', 'constructor-failure', 'post-failure', 'working']) {
   const fixture = browserFixture(mode, true);
@@ -381,6 +397,48 @@ assert.equal(focusedSummary, settingsMenu.summary);
 assert.equal(settingsMenu.summary.getAttribute('aria-label'), 'Documentation settings', 'theme choice never renames the combined menu');
 assert.equal(settingsMenu.summary.getAttribute('title'), 'Documentation settings');
 assert.equal(menuTheme.themeButtons[2].attributes['aria-pressed'], 'true');
+
+const localeListeners = { form: {}, select: {} };
+const documentationLocale = { value: 'cs', addEventListener(name, listener) { (localeListeners.select[name] ||= []).push(listener); } };
+let localeSubmitHidden = false;
+const localeSubmit = {
+  get hidden() { return localeSubmitHidden; },
+  set hidden(value) {
+    assert.equal(localeListeners.form.submit.length, 1, 'native submit stays available until its enhanced listener is bound');
+    assert.equal(localeListeners.select.change.length, 1, 'native submit stays available until change navigation is bound');
+    localeSubmitHidden = value;
+  }
+};
+const localeForm = {
+  querySelector(selector) {
+    assert(['[name="doc_lang"]', '[data-documentation-language-submit]'].includes(selector));
+    return selector === '[name="doc_lang"]' ? documentationLocale : localeSubmit;
+  },
+  addEventListener(name, listener) { (localeListeners.form[name] ||= []).push(listener); }
+};
+const localeVariant = Object.assign(element('select'), { closest: () => null });
+const localeDetail = Object.assign(element('select'), { closest: () => null });
+const localeFixture = browserFixture('missing', false, {
+  metadata: clients, saved: { language: 'python', clients: { python: 'python-async' } }, geometry: { scroll: 0 },
+  matches: { '[data-documentation-language]': [localeForm], '[data-variant-select]': [localeVariant], '[data-detail-select]': [localeDetail] }
+});
+assert.equal(localeSubmit.hidden, true, 'enhanced language settings show the select without a submit button');
+const localeNavigations = [];
+localeFixture.window.location.href = 'https://docs.example/api/v1/?resource=widget&q=hostname#root-widget-show';
+localeFixture.window.location.assign = destination => localeNavigations.push(destination);
+localeFixture.themeButtons[2].listeners.click();
+localeVariant.value = 'python-sync'; localeVariant.listeners.change();
+localeDetail.value = 'thorough'; localeDetail.listeners.change();
+let localePrevented = 0;
+localeListeners.select.change.forEach(listener => listener({ preventDefault() { localePrevented += 1; } }));
+assert.deepEqual(localeNavigations, ['https://docs.example/api/v1/?resource=widget&q=hostname&doc_lang=cs#root-widget-show'],
+  'changing theme, client and detail must not multiply language navigation handlers');
+assert.equal(localePrevented, 1);
+localeNavigations.length = 0;
+documentationLocale.value = 'en';
+localeListeners.form.submit.forEach(listener => listener({ preventDefault() {} }));
+assert.deepEqual(localeNavigations, ['https://docs.example/api/v1/?resource=widget&q=hostname&doc_lang=en#root-widget-show'],
+  'submitting the native language form is enhanced once and preserves the current location');
 
 const shortcutToggle = element('button');
 const shortcutMain = { inert: false };
@@ -541,6 +599,13 @@ assert.equal(searchConfiguration(action, 'https://foreign.example/api/v1/?page=r
 assert.equal(searchConfiguration(action, indexURL + '&q=secret', key, '1', current, false), null);
 assert.equal(searchConfiguration(action, indexURL, '', '1', current, false), null);
 assert.equal(searchConfiguration(action, indexURL.replace(key, 'b'.repeat(64)), key, '1', current, false), null);
+const localizedConfig = searchConfiguration(action, indexURL + '&doc_lang=cs', key, fixture.index.version, current, false);
+assert.equal(localizedConfig.locale, 'cs');
+assert.equal(new URL(searchConfiguration(action, indexURL + '&doc_lang=cs', key, fixture.index.version, current, true).url).searchParams.get('doc_lang'), 'cs');
+for (const suffix of ['&doc_lang=auto', '&doc_lang=cs&doc_lang=en', '&doc_lang[]=cs']) {
+  assert.equal(searchConfiguration(action, indexURL + suffix, key, fixture.index.version, current, false), null);
+}
+assert.throws(() => validateSearchIndex({ key, index: { ...fixture.index, locale: 'en' } }, localizedConfig));
 const index = validateSearchIndex({ key, index: fixture.index }, config);
 const matchIndex = searchMatcher(index);
 for (const example of fixture.queries) {

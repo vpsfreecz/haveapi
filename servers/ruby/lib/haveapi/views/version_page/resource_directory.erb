@@ -1,7 +1,7 @@
 <section id="resources">
-  <h1>Resources<%= documentation_permalink('resources', 'Resources') %></h1>
+  <h1><%= escape_html(documentation_t('labels.resources')) %><%= documentation_permalink('resources', documentation_t('labels.resources')) %></h1>
   <% if documentation_search_query.empty? %>
-  <nav aria-label="Resources" data-resource-nav>
+  <nav aria-label="<%= escape_html(documentation_t('labels.resources')) %>" data-resource-nav>
   <ul class="docs-resource-list docs-resource-directory">
     <% sort_hash(@help[:resources]).each do |resource, info| %>
       <%= erb :'version_sidebar/resource_nav', locals: {resource: resource, info: info, path: []} %>

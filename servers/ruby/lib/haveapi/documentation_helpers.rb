@@ -11,13 +11,13 @@ module HaveAPI
     def documentation_document_title
       page = @documentation_title || if @v
                                        case @documentation_page
-                                       when 'authentication' then 'Authentication'
-                                       when 'resources' then 'Resources'
+                                       when 'authentication' then documentation_t('labels.authentication')
+                                       when 'resources' then documentation_t('labels.resources')
                                        when 'resource' then @documentation_resource[:key]
-                                       else 'Overview'
+                                       else documentation_t('labels.overview')
                                        end
                                      else
-                                       'API versions'
+                                       documentation_t('labels.api_versions')
                                      end
       version = @v && !@documentation_title ? "API v#{@v}" : nil
       [page, version, documentation_identity_name].compact.join(' · ')
@@ -59,6 +59,12 @@ module HaveAPI
       documentation_search_query
       @v = version
       documentation_authenticated?(version)
+      with_documentation_locale do
+        render_localized_version_documentation(version)
+      end
+    end
+
+    def render_localized_version_documentation(version)
       @help = settings.api_server.describe_version(Context.new(
                                                      settings.api_server,
                                                      version:, user: current_user, params:
@@ -81,36 +87,36 @@ module HaveAPI
     def documentation_selection
       @documentation_selection ||= begin
         query = request.query_string
-        halt 400, 'Invalid documentation selection' if query.match?(/%(?![0-9a-f]{2})/i)
+        halt 400, documentation_t('errors.selection') if query.match?(/%(?![0-9a-f]{2})/i)
         pairs = URI.decode_www_form(query)
         selected = pairs.select { |key, _| key.match?(/\A(?:page|resource)(?:\[|\z)/) }
         unless selected.all? { |key, value| %w[page resource].include?(key) && value.valid_encoding? } &&
                selected.map(&:first).uniq.length == selected.length && selected.length <= 1
-          halt 400, 'Invalid documentation selection'
+          halt 400, documentation_t('errors.selection')
         end
         selected.to_h
       end
     rescue ArgumentError
-      halt 400, 'Invalid documentation selection'
+      halt 400, documentation_t('errors.selection')
     end
 
     def select_documentation_page
       selection = documentation_selection
       @documentation_page = selection.fetch('page', 'overview')
       unless %w[overview authentication resources].include?(@documentation_page)
-        halt 400, 'Invalid documentation selection'
+        halt 400, documentation_t('errors.selection')
       end
       if @documentation_page == 'resources' && !documentation_search_query.empty?
-        @documentation_title = "Search API v#{@v}: #{documentation_search_query}"
+        @documentation_title = documentation_t('titles.search', version: @v, query: documentation_search_query)
       end
       return unless selection.has_key?('resource')
 
       key = selection['resource']
       unless key.match?(/\A[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]+)*\z/)
-        halt 400, 'Invalid documentation selection'
+        halt 400, documentation_t('errors.selection')
       end
       @documentation_resource = documentation_resources.find { |entry| entry[:key] == key }
-      halt 404, 'Documentation resource not found' unless @documentation_resource
+      halt 404, documentation_t('errors.resource_not_found') unless @documentation_resource
       @documentation_page = 'resource'
     end
 
@@ -153,8 +159,8 @@ module HaveAPI
     end
 
     def documentation_action_sections(info, resource_path:, action_name:, authentication: nil)
-      sections = { input: 'Input parameters', output: 'Output parameters' }
-      sections[:examples] = 'Examples' unless info[:examples].empty?
+      sections = { input: documentation_t('labels.input_parameters'), output: documentation_t('labels.output_parameters') }
+      sections[:examples] = documentation_t('labels.examples') unless info[:examples].empty?
       sections.map do |section, label|
         { id: documentation_reference_anchor(resource_path:, action_name:, authentication:, section:), label: }
       end
@@ -169,13 +175,32 @@ module HaveAPI
     end
 
     def documentation_permalink(id, label)
-      "<a class=\"docs-permalink\" href=\"##{escape_html(id)}\" aria-label=\"#{escape_html("Link to #{label}")}\"><span aria-hidden=\"true\">#</span></a>"
+      "<a class=\"docs-permalink\" href=\"##{escape_html(id)}\" aria-label=\"#{escape_html(documentation_t('accessibility.link_to', label:))}\"><span aria-hidden=\"true\">#</span></a>"
     end
 
     def documentation_client_metadata
       documentation_clients.map do |client|
-        { id: client.id, language: client.language, language_label: client.language_label, variant: client.variant,
+        { id: client.id, language: client.language, language_label: client.language_label, variant: documentation_client_variant(client),
           details: (@documentation_page_details || {}).fetch(client.id, [:simple]).map(&:to_s) }
+      end
+    end
+
+    def documentation_client_label(client)
+      case client.id
+      when 'go' then documentation_t('generated.labels.go', default: client.label)
+      when 'rust-async' then documentation_t('generated.labels.rust_async', default: client.label)
+      when 'rust-blocking' then documentation_t('generated.labels.rust_blocking', default: client.label)
+      when 'typescript-generated' then documentation_t('generated.labels.typescript', default: client.label)
+      else client.label
+      end
+    end
+
+    def documentation_client_variant(client)
+      case client.id
+      when 'rust-async' then documentation_t('generated.variants.async', default: client.variant)
+      when 'rust-blocking' then documentation_t('generated.variants.blocking', default: client.variant)
+      when 'typescript-generated' then documentation_t('generated.variants.api_client', default: client.variant)
+      else client.variant
       end
     end
 

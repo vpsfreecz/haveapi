@@ -86,7 +86,7 @@ RSpec.describe HaveAPI::DocumentationSearch::Helpers do
     expect(response.content_type).to match(%r{\Atext/html;\s*charset=utf-8\z})
     expect(response['cache-control']).to eq('private, max-age=86400, immutable')
     expect(response['etag']).to eq(%("#{key}"))
-    expect(response['vary'].split(/,\s*/)).to contain_exactly('X-Language', 'Cookie', 'Authorization')
+    expect(response['vary'].split(/,\s*/)).to contain_exactly('X-Language', 'Accept-Language', 'Cookie', 'Authorization')
     expect(envelope(response)).to include('key' => key)
     expect(response.body).to include('\\u003c/script\\u003e', '\\u0026')
     expect(response.body).not_to include('<!DOCTYPE', 'docs-sidebar', '<script src=', 'fixture')
@@ -139,10 +139,14 @@ RSpec.describe HaveAPI::DocumentationSearch::Helpers do
     expect(envelope(current)['index']).to include('version' => '1', 'base_path' => '/api/v1/')
   end
 
-  it 'binds the projection to resolved locale and canonical Rack/API mounts' do
+  it 'binds the projection to the documentation browser locale independently of the API header and Rack/API mounts' do
     server.available_locales = %i[en cs]
-    english = envelope(request('?page=resources&search_index=current', 'HTTP_X_LANGUAGE' => 'en'))
-    czech = envelope(request('?page=resources&search_index=current', 'HTTP_X_LANGUAGE' => 'cs'))
+    english = envelope(request('?page=resources&search_index=current', 'HTTP_ACCEPT_LANGUAGE' => 'en', 'HTTP_X_LANGUAGE' => 'cs'))
+    czech = envelope(request('?page=resources&search_index=current', 'HTTP_ACCEPT_LANGUAGE' => 'cs', 'HTTP_X_LANGUAGE' => 'en'))
+    custom_header = envelope(request('?page=resources&search_index=current', 'HTTP_X_LANGUAGE' => 'cs'))
+    expect(english['index']['locale']).to eq('en')
+    expect(custom_header['index']['locale']).to eq('en')
+    expect(custom_header['key']).to eq(english['key'])
     expect(english['key']).not_to eq(czech['key'])
     expect(czech['index']['locale']).to eq('cs')
     mounted = envelope(request('?page=resources&search_index=current', 'SCRIPT_NAME' => '/rack'))

@@ -5,6 +5,7 @@ require 'cgi'
 require 'haveapi/hooks'
 require 'haveapi/documentation_clients'
 require 'haveapi/documentation_helpers'
+require 'haveapi/documentation_locale'
 require 'haveapi/documentation_validators'
 require 'haveapi/documentation_search'
 require 'haveapi/shared_documentation_helpers'
@@ -237,7 +238,9 @@ module HaveAPI
       end
 
       def doc(file)
-        markdown :"../../../doc/#{file}", with_toc_data: true, tables: true, fenced_code_blocks: true, lax_spacing: true
+        path = documentation_article_path(file)
+        shared_documentation_links(markdown(File.read(path), with_toc_data: true, tables: true,
+                                                             fenced_code_blocks: true, lax_spacing: true))
       end
 
       def base_url
@@ -274,7 +277,8 @@ module HaveAPI
       end
 
       def documentation_clients
-        HaveAPI::ClientExample.clients.select { |client| client.available?(documentation_context(client)) }
+        # The server's @documentation_clients owns profiles, not this request list.
+        @documentation_available_clients ||= HaveAPI::ClientExample.clients.select { |client| client.available?(documentation_context(client)) } # rubocop:disable Naming/MemoizedInstanceVariableName
       end
 
       def documentation_panels(kind, auth_method: nil, auth_description: nil, **changes)
@@ -513,6 +517,7 @@ module HaveAPI
         helpers ServerHelpers
         helpers DocHelpers
         helpers DocumentationHelpers
+        helpers DocumentationLocale
         helpers DocumentationSearch::Helpers
         helpers SharedDocumentationHelpers
         helpers DocumentationOAuth::Helpers
@@ -561,23 +566,25 @@ module HaveAPI
           [version, documentation_authenticated?(version)]
         end
 
-        @api = settings.api_server.describe(Context.new(
-                                              settings.api_server,
-                                              user: auth_users_by_version[settings.api_server.default_version],
-                                              params:,
-                                              auth_users_by_version:
-                                            ))
+        with_documentation_locale do
+          @api = settings.api_server.describe(Context.new(
+                                                settings.api_server,
+                                                user: auth_users_by_version[settings.api_server.default_version],
+                                                params:,
+                                                auth_users_by_version:
+                                              ))
 
-        if single_version
-          version = settings.api_server.default_version
-          @documentation_index_account = {
-            version:, user: auth_users_by_version[version],
-            authentication: @api[:versions].fetch(version).fetch(:authentication)
-          }
+          if single_version
+            version = settings.api_server.default_version
+            @documentation_index_account = {
+              version:, user: auth_users_by_version[version],
+              authentication: @api[:versions].fetch(version).fetch(:authentication)
+            }
+          end
+
+          content_type 'text/html'
+          render_documentation_index
         end
-
-        content_type 'text/html'
-        render_documentation_index
       end
 
       @sinatra.options @root do
@@ -621,36 +628,14 @@ module HaveAPI
 
       # Shared documentation keeps the existing content and URL aliases.
       @sinatra.get "#{@root}doc" do
-        render_shared_readme
+        with_documentation_locale { render_shared_article('readme') }
       end
 
-      @sinatra.get "#{@root}doc/readme" do
-        render_shared_readme
-      end
+      @sinatra.get %r{#{@root}doc/([a-z0-9-]+)(\.md)?} do |file, extension|
+        halt 404 if extension && %w[readme json-schema].include?(file)
 
-      @sinatra.get "#{@root}doc/json-schema" do
-        begin
-          content = File.read(File.join(settings.root, '../../doc/json-schema.html'))
-        rescue Errno::ENOENT
-          halt 404
-        end
-        render_shared_documentation(content:, title: 'JSON schema', sidebar: erb(:'doc_sidebars/json-schema'))
-      end
-
-      @sinatra.get %r{#{@root}doc/([^.]+)(\.md)?} do |file, _|
-        next render_shared_readme if file == 'index'
-
-        begin
-          content = doc(file)
-        rescue Errno::ENOENT
-          halt 404
-        end
-        sidebar = begin
-          erb :"doc_sidebars/#{file}"
-        rescue Errno::ENOENT
-          nil
-        end
-        render_shared_documentation(content:, title: file.humanize, sidebar:)
+        file = 'readme' if file == 'index'
+        with_documentation_locale { render_shared_article(file) }
       end
 
       # Retain old documentation links without engaging browser credentials.
@@ -693,7 +678,7 @@ module HaveAPI
 
         headers 'Cache-Control' => 'private, no-store'
         query = request.query_string
-        halt 400, 'Invalid documentation query' if query.bytes.any? { |byte| byte < 32 || byte == 127 }
+        halt 400, documentation_t('errors.query') if query.bytes.any? { |byte| byte < 32 || byte == 127 }
         destination = url(prefix, false)
         destination += "?#{query}" unless query.empty?
         halt 308, { 'Location' => destination }, ''

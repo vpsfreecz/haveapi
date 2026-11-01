@@ -139,7 +139,7 @@ module HaveAPI
 
       def invalid_documentation_search_query
         headers 'Cache-Control' => 'private, no-store'
-        halt 400, 'Invalid documentation search query'
+        halt 400, documentation_t('errors.search_query')
       end
 
       def documentation_search_form_options(id:)
@@ -159,7 +159,7 @@ module HaveAPI
       end
 
       def documentation_search_index_url(version:, key:)
-        "#{url(settings.api_server.version_prefix(version), false)}?page=resources&search_index=#{key}"
+        "#{url(settings.api_server.version_prefix(version), false)}?page=resources&search_index=#{key}&doc_lang=#{documentation_locale}"
       end
 
       def documentation_search_index_request?
@@ -171,7 +171,7 @@ module HaveAPI
         index = documentation_search_index
         requested = documentation_search_parameters[:index]
         if requested != 'current' && requested != index.key
-          halt 409, 'Search has changed. Reload this page or submit to open current results.'
+          halt 409, documentation_t('search.changed')
         end
 
         content_type 'text/html', charset: 'utf-8'
@@ -215,8 +215,8 @@ module HaveAPI
         else
           context << "#{result[:resource_path].join('.')} · #{result[:action_name]}"
         end
-        context << "#{result[:direction].to_s.capitalize} · #{result[:type]}" if result[:kind] == :parameter
-        context << "Authentication: #{result[:authentication]}" if result[:authentication]
+        context << "#{documentation_t("browser.#{result[:direction]}")} · #{result[:type]}" if result[:kind] == :parameter
+        context << documentation_t('browser.authentication', provider: result[:authentication]) if result[:authentication]
         context << result[:label] if result[:kind] != :resource && result[:label] && result[:label] != result[:name]
         context
       end

@@ -1,7 +1,7 @@
 module HaveAPI
   module SharedDocumentationHelpers
     def render_documentation_index
-      render_neutral_documentation(content: erb(:index), title: 'API versions', page: 'versions')
+      render_neutral_documentation(content: erb(:index), title: documentation_t('labels.api_versions'), page: 'versions')
     end
 
     def render_shared_documentation(content:, title:, sidebar: nil)
@@ -9,9 +9,57 @@ module HaveAPI
     end
 
     def render_shared_readme
-      content = markdown(File.read("#{settings.views}/../../../README.md"),
-                         with_toc_data: true, tables: true, fenced_code_blocks: true, lax_spacing: true)
-      render_shared_documentation(content:, title: 'HaveAPI internals')
+      render_shared_article('readme')
+    end
+
+    def documentation_article_path(article, extension: 'md')
+      halt 404 unless article.match?(/\A[a-z0-9-]+\z/) && %w[md html].include?(extension)
+
+      directory = File.expand_path('../../doc', __dir__)
+      locale = documentation_locale
+      path = File.join(directory, locale, "#{article}.#{extension}")
+      unless File.file?(path)
+        locale = 'en'
+        path = File.join(directory, locale, "#{article}.#{extension}")
+      end
+      halt 404 unless File.file?(path)
+
+      @documentation_article_locale = locale
+      path
+    end
+
+    def render_shared_article(article)
+      @documentation_article_id = article
+      content = if article == 'json-schema'
+                  File.read(documentation_article_path(article, extension: 'html'))
+                else
+                  doc(article)
+                end
+      title = documentation_t("articles.#{article.tr('-', '_')}", default: article.humanize)
+      sidebar = begin
+        erb :"doc_sidebars/#{article}"
+      rescue Errno::ENOENT
+        nil
+      end
+      render_shared_documentation(content:, title:, sidebar:)
+    rescue Errno::ENOENT
+      halt 404
+    end
+
+    def shared_documentation_links(content)
+      content.gsub(/(href|src)="([^"#]*)(#[^"]*)?"/) do |attribute|
+        kind = Regexp.last_match(1)
+        path = Regexp.last_match(2)
+        fragment = Regexp.last_match(3).to_s
+        if path.match?(%r{\A(?:(?:\.\./)*(?:en/|cs/)?|/doc/(?:en/|cs/)?)[a-z0-9-]+\.md\z})
+          article = File.basename(path, '.md')
+          %(#{kind}="#{escape_html(shared_documentation_url("doc/#{article}"))}#{fragment}")
+        elsif path.match?(%r{\A(?:\.\./)+[a-z0-9-]+\.png\z})
+          %(#{kind}="#{escape_html(shared_documentation_url("doc/#{File.basename(path)}"))}#{fragment}")
+        else
+          attribute
+        end
+      end
     end
 
     def shared_documentation_url(path = '')
@@ -47,7 +95,7 @@ module HaveAPI
     def shared_documentation_tables(content)
       # Trusted repository HTML is rendered before this presentation-only pass.
       content.gsub(%r{<table\b[^>]*>.*?</table>}m) do |table|
-        %(<div class="docs-table-scroll" role="region" aria-label="Documentation table" tabindex="0">#{table}</div>)
+        %(<div class="docs-table-scroll" role="region" aria-label="#{escape_html(documentation_t('accessibility.documentation_table'))}" tabindex="0">#{table}</div>)
       end
     end
   end

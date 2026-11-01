@@ -43,6 +43,473 @@ cs:
       token_required: Tato akce vyžaduje autentizaci tokenem
     authorization:
       insufficient_permissions: Přístup odepřen. Nedostatečná oprávnění.
+    documentation:
+      accessibility:
+        authentication_methods: Metody autentizace
+        breadcrumb: Drobečková navigace
+        documentation_table: Tabulka dokumentace
+        link_to: Odkaz na %{label}
+        navigation: Navigace
+        pages: Stránky dokumentace
+        resource_actions: Akce tohoto zdroje
+        shared: Společná dokumentace
+        skip: Přejít na obsah
+      article:
+        fallback: Tento článek je dostupný v angličtině.
+      articles:
+        client_examples: Příklady klientů
+        create_client: Tvorba klienta
+        documentation_oauth: OAuth pro dokumentaci
+        documentation_ui: Procházení dokumentace API
+        json_schema: JSON schéma
+        performance: Výkon
+        protocol: Protokol
+        readme: Vnitřní fungování HaveAPI
+        typed_input_validation: Validace typovaných vstupů
+      authentication:
+        disabled: Autentizace je pro toto API vypnutá.
+        initialize_after: " a poté zvol metodu autentizace."
+        initialize_before: Inicializuj klienta podle
+        overview_link: příkladů v přehledu
+      browser:
+        action: Akce
+        authentication: 'Autentizace: %{provider}'
+        copied: Zkopírováno
+        copy_example: Kopírovat příklad
+        copy_failed: Označ kód a zkopíruj ho.
+        example_unavailable: Tento příklad není pro zvoleného klienta dostupný.
+        input: Vstup
+        output: Výstup
+        parameter: Parametr
+        resource: Zdroj
+        saved_example_unavailable: Uložený příklad není dostupný. Zobrazuje se %{client}.
+        search_count: 'Počet výsledků: %{count}.'
+        search_empty: Nic nenalezeno. Zkus jiný název zdroje, akce nebo parametru.
+        search_failed: Vyhledávání se nepodařilo načíst. Odešli dotaz a otevři stránku
+          s výsledky.
+        search_loading: Načítání vyhledávání…
+        search_more: 'Zobrazených výsledků: %{count}. Existují další shody; upřesni
+          dotaz.'
+        search_one: "%{count} výsledek."
+        simple: Jednoduché
+        thorough: S ošetřením chyb
+      client:
+        and: " a "
+        library: knihovna
+        request_examples: příklady požadavků jsou dostupné na stránkách zdrojů.
+      comments:
+        acquire_token: Získání tokenu
+        array_subclass: která je podtřídou Array
+        cli_action_required: |-
+          Klient musí vždy zavolat nějakou akci. API by mělo poskytovat akci pro získání
+          informací o aktuálním uživateli, kterou zde voláme.
+        cli_ask_stdin: Pokud chybí uživatelské jméno nebo heslo, klient se na ně zeptá
+          na standardním vstupu
+        cli_credentials: Přihlašovací údaje na příkazovém řádku
+        cli_oauth_unsupported: Ruby CLI HaveAPI nepodporuje OAuth2.
+        cli_read_token: |-
+          Token se nyní načte z disku a uživatel se přihlásí bez zadávání
+          uživatelského jména a hesla
+        cli_save_token: Získání tokenu pomocí uživatelského jména a hesla a uložení
+          na disk
+        client_instance: Instance klienta
+        curl_password_argument: Heslo zadané na příkazovém řádku
+        curl_password_stdin: Na heslo se klient zeptá na standardním vstupu
+        custom_type: "%{variable} má vlastní datový typ"
+        dependency_failures: Chyby závislostí se nadále předávají aplikaci.
+        failure_branch: Tento příklad ukazuje větev pro chybu uvedenou výše.
+        go_existing_oauth: Před spuštěním programu získej přístupový token od poskytovatele
+          OAuth2.
+        go_existing_token: Použij token získaný od nabízeného poskytovatele autentizace.
+        go_metadata: 'Pro předání nabízených globálních metadat vyber pouze pole,
+          která nastavuješ:'
+        go_metadata_type: value má typ %{type}
+        http_oauth_code: 1) Vyžádání autorizačního kódu
+        http_oauth_login: 2) Uživatel se přihlásí pomocí tohoto API
+        http_oauth_redirect: 3) API přesměruje uživatele zpět do klientské aplikace
+        http_oauth_token: 4) Klientská aplikace si vyžádá přístupový token
+        instance_of: "%{variable} je instance %{type}"
+        js_existing_oauth: Použij existující přístupový token; tento klient neprovádí
+          autorizační proces OAuth.
+        js_initial_response: Tím se vypíše počáteční odpověď; dokončení sleduj pomocí
+          jejích metadat o stavu akce.
+        js_request_completion: Samotný úspěch požadavku neznamená dokončení operace.
+        oauth_callback_url: Tento příklad má běžet na níže uvedené URL
+        oauth_check_token: Ověření, zda už je k dispozici přístupový token
+        oauth_client_credentials: ID klienta a tajný klíč poskytuje API server
+        oauth_code_flow: Získání přístupového tokenu pomocí autorizačního kódu v procesu
+          OAuth2
+        oauth_need_code: Autorizační kód zatím není k dispozici, je potřeba si ho
+          vyžádat
+        oauth_redirect: Přesměrování uživatele na autorizační endpoint
+        oauth_request_token: Vyžádání přístupového tokenu přes token endpoint
+        oauth_reuse_token: Přihlášení už proběhlo, použije se existující přístupový
+          token
+        oauth_rfc: Autorizační proces popisuje RFC 6749 a použití přístupového tokenu
+          RFC 6750.
+        oauth_scopes: Rozsahy oprávnění závisí na implementaci API
+        oauth_session: OAuth2 vyžaduje relaci
+        oauth_store_token: Uložení přístupového tokenu do relace
+        operation_status_fields: Stav operace ověř pomocí jejích dokumentovaných výstupních
+          polí.
+        python_actions: Akce API volej uvnitř tohoto bloku.
+        python_async_context: Spusť uvnitř asynchronní funkce po inicializaci api.
+        python_existing_oauth: Použij existující přístupový token; tento klient nezajišťuje
+          získání ani obnovu tokenu OAuth.
+        raises_exception: Vyvolá výjimku %{exception}
+        request_completion: Úspěch požadavku neznamená dokončení operace.
+        response_associative: "%{call} vrací asociativní pole výstupních parametrů:"
+        response_associative_arrays: "%{call} vrací pole asociativních polí:"
+        response_hash: "%{call} vrací hash výstupních parametrů:"
+        response_hashes: "%{call} vrací pole hashů:"
+        reuse_token: Použití existujícího tokenu
+        ruby_oauth_unsupported: Ruby klient HaveAPI nepodporuje OAuth2.
+        rust_action_state: Použij pouze samostatně dokumentovanou akci pro stav operace;
+          tento API klient nemá automatickou pomocnou metodu pro čekání.
+        rust_async_function: Použij uvnitř asynchronní funkce vracející %{type}.
+        rust_blocking_context: Tohoto blokujícího klienta vytvářej, používej a uvolňuj
+          mimo vlákna asynchronního běhového prostředí.
+        rust_completion: Úspěch požadavku ani vypršení časového limitu neznamenají
+          dokončení operace na serveru.
+        rust_credentials: Nastav pouze existující přihlašovací údaje; vytvoření klienta
+          je neověřuje na serveru.
+        rust_diagnostics: Tyto údaje kontroluj explicitně; diagnostika serveru může
+          obsahovat citlivé hodnoty.
+        rust_sync_function: Použij uvnitř synchronní funkce, která vrací %{type},
+          mimo vlákna asynchronního běhového prostředí.
+        throws_exception: Vyvolá výjimku %{exception}
+        timeout_no_cancel: Vypršení časového limitu požadavku nezruší operaci na serveru.
+        token_credentials: Získání tokenu pomocí uživatelského jména a hesla
+        token_reuse_next: Příště se klient může přihlásit přímo pomocí tokenu
+        typescript_async_context: Vyžaduje inicializované api a asynchronní kontext.
+        typescript_completion: Úspěch požadavku neznamená dokončení operace na serveru.
+        typescript_package: 'Nastavený API klient: %{package}.'
+        use_previous_token: Použití dříve získaného tokenu
+      errors:
+        query: Neplatný dotaz dokumentace
+        resource_not_found: Zdroj dokumentace nebyl nalezen
+        search_query: Neplatný vyhledávací dotaz dokumentace
+        selection: Neplatný výběr dokumentace
+      example:
+        and: a
+        authentication: autentizaci
+        initialization: inicializaci
+        initialized: Příklady používají inicializovaného klienta API, v případě potřeby
+          přihlášeného.
+        see: Viz
+        title: Příklad č. %{index}
+      footer:
+        generated: Vygenerováno pomocí
+      generated:
+        go:
+          action: Tato akce není v nastaveném API klientovi pro Go dostupná.
+          associated_object: API klient pro Go vyžaduje u souvisejícího pole odpovědi
+            objekt.
+          associated_response: Tato související odpověď není ve viditelné dokumentaci
+            API klienta pro Go dostupná.
+          authentication: Tato autentizační metoda není v nastaveném API klientovi
+            pro Go dostupná.
+          authentication_mismatch: Tato autentizační metoda neodpovídá nastavenému
+            API klientovi pro Go.
+          authentication_unsupported: Generátor Go tuto autentizační metodu nepodporuje.
+          custom: Generátor Go nepodporuje v tomto příkladu pole typu Custom.
+          input: Tento vstup není v nastaveném API klientovi pro Go dostupný.
+          input_field: Toto vstupní pole neodpovídá nastavenému API klientovi pro
+            Go.
+          int64_range: Hodnota cesty je mimo rozsah int64 v Go.
+          layout: Nastavený API klient pro Go neodpovídá rozložení této akce.
+          list_input: Generátor Go nepodporuje v dokumentačních příkladech vstupní
+            seznamy.
+          metadata: Tato akce vyžaduje metadata, která v příkladu chybí.
+          mode: Tento režim příkladu API klienta pro Go není podporovaný.
+          name_collision: Generátor Go nedokáže vyjádřit tyto kolize názvů parametrů.
+          null_input: Toto vstupní pole API klienta pro Go nepřijímá null.
+          null_output: API klient pro Go nedokáže rozlišit skalární výstup null od
+            nulové hodnoty jeho typu.
+          object_input: Generátor Go podporuje pouze objektový vstup.
+          output_layout: Generátor Go nepodporuje toto rozložení výstupu.
+          path_parameters: Příklad neposkytuje všechny parametry cesty API klienta
+            pro Go.
+          path_type: Tento parametr cesty API klienta pro Go musí být celé číslo nebo
+            řetězec.
+          response: Tato odpověď není v nastaveném API klientovi pro Go dostupná.
+          response_field: Toto pole odpovědi neodpovídá nastavenému API klientovi
+            pro Go.
+          route: Nastavený API klient pro Go neodpovídá cestě této akce.
+          sample_output_layout: Příklad neodpovídá rozložení výstupu API klienta pro
+            Go.
+          structured_sample: Příklad nepopisuje strukturovaný požadavek a odpověď.
+          unavailable: Tento příklad API klienta pro Go není dostupný.
+          undeclared_field: Pole příkladu API %{path} není deklarované ve schématu
+            API klienta pro Go.
+          value: Typ pole API klienta pro Go nedokáže vyjádřit tuto hodnotu příkladu.
+        labels:
+          go: Klient API pro Go
+          rust_async: Klient API pro Rust (asynchronní)
+          rust_blocking: Klient API pro Rust (blokující)
+          typescript: Klient API pro TypeScript
+        rust:
+          action: Tato akce není v autorizovaném profilu API klienta pro Rust dostupná.
+          action_authentication: Tato akce vyžaduje autentizaci, která není v autorizovaném
+            profilu API klienta pro Rust dostupná.
+          action_metadata: Tato akce API klienta pro Rust vyžaduje metadata, která
+            v příkladu chybí.
+          authentication: Tento poskytovatel autentizace není v autorizovaném profilu
+            API klienta pro Rust dostupný.
+          authentication_description: Popis autentizace se liší od autorizované dokumentace.
+          authentication_header: Autentizační hlavička API klienta pro Rust se liší
+            od tohoto API.
+          authentication_unsupported: Klient pro Rust tohoto poskytovatele autentizace
+            nepodporuje.
+          get_custom: Požadavky GET v Rustu nepodporují vnořené hodnoty Custom v query
+            stringu.
+          get_list: Požadavky GET v Rustu nepodporují vstupní seznamy.
+          input: Tato akce API klienta pro Rust nedokáže vyjádřit vstup příkladu.
+          input_layout: Vstup příkladu neodpovídá rozložení API klienta pro Rust.
+          layout: Rozložení vstupu nebo výstupu API klienta pro Rust se liší od této
+            akce API.
+          mode: Nepodporovaný režim spouštění Rustu.
+          parameter: Parametr příkladu není dostupný nebo se v tomto API klientovi
+            pro Rust změnil.
+          path_parameters: Tento API klient pro Rust nedokáže vyjádřit argumenty cesty
+            v příkladu.
+          required_input: V příkladu chybí povinný vstup API klienta pro Rust.
+          response: Odpověď příkladu neodpovídá tomuto API klientovi pro Rust.
+          response_layout: Odpověď příkladu neodpovídá rozložení tohoto API klienta
+            pro Rust.
+          route: Cesta nebo HTTP metoda API klienta pro Rust se liší od této akce
+            API.
+          sample_metadata: Tato akce vyžaduje metadata, která v příkladu chybí.
+          section: Nepodporovaná část dokumentace Rustu.
+          structured_sample: Příklad neobsahuje strukturovaný požadavek ani odpověď
+            k zobrazení.
+          value: Tento API klient pro Rust nedokáže vyjádřit hodnotu příkladu.
+          version: API klient pro Rust cílí na jinou verzi API.
+        typescript:
+          unavailable: Tento příklad není dostupný nebo není kompatibilní s nastaveným
+            API klientem pro TypeScript.
+        variants:
+          api_client: Klient API
+          async: Asynchronní
+          blocking: Blokující
+      labels:
+        account: Účet
+        actions: Akce
+        aliases: Aliasy
+        api_reference: Referenční příručka API
+        api_versions: Verze API
+        apply_language: Použít jazyk
+        authentication: Autentizace
+        authentication_required: Vyžaduje autentizaci
+        authorize_url: 'Autorizační URL:'
+        blocking: Blokující
+        client: Klient
+        client_libraries: Klientské knihovny
+        contents: Obsah
+        default: 'Výchozí hodnota:'
+        description: Popis
+        details: Podrobnosti
+        examples: Příklady
+        http_header: 'HTTP hlavička:'
+        initialization: Inicializace
+        input_parameters: Vstupní parametry
+        language: Jazyk
+        layout: Rozložení
+        namespace: Jmenný prostor
+        'no': ne
+        no_parameters: Žádné parametry.
+        output_parameters: Výstupní parametry
+        overview: Přehled
+        parameter: Parametr
+        path: Cesta
+        programming_language: Jazyk
+        query_parameter: 'Parametr dotazu:'
+        required: Povinný
+        resources: Zdroje
+        revoke_url: 'URL pro odvolání tokenu:'
+        scope: Rozsah
+        settings: Nastavení dokumentace
+        sign_in: Přihlásit se
+        sign_out: Odhlásit se
+        simple: Jednoduché
+        subresources: Podřízené zdroje
+        switch_user: Změnit uživatele
+        theme: Motiv
+        theme_auto: Automatický motiv
+        theme_dark: Tmavý motiv
+        theme_light: Světlý motiv
+        thorough: S ošetřením chyb
+        token_url: 'URL pro token:'
+        type: Typ
+        usage: Použití této příručky
+        'yes': ano
+      limitations:
+        action_authentication: Tato akce vyžaduje poskytovatele autentizace, kterého
+          tento klient nepodporuje.
+        authentication_provider: Tento poskytovatel autentizace není zveřejněn nebo
+          ho tento klient nepodporuje.
+        callback_parameter_name: Tento klient s callbacky nemůže bezpečně vyjádřit
+          název tohoto vstupního parametru.
+        duplicate_object_keys: Tato ukázka má duplicitní klíče serializovaného objektu.
+        go_profile: Je vyžadován profil klienta API pro Go.
+        input_description_missing: Ukázka poskytuje vstup pro akci bez popisu vstupu.
+        input_hidden: Ukázka obsahuje vstupní parametry, které nejsou ve viditelném
+          popisu.
+        input_metadata: Tato akce vyžaduje vstupní metadata, která formát ukázky nedokáže
+          poskytnout.
+        javascript_integer: Tato ukázka obsahuje celé číslo mimo rozsah přesně reprezentovatelných
+          celých čísel v JavaScriptu.
+        javascript_list_input: Tento klient JavaScriptu přijímá pouze objektový vstup;
+          seznam nelze vyjádřit bez ztráty hodnot.
+        javascript_nested_query: Tento klient JavaScriptu nemůže zachovat vnořené
+          hodnoty ve vstupu dotazu.
+        javascript_object_input: Tento klient JavaScriptu vyžaduje objektový vstup.
+        literal: Tato ukázka obsahuje hodnotu bez podporovaného zápisu literálu.
+        non_finite_number: Tato ukázka obsahuje číslo, které není konečné.
+        object_key: Tato ukázka má klíč objektu, který není řetězec.
+        path_argument_type: Argumenty cesty akce musí být řetězce nebo celá čísla.
+        path_arguments_missing: Ukázka neobsahuje všechny argumenty cesty akce.
+        prose_only: Tento příklad obsahuje pouze text, nikoli spustitelný požadavek.
+        python_get_input: Příklady GET v Pythonu podporují plochý skalární vstup s
+          názvy bez hranatých závorek; hodnoty Custom musí být řetězce nebo povolené
+          hodnoty null.
+        python_input: Tento klient Pythonu vyžaduje vstup ve formě objektu nebo seznamu.
+        python_list_namespace: Tento klient Pythonu vyžaduje jmenný prostor pro vstup
+          ve formě seznamu.
+        python_method: Tento klient Pythonu podporuje pouze akce GET, POST, PUT a
+          DELETE.
+        rust_profile: Je vyžadován profil dokumentace klienta API pro Rust.
+        token_input_choice: Tento příklad s tokenem nemůže vyjádřit zveřejněnou volbu
+          vstupu.
+        token_input_choice_missing: Tento příklad s tokenem nemá zveřejněnou volbu
+          vstupu.
+        token_input_type: Tento příklad s tokenem má nepodporovaný typ vstupu.
+        token_input_value: Tento klient s tokenem nemůže odeslat zveřejněnou hodnotu
+          přihlašovacího vstupu.
+        token_object_input: Tento příklad s tokenem vyžaduje objektový vstup.
+        typescript_profile: Je vyžadován profil dokumentace klienta API pro TypeScript.
+      oauth:
+        origin_required: Přihlášení do dokumentace vyžaduje nastavený HTTPS origin
+        return: Zpět do dokumentace
+        session_ended: Relace dokumentace skončila. Přihlas se znovu.
+        sign_in_failed: Přihlášení do dokumentace se nezdařilo.
+        sign_out_incomplete: Místní odhlášení proběhlo, ale relace na serveru může
+          zůstat aktivní do vypršení platnosti.
+        sign_out_invalid: Neplatný požadavek na odhlášení z dokumentace
+        switch_invalid: Neplatný požadavek na změnu uživatele dokumentace
+        try_again: Zkus to znovu
+      overview:
+        api_address: API je dostupné na
+        authentication_link: pokynů k autentizaci
+        browse_after: a jejich akce, parametry a příklady.
+        browse_link: Projdi si všechny zdroje
+        initialize_after: v případě potřeby přihlášení.
+        initialize_before: Inicializuj klienta a poté postupuj podle
+        versions: Příklady jsou pro API v%{version}. Klienti API mají vlastní verze
+          balíčků a musí být s tímto API kompatibilní.
+      schema:
+        envelope: Obálka
+      search:
+        changed: Vyhledávání se změnilo. Obnov stránku nebo odešli dotaz pro aktuální
+          výsledky.
+        label: Hledat v API v%{version}
+        placeholder: Zdroj…
+        results: Výsledky vyhledávání
+        results_for: Výsledky hledání pro %{query}
+        submit: Hledat
+        suggestions: Návrhy vyhledávání
+      titles:
+        search: 'Hledání v API v%{version}: %{query}'
+      toc:
+        authorization: Autorizace
+        client_definition: Definice klienta
+        client_side_validations: Validace na straně klienta
+        data_types: Datové typy
+        describe_default_version: Popis výchozí verze
+        describe_the_whole_api: Popis celého API
+        description_format: Formát popisu
+        design_rules: Pravidla návrhu
+        http_basic_authentication: HTTP Basic autentizace
+        input_output_formats: Vstupní a výstupní formáty
+        input_output_parameters: Vstupní a výstupní parametry
+        layouts: Rozložení
+        list_api_versions: Seznam verzí API
+        necessary_features_to_implement: Nezbytné funkce
+        object_like_access: Objektový přístup
+        parameters: Parametry
+        protocol_definition: Definice protokolu
+        request: Požadavek
+        resource_associations: Vazby na zdroje
+        resource_tree: Strom zdrojů
+        response: Odpověď
+        self_description: Popis API
+        supplemental_features: Doplňkové funkce
+        token_authentication: Tokenová autentizace
+        version: Verze
+      usage:
+        below: níže a sekcí
+        browse: a vyber zdroj s jeho akcemi, parametry a příklady.
+        choose: Zvol programovací jazyk a variantu klienta pro příklady. Nabídka Příklady
+          obsahuje formáty podporované zvoleným klientem. Volby platí pro všechny
+          příklady a zůstávají vybrané při procházení dokumentace.
+        credentials: pro přihlašovací údaje. Otevři
+        search: Vyhledávání hledá zdroje, akce a vstupní i výstupní parametry. Výsledek
+          vede na příslušné místo v příručce.
+        sign_in: Po přihlášení uvidíš jen ty, které jsou dostupné tvému účtu.
+        signed_out: Bez přihlášení příručka zobrazuje všechny deklarované zdroje,
+          akce a parametry.
+        start: Začni sekcí
+      validators:
+        accept: Musí se rovnat %{value}.
+        additional: Další podrobnosti
+        allowed: Povolené hodnoty
+        caption: Validační pravidla
+        characters: " znaků"
+        confirm_different: Musí se lišit od parametru %{parameter}.
+        confirm_equal: Musí se rovnat parametru %{parameter}.
+        custom: 'Pravidlo aplikace: %{rule}'
+        details: Podrobnosti
+        disallowed: Zakázané hodnoty
+        empty_allowed: Prázdné hodnoty jsou povolené.
+        empty_disallowed: Nesmí být prázdné; řetězce složené pouze z bílých znaků
+          nejsou povolené.
+        empty_set: Množina je prázdná.
+        even: Musí být sudé.
+        even_disabled: 'Omezení na sudá čísla: vypnuto.'
+        format_match: 'Musí odpovídat tomuto regulárnímu výrazu:'
+        format_no_match: 'Nesmí odpovídat tomuto regulárnímu výrazu:'
+        items: " položek"
+        length_equal: Délka musí být rovna %{value}%{unit}.
+        length_maximum: 'Maximální délka: %{value}%{unit} (včetně).'
+        length_minimum: 'Minimální délka: %{value}%{unit} (včetně).'
+        maximum: 'Maximum: %{value} (včetně).'
+        message: 'Chybová zpráva validace:'
+        metadata: 'Poskytnutá metadata validátoru:'
+        minimum: 'Minimum: %{value} (včetně).'
+        multiple: Musí být násobkem %{value}, počítáno od nuly.
+        names:
+          accept: Přijetí
+          confirm: Potvrzení
+          custom: Vlastní
+          exclude: Zakázané hodnoty
+          format: Formát
+          include: Povolené hodnoty
+          length: Délka
+          number: Číslo
+          present: Přítomnost
+        number: Po převodu typu parametru musí jít o číslo.
+        odd: Musí být liché.
+        odd_disabled: 'Omezení na lichá čísla: vypnuto.'
+        present: Musí být uvedeno a nesmí být null.
+        ruby_value: Hodnota Ruby
+        rule: Pravidlo
+        step: 'Krok: %{value}, počítáno od %{start}.'
+      version:
+        default: "(výchozí)"
+        label: Verze %{version}
+      visibility:
+        account: Zobrazené zdroje, akce a parametry jsou dostupné tomuto účtu.
+        all: Zobrazeny jsou všechny zdroje, akce a parametry.
     errors:
       action_not_found: Akce nebyla nalezena
       bad_accept_header: Neplatná hlavička Accept

@@ -271,7 +271,24 @@ module HaveAPI
           inspect_typescript(package) if name == 'haveapi-typescript-client'
           next unless name == 'haveapi'
 
-          required = %w[json-schema.html protocol.md create-client.md typed-input-validation.md client-examples.md protocol.png].map { |f| "doc/#{f}" }
+          required = %w[
+            doc/protocol.png
+            doc/en/readme.md
+            doc/en/protocol.md
+            doc/en/create-client.md
+            doc/en/typed-input-validation.md
+            doc/en/client-examples.md
+            doc/en/documentation-ui.md
+            doc/en/documentation-oauth.md
+            doc/en/performance.md
+            doc/en/json-schema.html
+            doc/cs/readme.md
+            doc/cs/protocol.md
+            doc/cs/create-client.md
+            doc/cs/typed-input-validation.md
+            doc/cs/client-examples.md
+            doc/cs/json-schema.html
+          ]
           raise Error, 'Server gem is missing shared documentation' unless (required - package.contents).empty?
         end
         inspect_npm(directory)

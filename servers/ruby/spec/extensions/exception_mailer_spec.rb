@@ -125,7 +125,7 @@ describe HaveAPI::Extensions::ExceptionMailer do
   it 'does not mail a missing JSON schema documentation file' do
     mailer = new_mailer
     calls = collect_mail_calls(mailer)
-    doc_path = File.join(app.settings.root, '../../doc/json-schema.html')
+    doc_path = File.expand_path('../../doc/en/json-schema.html', app.settings.root)
     allow(File).to receive(:read).and_call_original
     allow(File).to receive(:read).with(doc_path).and_raise(Errno::ENOENT, doc_path)
 
@@ -142,7 +142,7 @@ describe HaveAPI::Extensions::ExceptionMailer do
     calls = collect_mail_calls(mailer)
     app.set :raise_errors, false
     app.set :show_exceptions, false
-    doc_path = File.join(app.settings.root, '../../doc/json-schema.html')
+    doc_path = File.expand_path('../../doc/en/json-schema.html', app.settings.root)
     allow(File).to receive(:read).and_call_original
     allow(File).to receive(:read).with(doc_path).and_raise(Errno::EACCES, doc_path)
 

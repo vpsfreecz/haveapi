@@ -23,7 +23,7 @@ the API has, what are their parameters, and so on.
 When your API speaks the HaveAPI protocol, you can use pre-created clients that
 will know how to work with it. You can do this by using this framework to
 handle all HaveAPI-protocol stuff for you, or you can implement
-the [protocol](doc/protocol.md) on your own.
+the [protocol](doc/en/protocol.md) on your own.
 
 Available server frameworks:
 
@@ -51,7 +51,7 @@ Complex applications can be built on top of these basic clients, e.g.:
   that can mount any HaveAPI-based API
 
 If there isn't a client in the language you need, you can
-[create it](doc/create-client.md) and then use it for all HaveAPI-based APIs.
+[create it](doc/en/create-client.md) and then use it for all HaveAPI-based APIs.
 
 ## Protocol features
 - Creates RESTful APIs usable even with simple HTTP client, should it be needed
@@ -68,14 +68,14 @@ If there isn't a client in the language you need, you can
 
 For development rules and required procedures, start with [AGENTS.md](AGENTS.md).
 
- - [Protocol definition](doc/protocol.md)
- - [How to create a client](doc/create-client.md)
- - [Typed input validation rules](doc/typed-input-validation.md)
+ - [Protocol definition](doc/en/protocol.md)
+ - [How to create a client](doc/en/create-client.md)
+ - [Typed input validation rules](doc/en/typed-input-validation.md)
  - [TypeScript client generator](clients/typescript/README.md)
  - [Rust client generator](clients/rust/README.md)
- - [Browsing API documentation](doc/documentation-ui.md)
- - [Client examples in API documentation](doc/client-examples.md)
- - [Endpoint performance checks and CI](doc/performance.md)
+ - [Browsing API documentation](doc/en/documentation-ui.md)
+ - [Client examples in API documentation](doc/en/client-examples.md)
+ - [Endpoint performance checks and CI](doc/en/performance.md)
  - [Release procedure](doc/agent-instructions/releases.md)
  - [Project templates](templates)
  - [API examples](examples)

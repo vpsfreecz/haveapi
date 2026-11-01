@@ -86,9 +86,33 @@ Version-specific navigation puts Authentication before Resources and indents
 authentication methods beneath it. Technical references are linked under
 HaveAPI internals in the versions-index sidebar, and retain their direct URLs.
 
+## Documentation language
+
+Open **Documentation settings** and use **Language**, above **Theme**, to select
+**English** or **Česky**. Before a choice is saved, the documentation follows the
+browser's weighted `Accept-Language` preferences, including regional tags such
+as `cs-CZ` and `en-GB`, and falls back to English. Detecting a language does not
+save it. Changing the select saves the choice and reloads the current page,
+preserving its path, query and fragment.
+
+A valid `doc_lang=en` or `doc_lang=cs` query takes precedence over the saved
+`haveapi.docs.locale` cookie, then browser preferences, then English. The cookie
+is host-only, scoped to the API mount, uses SameSite=Lax, and is Secure on HTTPS.
+If cookies are unavailable, the query still selects the language for that page,
+but the choice cannot persist through the cookie. With JavaScript, only the
+select is shown. Without JavaScript, use the submit button after choosing a
+language; native form submission does not preserve the fragment.
+Search uses the page's effective documentation language without saving a choice.
+
+The API reference and HaveAPI internal articles share this setting. Articles
+without a Czech translation show the English source with a notice. Article
+links and existing section fragments retain their public URLs. Documentation
+language does not change API action requests, OPTIONS responses, account
+language or the API's request-locale configuration.
+
 ## Themes and examples
 
-The sidebar controls theme, language, client variant and example detail for
+The sidebar controls theme, programming language, client variant and example detail for
 all examples on the page. Open **Documentation settings** and use the **Theme**
 controls to select **Automatic**, **Light** or **Dark**. Automatic follows the
 operating system. The versions index and shared internal pages use the same
@@ -99,7 +123,7 @@ client, authenticated when required. **With error handling** demonstrates
 additional error checks or diagnostics. Initialization and authentication
 examples remain on their respective pages.
 
-Choose a language first. The Client selector appears when that language has
+Choose a programming language first (labeled **Jazyk** in Czech). The Client selector appears when that language has
 multiple variants, such as Callback and Async. Examples stays visible and shows
 the choices supported by the selected client on the current page. A selector
 with only one choice is disabled.
@@ -114,7 +138,9 @@ Use the copy icon inside a code block's top-right corner to copy its displayed c
 If the browser cannot copy it, select the code and copy it manually. Copying an
 example does not change the selected language, detail or scroll position.
 
-The browser stores these choices in `haveapi.docs.preferences.v1`. Preference
+The browser stores theme, programming language, client variant and example detail
+in `haveapi.docs.preferences.v1`; its `language` field selects the programming
+language. The documentation language uses its separate cookie. Preference
 data contains no credentials or API responses. Choices are checked against the
 clients available in the current API; an unavailable saved client uses an
 available fallback.

@@ -1,5 +1,7 @@
 require 'spec_helper'
 require 'rack/mock'
+require 'cgi'
+require 'ripper'
 
 RSpec.describe HaveAPI::SharedDocumentationHelpers do
   api do
@@ -119,6 +121,65 @@ RSpec.describe HaveAPI::SharedDocumentationHelpers do
       main
     end
     expect(pages.uniq.length).to eq(1)
+  end
+
+  def article_samples(body)
+    body.scan(%r{<pre><code(?: class="([^"]*)")?>(.*?)</code></pre>}m).map do |language, source|
+      code = CGI.unescapeHTML(source)
+      if language == 'ruby'
+        Ripper.lex(code).reject { |(_, type, _, _)| %i[on_sp on_nl on_ignored_nl on_comment].include?(type) }
+                        .map { |(_, type, token, _)| [type, token] }
+      else
+        code.lines.reject { |line| line.lstrip.start_with?('#', '//') }.join.strip
+      end
+    end
+  end
+
+  {
+    'readme' => 'Serverová implementace',
+    'protocol' => 'Definice protokolu',
+    'create-client' => 'Definice klienta',
+    'typed-input-validation' => 'Validace typovaných vstupů',
+    'client-examples' => 'Klientské příklady'
+  }.each do |article, heading|
+    it "translates #{article} while preserving its English anchors and noncomment samples" do
+      get "/doc/#{article}", {}, 'HTTP_ACCEPT_LANGUAGE' => 'en'
+      english = last_response.body
+      expect(last_response).to be_ok
+      get "/doc/#{article}", {}, 'HTTP_ACCEPT_LANGUAGE' => 'cs-CZ'
+      czech = last_response.body
+      expect(last_response).to be_ok
+      expect(czech).to include('lang="cs"', heading)
+      expect(czech.scan(/<h[1-6]\b[^>]*\bid="([^"]+)"/).flatten)
+        .to eq(english.scan(/<h[1-6]\b[^>]*\bid="([^"]+)"/).flatten)
+      expect(article_samples(czech)).not_to be_empty
+      expect(article_samples(czech)).to eq(article_samples(english))
+    end
+  end
+
+  it 'uses identical schema code for the English and Czech presentations' do
+    get '/doc/json-schema', {}, 'HTTP_ACCEPT_LANGUAGE' => 'en'
+    english = last_response.body
+    get '/doc/json-schema', {}, 'HTTP_ACCEPT_LANGUAGE' => 'cs'
+    expect(last_response).to be_ok
+    expect(last_response.body).to include('<h1 id="envelope">Obálka</h1>')
+    expect(article_samples(last_response.body)).to eq(article_samples(english))
+  end
+
+  it 'keeps translated article and shared asset links mounted under Rack and API prefixes' do
+    server = HaveAPI::Server.new(get_opt(:api_module))
+    server.use_version(1)
+    server.mount('/api/')
+    request = Rack::MockRequest.new(server.app)
+    response = request.get('/api/doc/protocol', 'HTTP_HOST' => 'example.test',
+                                                'SCRIPT_NAME' => '/rack', 'HTTP_ACCEPT_LANGUAGE' => 'cs')
+    expect(response.status).to eq(200)
+    expect(response.body).to include('href="/rack/api/doc/typed-input-validation"',
+                                     'src="/rack/api/doc/protocol.png"')
+    response = request.get('/api/doc/client-examples', 'HTTP_HOST' => 'example.test',
+                                                       'SCRIPT_NAME' => '/rack', 'HTTP_ACCEPT_LANGUAGE' => 'cs')
+    expect(response.body).to include('href="/rack/api/doc/documentation-ui"',
+                                     'href="/rack/api/doc/documentation-oauth"')
   end
 
   it 'uses configured escaped identity or the actual host and port in neutral titles and brand' do

@@ -1,4 +1,4 @@
-"""Strict typed inputs from doc/typed-input-validation.md."""
+"""Strict typed inputs from doc/en/typed-input-validation.md."""
 
 from __future__ import annotations
 

@@ -344,7 +344,7 @@ RSpec.describe HaveAPI::PerformanceCI do
     %w[flake.lock Gemfile Makefile .ruby-version servers/ruby/benchmarks/endpoints.rb
        servers/ruby/benchmarks/Gemfile servers/ruby/benchmarks/Gemfile.lock servers/ruby/benchmarks/shell.nix
        servers/ruby/test_support/performance_sqlite_fixture.rb clients/ruby/Gemfile clients/rust/Gemfile
-       doc/performance.md utils/performance_ci.rb .github/workflows/servers-ruby-performance.yml
+       doc/en/performance.md utils/performance_ci.rb .github/workflows/servers-ruby-performance.yml
        servers/ruby/benchmarks/spec/client_examples_spec.rb servers/ruby/test_support/all_client_performance_fixture.rb
        clients/go/lib/haveapi/go_client/documentation.rb clients/typescript/lib/haveapi/typescript_client/documentation.rb
        clients/js/src/client.ts clients/python/haveapi/client.py clients/php/src/Client.php clients/new-client/renderer.rb].each do |path|

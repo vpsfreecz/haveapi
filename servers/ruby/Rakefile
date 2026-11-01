@@ -9,12 +9,22 @@ require 'haveapi/tasks/yard'
 desc 'Check shared documentation required in the server gem'
 task :check_doc do
   required = %w[
-    doc/json-schema.html
-    doc/protocol.md
-    doc/create-client.md
-    doc/typed-input-validation.md
-    doc/client-examples.md
     doc/protocol.png
+    doc/en/readme.md
+    doc/en/protocol.md
+    doc/en/create-client.md
+    doc/en/typed-input-validation.md
+    doc/en/client-examples.md
+    doc/en/documentation-ui.md
+    doc/en/documentation-oauth.md
+    doc/en/performance.md
+    doc/en/json-schema.html
+    doc/cs/readme.md
+    doc/cs/protocol.md
+    doc/cs/create-client.md
+    doc/cs/typed-input-validation.md
+    doc/cs/client-examples.md
+    doc/cs/json-schema.html
   ]
   missing = required.reject { |path| File.file?(path) && File.size?(path) }
 
@@ -40,11 +50,11 @@ begin
       '--protected',
       '--output-dir=html_doc',
       '--files=doc/*.md',
-      '--files=doc/*.html'
+      '--files=doc/en/*.md',
+      '--files=doc/en/*.html'
     ]
     t.before = proc do
       document_hooks.call
-      render_doc_file('doc/json-schema.erb', 'doc/JSON-Schema.html').call
     end
   end
 rescue LoadError

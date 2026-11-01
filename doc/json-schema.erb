@@ -430,7 +430,7 @@ urls = {
 }
 %>
 
-<h1 id="envelope">Envelope</h1>
+<h1 id="envelope"><%= ERB::Util.html_escape(schema_envelope) %></h1>
 <pre><code><%= JSON.pretty_generate(ROOTS[:envelope]) %></code></pre>
 
 <%

@@ -22,12 +22,12 @@ repository root unless explicitly stated otherwise.
 - Opt-in documentation measurements: `make benchmark-documentation` in the
   prepared server Ruby shell emits JSON for context derivation and full HTML
   requests. Pass options through `BENCHMARK_DOCUMENTATION_ARGS`; see
-  [the benchmark guide](../client-examples.md#documentation-benchmark) for shapes,
+  [the benchmark guide](../en/client-examples.md#documentation-benchmark) for shapes,
   optional Rust lanes and equivalent baseline/candidate runs. Fixture/mount setup
   is excluded from request measurements. Ordinary specs use deterministic
   ownership, traversal and allocation checks without wall-clock thresholds in
   ordinary specs.
-- Required endpoint performance checks: see [performance testing](../performance.md)
+- Required endpoint performance checks: see [performance testing](../en/performance.md)
   before changing fixtures, budgets or the performance workflow. `make
   test-performance` runs deterministic contracts; `make performance` and
   `make performance-compare` invoke the paired runner and replay classifier.
@@ -44,7 +44,7 @@ repository root unless explicitly stated otherwise.
   in the prepared unbundled benchmark shell checks every registered renderer and
   mode plus complete pages. This additional deterministic contract uses actual
   Go/Rust/TypeScript profiles; it does not change historical paired timing
-  workloads or budgets. See [performance testing](../performance.md).
+  workloads or budgets. See [performance testing](../en/performance.md).
 - Release tooling checks: `make release-check` and `make release-test` in the
   top-level Nix shell. `make release-deps` installs maintained-component
   dependencies and creates ignored local library locks. Prepare these inputs

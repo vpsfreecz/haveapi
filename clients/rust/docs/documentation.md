@@ -77,7 +77,7 @@ fields and samples, including across users and locales. For saved models, each
 sample must match its route, method, layouts and supplied parameter contracts.
 Unavailable or stale samples produce a limitation. Private schema, hidden
 defaults, local paths and initialization diagnostics never enter rendered output.
-See the [server profile guide](../../../doc/client-examples.md) for compatibility
+See the [server profile guide](../../../doc/en/client-examples.md) for compatibility
 and rollback requirements.
 
 The adapter selects the action or advertised authentication provider from the
@@ -148,7 +148,7 @@ nix develop .#server-ruby --command bash -c \
 
 The performance unit specs count normalization work around real renders and
 check output/authorization parity as unrelated resource trees grow. They use no
-wall-clock budget. The opt-in [documentation benchmark](../../../doc/client-examples.md#documentation-benchmark)
+wall-clock budget. The opt-in [documentation benchmark](../../../doc/en/client-examples.md#documentation-benchmark)
 adds timing and allocation evidence. With server and Rust generator Ruby
 dependencies prepared, pass `--rust` through `BENCHMARK_DOCUMENTATION_ARGS` to
 include a matching profile in HTML and measure async/blocking adapter action and

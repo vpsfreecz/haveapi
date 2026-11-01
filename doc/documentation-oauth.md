@@ -41,10 +41,35 @@ token expiry. No refresh token is stored or used.
 
 `switch_user` defaults to `false` and accepts only `true` or `false`. Enable it
 only after verifying that a fresh authorization for this dedicated client lets
-the reader enter different credentials. For vpsAdmin, this requires a dedicated
-nondefault client with `allow_single_sign_on=false`. This option asserts that
-the operator has checked that behavior; it does not discover account-selection
-support or send `prompt` or `select_account` parameters.
+the reader enter different credentials. This option asserts that the operator
+has checked that behavior; it does not discover account-selection support or
+send `prompt` or `select_account` parameters.
+
+`switch_user_revoke_params` defaults to `{}` and accepts a static hash of string
+keys and string values. These fields are added to the revoke POST only for a
+validated Switch user request. They are never sent during ordinary Sign out,
+authorization or token exchange. The required `client_id`, `client_secret`,
+`token` and `token_type_hint` fields cannot be configured through this option.
+The server copies and freezes the hash and its strings at startup; browser
+fields and later changes to the original hash cannot change the revoke payload.
+The option has no effect when `switch_user` is `false`.
+
+For example, a dedicated nondefault vpsAdmin client can allow SSO and use the
+provider's `close_sso` revoke parameter when switching:
+
+```ruby
+api.documentation_oauth(
+  # Include the client, callback, session and scope options shown above.
+  switch_user: true,
+  switch_user_revoke_params: { 'close_sso' => '1' }
+)
+```
+
+Verify that the provider accepts these parameters and that the next authorization
+allows different credentials. Revoking the documentation token alone can leave
+SSO available when another active authorization shares it. Provider-specific
+SSO closure need not revoke that other authorization's access token. A dedicated
+client with SSO disabled is another way to permit account switching.
 
 The callback must be an absolute HTTPS URL with the exact mounted callback path,
 without credentials, query or fragment. The server takes authorize, token and
@@ -145,13 +170,19 @@ state and PKCE values; the old pending attempt and session are cleared. No retur
 URL or scope supplied by the switch request changes that destination. Cancelling
 the new authorization leaves the old documentation session signed out. A revoke
 failure retains the 502 response described above and does not continue to login.
-Switching does not sign out of the provider's whole-account SSO session.
+Switching can request provider-specific SSO behavior through the configured
+revoke parameters; HaveAPI does not interpret them or guarantee whole-account
+sign-out. Ordinary Sign out still revokes only the documentation token without
+those parameters.
 
 To disable this feature, remove its optional configuration before starting older
-documentation code. Existing API data needs no migration or rollback. Cookies
-expire or are ignored. Disable or revoke the dedicated OAuth client through
-normal provider administration when needed; documentation rollback does not
-delete clients automatically. Without this configuration, documentation remains
+documentation code. In particular, remove `switch_user_revoke_params` before
+rolling back to a HaveAPI version that does not support it; the unknown option
+would prevent startup. Upgrade HaveAPI before enabling the option, including on
+each worker that loads the configuration. Existing API data needs no migration
+or rollback. Cookies expire or are ignored. Disable or revoke the dedicated
+OAuth client through normal provider administration when needed; documentation
+rollback does not delete clients automatically. Without this configuration, documentation remains
 anonymous and offers no authentication controls; ordinary API authentication is
 unchanged. Older documentation code may use API credentials and legacy browser
 sign-in routes again. Rolling back requires no cookie or database migration.

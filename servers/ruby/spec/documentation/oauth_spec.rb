@@ -31,6 +31,27 @@ module DocumentationOAuthSpec
       User.new('basic-reader') if username == 'basic-reader' && password == 'basic-password'
     end
   end
+
+  class SharedSSOProvider
+    def initialize
+      @authorizations = %w[PRIVATE_ACCESS_TOKEN OTHER_ACCESS_TOKEN]
+      @sso_active = true
+    end
+
+    def revoke(parameters)
+      @authorizations.delete(parameters.fetch('token'))
+      @sso_active = false if @authorizations.empty? || parameters['end_shared_session'] == '1'
+      ''
+    end
+
+    def valid_token?(token)
+      @authorizations.include?(token)
+    end
+
+    def fresh_authorization_identity
+      'admin' if @sso_active
+    end
+  end
 end
 
 describe HaveAPI::DocumentationOAuth do
@@ -243,7 +264,7 @@ describe HaveAPI::DocumentationOAuth do
   end
 
   context 'with valid session CSRF and a switch-capable client' do
-    let(:oauth_options) { super().merge(switch_user: true) }
+    let(:oauth_options) { super().merge(switch_user: true, switch_user_revoke_params: { 'end_shared_session' => '1' }) }
 
     [nil, 'null', 'https://foreign.example', 'http://docs.example', 'https://docs.example:444'].each do |origin|
       [false, true].each do |switch_user|
@@ -269,7 +290,10 @@ describe HaveAPI::DocumentationOAuth do
       expect(last_response.headers).to include('Cache-Control' => 'private, no-store', 'Referrer-Policy' => 'no-referrer')
       expect(last_response.location).to eq('https://docs.example/api/_documentation/oauth/login?version=1')
       expect(cookie_headers).to include('_session=', '_pending=', 'max-age=0')
-      expect(transport).to have_received(:post).with(have_attributes(path: '/api/_auth/oauth2/revoke'), hash_including('token' => 'PRIVATE_ACCESS_TOKEN'))
+      expect(transport).to have_received(:post).with(have_attributes(path: '/api/_auth/oauth2/revoke'),
+                                                     'client_id' => 'docs-client', 'client_secret' => oauth_options[:client_secret],
+                                                     'token' => 'PRIVATE_ACCESS_TOKEN', 'token_type_hint' => 'access_token',
+                                                     'end_shared_session' => '1')
     end
   end
 
@@ -668,8 +692,122 @@ describe HaveAPI::DocumentationOAuth do
     expect { described_class.new(**oauth_options, switch_user: false) }.not_to raise_error
   end
 
+  it 'requires static string keys and values for switch-user revoke parameters' do
+    [nil, [], 'PRIVATE_VALUE', { end_shared_session: 'PRIVATE_VALUE' }, { 'extra' => nil },
+     { 'extra' => true }, { 'extra' => 1 }, { 'extra' => [] }, { 'extra' => { 'nested' => 'PRIVATE_VALUE' } }].each do |value|
+      expect { described_class.new(**oauth_options, switch_user_revoke_params: value) }
+        .to raise_error(described_class::Invalid, 'Invalid documentation OAuth switch-user revoke parameters')
+    end
+  end
+
+  %w[client_id client_secret token token_type_hint].each do |field|
+    it "rejects overriding required revoke field #{field} in configuration" do
+      expect { described_class.new(**oauth_options, switch_user_revoke_params: { field => 'PRIVATE_VALUE' }) }
+        .to raise_error(described_class::Invalid, 'Invalid documentation OAuth switch-user revoke parameters')
+    end
+  end
+
+  it 'keeps configured switch-user revoke parameters inert when switching is disabled' do
+    oauth_options[:switch_user_revoke_params] = { 'end_shared_session' => '1' }
+    sign_in
+    controls = capture_controls
+    csrf = session_csrf
+    expect(controls.last).not_to have_key(:switch_user)
+    cookie = rack_mock_session.cookie_jar.to_hash.find { |name, _| name.end_with?('_session') }
+    expect_switch_refused(cookie, '', URI.encode_www_form(csrf:, switch_user: '1'))
+    post 'https://docs.example/api/_documentation/oauth/logout', { csrf: }, 'HTTP_ORIGIN' => 'https://docs.example'
+    expect(last_response.status).to eq(303)
+    expect(transport).to have_received(:post).with(have_attributes(path: '/api/_auth/oauth2/revoke'),
+                                                   'client_id' => 'docs-client', 'client_secret' => oauth_options[:client_secret],
+                                                   'token' => 'PRIVATE_ACCESS_TOKEN', 'token_type_hint' => 'access_token')
+  end
+
+  [false, true].each do |configured|
+    context "with shared SSO and #{configured ? 'configured' : 'default'} switch-user revoke parameters" do
+      let(:oauth_options) do
+        super().merge(switch_user: true).tap do |options|
+          options[:switch_user_revoke_params] = { 'end_shared_session' => '1' } if configured
+        end
+      end
+
+      it 'revokes only the documentation token and lets the provider decide whether fresh authorization reuses SSO' do
+        provider = DocumentationOAuthSpec::SharedSSOProvider.new
+        allow(transport).to receive(:post).with(have_attributes(path: '/api/_auth/oauth2/revoke'), anything) do |_, parameters|
+          provider.revoke(parameters)
+        end
+        sign_in
+        csrf = session_csrf
+        post 'https://docs.example/api/_documentation/oauth/logout', { csrf:, switch_user: '1' }, 'HTTP_ORIGIN' => 'https://docs.example'
+        expect(last_response.status).to eq(303)
+        fields = { 'client_id' => 'docs-client', 'client_secret' => oauth_options[:client_secret],
+                   'token' => 'PRIVATE_ACCESS_TOKEN', 'token_type_hint' => 'access_token' }
+        fields['end_shared_session'] = '1' if configured
+        expect(transport).to have_received(:post).with(have_attributes(path: '/api/_auth/oauth2/revoke'), fields)
+        expect(provider.valid_token?('PRIVATE_ACCESS_TOKEN')).to be(false)
+        expect(provider.valid_token?('OTHER_ACCESS_TOKEN')).to be(true)
+        get last_response.location
+        expect(last_response.status).to eq(302)
+        expect(provider.fresh_authorization_identity).to eq(configured ? nil : 'admin')
+      end
+    end
+  end
+
   context 'with user switching enabled' do
-    let(:oauth_options) { super().merge(switch_user: true) }
+    let(:oauth_options) { super().merge(switch_user: true, switch_user_revoke_params: { 'end_shared_session' => '1' }) }
+
+    it 'requires an authenticated documentation session before switching' do
+      post 'https://docs.example/api/_documentation/oauth/logout', { csrf: 'x' * 43, switch_user: '1' },
+           'HTTP_ORIGIN' => 'https://docs.example'
+      expect(last_response.status).to eq(403)
+      expect(cookie_headers).to be_empty
+      expect(transport).not_to have_received(:post)
+    end
+
+    it 'requires the configured HTTPS origin before switching' do
+      sign_in
+      csrf = session_csrf
+      name, value = rack_mock_session.cookie_jar.to_hash.find { |key, _| key.end_with?('_session') }
+      %w[http://docs.example https://foreign.example].each do |origin|
+        post "#{origin}/api/_documentation/oauth/logout", { csrf:, switch_user: '1' },
+             'HTTP_ORIGIN' => 'https://docs.example', 'HTTP_COOKIE' => "#{name}=#{Rack::Utils.escape(value)}"
+        expect(last_response.status).to eq(400)
+        expect(cookie_headers).to be_empty
+      end
+      expect(transport).to have_received(:post).once
+    end
+
+    it 'copies configured revoke fields before the caller mutates its hash, keys or values' do
+      key = +'end_shared_session'
+      value = +'1'
+      parameters = {}.compare_by_identity
+      parameters[key] = value
+      oauth_options[:switch_user_revoke_params] = parameters
+      app
+      key.replace('changed')
+      value.replace('changed')
+      parameters.clear
+      parameters['token'] = 'BROWSER_TOKEN'
+      sign_in
+      csrf = session_csrf
+      post 'https://docs.example/api/_documentation/oauth/logout', { csrf:, switch_user: '1' }, 'HTTP_ORIGIN' => 'https://docs.example'
+      expect(last_response.status).to eq(303)
+      expect(transport).to have_received(:post).with(have_attributes(path: '/api/_auth/oauth2/revoke'),
+                                                     'client_id' => 'docs-client', 'client_secret' => oauth_options[:client_secret],
+                                                     'token' => 'PRIVATE_ACCESS_TOKEN', 'token_type_hint' => 'access_token',
+                                                     'end_shared_session' => '1')
+    end
+
+    it 'sends the original revoke form on ordinary sign-out even if the browser supplies extra fields' do
+      sign_in
+      csrf = session_csrf
+      post 'https://docs.example/api/_documentation/oauth/logout', { csrf:, end_shared_session: '1', token: 'BROWSER_TOKEN' },
+           'HTTP_ORIGIN' => 'https://docs.example'
+      expect(last_response.status).to eq(303)
+      expect(last_response.location).to eq('https://docs.example/api/v1/')
+      expect(transport).to have_received(:post).with(have_attributes(path: '/api/_auth/oauth2/revoke'),
+                                                     'client_id' => 'docs-client', 'client_secret' => oauth_options[:client_secret],
+                                                     'token' => 'PRIVATE_ACCESS_TOKEN', 'token_type_hint' => 'access_token')
+    end
 
     it 'offers switching only after validated documentation-cookie authentication' do
       controls = capture_controls
@@ -688,21 +826,29 @@ describe HaveAPI::DocumentationOAuth do
 
     it 'revokes and clears the old session before starting fresh state and PKCE at the fixed login' do
       original = sign_in
+      expect(original).not_to have_key('end_shared_session')
+      expect(transport).to have_received(:post).with(have_attributes(path: '/api/_auth/oauth2/token'),
+                                                     hash_excluding('end_shared_session'))
       csrf = session_csrf
       post 'https://docs.example/api/_documentation/oauth/logout',
-           { csrf:, switch_user: '1', version: '2', return: 'https://foreign.example/', scope: 'other' },
+           { csrf:, switch_user: '1', version: '2', return: 'https://foreign.example/', scope: 'other',
+             client_id: 'BROWSER_CLIENT', client_secret: 'BROWSER_SECRET', token: 'BROWSER_TOKEN',
+             token_type_hint: 'refresh_token', end_shared_session: '0', unexpected: 'BROWSER_EXTRA' },
            'HTTP_ORIGIN' => 'https://docs.example'
       expect(last_response.status).to eq(303)
       expect(last_response.location).to eq('https://docs.example/api/_documentation/oauth/login?version=1')
       expect(cookie_headers).to include('_session=', '_pending=', 'max-age=0')
-      expect(transport).to have_received(:post).with(have_attributes(path: '/api/_auth/oauth2/revoke'), hash_including('token' => 'PRIVATE_ACCESS_TOKEN'))
+      expect(transport).to have_received(:post).with(have_attributes(path: '/api/_auth/oauth2/revoke'),
+                                                     'client_id' => 'docs-client', 'client_secret' => oauth_options[:client_secret],
+                                                     'token' => 'PRIVATE_ACCESS_TOKEN', 'token_type_hint' => 'access_token',
+                                                     'end_shared_session' => '1')
       get last_response.location
       expect(last_response.status).to eq(302)
       fresh = URI.decode_www_form(URI(last_response.location).query).to_h
       expect(fresh).to include('scope' => 'all', 'code_challenge_method' => 'S256')
       expect(fresh['state']).not_to eq(original['state'])
       expect(fresh['code_challenge']).not_to eq(original['code_challenge'])
-      expect(fresh.keys & %w[prompt select_account]).to be_empty
+      expect(fresh.keys & %w[prompt select_account end_shared_session]).to be_empty
       get 'https://docs.example/api/_documentation/oauth/callback', error: 'access_denied', state: fresh.fetch('state')
       expect(last_response.status).to eq(400)
       DocumentationOAuthSpec::Config.lookups.clear

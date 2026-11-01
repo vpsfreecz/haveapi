@@ -19,7 +19,8 @@ module HaveAPI
     COOKIE_LIMIT = 3800
     RESPONSE_LIMIT = 16_384
     PENDING_LIFETIME = 600
-    FIELDS = %i[client_id client_secret redirect_uri session_secret scope session_lifetime switch_user].freeze
+    FIELDS = %i[client_id client_secret redirect_uri session_secret scope session_lifetime
+                switch_user switch_user_revoke_params].freeze
 
     class Transport
       def post(uri, parameters)
@@ -92,6 +93,15 @@ module HaveAPI
       unless @switch_user.equal?(true) || @switch_user.equal?(false)
         raise Invalid, 'Invalid documentation OAuth switch-user capability'
       end
+
+      revoke_params = options.fetch(:switch_user_revoke_params, {})
+      unless revoke_params.is_a?(Hash) && revoke_params.all? do |name, value|
+               name.is_a?(String) && value.is_a?(String) && !%w[client_id client_secret token token_type_hint].include?(name)
+             end
+        raise Invalid, 'Invalid documentation OAuth switch-user revoke parameters'
+      end
+
+      @switch_user_revoke_params = revoke_params.to_h { |name, value| [name.dup.freeze, value.dup.freeze] }.freeze
 
       @origin = "#{@redirect_uri.scheme}://#{@redirect_uri.host}"
       @origin += ":#{@redirect_uri.port}" unless @redirect_uri.port == 443
@@ -222,8 +232,10 @@ module HaveAPI
       end
       clear_cookie(handler, 'session')
       clear_cookie(handler, 'pending')
+      parameters = credentials.merge('token' => session.fetch('token'), 'token_type_hint' => 'access_token')
+      parameters.merge!(@switch_user_revoke_params) if switch_user
       begin
-        @transport.post(@endpoints.fetch(:revoke), credentials.merge('token' => session.fetch('token'), 'token_type_hint' => 'access_token'))
+        @transport.post(@endpoints.fetch(:revoke), parameters)
       rescue Failure
         handler.halt(502, { 'content-type' => 'text/html; charset=utf-8' },
                      '<p>Local sign-out succeeded, but the server session may remain until it expires.</p>' \

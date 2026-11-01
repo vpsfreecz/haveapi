@@ -56,7 +56,7 @@ module HaveAPI::TypeScriptClient
       { status: :code, code: source.freeze }.freeze
     rescue Unsupported, JSON::GeneratorError, EncodingError
       # Never name fields or actions from the private API client in public diagnostics.
-      { status: :limitation, reason: 'This sample is unavailable or incompatible with the configured TypeScript API client.'.freeze }.freeze
+      { status: :limitation, reason: documentation_message('generated.typescript.unavailable', context:, default: 'This sample is unavailable or incompatible with the configured TypeScript API client.').freeze }.freeze
     end
 
     def detail_levels_for(kind:, context:, result:, mode:, auth_method: nil, auth_description: nil)
@@ -66,6 +66,26 @@ module HaveAPI::TypeScriptClient
     end
 
     private
+
+    def documentation_message(key, context:, default:, **values)
+      if context.respond_to?(:documentation_message)
+        context.documentation_message(key, default:, **values)
+      else
+        values.empty? ? default : format(default, values)
+      end
+    end
+
+    def example_comment(key, context:, default:, **values)
+      if context.respond_to?(:example_comment)
+        context.example_comment(key, default:, **values)
+      else
+        values.empty? ? default : format(default, values)
+      end
+    end
+
+    def comment_lines(text, prefix)
+      text.gsub(/\r\n?/, "\n").split("\n", -1).map { |line| "#{prefix}#{line}" }.join("\n")
+    end
 
     def unsupported!
       raise Unsupported
@@ -125,7 +145,7 @@ module HaveAPI::TypeScriptClient
 
     def program(context, body, auth = [], errors: false)
       version_url = version_url(context)
-      dependencies = "// Configured API client: #{@package_name}#{"@#{@package_version}" if @package_version}."
+      dependencies = comment_lines(example_comment('typescript_package', default: 'Configured API client: %{package}.', context:, package: "#{@package_name}#{"@#{@package_version}" if @package_version}"), '// ')
       runtime_imports = errors ? 'AsyncClient, AsyncError' : 'AsyncClient'
       lines = [dependencies, "import { #{runtime_imports} } from #{literal('haveapi-client')};", "import { createClient } from #{literal(@package_name)};"]
       lines += ['', 'async function main(): Promise<void> {']
@@ -327,14 +347,14 @@ module HaveAPI::TypeScriptClient
         body << 'void [result.data, result.meta, result.envelope, result.httpStatus];' if context.detail == :thorough
         body.concat(output_lines(action, response, thorough: context.detail == :thorough))
       end
-      body << '// Request success does not establish completion of a server-side operation.' if action.fetch(:blocking)
+      body << comment_lines(example_comment('typescript_completion', default: 'Request success does not establish completion of a server-side operation.', context:), '// ') if action.fetch(:blocking)
       auth = action_authentication(action, context)
       if context.detail == :thorough
         return program(context, body, auth, errors: true)
       end
 
       imports = failure ? ["import { AsyncError } from #{literal('haveapi-client')};", ''] : []
-      (imports + ['// Requires an initialized api and an async context.'] + body + ['']).join("\n")
+      (imports + [comment_lines(example_comment('typescript_async_context', default: 'Requires an initialized api and an async context.', context:), '// ')] + body + ['']).join("\n")
     end
 
     def output_lines(action, response, thorough:)

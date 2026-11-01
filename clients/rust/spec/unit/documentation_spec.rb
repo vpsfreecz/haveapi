@@ -1,22 +1,55 @@
+require_relative '../../../../servers/ruby/spec/client_examples/comment_capture'
 require 'spec_helper'
 require 'haveapi/rust_client/documentation'
 
 describe HaveAPI::RustClient::Documentation do
   include RustGeneratorFixtures
 
-  let(:config) do
-    { 'crate_name' => 'fixture-client', 'crate_version' => '0.1.0', 'license' => 'MIT',
-      'edition' => '2024', 'rust_version' => '1.95', 'rustfmt_version' => 'not invoked by documentation' }
-  end
-  let(:schema) { snapshot }
-  let(:adapter) { described_class.new(snapshot: schema, config:) }
-  let(:context_type) do
-    Struct.new(:version, :base_url, :description, :resource_path, :action_name, :sample, :detail)
-  end
+  include ExampleCommentCapture
+
   let(:context) do
     context_type.new(detail: :thorough, version: '1.0', base_url: 'https://example.test/', description: schema['description'],
                      resource_path: ['widget'], action_name: 'update',
                      sample: { path_params: [1], request: { name: 'widget' }, response: { id: 1 }, status: true })
+  end
+  let(:context_type) do
+    Struct.new(:version, :base_url, :description, :resource_path, :action_name, :sample, :detail)
+  end
+  let(:adapter) { described_class.new(snapshot: schema, config:) }
+  let(:schema) { snapshot }
+  let(:config) do
+    { 'crate_name' => 'fixture-client', 'crate_version' => '0.1.0', 'license' => 'MIT',
+      'edition' => '2024', 'rust_version' => '1.95', 'rustfmt_version' => 'not invoked by documentation' }
+  end
+
+  it 'localizes both Rust modes and details while retaining exact noncomment source and legacy English' do
+    schema['description']['authentication'] = { 'basic' => {}, 'token' => { 'http_header' => 'X-Token' } }
+    context.sample[:request][:name] = 'literal // # komentář'
+    %i[async blocking].product(%i[simple thorough]).each do |mode, detail|
+      context.detail = detail
+      [[:init, nil], %i[auth basic], %i[auth token], [:example, nil]].each do |kind, method|
+        sources = expect_adapter_comment_parity(described_class, context, kind:, mode:,
+                                                                          auth_method: method, auth_description: schema['description']['authentication'][method.to_s]) do |klass|
+          klass.new(snapshot: schema, config:)
+        end
+        syntax = sources.last
+        if kind == :example && detail == :simple
+          syntax = "#{'async ' if mode == :async}fn example() -> Result<(), Box<dyn std::error::Error>> {\n#{syntax}\nOk(())\n}\n"
+        end
+        output, status = Open3.capture2e('rustfmt', '--edition', '2024', stdin_data: syntax)
+        expect(status).to be_success, output
+      end
+    end
+  end
+
+  it 'resolves Rust limitation prose from the request context without mutating the frozen adapter' do
+    adapter.freeze
+    localized = localized_comment_context(context, :cs)
+    result = adapter.render(kind: :init, context: localized, mode: :unknown)
+    expect(result).to eq(status: :limitation, reason: 'Nepodporovaný režim spouštění Rustu.')
+    expect(result[:reason]).to be_frozen
+    expect(adapter.render(kind: :init, context:, mode: :unknown)[:reason]).to eq('Unsupported Rust execution mode.')
+    expect(adapter).to be_frozen
   end
 
   def render(mode = :async, kind = :example, **options)

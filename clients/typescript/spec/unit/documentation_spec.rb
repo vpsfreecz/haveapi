@@ -1,9 +1,40 @@
+require_relative '../../../../servers/ruby/spec/client_examples/comment_capture'
 require_relative '../documentation/fixtures'
 require_relative '../documentation/compilation'
 
 RSpec.describe HaveAPI::TypeScriptClient::Documentation do
   include TypeScriptDocumentationFixtures
   include TypeScriptDocumentationCompilation
+
+  include ExampleCommentCapture
+
+  it 'localizes setup and action comments while preserving all typed program bytes and standalone defaults' do
+    schema = documentation_snapshot
+    context = documentation_context(schema)
+    context.sample[:request]['name'] = 'literal // # komentář'
+    %i[simple thorough].each do |detail|
+      context.detail = detail
+      [[:init, nil], %i[auth basic], %i[auth token], [:example, nil]].each do |kind, method|
+        expect_adapter_comment_parity(described_class, context, kind:, mode: :async,
+                                                                auth_method: method, auth_description: schema['description']['authentication'][method.to_s]) do |klass|
+          klass.from_snapshot(snapshot: schema, package_name: 'widget-client', package_version: '1.2.3')
+        end
+      end
+    end
+  end
+
+  it 'keeps the TypeScript privacy-safe generic limitation while translating its prose' do
+    context = documentation_context
+    localized = localized_comment_context(context, :cs)
+    adapter = documentation_adapter
+    result = adapter.render(kind: :init, context: localized, mode: :unknown)
+    expect(result[:reason]).to eq('Tento příklad není dostupný nebo není kompatibilní s nastaveným API klientem pro TypeScript.')
+    expect(result).to be_frozen
+    expect(result[:reason]).to be_frozen
+    expect(result[:reason]).not_to include('widget', 'private', 'schema')
+    expect(adapter.render(kind: :init, context:, mode: :unknown)[:reason]).to include('This sample is unavailable')
+    expect(adapter).to be_frozen
+  end
 
   it 'type-checks conventionally spaced imports and prototype-safe values at both details' do
     adapter = documentation_adapter

@@ -65,9 +65,9 @@ module HaveAPI::ClientExamples
                    end
                  RUBY
                end
-               %(#{code.chomp}\n\n# Reuse an existing token\napi.authenticate(:token, token: 'example-token'))
+               %(#{code.chomp}\n\n#{comment_lines(example_comment('reuse_token', default: 'Reuse an existing token'), '# ')}\napi.authenticate(:token, token: 'example-token'))
              when :oauth2
-               return '# OAuth2 is not supported by HaveAPI Ruby client.'
+               return comment_lines(example_comment('ruby_oauth_unsupported', default: 'OAuth2 is not supported by HaveAPI Ruby client.'), '# ')
              end
       return unless body
 
@@ -104,7 +104,7 @@ module HaveAPI::ClientExamples
       out << if sample[:status]
                response(sample)
              else
-               "\n# Raises exception HaveAPI::Client::ActionFailed\n"
+               "\n#{comment_lines(example_comment('raises_exception', default: 'Raises exception %{exception}', exception: 'HaveAPI::Client::ActionFailed'), '# ')}\n"
              end
       thorough? ? with_error_handling(["#{initialization}api.setup", credentials.chomp, out].reject(&:empty?).join("\n\n")) : out
     rescue HaveAPI::ClientExample::UnsupportedAuthentication => e
@@ -116,17 +116,17 @@ module HaveAPI::ClientExamples
 
       case action[:output][:layout]
       when :hash
-        out << "# reply is an instance of HaveAPI::Client::Response\n"
-        out << "# reply.response() returns a hash of output parameters:\n"
+        out << "#{comment_lines(example_comment('instance_of', default: '%{variable} is an instance of %{type}', variable: 'reply', type: 'HaveAPI::Client::Response'), '# ')}\n"
+        out << "#{comment_lines(example_comment('response_hash', default: '%{call} returns a hash of output parameters:', call: 'reply.response()'), '# ')}\n"
         out << PP.pp(sample[:response] || {}, '').split("\n").map { |v| "# #{v}" }.join("\n")
 
       when :hash_list
-        out << "# reply is an instance of HaveAPI::Client::Response\n"
-        out << "# reply.response() returns an array of hashes:\n"
+        out << "#{comment_lines(example_comment('instance_of', default: '%{variable} is an instance of %{type}', variable: 'reply', type: 'HaveAPI::Client::Response'), '# ')}\n"
+        out << "#{comment_lines(example_comment('response_hashes', default: '%{call} returns an array of hashes:', call: 'reply.response()'), '# ')}\n"
         out << PP.pp(sample[:response] || [], '').split("\n").map { |v| "# #{v}" }.join("\n")
 
       when :object
-        out << "# reply is an instance of HaveAPI::Client::ResourceInstance\n"
+        out << "#{comment_lines(example_comment('instance_of', default: '%{variable} is an instance of %{type}', variable: 'reply', type: 'HaveAPI::Client::ResourceInstance'), '# ')}\n"
 
         (sample[:response] || {}).each do |pn, pv|
           param = action[:output][:parameters][pn]
@@ -149,8 +149,8 @@ module HaveAPI::ClientExamples
         end
 
       when :object_list
-        out << "# reply is an instance of HaveAPI::Client::ResourceInstanceList,\n"
-        out << '# which is a subclass of Array'
+        out << "#{comment_lines(example_comment('instance_of', default: '%{variable} is an instance of %{type}', variable: 'reply', type: 'HaveAPI::Client::ResourceInstanceList'), '# ')},\n"
+        out << comment_lines(example_comment('array_subclass', default: 'which is a subclass of Array'), '# ')
       end
 
       out

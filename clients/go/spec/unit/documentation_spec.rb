@@ -1,15 +1,54 @@
+require_relative '../../../../servers/ruby/spec/client_examples/comment_capture'
 require 'haveapi/go_client/documentation'
 require 'open3'
 require_relative '../support/documentation_fixture'
 
 RSpec.describe HaveAPI::GoClient::Documentation do
-  let(:description) { GoDocumentationFixture.description }
-  let(:adapter) { described_class.new(description:, import_path: 'example.test/sdk/client', module_version: 'v1.2.3') }
-  let(:action) { description.dig(:resources, :client, :resources, :child, :actions, :client) }
-  let(:sample) { GoDocumentationFixture.sample }
+  include ExampleCommentCapture
+
   let(:context) do
     Struct.new(:version, :base_url, :description, :resource_path, :action_name, :action, :sample, :detail).new(detail: :thorough, version: '7', base_url: 'https://api.example.test/mounted/', description:,
                                                                                                                resource_path: %w[client child], action_name: 'client', action:, sample:)
+  end
+  let(:sample) { GoDocumentationFixture.sample }
+  let(:action) { description.dig(:resources, :client, :resources, :child, :actions, :client) }
+  let(:adapter) { described_class.new(description:, import_path: 'example.test/sdk/client', module_version: 'v1.2.3') }
+  let(:description) { GoDocumentationFixture.description }
+
+  it 'localizes authored comments without changing commands or data for standalone contexts' do
+    action[:blocking] = true
+    context.sample[:request][:name] = 'literal // # komentář'
+    %i[simple thorough].each do |detail|
+      context.detail = detail
+      [[:init, nil], %i[auth basic], %i[auth token], %i[auth oauth2], [:example, nil]].each do |kind, method|
+        sources = expect_adapter_comment_parity(described_class, context, kind:, mode: :sync,
+                                                                          auth_method: method, auth_description: description[:authentication][method]) do |klass|
+          klass.new(description:, import_path: 'example.test/sdk/client', module_version: 'v1.2.3')
+        end
+        expect(sources.last).to include('literal // # komentář') if kind == :example
+        formatted, status = Open3.capture2e('gofmt', stdin_data: sources.last)
+        expect(status).to be_success, formatted
+        expect(formatted).to eq(sources.last)
+      end
+    end
+  end
+
+  it 'localizes keyed limitations using only the current context, including field paths' do
+    localized = localized_comment_context(context, :cs)
+    result = adapter.render(kind: :init, context: localized, mode: :unknown)
+    expect(result).to eq(status: :limitation, reason: 'Tento režim příkladu API klienta pro Go není podporovaný.')
+    expect(result).to be_frozen
+    expect(result[:reason]).to be_frozen
+    expect(adapter.render(kind: :init, context:, mode: :unknown)[:reason]).to eq('This Go API client example mode is unsupported.')
+    expect(adapter).to be_frozen
+    sample[:response] = { 'unknown.field' => 1 }
+    reason = adapter.render(kind: :example, context: localized, mode: :sync).fetch(:reason)
+    expect(reason).to include('unknown.field')
+    expect(reason).not_to include('API example field')
+    fallback = localized.dup
+    fallback.define_singleton_method(:documentation_message) { |_key, default:, **values| values.empty? ? default : format(default, values) }
+    expect(adapter.render(kind: :example, context: fallback, mode: :sync).fetch(:reason))
+      .to include('API example field', 'unknown.field')
   end
 
   def render

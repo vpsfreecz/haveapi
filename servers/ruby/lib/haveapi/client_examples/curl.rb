@@ -17,13 +17,13 @@ module HaveAPI::ClientExamples
       case method
       when :basic
         <<~END
-          # Password is asked on standard input
+          #{comment_lines(example_comment('curl_password_stdin', default: 'Password is asked on standard input'), '# ')}
           $ curl --request OPTIONS \\
                  --user user \\
                  #{Shellwords.escape(base_url)}
           # Password: secret
 
-          # Password given on the command line
+          #{comment_lines(example_comment('curl_password_argument', default: 'Password given on the command line'), '# ')}
           $ curl --request OPTIONS \\
                  --user user:secret \\
                  #{Shellwords.escape(base_url)}
@@ -33,20 +33,20 @@ module HaveAPI::ClientExamples
         login = auth_token_credentials(desc)
 
         <<~END
-          # Acquire the token
+          #{comment_lines(example_comment('acquire_token', default: 'Acquire the token'), '# ')}
           $ curl --request POST \\
                  --header 'Content-Type: application/json' \\
                  --data-binary #{Shellwords.escape(JSON.generate(token: login))} \\
                  #{Shellwords.escape(File.join(base_url, '_auth', 'token', 'tokens'))}
 
-          # Use a previously acquired token
+          #{comment_lines(example_comment('use_previous_token', default: 'Use a previously acquired token'), '# ')}
           $ curl --request OPTIONS \\
                  --header #{Shellwords.escape("#{desc[:http_header]}: example-token")} \\
                  #{Shellwords.escape(base_url)}
         END
 
       when :oauth2
-        '# See RFC 6749 for authorization process and RFC 6750 for access token usage.'
+        comment_lines(example_comment('oauth_rfc', default: 'See RFC 6749 for authorization process and RFC 6750 for access token usage.'), '# ')
       end
     rescue HaveAPI::ClientExample::UnsupportedAuthentication => e
       { status: :limitation, reason: e.message }.freeze

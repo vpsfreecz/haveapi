@@ -164,4 +164,42 @@ describe HaveAPI::DocumentationHelpers, '#render_version_documentation' do
     end
     expect(HaveAPI::ClientExample.clients).to all(have_received(:available?).twice)
   end
+
+  it 'uses fresh identity, version, locale, description and profiles on consecutive requests' do
+    require_relative '../../test_support/documentation_oauth_fixture'
+    server = HaveAPI::Server.new(get_opt(:api_module))
+    server.use_version([1, 2])
+    users = %w[admin member].to_h { |name| [name, Struct.new(:login).new(name)] }
+    fixture = DocumentationOAuthFixture.configure(server, users: { 1 => users, 2 => users })
+    server.mount('/')
+    allow(server).to receive(:describe_version).and_wrap_original do |method, context|
+      method.call(context).merge(probe_user: context.current_user&.login)
+    end
+    configured_profiles = {}
+    allow(server).to receive(:documentation_client_profiles) { |_version| configured_profiles }
+    observed = []
+    allow(HaveAPI::ClientExamples::PythonAsyncClient).to receive(:available?) do |context|
+      observed << [context.description[:probe_user], context.version, context.locale]
+      context.description[:probe_user] == 'admin' && context.version == '1' && context.locale == :en
+    end
+    request = lambda do |version, user, locale|
+      Rack::MockRequest.new(server.app).get("#{fixture.origin}/v#{version}/",
+                                            'HTTP_HOST' => URI(fixture.origin).host, 'HTTP_ACCEPT_LANGUAGE' => locale,
+                                            'HTTP_COOKIE' => fixture.header_for(server, version:, token: user))
+    end
+    english = request.call(1, 'admin', 'en')
+    expect(english.status).to eq(200)
+    expect(english.body).to include('data-client="python-async"')
+    czech = request.call(1, 'admin', 'cs')
+    expect(czech.status).to eq(200)
+    expect(czech.body).not_to include('data-client="python-async"')
+    member = request.call(2, 'member', 'en')
+    expect(member.status).to eq(200)
+    expect(member.body).not_to include('data-client="python-async"', 'data-client="go"')
+    configured_profiles[:go] = profile(:go, 'example.test/new-profile')
+    with_profile = request.call(2, 'member', 'en')
+    expect(with_profile.status).to eq(200)
+    expect(with_profile.body).to include('data-client="go"', 'example.test/new-profile')
+    expect(observed).to eq([['admin', '1', :en], ['admin', '1', :cs], ['member', '2', :en], ['member', '2', :en]])
+  end
 end

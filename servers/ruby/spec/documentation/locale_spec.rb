@@ -1,4 +1,7 @@
 require 'spec_helper'
+require 'cgi'
+require 'ripper'
+require 'open3'
 
 RSpec.describe HaveAPI::DocumentationLocale do
   api do
@@ -292,10 +295,36 @@ RSpec.describe HaveAPI::DocumentationLocale do
     expect(last_response.status).to eq(409)
   end
 
-  it 'preserves executable examples across UI locales' do
+  it 'preserves native Ruby and JavaScript tokens while translating authored comments' do
+    scanner = <<~JS
+      const ts = require(process.argv[1]);
+      let source = "";
+      process.stdin.on("data", chunk => source += chunk);
+      process.stdin.on("end", () => {
+        const scanner = ts.createScanner(ts.ScriptTarget.Latest, false, ts.LanguageVariant.Standard, source);
+        const tokens = [];
+        let kind;
+        while ((kind = scanner.scan()) !== ts.SyntaxKind.EndOfFileToken) {
+          if (kind !== ts.SyntaxKind.SingleLineCommentTrivia && kind !== ts.SyntaxKind.MultiLineCommentTrivia) {
+            tokens.push([kind, scanner.getTokenText()]);
+          }
+        }
+        process.stdout.write(JSON.stringify(tokens));
+      });
+    JS
+    compiler = File.expand_path('../../../../clients/js/node_modules/typescript', __dir__)
     rendered = %w[en cs].map do |locale|
       get "/api/v1/?doc_lang=#{locale}"
-      last_response.body.scan(%r{<pre><code[^>]*>(.*?)</code></pre>}m).flatten
+      last_response.body.scan(%r{<pre><code class="(ruby|javascript)"[^>]*>(.*?)</code></pre>}m).map do |language, html|
+        source = CGI.unescapeHTML(html)
+        if language == 'ruby'
+          Ripper.lex(source).reject { |(_, type, _, _)| type == :on_comment }.map { |(_, type, token, _)| [type, token] }
+        else
+          output, error, status = Open3.capture3('node', '-e', scanner, compiler, stdin_data: source)
+          expect(status).to be_success, error
+          JSON.parse(output)
+        end
+      end
     end
     expect(rendered.first).not_to be_empty
     expect(rendered.last).to eq(rendered.first)

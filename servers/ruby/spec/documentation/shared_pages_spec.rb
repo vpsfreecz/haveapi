@@ -92,7 +92,7 @@ RSpec.describe HaveAPI::SharedDocumentationHelpers do
       expect(last_response.body).to include(heading, 'aria-label="Breadcrumb"',
                                             'href="/"', 'href="/doc"', 'href="/v1/?page=resources"')
       expect_neutral_shell(last_response.body, 'guide')
-      breadcrumb = last_response.body.match(%r{<nav aria-label="Breadcrumb">(.*?)</nav>}m)[1]
+      breadcrumb = last_response.body.match(%r{<nav class="docs-breadcrumb"[^>]*>(.*?)</nav>}m)[1]
       expect(breadcrumb).to include('API versions', 'HaveAPI internals')
       expect(breadcrumb.scan(/<li\b/).length).to eq(path.match?(%r{\A/doc(?:/(?:index(?:\.md)?|readme))?\z}) ? 2 : 3)
       expect(server).not_to have_received(:describe)

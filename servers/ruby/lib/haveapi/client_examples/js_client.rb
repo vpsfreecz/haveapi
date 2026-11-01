@@ -140,7 +140,7 @@ module HaveAPI::ClientExamples
                          end
         source = program(thorough? ? "console.log(\"Authenticated\");\n" : '', authentication:)
         if method.to_sym == :oauth2
-          source = "// Use an existing access token; this client does not run an OAuth authorization flow.\n#{source}"
+          source = "#{comment_lines(example_comment('js_existing_oauth', default: 'Use an existing access token; this client does not run an OAuth authorization flow.'), '// ')}\n#{source}"
         end
         source
       end
@@ -191,7 +191,7 @@ module HaveAPI::ClientExamples
           body << "console.log(result.value);\n"
           body << "console.log(result.response.meta);\n" if thorough?
           if field(current_action, :blocking)
-            body << "// Request success alone does not establish operation completion.\n"
+            body << "#{comment_lines(example_comment('js_request_completion', default: 'Request success alone does not establish operation completion.'), '// ')}\n"
             body << "const completed = await api.waitForCompletion(result, {timeoutMs: 300000});\nconsole.log(completed.state);\n"
           end
         else
@@ -209,7 +209,7 @@ module HaveAPI::ClientExamples
           options << "  console.log(reply.meta());\n" if thorough?
           options << "}\n"
           body << "action.directInvoke(#{(args + ["{\n#{indent(options)}}"]).join(', ')});\n"
-          body << "// This prints the initial response; use its action-state metadata to monitor completion.\n" if field(current_action, :blocking)
+          body << "#{comment_lines(example_comment('js_initial_response', default: 'This prints the initial response; use its action-state metadata to monitor completion.'), '// ')}\n" if field(current_action, :blocking)
         end
         authentication = action_authentication
         thorough? ? program(body, authentication:) : body

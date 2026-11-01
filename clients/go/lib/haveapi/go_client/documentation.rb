@@ -55,7 +55,7 @@ module HaveAPI::GoClient
     end
 
     def render(kind:, context:, mode:, auth_method: nil, auth_description: nil)
-      return limitation('This Go API client example mode is unsupported.') unless mode == :sync
+      return limitation(documentation_message('generated.go.mode', context:, default: 'This Go API client example mode is unsupported.')) unless mode == :sync
 
       case kind
       when :init
@@ -65,10 +65,10 @@ module HaveAPI::GoClient
       when :example
         render_example(context)
       else
-        limitation('This Go API client example is unavailable.')
+        limitation(documentation_message('generated.go.unavailable', context:, default: 'This Go API client example is unavailable.'))
       end
     rescue Unsupported => e
-      limitation(e.message)
+      limitation(documentation_message(e.key, context:, default: e.default, **e.values))
     end
 
     def detail_levels_for(kind:, context:, result:, mode:, auth_method: nil, auth_description: nil)
@@ -83,7 +83,36 @@ module HaveAPI::GoClient
 
     protected
 
-    class Unsupported < StandardError; end
+    def documentation_message(key, context:, default:, **values)
+      if context.respond_to?(:documentation_message)
+        context.documentation_message(key, default:, **values)
+      else
+        values.empty? ? default : format(default, values)
+      end
+    end
+
+    def example_comment(key, context:, default:, **values)
+      if context.respond_to?(:example_comment)
+        context.example_comment(key, default:, **values)
+      else
+        values.empty? ? default : format(default, values)
+      end
+    end
+
+    def comment_lines(text, prefix)
+      text.gsub(/\r\n?/, "\n").split("\n", -1).map { |line| "#{prefix}#{line}" }.join("\n")
+    end
+
+    class Unsupported < StandardError
+      attr_reader :key, :default, :values
+
+      def initialize(key, default:, **values)
+        @key = key
+        @default = default
+        @values = values
+        super(values.empty? ? default : format(default, values))
+      end
+    end
 
     def validate_description
       unless @description.is_a?(Hash) && @description[:authentication].is_a?(Hash) \
@@ -125,13 +154,13 @@ module HaveAPI::GoClient
     def render_example(context)
       resolved = resolve(resource_path: context.resource_path, action_name: context.action_name)
       live = visible_action(context.description, context.resource_path, context.action_name)
-      unsupported!('This action is unavailable in the configured Go API client.') unless resolved && live && context.action
+      unsupported!('generated.go.action', default: 'This action is unavailable in the configured Go API client.') unless resolved && live && context.action
       saved = resolved.description
       check_action(saved, live)
       check_action(saved, context.action)
       sample = context.sample
       unless sample.is_a?(Hash) && [true, false].include?(sample[:status])
-        unsupported!('This sample does not describe a structured request and response.')
+        unsupported!('generated.go.structured_sample', default: 'This sample does not describe a structured request and response.')
       end
 
       action = resolved.action
@@ -141,7 +170,7 @@ module HaveAPI::GoClient
       lines = ["invocation := api.#{members.join('.')}.Prepare()"]
       lines.concat(path_lines(action, sample))
       lines.concat(input_lines(action, saved[:input], live[:input], sample))
-      lines.concat(metadata_lines(action, saved, live)) if context.detail == :thorough
+      lines.concat(metadata_lines(action, saved, live, context)) if context.detail == :thorough
       lines.concat(call_lines(action, live, sample, context))
       code(context.detail == :thorough ? program(context, ['fmt'], lines) : (lines + ['']).join("\n"))
     end
@@ -149,18 +178,18 @@ module HaveAPI::GoClient
     def check_action(saved, live)
       unless saved[:method] == live[:method] && saved[:path] == live[:path] \
           && (saved[:blocking] == true) == (live[:blocking] == true)
-        unsupported!('The configured Go API client does not match this action route.')
+        unsupported!('generated.go.route', default: 'The configured Go API client does not match this action route.')
       end
       %i[input output].each do |direction|
         left = saved[direction] || {}
         right = live[direction] || {}
         unless left[:layout].to_s == right[:layout].to_s && left[:namespace].to_s == right[:namespace].to_s
-          unsupported!('The configured Go API client does not match this action layout.')
+          unsupported!('generated.go.layout', default: 'The configured Go API client does not match this action layout.')
         end
       end
       return unless [saved, live].any? { |description| required_metadata?(description) }
 
-      unsupported!('This action requires metadata that is absent from the sample.')
+      unsupported!('generated.go.metadata', default: 'This action requires metadata that is absent from the sample.')
     end
 
     def required_metadata?(description)
@@ -174,7 +203,7 @@ module HaveAPI::GoClient
       return if !desc || (desc[:parameters] || {}).empty?
 
       unless INPUT_LAYOUTS.include?(desc[:layout].to_s)
-        unsupported!('The Go generator does not support list input in documentation examples.')
+        unsupported!('generated.go.list_input', default: 'The Go generator does not support list input in documentation examples.')
       end
       check_parameters(action.input, desc, input: true)
     end
@@ -182,20 +211,20 @@ module HaveAPI::GoClient
     def check_output(action, desc, live, sample, context)
       if !desc || (desc[:parameters] || {}).empty?
         if sample[:status] && sample[:response] && ![{}, []].include?(sample[:response])
-          unsupported!('This response is unavailable in the configured Go API client.')
+          unsupported!('generated.go.response', default: 'This response is unavailable in the configured Go API client.')
         end
         return
       end
 
       unless OUTPUT_LAYOUTS.include?(desc[:layout].to_s)
-        unsupported!('The Go generator does not support this output layout.')
+        unsupported!('generated.go.output_layout', default: 'The Go generator does not support this output layout.')
       end
       check_parameters(action.output, desc, input: false)
       return unless sample[:status] && sample.has_key?(:response) && !sample[:response].nil?
 
       list = desc[:layout].to_s.end_with?('_list')
       values = list ? sample[:response] : [sample[:response]]
-      unsupported!('This sample does not match the Go API client output layout.') unless values.is_a?(Array)
+      unsupported!('generated.go.sample_output_layout', default: 'This sample does not match the Go API client output layout.') unless values.is_a?(Array)
       values.each_with_index do |value, index|
         response_path = list ? "response[#{index}]" : 'response'
         check_output_value(action.output, desc, live, value, context, response_path:)
@@ -205,37 +234,37 @@ module HaveAPI::GoClient
     def check_parameters(io, desc, input:)
       names = io ? io.parameters.map(&:name) : []
       unless (desc[:parameters] || {}).keys.all? { |name| names.include?(name.to_s) }
-        unsupported!('The Go generator does not support Custom fields in this sample.')
+        unsupported!('generated.go.custom', default: 'The Go generator does not support Custom fields in this sample.')
       end
       members = io.parameters.map(&:go_name)
       reserved = input ? INPUT_MEMBERS + members.map { |name| "Set#{name}" } + members.map { |name| "Set#{name}Nil" } : []
       return unless members.uniq != members || members.intersect?(reserved)
 
-      unsupported!('The Go generator cannot represent these parameter name collisions.')
+      unsupported!('generated.go.name_collision', default: 'The Go generator cannot represent these parameter name collisions.')
     end
 
     def check_output_value(io, desc, live, value, context, response_path:)
-      unsupported!('This sample does not match the Go API client output layout.') unless value.is_a?(Hash)
+      unsupported!('generated.go.sample_output_layout', default: 'This sample does not match the Go API client output layout.') unless value.is_a?(Hash)
       value.each do |name, item|
-        unsupported!('This sample does not match the Go API client output layout.') unless name.is_a?(String) || name.is_a?(Symbol)
+        unsupported!('generated.go.sample_output_layout', default: 'This sample does not match the Go API client output layout.') unless name.is_a?(String) || name.is_a?(Symbol)
         parameter = io.parameters.find { |candidate| candidate.name == name.to_s }
         unless parameter
-          unsupported!("API example field #{response_field_path(response_path, name)} is not declared in the Go API client schema.")
+          unsupported!('generated.go.undeclared_field', default: 'API example field %{path} is not declared in the Go API client schema.', path: response_field_path(response_path, name))
         end
         left = lookup(desc[:parameters], name)
         right = lookup(live && live[:parameters], name)
         unless left && right && parameter_contract(left) == parameter_contract(right)
-          unsupported!('This response field does not match the configured Go API client.')
+          unsupported!('generated.go.response_field', default: 'This response field does not match the configured Go API client.')
         end
         if item.nil? && !parameter.respond_to?(:association)
-          unsupported!('The Go API client cannot distinguish scalar null output from its zero value.')
+          unsupported!('generated.go.null_output', default: 'The Go API client cannot distinguish scalar null output from its zero value.')
         end
         literal(parameter.go_out_type, item) unless parameter.respond_to?(:association)
         next unless parameter.respond_to?(:association)
         next if item.nil?
 
         unless item.is_a?(Hash)
-          unsupported!('The Go API client requires an object for an associated response field.')
+          unsupported!('generated.go.associated_object', default: 'The Go API client requires an object for an associated response field.')
         end
 
         associated = parameter.association.resource.actions.find { |candidate| candidate.name == 'show' }
@@ -243,7 +272,7 @@ module HaveAPI::GoClient
         saved_association = resolve(resource_path: path, action_name: 'show')
         live_association = visible_action(context.description, path, 'show')
         unless saved_association && live_association
-          unsupported!('This associated response is unavailable in the visible Go API client documentation.')
+          unsupported!('generated.go.associated_response', default: 'This associated response is unavailable in the visible Go API client documentation.')
         end
         check_parameters(associated.output, saved_association.description[:output], input: false)
         check_output_value(associated.output, saved_association.description[:output], live_association[:output], item, context,
@@ -264,17 +293,17 @@ module HaveAPI::GoClient
       names = action.path.scan(/\{([a-zA-Z0-9\-_]+)\}/).flatten
       values = sample[:path_params] || []
       unless values.is_a?(Array) && names.length == values.length
-        unsupported!('This sample does not supply all Go API client path parameters.')
+        unsupported!('generated.go.path_parameters', default: 'This sample does not supply all Go API client path parameters.')
       end
       names.zip(values).map do |name, value|
         case value
         when Integer
-          unsupported!('This path value is outside the Go int64 range.') unless int64?(value)
+          unsupported!('generated.go.int64_range', default: 'This path value is outside the Go int64 range.') unless int64?(value)
           "invocation.SetPathParamInt(#{go_string_literal(name)}, #{value})"
         when String
           "invocation.SetPathParamString(#{go_string_literal(name)}, #{go_string_literal(value)})"
         else
-          unsupported!('This Go API client path parameter must be an integer or string.')
+          unsupported!('generated.go.path_type', default: 'This Go API client path parameter must be an integer or string.')
         end
       end
     end
@@ -283,9 +312,9 @@ module HaveAPI::GoClient
       return [] unless sample.has_key?(:request) && !sample[:request].nil?
 
       request = sample[:request]
-      unsupported!('The Go generator supports object input only.') unless request.is_a?(Hash)
+      unsupported!('generated.go.object_input', default: 'The Go generator supports object input only.') unless request.is_a?(Hash)
       unless action.has_input?
-        unsupported!('This input is unavailable in the configured Go API client.') unless request.empty?
+        unsupported!('generated.go.input', default: 'This input is unavailable in the configured Go API client.') unless request.empty?
         return []
       end
       lines = ["#{'input := ' unless request.empty?}invocation.NewInput().SelectParameters()"]
@@ -294,10 +323,10 @@ module HaveAPI::GoClient
         saved_parameter = lookup(saved && saved[:parameters], name)
         live_parameter = lookup(live && live[:parameters], name)
         unless parameter && saved_parameter && live_parameter && parameter_contract(saved_parameter) == parameter_contract(live_parameter)
-          unsupported!('This input field does not match the configured Go API client.')
+          unsupported!('generated.go.input_field', default: 'This input field does not match the configured Go API client.')
         end
         if value.nil?
-          unsupported!('This Go API client input field does not accept null.') unless parameter.nillable?
+          unsupported!('generated.go.null_input', default: 'This Go API client input field does not accept null.') unless parameter.nillable?
           lines << "input.Set#{parameter.go_name}Nil(true)"
         else
           lines << "input.Set#{parameter.go_name}(#{literal(parameter.go_in_type, value)})"
@@ -306,7 +335,7 @@ module HaveAPI::GoClient
       lines
     end
 
-    def metadata_lines(action, saved, live)
+    def metadata_lines(action, saved, live, context)
       io = action.metadata && action.metadata.global && action.metadata.global.input
       return [] unless io && io.parameters.any?
 
@@ -318,9 +347,9 @@ module HaveAPI::GoClient
         left && right && parameter_contract(left) == parameter_contract(right)
       end
 
-      ['// To supply advertised global metadata, select only the fields you set:',
+      [comment_lines(example_comment('go_metadata', default: 'To supply advertised global metadata, select only the fields you set:', context:), '// '),
        '// metadata := invocation.NewMetaInput().SelectParameters()'] +
-        io.parameters.map { |parameter| "// metadata.Set#{parameter.go_name}(value) // value has type #{parameter.go_in_type}" }
+        io.parameters.map { |parameter| "// metadata.Set#{parameter.go_name}(value) #{comment_lines(example_comment('go_metadata_type', default: 'value has type %{type}', context:, type: parameter.go_in_type), '// ')}" }
     end
 
     def call_lines(action, live, sample, context)
@@ -335,7 +364,7 @@ module HaveAPI::GoClient
         "\treturn",
         '}'
       ]
-      return lines + ['// This sample demonstrates the failure branch above.'] unless sample[:status]
+      return lines + [comment_lines(example_comment('failure_branch', default: 'This sample demonstrates the failure branch above.', context:), '// ')] unless sample[:status]
 
       lines.concat(output_lines(action, sample))
       if context.detail == :thorough && operation_visible?(action, live, context)
@@ -350,12 +379,12 @@ module HaveAPI::GoClient
           "\t\tfmt.Println(state.Message, state.Errors)",
           "\t\treturn",
           "\t}",
-          "\t// Inspect the operation status using its documented output fields.",
+          comment_lines(example_comment('operation_status_fields', default: 'Inspect the operation status using its documented output fields.', context:), '	// '),
           '}',
-          '// Request success does not establish operation completion.'
+          comment_lines(example_comment('request_completion', default: 'Request success does not establish operation completion.', context:), '// ')
         )
       elsif action.blocking?
-        lines << '// Request success does not establish operation completion.'
+        lines << comment_lines(example_comment('request_completion', default: 'Request success does not establish operation completion.', context:), '// ')
       end
       lines
     end
@@ -433,25 +462,25 @@ module HaveAPI::GoClient
       method = method.to_sym
       visible = lookup(context.description[:authentication], method)
       saved = lookup(@description[:authentication], method)
-      unsupported!('This authentication method is unavailable in the configured Go API client.') unless visible && saved && desc
+      unsupported!('generated.go.authentication', default: 'This authentication method is unavailable in the configured Go API client.') unless visible && saved && desc
       lines = case method
               when :basic
                 ['api.SetBasicAuthentication("user", "secret")']
               when :token
                 unless same_transport_name?(saved[:http_header], visible[:http_header]) &&
                        same_transport_name?(saved[:query_parameter], visible[:query_parameter])
-                  unsupported!('This authentication method does not match the configured Go API client.')
+                  unsupported!('generated.go.authentication_mismatch', default: 'This authentication method does not match the configured Go API client.')
                 end
                 ['api.SetExistingTokenAuth("example-token")',
-                 '// Use a token obtained through the advertised authentication provider.']
+                 comment_lines(example_comment('go_existing_token', default: 'Use a token obtained through the advertised authentication provider.', context:), '// ')]
               when :oauth2
                 unless saved[:http_header] == visible[:http_header]
-                  unsupported!('This authentication method does not match the configured Go API client.')
+                  unsupported!('generated.go.authentication_mismatch', default: 'This authentication method does not match the configured Go API client.')
                 end
                 ['api.SetExistingOAuth2Auth("example-access-token")',
-                 '// Obtain the access token through the OAuth2 provider before running this program.']
+                 comment_lines(example_comment('go_existing_oauth', default: 'Obtain the access token through the OAuth2 provider before running this program.', context:), '// ')]
               else
-                unsupported!('This authentication method is unsupported by the Go generator.')
+                unsupported!('generated.go.authentication_unsupported', default: 'This authentication method is unsupported by the Go generator.')
               end
       code(program(context, [], lines))
     end
@@ -482,7 +511,7 @@ module HaveAPI::GoClient
               when 'bool' then [true, false].include?(value)
               else false
               end
-      unsupported!('This sample value cannot be represented by the Go API client field type.') unless valid
+      unsupported!('generated.go.value', default: 'This sample value cannot be represented by the Go API client field type.') unless valid
       type == 'string' ? go_string_literal(value) : value.to_s
     end
 
@@ -542,8 +571,8 @@ module HaveAPI::GoClient
       value.freeze
     end
 
-    def unsupported!(reason)
-      raise Unsupported, reason
+    def unsupported!(key, default:, **values)
+      raise Unsupported.new(key, default:, **values)
     end
 
     def code(source)

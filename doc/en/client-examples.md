@@ -209,6 +209,16 @@ wire requests or persisted data.
 
 ## Renderer extensions
 
+Framework-authored explanatory comments follow the documentation language.
+Executable code, identifiers, literals, commented commands and sample data stay
+unchanged. The immutable context captures `locale`, defaulting to `:en`, and
+retains it through `with`. `example_comment(key, default:, **values)` resolves
+`haveapi.documentation.comments.<key>`; `documentation_message` resolves other
+keys relative to `haveapi.documentation`, including generated-client limitations.
+Renderers add a comment marker to every physical prose line. Documentation
+adapters can use these optional context methods without depending on the server
+gem; old contexts and direct renderer calls keep English defaults.
+
 Existing renderer positional constructors and `init`, `auth(method, desc)` and
 `example(sample)` or `request(sample)`/`response(sample)` methods still work.
 The registry binds a request-local `HaveAPI::ClientExample::Context` through

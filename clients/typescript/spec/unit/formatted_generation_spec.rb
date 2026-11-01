@@ -19,7 +19,7 @@ RSpec.describe HaveAPI::TypeScriptClient::Generator, '#generate' do
       expect(manifest.fetch('formatter')).to eq(formatter.provenance)
       files = manifest.fetch('files').to_h { |path, _digest| [path, File.read(File.join(output, path))] }
       expect(formatter.format(files)).to eq(files)
-      expect(files.fetch('api.ts')).to include('import type { ClientOptions } from "./runtime.js";', "\n  return {\n")
+      expect(files.fetch('api.ts')).to include("import type {\n  ActionResult,\n  ClientOptions,\n  DescribeOptions,\n} from \"./runtime.js\";", "\n  return {\n")
       expect(manifest.fetch('files')).to eq(files.transform_values { |content| Digest::SHA256.hexdigest(content) })
       before = Dir.glob('**/*', base: output).select { |path| File.file?(File.join(output, path)) }.to_h do |path|
         full = File.join(output, path)

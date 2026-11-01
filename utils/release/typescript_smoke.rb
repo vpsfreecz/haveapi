@@ -5,15 +5,15 @@ module HaveAPI
   module Release
     # Only the retained gems provide generator and shared schema code.
     class TypeScriptSmoke
-      RUNTIME_VERSION = '0.30.2'.freeze
-      RUNTIME_SHA256 = '96450c40a55ec7b7af4fca903d045bd0fc7ba1216efe12c3fee9b3e6a09e9198'.freeze
+      RUNTIME_VERSION = '0.32.0'.freeze
+      RUNTIME_SHA256 = '9285eab56e435ee86a501a24808e15496d44521881a032090003a1108511f016'.freeze
 
       def self.run(artifacts, directory, runtime)
         runtime = File.realpath(runtime)
         metadata = JSON.parse(File.read(File.join(runtime, 'package.json')))
         unless metadata.values_at('name', 'version') == ['haveapi-client', RUNTIME_VERSION] &&
                Digest::SHA256.file(File.join(runtime, 'dist/haveapi-client.js')).hexdigest == RUNTIME_SHA256
-          raise Error, 'TypeScript smoke requires the prepared published haveapi-client 0.30.2 runtime'
+          raise Error, 'TypeScript smoke requires the prepared published haveapi-client 0.32.0 runtime'
         end
 
         package = Gem::Package.new(File.join(directory, "haveapi-typescript-client-#{artifacts.version}.gem"))
@@ -137,7 +137,7 @@ module HaveAPI
             const require = createRequire(import.meta.url);
             const api = require('haveapi-client');
             assert.equal(realpathSync(require.resolve('haveapi-client')), realpathSync(process.argv[2]));
-            assert.equal(api.Client.Version, '0.30.2');
+            assert.equal(api.Client.Version, '0.32.0');
             const runtime = new api.AsyncClient('https://schema.invalid/mount/v1.0');
             let request;
             runtime.request = async spec => { request = spec; return {data: {name: 'fixture'}}; };

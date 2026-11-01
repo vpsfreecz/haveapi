@@ -243,7 +243,7 @@ using the Ruby gem outside Nix.
 The manifest retains the TypeScript component lock without packaging it in the
 TypeScript gem. Tools-only artifact verification uses the retained lock and does
 not resolve or require a local component bundle. After packaging, the build
-prepares the supported published JavaScript runtime `haveapi-client@0.30.2`,
+prepares the supported published JavaScript runtime `haveapi-client@0.32.0`,
 with install scripts disabled, then runs `typescript_smoke.rb`. This check
 extracts both retained Ruby gems, clears inherited Ruby/Bundler load overrides,
 verifies loaded paths, versions and source identities, generates a saved mounted
@@ -259,7 +259,7 @@ To repeat only that smoke against already prepared artifacts and runtime:
 ruby utils/release/typescript_smoke.rb dist /path/to/node_modules/haveapi-client
 ```
 
-The runtime must be the original published 0.30.2 bundle; the smoke checks its
+The runtime must be the original published 0.32.0 bundle; the smoke checks its
 version and SHA-256. The release build prepares it before protected publication.
 No dependency installation or extracted consumer build runs after approval.
 Tools-only retained-artifact verification checks packaged bytes and retained

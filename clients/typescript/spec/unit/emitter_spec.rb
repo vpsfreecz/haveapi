@@ -35,7 +35,7 @@ RSpec.describe HaveAPI::TypeScriptClient::Emitter do
     expect(update).to include('"wire-name"?: string | null;', '"wire_name"?: string | undefined;', '"name"?: string | null;')
     expect(index).to include('"inputNamespace":null', '"outputNamespace":"widgets"', '"metaNamespace":"_meta"')
     expect(update).to include('"custom"?: unknown;', '"owner"?: Partial<Record<"key" | "title", unknown>> | null;')
-    expect(files['runtime.ts'].scan('response.data as T').length).to eq(1)
+    expect(files['runtime.ts'].scan('canonicalObjectMetadata(response.data, action, namespace) as T').length).to eq(1)
     expect(files['api.ts']).not_to include('new AsyncClient', 'fetch(', 'XMLHttpRequest')
   end
 
@@ -62,6 +62,18 @@ RSpec.describe HaveAPI::TypeScriptClient::Emitter do
     visit.call('api.ts', [])
     expect(visited.keys).to include('runtime.ts', 'resources/widget/resource.ts', 'resources/widget/resources/part/actions/show.ts')
     expect(files.values.join.scan('const descriptor =').length).to eq(emitter_ir[:actions].length)
+  end
+
+  it 'emits only output wire names needed for declared object metadata collisions' do
+    files = emitted_files
+    descriptor = lambda do |name|
+      JSON.parse(files.fetch("resources/widget/actions/#{name}.ts").match(/^const descriptor = (.+) as const;/)[1])
+    end
+    index = descriptor.call('index')
+    expect(index.fetch('outputNames')).to eq(emitter_ir[:actions].find { |item| item[:accessor_name] == 'index' }[:output][:parameters].map { |field| field[:wire_name] })
+    expect(index).not_to have_key('output')
+    expect(descriptor.call('update').fetch('outputNames')).to be_nil
+    expect(descriptor.call('empty').fetch('outputNames')).to be_nil
   end
 
   it 'rejects case-folded resource and action paths with both original schema paths' do

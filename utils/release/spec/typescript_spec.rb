@@ -146,7 +146,7 @@ RSpec.describe HaveAPI::Release::TypeScriptSmoke do
     build_gem('clients/ruby', 'haveapi-client')
     runtime = File.join(tmp, 'runtime')
     FileUtils.mkdir_p(File.join(runtime, 'dist'))
-    File.write(File.join(runtime, 'package.json'), JSON.generate(name: 'haveapi-client', version: '0.30.2'))
+    File.write(File.join(runtime, 'package.json'), JSON.generate(name: 'haveapi-client', version: '0.32.0'))
     File.write(File.join(runtime, 'dist/haveapi-client.js'), 'runtime fixture')
     allow(Digest::SHA256).to receive(:file).and_call_original
     allow(Digest::SHA256).to receive(:file).with(File.join(runtime, 'dist/haveapi-client.js'))

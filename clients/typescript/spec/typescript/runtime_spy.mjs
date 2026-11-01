@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {pathToFileURL} from 'node:url';
 
-const {createClient} = await import(pathToFileURL(process.argv[2]).href);
+const {createClient, ClientInputError} = await import(pathToFileURL(process.argv[2]).href);
 const calls = [];
 const data = {name: null, 'wire-name': 'raw', custom: {unvalidated: true}};
 const meta = {count: 3};
@@ -82,7 +82,13 @@ const invalid = [
 ];
 for (const invoke of invalid) {
   const previous = calls.length;
-  await assert.rejects(invoke, TypeError);
+  await assert.rejects(invoke, error => {
+    assert.ok(error instanceof TypeError && error instanceof ClientInputError);
+    assert.equal(error.code, 'HAVEAPI_CLIENT_INPUT_ERROR');
+    assert.equal(error.phase, 'pre-dispatch');
+    assert.equal(Object.hasOwn(error, 'params'), false);
+    return true;
+  });
   assert.equal(calls.length, previous, 'invalid input must reject before sending');
 }
 const inherited = Object.create({name: 'inherited'});
@@ -91,9 +97,66 @@ const cycle = {};
 cycle.self = cycle;
 await assert.rejects(() => client.widget.update({path: {widget_id: 1}, params: {name: 'ok', custom: cycle}}), /Invalid JSON/);
 
+const descriptions = [];
+const descriptionData = {input: {parameters: {name: {required: true}}}, extra: 'extension'};
+const descriptionReceipt = {data: descriptionData, meta: {future: false}, envelope: {status: true, response: descriptionData}, httpStatus: 200};
+const described = createClient({execute: async spec => {descriptions.push(spec); return descriptionReceipt;}});
+assert.equal(await described.describe({headers, signal, timeoutMs: 25}), descriptionReceipt);
+assert.deepEqual(descriptions.at(-1), {
+  method: 'OPTIONS', path: '/', inputNamespace: null, outputNamespace: null, metaNamespace: '_meta', headers, signal, timeoutMs: 25,
+});
+await described.widget.change.describe({path: {widget_id: 'a/b'}, signal});
+assert.equal(descriptions.at(-1).path, '/widget-help/a%2Fb?method=PUT', 'uses explicit recorded help, not guessed operation route');
+assert.equal(new URL('https://api.example/mount/v1.0' + descriptions.at(-1).path).pathname, '/mount/v1.0/widget-help/a%2Fb');
+await described.widget.part.show.describe({path: {widget_id: 1, part_id: 'nested/ID'}});
+assert.equal(descriptions.at(-1).path, '/widgets/1/parts/nested%2FID?method=GET');
+await described.widget.audit.describe();
+const beforeInvalidDescription = descriptions.length;
+for (const invoke of [
+  () => described.describe({path: '/injected'}),
+  () => described.widget.update.describe(),
+  () => described.widget.update.describe({path: {widget_id: '\ud800'}}),
+  () => described.widget.update.describe({path: {widget_id: 1}, params: {name: 'secret-value'}}),
+]) await assert.rejects(invoke, ClientInputError);
+assert.equal(descriptions.length, beforeInvalidDescription);
+// Payload validation remains with consumers. The generator preserves a malformed
+// description receipt and the executor's denied/protocol error without rewriting.
+const malformed = {data: null, meta: {}, envelope: {status: true, response: null}, httpStatus: 200};
+assert.equal(await createClient({execute: async () => malformed}).describe(), malformed);
+
+const namespaceCalls = [];
+const customRows = [{name: 'wire', custom: {_meta: {keep: true}}, wire_meta: {revision: 0}}];
+const customEnvelope = {status: true, response: {widgets: customRows, wire_meta: {count: 0, extension: null}}};
+const customClient = createClient({metaNamespace: 'wire_meta', execute: async spec => {
+  namespaceCalls.push(spec);
+  return {data: customRows, meta: customEnvelope.response.wire_meta, envelope: customEnvelope, httpStatus: 200};
+}});
+await customClient.widget.update({path: {widget_id: 1}, params: {name: 'custom', _meta: {revision: 0}}, meta: {notify: false}});
+assert.deepEqual({...namespaceCalls.at(-1).params.wire_meta}, {revision: 0});
+assert.equal(Object.hasOwn(namespaceCalls.at(-1).params, '_meta'), false);
+assert.deepEqual({...namespaceCalls.at(-1).meta}, {notify: false});
+assert.equal(namespaceCalls.at(-1).metaNamespace, 'wire_meta');
+const customResult = await customClient.widget.index();
+assert.equal(customResult.data[0]._meta, customRows[0].wire_meta);
+assert.equal(customResult.data[0].custom, customRows[0].custom, 'Custom output is not traversed');
+assert.equal(customResult.envelope, customEnvelope);
+assert.equal(Object.hasOwn(customRows[0], '_meta'), false, 'raw envelope data stays untouched');
+assert.equal(customResult.meta, customEnvelope.response.wire_meta);
+await customClient.describe();
+assert.equal(namespaceCalls.at(-1).metaNamespace, 'wire_meta');
+await customClient.widget.index.describe();
+assert.equal(namespaceCalls.at(-1).metaNamespace, 'wire_meta');
+for (const metaNamespace of ['', null, '__proto__', 'name', 'widget', 'widgets', 'output-only']) {
+  assert.throws(() => createClient({metaNamespace, execute: async () => receipt}), ClientInputError);
+}
+
 const failure = new Error('executor retains uncertain-write semantics');
 let attempts = 0;
 const failing = createClient({execute: async () => {attempts++; throw failure;}});
 await assert.rejects(() => failing.widget.update({path: {widget_id: 1}, params: {name: 'ok'}}), error => error === failure);
 assert.equal(attempts, 1, 'mutations are never replayed');
+const transportFailure = new TypeError('transport uncertainty');
+const transport = createClient({execute: async () => {throw transportFailure;}});
+await assert.rejects(() => transport.widget.update({path: {widget_id: 1}, params: {name: 'ok'}}), error => error === transportFailure && !(error instanceof ClientInputError));
+await assert.rejects(() => transport.widget.update.describe({path: {widget_id: 1}}), error => error === transportFailure);
 console.log('generated strict types and runtime spy contract passed');

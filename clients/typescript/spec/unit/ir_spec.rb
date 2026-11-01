@@ -106,4 +106,36 @@ RSpec.describe HaveAPI::TypeScriptClient::IR do
       end
     end
   end
+
+  it 'normalizes explicit help routes and derives missing help without live discovery' do
+    schema = snapshot
+    expect(described_class.build(schema)[:actions].first[:help_path]).to eq('/widgets/{widget_id}?method=PUT')
+    fixture_action(schema)['help'] = '/api/v1.0/widget-help/{widget_id}?method=PUT'
+    expect(described_class.build(schema)[:actions].first[:help_path]).to eq('/widget-help/{widget_id}?method=PUT')
+    [
+      '/api/v2.0/widgets/{widget_id}?method=PUT', '/api/v1.0/widgets/{other_id}?method=PUT',
+      '/api/v1.0/widgets/{widget_id}?method=GET', '/api/v1.0/widgets/{widget_id}?other=PUT', nil
+    ].each do |help|
+      fixture_action(schema)['help'] = help
+      expect { described_class.build(schema) }.to raise_error(HaveAPI::TypeScriptClient::Error)
+    end
+  end
+
+  it 'rejects root describe and emitted helper type collisions while allowing resource actions named describe' do
+    schema = snapshot
+    schema['description']['resources']['describe'] = { 'actions' => {}, 'resources' => {} }
+    expect { described_class.build(schema) }.to raise_error(HaveAPI::TypeScriptClient::Error, /collision.*describe/)
+    schema = snapshot
+    schema['description']['resources']['widget']['actions']['describe'] = action
+    expect(described_class.build(schema)[:actions].map { |item| item[:accessor_name] }).to include('describe')
+    expect(HaveAPI::TypeScriptClient::Naming::EXPORT_RESERVED).to include('ActionResult', 'ClientInputError', 'DescribeOptions')
+  end
+
+  it 'rejects selector-less explicit help on a path shared by different HTTP actions' do
+    schema = snapshot
+    fixture_action(schema)['help'] = '/api/v1.0/widgets/{widget_id}'
+    schema['description']['resources']['widget']['actions']['show'] = action(method: 'GET')
+    expect { described_class.build(schema) }
+      .to raise_error(HaveAPI::TypeScriptClient::Error, %r{action help method differs from action method at widget/update})
+  end
 end

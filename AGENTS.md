@@ -14,7 +14,8 @@ stop the affected action and report it.
 | Before this activity | Read |
 | --- | --- |
 | Selecting/running builds, tests or documentation generation; changing Nix inputs | [Development commands](doc/agent-instructions/development.md) |
-| Changing generated example renderers/adapters or their source assertions | [Example source style](doc/client-examples.md#example-source-style) |
+| Writing or translating documentation articles; changing article copying or packaging | [Documentation articles](doc/agent-instructions/documentation.md) |
+| Changing generated example renderers/adapters or their source assertions | [Example source style](doc/en/client-examples.md#example-source-style) |
 | Changing framework/client translations, generated catalogs, parameter metadata or localization lookup behavior | [Localization](doc/agent-instructions/localization.md) |
 | Selecting a branch for a release/backport, versioning, publishing or synchronizing the PHP client | [Branches and releases](doc/agent-instructions/releases.md) |
 

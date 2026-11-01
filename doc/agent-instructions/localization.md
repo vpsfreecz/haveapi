@@ -17,3 +17,13 @@ repository root unless explicitly stated otherwise.
   shared resource input/output keys, resource attributes, and shared
   `attributes.<name>` keys. Use `label_key`/`desc_key` only for explicit
   overrides.
+
+## HTML documentation
+
+Framework documentation messages live under `haveapi.documentation` in the
+shared catalog. ERB uses `documentation_t` and browser code uses
+`documentationMessage`; `rake i18n:health` checks their catalog keys. The server
+passes the resolved browser subset through `documentation_json`. Do not maintain
+a separate hand-written browser catalog. Documentation language selection is
+independent of API request localization; see the
+[documentation UI guide](../en/documentation-ui.md#documentation-language).

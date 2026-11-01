@@ -67,8 +67,8 @@ be encoded in any of the supported output formats.
 
 ## API version
 
-<a href="/doc/protocol.png">
-<img src="/doc/protocol.png"
+<a href="../protocol.png">
+<img src="../protocol.png"
      alt="Diagram representing the structure of an API version"
 	 width="600">
 </a>

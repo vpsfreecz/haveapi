@@ -62,7 +62,7 @@ api.mount('/api/')
 `generator_version` defaults to the server's `HaveAPI::VERSION`. Install the
 matching generator in the server's Ruby environment: `haveapi-go-client`,
 `haveapi-rust-client`, or the source-distributed `haveapi-typescript-client`.
-See the [TypeScript generator guide](../clients/typescript/README.md) for its
+See the [TypeScript generator guide](../../clients/typescript/README.md) for its
 setup. An explicit `generator_version` requires the installed generator to report
 that version; the server never downloads one. This version is independent of the
 API client and API versions.
@@ -114,7 +114,7 @@ users can install; the server does not check its availability or publish it.
 TypeScript examples call the package's typed properties through its public
 `createClient` export. The profile does not detect or select the application's
 installed `haveapi-client` runtime. The installation command above uses the
-version supported by the [TypeScript generator](../clients/typescript/README.md);
+version supported by the [TypeScript generator](../../clients/typescript/README.md);
 the examples do not report it as a configured runtime version.
 
 For an unpublished Rust API client, supply an HTTPS Git URL and a full commit SHA:
@@ -385,17 +385,17 @@ When changing a renderer:
 - Inspect relevant initialization, authentication and action output for affected
   variants and both direct detail inputs. Cover absent optional fragments and
   literal edge cases where the change can affect them.
-- Use existing [server example specs](../servers/ruby/spec/client_examples/) for
+- Use existing [server example specs](../../servers/ruby/spec/client_examples/) for
   PHP literal round trips and real handlers, Ruby syntax, Python AST/separation,
   detail behavior and custom whitespace. Use the owning
-  [Go documentation specs](../clients/go/spec/unit/documentation_spec.rb),
-  [TypeScript documentation specs](../clients/typescript/spec/unit/) and
-  [Rust development checks](../clients/rust/docs/development.md) when affected.
+  [Go documentation specs](../../clients/go/spec/unit/documentation_spec.rb),
+  [TypeScript documentation specs](../../clients/typescript/spec/unit/) and
+  [Rust development checks](../../clients/rust/docs/development.md) when affected.
   TypeScript coverage includes source, strict compilation and performance specs.
 - Search neighboring HTML, fixture and performance assertions for exact source
   spelling. Update intentional quote/import/spacing expectations while retaining
   semantic assertions, traversal/allocation bounds and strict compiler checks.
-- Follow [development commands](agent-instructions/development.md) and the
+- Follow [development commands](../agent-instructions/development.md) and the
   existing verification requirements. Select checks by affected language and
   behavior; an unrelated edit does not require every language toolchain.
 
@@ -488,7 +488,7 @@ This command runs outside Bundler and records the gem versions actually
 activated. Retain that list alongside both component locks and use the same
 prepared inputs for both revisions. Missing optional dependencies fail the run;
 Rust lanes are never silently omitted. See the
-[Rust adapter guide](../clients/rust/docs/documentation.md#verification).
+[Rust adapter guide](../../clients/rust/docs/documentation.md#verification).
 
 Every lane reports each trial and the median wall seconds, process CPU seconds
 and allocated objects, with the operation count per trial. Wall time uses a
@@ -528,4 +528,4 @@ installed packages or an API client. These run rendered source against
 disposable fixtures; syntax checks alone do not
 establish that client calls or authentication work. See each client's
 development documentation for its test environment. Highlighter rebuilding is
-described in [utils/highlight](../utils/highlight/README.md).
+described in [utils/highlight](../../utils/highlight/README.md).

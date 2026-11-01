@@ -44,7 +44,7 @@ benchmark-documentation:
 	@$(MAKE) --no-print-directory --silent doc
 	@cd servers/ruby && $(BENCHMARK_DOCUMENTATION_RUBY) benchmarks/documentation.rb $(BENCHMARK_DOCUMENTATION_ARGS)
 
-# Run in the prepared unbundled server environment; see doc/performance.md.
+# Run in the prepared unbundled server environment; see doc/en/performance.md.
 performance:
 	ruby servers/ruby/benchmarks/endpoints.rb run $(PERFORMANCE_ARGS)
 

@@ -9,7 +9,12 @@ require 'tmpdir'
 
 describe HaveAPI::Server do
   def required_docs
-    %w[json-schema.html protocol.md create-client.md typed-input-validation.md client-examples.md protocol.png]
+    %w[protocol.png en/documentation-ui.md en/documentation-oauth.md en/performance.md] +
+      %w[en cs].flat_map do |locale|
+        %w[readme.md protocol.md create-client.md typed-input-validation.md client-examples.md json-schema.html].map do |name|
+          "#{locale}/#{name}"
+        end
+      end
   end
 
   before(:context) do
@@ -22,14 +27,15 @@ describe HaveAPI::Server do
     Rake::Task[:build].invoke
   end
 
-  %i[missing empty].each do |condition|
-    it "rejects a direct build with #{condition} shared documentation" do
+  %w[en/json-schema.html cs/json-schema.html cs/protocol.md].product(%i[missing empty]).each do |document, condition|
+    it "rejects a direct build with #{condition} #{document}" do
       Dir.mktmpdir('haveapi-doc-check') do |dir|
         FileUtils.mkdir_p(File.join(dir, 'doc'))
         required_docs.each do |name|
-          next if name == 'json-schema.html' && condition == :missing
+          next if name == document && condition == :missing
 
-          content = name == 'json-schema.html' && condition == :empty ? '' : 'document'
+          content = name == document && condition == :empty ? '' : 'document'
+          FileUtils.mkdir_p(File.dirname(File.join(dir, 'doc', name)))
           File.write(File.join(dir, 'doc', name), content)
         end
 
@@ -38,9 +44,39 @@ describe HaveAPI::Server do
             expect { invoke_build }.to raise_error(SystemExit) do |error|
               expect(error.status).to eq(1)
             end
-          end.to output(/json-schema.html.*Run `make doc`/).to_stderr
+          end.to output(/#{Regexp.escape(document)}.*Run `make doc`/).to_stderr
         end
       end
+    end
+  end
+
+  it 'copies localized schema documentation without application gems or Bundler' do
+    root = File.expand_path('../../..', __dir__)
+    Dir.mktmpdir('haveapi-copydoc') do |dir|
+      destination = File.join(dir, 'server')
+      empty_gems = File.join(dir, 'empty-gems')
+      FileUtils.mkdir_p(empty_gems)
+      environment = {
+        'GEM_HOME' => empty_gems,
+        'GEM_PATH' => empty_gems,
+        'RUBYLIB' => nil,
+        'RUBYOPT' => nil,
+        'RUBYGEMS_GEMDEPS' => nil
+      }
+      stdout, stderr, status = Bundler.with_unbundled_env do
+        Open3.capture3(environment, File.join(root, 'utils/copydoc.sh'), destination, chdir: root)
+      end
+      expect(status.success?).to be(true), "Isolated documentation copy failed: #{stdout}#{stderr}"
+
+      schemas = %w[en cs].map do |locale|
+        body = File.read(File.join(destination, 'doc', locale, 'json-schema.html'))
+        heading = ::I18n.t('haveapi.documentation.schema.envelope', locale:, raise: true)
+        expect(body).to include(%(<h1 id="envelope">#{ERB::Util.html_escape(heading)}</h1>))
+        code = body.scan(%r{<pre><code>(.*?)</code></pre>}m).flatten
+        expect(code.length).to eq(4)
+        code
+      end
+      expect(schemas[0]).to eq(schemas[1])
     end
   end
 
@@ -85,13 +121,18 @@ describe HaveAPI::Server do
         server.use_version(1)
         server.mount('/')
         request = Rack::MockRequest.new(server.app)
-        responses = %w[/ /doc /doc/index /doc/index.md /doc/readme /doc/json-schema /doc/protocol.md /doc/create-client.md /doc/client-examples.md /js/highlight-LICENSE].to_h do |path|
-          response = request.get(path, 'HTTP_HOST' => 'localhost')
+        responses = %w[/ /doc /doc/index /doc/index.md /doc/readme /doc/json-schema /doc/protocol.md /doc/create-client.md /doc/client-examples.md /doc/typed-input-validation /js/highlight-LICENSE].to_h do |path|
+          response = request.get(path, 'HTTP_HOST' => 'localhost', 'HTTP_ACCEPT_LANGUAGE' => 'en')
           [path, { status: response.status, type: response.content_type, cache_control: response['Cache-Control'], body: response.body }]
+        end
+        translated = %w[/doc /doc/index /doc/index.md /doc/readme /doc/protocol.md /doc/create-client.md /doc/typed-input-validation /doc/client-examples.md /doc/json-schema /doc/documentation-ui].to_h do |path|
+          response = request.get(path, 'HTTP_HOST' => 'localhost', 'HTTP_ACCEPT_LANGUAGE' => 'cs-CZ')
+          [path, { status: response.status, body: response.body }]
         end
         puts JSON.generate({
           framework: HaveAPI::Server.instance_method(:mount).source_location.first,
-          responses: responses
+          responses: responses,
+          translated: translated
         })
       RUBY
 
@@ -128,6 +169,7 @@ describe HaveAPI::Server do
         '/doc/protocol.md' => 'Protocol definition',
         '/doc/create-client.md' => 'Client definition',
         '/doc/client-examples.md' => 'Client examples',
+        '/doc/typed-input-validation' => 'Typed input validation',
         '/js/highlight-LICENSE' => 'Copyright'
       }.each do |path, heading|
         response = result.fetch('responses').fetch(path)
@@ -140,6 +182,23 @@ describe HaveAPI::Server do
         expect(response.fetch('body')).to include('data-docs', '/js/documentation.js', '/css/documentation.css')
         expect(response.fetch('body')).not_to include('/js/main.js', '/css/bootstrap')
       end
+      {
+        '/doc' => 'Serverová implementace',
+        '/doc/index' => 'Serverová implementace',
+        '/doc/index.md' => 'Serverová implementace',
+        '/doc/readme' => 'Serverová implementace',
+        '/doc/protocol.md' => 'Definice protokolu',
+        '/doc/create-client.md' => 'Definice klienta',
+        '/doc/typed-input-validation' => 'Validace typovaných vstupů',
+        '/doc/client-examples.md' => 'Klientské příklady',
+        '/doc/json-schema' => 'Obálka',
+        '/doc/documentation-ui' => 'Browsing API documentation'
+      }.each do |path, heading|
+        response = result.fetch('translated').fetch(path)
+        expect(response.fetch('status')).to eq(200), "Packaged Czech route failed: #{path}"
+        expect(response.fetch('body')).to include('lang="cs"', heading)
+      end
+      expect(result.fetch('translated').fetch('/doc/documentation-ui').fetch('body')).to include('lang="en"')
       %w[/doc /doc/index /doc/index.md /doc/readme].each do |path|
         body = result.fetch('responses').fetch(path).fetch('body')
         expect(body).to include('<title>HaveAPI internals · ', 'Server framework features',

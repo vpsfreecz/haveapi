@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
     s.description = 'Framework for creating self-describing APIs'
   s.authors     = 'Jakub Skokan'
   s.email       = 'jakub.skokan@vpsfree.cz'
-  s.files       = `git ls-files -z`.split("\x0") + Dir.glob('doc/*')
+  s.files       = `git ls-files -z`.split("\x0") + Dir.glob('doc/**/*').select { |path| File.file?(path) }
   s.license     = 'MIT'
 
   s.required_ruby_version = ">= #{File.read('../../.ruby-version').strip}"

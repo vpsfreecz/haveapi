@@ -47,7 +47,7 @@ are loaded during registration; automatic adapters are initialized at the end of
 mount. No profiles are published when mount fails. HTML requests read no files,
 fetch no descriptions and run no generator, compiler or formatter. Removing the
 profile changes documentation availability without changing API wire behavior.
-See the [server profile guide](../../../doc/client-examples.md) for configuration,
+See the [server profile guide](../../../doc/en/client-examples.md) for configuration,
 compatibility assumptions and rollback requirements.
 
 ## Mapping and supported samples

@@ -16,6 +16,7 @@ module TypeScriptEmitterFixtures
     actions['update']['input'] = io(fields)
     actions['update']['output'] = io(fields)
     actions['update']['aliases'] = ['change']
+    actions['update']['help'] = '/api/v1.0/widget-help/{widget_id}?method=PUT'
     actions['update']['meta'] = {
       'global' => { 'input' => io('notify' => parameter('Boolean')), 'output' => io('count' => parameter('Integer')) },
       'object' => { 'input' => io('revision' => parameter('Integer')), 'output' => io('revision' => parameter('Integer')) }
@@ -25,6 +26,7 @@ module TypeScriptEmitterFixtures
       'output' => io(fields, namespace: 'widgets', layout: 'object_list'),
       'meta' => actions['update']['meta'].merge('object' => { 'output' => io('revision' => parameter('Integer')) })
     )
+    actions['index']['output']['parameters']['output-only'] = parameter
     actions['empty'] = action(path: '/api/v1.0/widgets/empty', method: 'POST').merge('input' => nil, 'output' => nil)
     actions['audit'] = action(path: '/api/v1.0/widgets/audit', method: 'POST').merge(
       'input' => nil,

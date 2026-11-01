@@ -8,7 +8,7 @@ import {setTimeout as delay} from 'node:timers/promises';
 
 const [directory, runtime] = process.argv.slice(2);
 assert.equal(createHash('sha256').update(await readFile(runtime)).digest('hex'),
-  '96450c40a55ec7b7af4fca903d045bd0fc7ba1216efe12c3fee9b3e6a09e9198');
+  '9285eab56e435ee86a501a24808e15496d44521881a032090003a1108511f016');
 const requests = [];
 const server = createServer(async (request, response) => {
   try {

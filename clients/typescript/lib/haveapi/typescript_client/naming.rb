@@ -1,7 +1,11 @@
 module HaveAPI::TypeScriptClient
   module Naming
     RESERVED = %w[then constructor prototype __proto__].freeze
-    EXPORT_RESERVED = %w[createClient RequestExecutor ClientOptions JsonValue API_VERSION SCHEMA_SHA256 RequestOptions executeAction].freeze
+    EXPORT_RESERVED = %w[
+      createClient RequestExecutor ClientOptions JsonValue API_VERSION SCHEMA_SHA256 RequestOptions executeAction
+      ActionResult ClientInputError ApiDescription ActionDescription ResourceDescription ParameterDescription
+      IoDescription MetadataDescription AuthenticationDescription DescribeOptions
+    ].freeze
 
     def self.identifier(name)
       raise Error, 'schema name must be a nonempty string' unless name.is_a?(String) && !name.empty?

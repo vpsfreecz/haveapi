@@ -2,7 +2,7 @@
 
 The Ruby server can show examples for a generated TypeScript SDK alongside its
 dynamic TypeScript clients. The generated examples use the SDK's public
-`createClient` factory and `haveapi-client` version `0.30.2` for requests and
+`createClient` factory and `haveapi-client` version `0.32.0` for requests and
 authentication. The server prepares the SDK model at mount time and renders
 examples when users view the documentation.
 
@@ -103,7 +103,7 @@ TypeScript 6, NodeNext/ES2022, `exactOptionalPropertyTypes`,
 `noUncheckedIndexedAccess` and `verbatimModuleSyntax`. They cover aliases, nested
 paths, filtered fields, stale contracts, supported authentication and errors.
 
-Run the wire harness with a prepared published `haveapi-client@0.30.2`
+Run the wire harness with a prepared published `haveapi-client@0.32.0`
 installation:
 
 ```sh

@@ -36,7 +36,7 @@ checkout revision and resolved dependency inputs. Generation reads local files
 using the prepared dependencies and runs without contacting the API.
 
 Applications need a TypeScript compiler and the `haveapi-client` JavaScript
-runtime. The supported runtime version is exactly `0.30.2`.
+runtime. The supported runtime version is exactly `0.32.0`.
 
 Both generation and `generate --check` require **Prettier 3.9.10** and Node.
 The repository's default Nix shell supplies them. For an installed Ruby gem,
@@ -123,7 +123,7 @@ and a TypeScript compiler:
 
 ```sh
 cd /path/to/widget-client
-npm install --save-exact haveapi-client@0.30.2
+npm install --save-exact haveapi-client@0.32.0
 npm install --save-dev typescript
 ```
 
@@ -155,6 +155,57 @@ the response envelope and HTTP status. Runtime errors reject the promise.
 Raw request results cannot be passed to
 `AsyncClient.waitForCompletion`; see the
 [JavaScript runtime guide](../js/README.md#advanced-usage-and-reference).
+
+Each action returns `ActionResult<Output, GlobalOutput>`. Its `meta` has the
+declared global output fields, preserving optional/null values, and accepts
+additional unknown server fields. The complete envelope and HTTP status remain
+available. This typing does not validate payload or metadata fields at runtime.
+
+Read live descriptions through the same executor:
+
+```ts
+const description = await api.describe({signal: new AbortController().signal});
+const capability = await api.widget.update.describe({path: {widget_id: 1}});
+const required = capability.data.input?.parameters?.['name']?.required;
+```
+
+`api.describe` sends OPTIONS to the selected version root. An action's `describe`
+uses its saved help route and encoded IDs, with the recorded HTTP method selector;
+older snapshots without help use the validated action route and method.
+Explicit help without the action's method selector is rejected during generation.
+Headers, signal and timeout can be supplied, but arbitrary HTTP routes and
+mutation input cannot. Aliases share the same callable action and `describe`
+function. A root resource named `describe` is rejected as a name collision
+during generation.
+The exported protocol description types are conservative and extensible. Fields
+can be absent or null, and consumers must narrow the parts they use. The
+executor retains responsibility for envelope errors. Static SDK action presence
+does not establish authorization or field availability; live descriptions can
+hide actions/fields or fail. The generator does not cache descriptions or infer
+permissions from them.
+
+Generated local input, JSON and path checks throw `ClientInputError`, a
+`TypeError` subclass with `code: 'HAVEAPI_CLIENT_INPUT_ERROR'` and
+`phase: 'pre-dispatch'`. This error means the executor was never called, so no
+mutation was sent. Errors from the executor pass through unchanged; an ordinary
+transport `TypeError` must not be treated as a proven local failure. Error
+objects do not retain input values.
+
+When the deployed API uses a different metadata namespace, bind one override:
+
+```ts
+const api = createClient({execute: spec => runtime.request(spec), metaNamespace: 'meta'});
+```
+
+The default is the saved schema's namespace. Generated input keys remain those
+in the schema (for example `params._meta`); the generator maps declared object
+metadata to the effective wire key and sets `RequestSpec.metaNamespace` for
+ordinary and description requests. Global metadata still uses `options.meta`.
+For declared object-list output metadata, `data` exposes the canonical schema
+key. The projection preserves Custom/nested values and the original envelope;
+it never walks arbitrary payloads. Invalid/reserved namespace overrides or
+collisions with declared input/output fields fail before dispatch. Bind a new
+client when the effective namespace changes.
 
 ## Schemas and types
 
@@ -189,6 +240,7 @@ src/generated/
   index.ts
   api.ts
   runtime.ts
+  descriptions.ts
   types.ts
   resources/
     widget/

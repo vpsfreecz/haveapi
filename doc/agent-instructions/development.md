@@ -147,6 +147,23 @@ installs that map. Coordinate changes to this interface across parser and emitte
 Resource/action modules compose through internal factories; public entry points
 re-export types explicitly without exposing those factories.
 
+Generated root/action `describe` calls use protocol-2 OPTIONS routes, the same
+path encoder and the existing executor. Reserve root `describe` and all emitted
+helper/type names in the IR. Honor explicit help paths; only absent help permits
+the deterministic action-path/method fallback. Description fields remain
+unvalidated, extensible wire data and never establish authorization by static
+presence. `ClientInputError` identifies only generated checks before dispatch;
+do not relabel executor errors or replay requests.
+
+The supported JavaScript runtime is 0.32.0. Keep its exact published runtime hash
+in the release smoke and wire fixtures aligned when changing that contract.
+`ActionResult` types known global metadata while allowing unknown extension
+keys; empty metadata must not become `Record<string, never>`. A client-level
+metadata namespace override maps only declared metadata positions, preserving
+canonical schema input/object-list keys and the raw envelope. Custom payloads
+are not traversed. Add emitted-source/request-spy and negative type coverage
+for changes to these contracts before the longer actual-runtime checks.
+
 The writer replaces each file atomically and writes the ownership manifest last.
 An interruption can leave a mixed tree. It compares recursive file hashes,
 preserves timestamps for identical output and removes stale owned files and empty

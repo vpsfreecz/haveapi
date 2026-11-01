@@ -9,7 +9,16 @@ module HaveAPI::RustClient
     SIMPLE_DETAIL_LEVELS = [:simple].freeze
     DETAIL_LEVELS = %i[simple thorough].freeze
 
-    class Unsupported < StandardError; end
+    class Unsupported < StandardError
+      attr_reader :key, :default, :values
+
+      def initialize(key, default:, **values)
+        @key = key
+        @default = default
+        @values = values
+        super(values.empty? ? default : format(default, values))
+      end
+    end
 
     def self.from_description(description:, api_version:, protocol_version:, mount_path:,
                               crate_name:, crate_version: nil, source: nil)
@@ -76,18 +85,18 @@ module HaveAPI::RustClient
     end
 
     def render(kind:, context:, mode:, auth_method: nil, auth_description: nil)
-      unsupported!('Unsupported Rust execution mode.') unless %i[async blocking].include?(mode)
-      unsupported!('The Rust API client targets a different API version.') unless context.version.to_s == @snapshot['api_version']
+      unsupported!('generated.rust.mode', default: 'Unsupported Rust execution mode.') unless %i[async blocking].include?(mode)
+      unsupported!('generated.rust.version', default: 'The Rust API client targets a different API version.') unless context.version.to_s == @snapshot['api_version']
 
       source = case kind
                when :init then program(context, mode, [])
                when :auth then authentication(context, mode, auth_method, auth_description)
                when :example then example(context, mode)
-               else unsupported!('Unsupported Rust documentation section.')
+               else unsupported!('generated.rust.section', default: 'Unsupported Rust documentation section.')
                end
       { status: :code, code: source.freeze }.freeze
     rescue Unsupported => e
-      { status: :limitation, reason: e.message.freeze }.freeze
+      { status: :limitation, reason: documentation_message(e.key, context:, default: e.default, **e.values).freeze }.freeze
     end
 
     def detail_levels_for(kind:, context:, result:, mode:, auth_method: nil, auth_description: nil)
@@ -96,12 +105,32 @@ module HaveAPI::RustClient
 
     private
 
+    def documentation_message(key, context:, default:, **values)
+      if context.respond_to?(:documentation_message)
+        context.documentation_message(key, default:, **values)
+      else
+        values.empty? ? default : format(default, values)
+      end
+    end
+
+    def example_comment(key, context:, default:, **values)
+      if context.respond_to?(:example_comment)
+        context.example_comment(key, default:, **values)
+      else
+        values.empty? ? default : format(default, values)
+      end
+    end
+
+    def comment_lines(text, prefix)
+      text.gsub(/\r\n?/, "\n").split("\n", -1).map { |line| "#{prefix}#{line}" }.join("\n")
+    end
+
     def failed_sample?(sample)
       sample['status'] == false || (sample['http_status'].is_a?(Integer) && sample['http_status'] >= 400)
     end
 
-    def unsupported!(reason)
-      raise Unsupported, reason
+    def unsupported!(key, default:, **values)
+      raise Unsupported.new(key, default:, **values)
     end
 
     def freeze_data(value, seen = {}.compare_by_identity)
@@ -136,7 +165,7 @@ module HaveAPI::RustClient
       dependencies = dependency_lines(mode)
       dependencies << '// cargo add tokio --features macros,rt-multi-thread' if mode == :async
       dependencies << '// cargo add serde_json'
-      dependencies << '// Construct, use and drop this blocking client outside async runtime threads.' if mode == :blocking
+      dependencies << comment_lines(example_comment('rust_blocking_context', default: 'Construct, use and drop this blocking client outside async runtime threads.', context:), '// ') if mode == :blocking
       client = mode == :blocking ? "#{@import}::blocking::Client" : "#{@import}::Client"
       lines = dependencies + ["use #{client};", '']
       lines << '#[tokio::main]' if mode == :async
@@ -173,23 +202,23 @@ module HaveAPI::RustClient
       live = normalized_members(providers)[provider]
       saved = @snapshot.fetch('description').fetch('authentication')[provider]
       unless live.is_a?(Hash) && saved
-        unsupported!('This authentication provider is unavailable in the authorized Rust API client profile.')
+        unsupported!('generated.rust.authentication', default: 'This authentication provider is unavailable in the authorized Rust API client profile.')
       end
       live = normalize(live)
-      unsupported!('The authentication description differs from the authorized help.') unless normalize(description) == live
+      unsupported!('generated.rust.authentication_description', default: 'The authentication description differs from the authorized help.') unless normalize(description) == live
 
       credentials = case provider
                     when 'basic'
                       ['.basic_auth("user", "secret")']
                     when 'token', 'oauth2'
                       unless saved['http_header'] == live['http_header']
-                        unsupported!('The Rust API client authentication header differs from this API.')
+                        unsupported!('generated.rust.authentication_header', default: 'The Rust API client authentication header differs from this API.')
                       end
                       setter = provider == 'token' ? 'token' : 'oauth2_token'
                       [".#{setter}(#{literal(provider == 'token' ? 'example-token' : 'example-access-token')})"]
-                    else unsupported!('This authentication provider is unsupported by the Rust client.')
+                    else unsupported!('generated.rust.authentication_unsupported', default: 'This authentication provider is unsupported by the Rust client.')
                     end
-      body = ['// Configure existing credentials only; building does not validate them with the server.',
+      body = [comment_lines(example_comment('rust_credentials', default: 'Configure existing credentials only; building does not validate them with the server.', context:), '// '),
               'let _ = &api;']
       program(context, mode, body, credentials:)
     end
@@ -197,16 +226,16 @@ module HaveAPI::RustClient
     def example(context, mode)
       saved = resolve(resource_path: context.resource_path, action_name: context.action_name)
       live = authorized_action(context)
-      unsupported!('This action is unavailable in the authorized Rust API client profile.') unless saved && live
+      unsupported!('generated.rust.action', default: 'This action is unavailable in the authorized Rust API client profile.') unless saved && live
       sample = normalize(context.sample)
       unless sample.is_a?(Hash) && (%w[path_params request response errors].any? { |key| !sample[key].nil? } ||
                                     sample['status'] == false || (sample['http_status'] && sample['http_status'] != 200))
-        unsupported!('This sample has no structured request or response to render.')
+        unsupported!('generated.rust.structured_sample', default: 'This sample has no structured request or response to render.')
       end
       compatible_action!(saved, live, context)
       paths = sample['path_params'] || []
       unless paths.is_a?(Array) && paths.length == saved[:placeholders].length && paths.all? { |value| valid_path?(value) }
-        unsupported!('The sample path arguments cannot be represented by this Rust API client.')
+        unsupported!('generated.rust.path_parameters', default: 'The sample path arguments cannot be represented by this Rust API client.')
       end
       inputs = input_lines(saved, live, sample['request'])
       validate_response!(saved, live, sample['response']) unless sample['response'].nil?
@@ -221,7 +250,7 @@ module HaveAPI::RustClient
                  '    Err(error) => {', '        eprintln!("HTTP status: {:?}", error.http_status());']
         if context.detail == :thorough
           body += ['        eprintln!("Request failed: {}; timeout: {}", error, error.is_timeout());',
-                   '        // Inspect these explicitly; server diagnostics can contain sensitive values.',
+                   comment_lines(example_comment('rust_diagnostics', default: 'Inspect these explicitly; server diagnostics can contain sensitive values.', context:), '        // '),
                    '        let _ = (error.server_message(), error.validation_errors());']
         end
         body += ['    }', '}']
@@ -231,16 +260,20 @@ module HaveAPI::RustClient
         body.concat(output_lines(saved, sample['response']))
       end
       if saved[:desc]['blocking'] == true
-        body << '// Request success or a timeout does not establish completion of a server-side operation.'
+        body << comment_lines(example_comment('rust_completion', default: 'Request success or a timeout does not establish completion of a server-side operation.', context:), '// ')
         if context.detail == :thorough
-          body << '// Use only the separately documented action-state action; this API client has no automatic wait helper.'
+          body << comment_lines(example_comment('rust_action_state', default: 'Use only the separately documented action-state action; this API client has no automatic wait helper.', context:), '// ')
         end
       end
       credentials = action_credentials(saved, context)
       return program(context, mode, body, credentials:) if context.detail == :thorough
 
-      enclosing = mode == :async ? 'an async function' : 'a synchronous function outside async runtime threads'
-      (["// Use inside #{enclosing} returning Result<(), Box<dyn std::error::Error>>."] + body + ['']).join("\n")
+      enclosing = if mode == :async
+                    comment_lines(example_comment('rust_async_function', default: 'Use inside an async function returning %{type}.', context:, type: 'Result<(), Box<dyn std::error::Error>>'), '// ')
+                  else
+                    comment_lines(example_comment('rust_sync_function', default: 'Use inside a synchronous function outside async runtime threads returning %{type}.', context:, type: 'Result<(), Box<dyn std::error::Error>>'), '// ')
+                  end
+      ([enclosing] + body + ['']).join("\n")
     end
 
     def action_credentials(action, context)
@@ -260,7 +293,7 @@ module HaveAPI::RustClient
         setter = provider == 'token' ? 'token' : 'oauth2_token'
         return [".#{setter}(#{literal(provider == 'token' ? 'example-token' : 'example-access-token')})"]
       end
-      unsupported!('This action requires authentication unavailable in the authorized Rust API client profile.')
+      unsupported!('generated.rust.action_authentication', default: 'This action requires authentication unavailable in the authorized Rust API client profile.')
     end
 
     def authorized_action(context)
@@ -282,7 +315,7 @@ module HaveAPI::RustClient
       mount += '/' unless mount.end_with?('/')
       unless live['method'] == saved[:desc]['method'] && live['path'] == mount + saved[:route] &&
              (live['auth'] == false) == (saved[:desc]['auth'] == false)
-        unsupported!('The Rust API client route or HTTP method differs from this API action.')
+        unsupported!('generated.rust.route', default: 'The Rust API client route or HTTP method differs from this API action.')
       end
       %w[input output].each do |direction|
         saved_io = saved[direction.to_sym]
@@ -291,17 +324,17 @@ module HaveAPI::RustClient
 
         unless saved_io && live_io && saved_io[:desc]['layout'] == live_io['layout'] &&
                saved_io[:desc]['namespace'] == live_io['namespace'] && saved_io[:desc]['format'] == live_io['format']
-          unsupported!('The Rust API client input or output layout differs from this API action.')
+          unsupported!('generated.rust.layout', default: 'The Rust API client input or output layout differs from this API action.')
         end
       end
       %i[global_input object_input].each do |key|
         next unless saved[key] && saved[key][:parameters].any? { |parameter| parameter[:desc]['required'] == true }
 
-        unsupported!('This Rust API client action requires metadata that is absent from the sample.')
+        unsupported!('generated.rust.action_metadata', default: 'This Rust API client action requires metadata that is absent from the sample.')
       end
       %w[global object].each do |role|
         if live.dig('meta', role, 'input', 'parameters')&.any? { |_name, parameter| parameter['required'] == true }
-          unsupported!('This action requires metadata that is absent from the sample.')
+          unsupported!('generated.rust.sample_metadata', default: 'This action requires metadata that is absent from the sample.')
         end
       end
     end
@@ -313,18 +346,18 @@ module HaveAPI::RustClient
     def input_lines(saved, live, request)
       io = saved[:input]
       if io.nil?
-        unsupported!('This Rust API client action cannot represent the sample input.') unless request.nil? || request == {}
+        unsupported!('generated.rust.input', default: 'This Rust API client action cannot represent the sample input.') unless request.nil? || request == {}
         return { before: [], chain: '' }
       end
       list = io[:layout].end_with?('_list')
-      unsupported!('Rust GET requests do not support list input.') if list && saved[:desc]['method'] == 'GET'
+      unsupported!('generated.rust.get_list', default: 'Rust GET requests do not support list input.') if list && saved[:desc]['method'] == 'GET'
       values = if request.nil?
                  list ? [] : {}
                else
                  request
                end
       unless list ? values.is_a?(Array) && values.all?(Hash) : values.is_a?(Hash)
-        unsupported!('The sample input does not match the Rust API client layout.')
+        unsupported!('generated.rust.input_layout', default: 'The sample input does not match the Rust API client layout.')
       end
       objects = list ? values : [values]
       objects.each { |object| validate_object!(io, live['input'], object, required: true, method: saved[:desc]['method']) }
@@ -352,20 +385,20 @@ module HaveAPI::RustClient
         parameter = saved_io[:parameters].find { |item| item[:name] == name }
         live_parameter = live_params && live_params[name]
         unless parameter && live_parameter && compatible_parameter?(parameter[:desc], live_parameter)
-          unsupported!('A sample parameter is unavailable or has changed in this Rust API client.')
+          unsupported!('generated.rust.parameter', default: 'A sample parameter is unavailable or has changed in this Rust API client.')
         end
         unless valid_value?(parameter[:desc], value, output: !required)
-          unsupported!('A sample value cannot be represented by this Rust API client.')
+          unsupported!('generated.rust.value', default: 'A sample value cannot be represented by this Rust API client.')
         end
         if method == 'GET' && parameter[:desc]['type'] == 'Custom' && (value.is_a?(Hash) || value.is_a?(Array))
-          unsupported!('Rust GET requests do not support nested Custom query values.')
+          unsupported!('generated.rust.get_custom', default: 'Rust GET requests do not support nested Custom query values.')
         end
       end
       return unless required
 
       [saved_io[:desc].fetch('parameters'), live_params || {}].each do |parameters|
         if parameters.any? { |name, desc| desc['required'] == true && !object.has_key?(name) }
-          unsupported!('The sample omits a required Rust API client input.')
+          unsupported!('generated.rust.required_input', default: 'The sample omits a required Rust API client input.')
         end
       end
     end
@@ -425,12 +458,12 @@ module HaveAPI::RustClient
     def validate_response!(saved, live, response)
       io = saved[:output]
       unless io
-        unsupported!('The sample response does not match this Rust API client.') unless response == {}
+        unsupported!('generated.rust.response', default: 'The sample response does not match this Rust API client.') unless response == {}
         return
       end
       list = io[:layout].end_with?('_list')
       unless list ? response.is_a?(Array) && response.all?(Hash) : response.is_a?(Hash)
-        unsupported!('The sample response does not match this Rust API client layout.')
+        unsupported!('generated.rust.response_layout', default: 'The sample response does not match this Rust API client layout.')
       end
       (list ? response : [response]).each { |object| validate_object!(io, live['output'], object, required: false) }
     end

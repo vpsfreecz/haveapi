@@ -258,7 +258,7 @@ module HaveAPI
         @documentation_context ||= HaveAPI::ClientExample::Context.new(
           version: @v, host:, base_url: "#{base_url}#{root.end_with?('/') ? root : "#{root}/"}",
           version_url: "#{base_url}#{root.end_with?('/') ? root : "#{root}/"}v#{@v}/",
-          description: @help
+          description: @help, locale: documentation_locale
         )
         profile = if client
                     settings.api_server.documentation_client_profiles(@v)[client.code&.to_sym]

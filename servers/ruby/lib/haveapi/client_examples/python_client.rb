@@ -70,20 +70,20 @@ module HaveAPI::ClientExamples
     end
 
     def init
-      code_result { program(thorough? ? "print(\"Discovery complete\")\n" : "# Call API actions inside this block.\npass\n") }
+      code_result { program(thorough? ? "print(\"Discovery complete\")\n" : "#{comment_lines(example_comment('python_actions', default: 'Call API actions inside this block.'), '# ')}\npass\n") }
     end
 
     def auth(method, description)
       return limitation(HaveAPI.t('haveapi.documentation.limitations.authentication_provider')) unless supported_auth?(method)
 
       code_result do
-        body = thorough? ? "print(\"Authenticated\")\n" : "# Call API actions inside this block.\npass\n"
+        body = thorough? ? "print(\"Authenticated\")\n" : "#{comment_lines(example_comment('python_actions', default: 'Call API actions inside this block.'), '# ')}\npass\n"
         case method.to_sym
         when :basic
           program(body, imports: ['BasicAuth'], auth: 'BasicAuth("user", "secret")')
         when :oauth2
           source = program(body, imports: ['OAuth2Auth'], auth: 'OAuth2Auth("example-access-token")')
-          "# Use an existing access token; OAuth acquisition and refresh are outside this client.\n#{source}"
+          "#{comment_lines(example_comment('python_existing_oauth', default: 'Use an existing access token; OAuth acquisition and refresh are outside this client.'), '# ')}\n#{source}"
         when :token
           if token_login_fields(description).empty?
             program(body, imports: ['TokenAuth'], auth: 'TokenAuth("example-token")')
@@ -134,7 +134,7 @@ module HaveAPI::ClientExamples
         body << "print(response.meta)\n" if thorough?
         if field(current_action, :blocking)
           body << <<~PY
-            # A request timeout does not cancel a server operation.
+            #{comment_lines(example_comment('timeout_no_cancel', default: 'A request timeout does not cancel a server operation.'), '# ')}
             if response.operation is not None:
                 completed = #{await_prefix}response.operation.wait(timeout=300, interval=1)
                 print(completed)
@@ -161,7 +161,7 @@ module HaveAPI::ClientExamples
     end
 
     def action_fragment(body)
-      asynchronous? ? "# Run inside an async function after initializing api.\n#{body}" : body
+      asynchronous? ? "#{comment_lines(example_comment('python_async_context', default: 'Run inside an async function after initializing api.'), '# ')}\n#{body}" : body
     end
 
     def check_get_sample(request)

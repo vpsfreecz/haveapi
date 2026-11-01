@@ -46,6 +46,22 @@ describe HaveAPI::ClientExample::Context do
     end
   end
 
+  it 'captures locale independently of ambient state and retains English defaults' do
+    czech = context.with(locale: :cs)
+    expect(context.locale).to eq(:en)
+    expect(czech.with(detail: :thorough).locale).to eq(:cs)
+    ::I18n.with_locale(:en) do
+      expect(czech.example_comment('reuse_token', default: 'Reuse an existing token')).to eq('Použití existujícího tokenu')
+    end
+    ::I18n.with_locale(:cs) do
+      expect(context.example_comment('reuse_token', default: 'Reuse an existing token')).to eq('Reuse an existing token')
+      expect(context.example_comment('missing_comment', default: 'Keep %{value}', value: 'literal')).to eq('Keep literal')
+    end
+    expect(czech.example_comment('instance_of', default: '%{variable} is an instance of %{type}', variable: 'reply', type: 'Type'))
+      .to eq('reply je instance Type')
+    expect(context).to be_frozen
+  end
+
   describe '#with' do
     let(:fields) do
       {
@@ -54,7 +70,7 @@ describe HaveAPI::ClientExample::Context do
         description: { 'resources' => { 'widget' => { 'label' => 'Widget' } } },
         resource_path: [:widget, 2], resource: { 'label' => 'Widget' },
         action_name: :show, action: { 'method' => 'GET' },
-        sample: { 'request' => { 'values' => [0, false, '', nil] } }, profile: Object.new, detail: :simple
+        sample: { 'request' => { 'values' => [0, false, '', nil] } }, profile: Object.new, detail: :simple, locale: :en
       }
     end
     let(:parent) { described_class.new(**fields) }
@@ -66,7 +82,7 @@ describe HaveAPI::ClientExample::Context do
         resource_path: [:other, 3], resource: { 'label' => 'Other' },
         action_name: :update, action: { 'method' => 'POST' },
         sample: { 'request' => { 'values' => [false, 0, nil, ''] } },
-        profile: Object.new, detail: :thorough
+        profile: Object.new, detail: :thorough, locale: 'cs'
       }
     end
 

@@ -171,6 +171,19 @@ module HaveAPI
       context&.detail == :thorough
     end
 
+    def example_comment(key, default:, **values)
+      if context.respond_to?(:example_comment)
+        context.example_comment(key, default:, **values)
+      else
+        values.empty? ? default : format(default, values)
+      end
+    end
+
+    # Prefix every physical prose line before combining it with executable source.
+    def comment_lines(text, prefix)
+      text.gsub(/\r\n?/, "\n").split("\n", -1).map { |line| "#{prefix}#{line}" }.join("\n")
+    end
+
     def version_url
       File.join(base_url, "v#{version}", '/')
     end

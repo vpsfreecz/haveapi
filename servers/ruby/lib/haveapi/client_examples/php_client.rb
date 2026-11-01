@@ -29,7 +29,7 @@ module HaveAPI::ClientExamples
         } catch (\\HaveAPI\\Client\\Exception\\Base $error) {
             echo $error->getMessage() . "\\n";
         } catch (\\Exception $error) {
-            // Dependency failures still propagate to the application.
+        #{comment_lines(example_comment('dependency_failures', default: 'Dependency failures still propagate to the application.'), '    // ')}
             echo $error->getMessage() . "\\n";
             throw $error;
         }
@@ -60,51 +60,50 @@ module HaveAPI::ClientExamples
                  <<~END
                    #{initialization.chomp}
 
-                   // Get token using username and password
+                   #{comment_lines(example_comment('token_credentials', default: 'Get token using username and password'), '// ')}
                    $api->authenticate('token', #{token_options(desc)});
 
-                   // Next time, the client can authenticate using the token directly
+                   #{comment_lines(example_comment('token_reuse_next', default: 'Next time, the client can authenticate using the token directly'), '// ')}
                    $api->authenticate('token', ['token' => 'example-token']);
                  END
 
                when :oauth2
                  <<~END
-                   // OAuth2 requires session
+                   #{comment_lines(example_comment('oauth_session', default: 'OAuth2 requires session'), '// ')}
                    session_start();
 
-                   // Client instance
+                   #{comment_lines(example_comment('client_instance', default: 'Client instance'), '// ')}
                    #{initialization}
-                   // Check if we already have an access token
+                   #{comment_lines(example_comment('oauth_check_token', default: 'Check if we already have an access token'), '// ')}
                    if (isset($_SESSION['access_token'])) {
-                       // We're already authenticated, reuse the existing access token
+                   #{comment_lines(example_comment('oauth_reuse_token', default: 'We\'re already authenticated, reuse the existing access token'), '    // ')}
                        $api->authenticate('oauth2', ['access_token' => $_SESSION['access_token']]);
                    } else {
-                       // Follow the OAuth2 authorization process to get an access token using
-                       // authorization code
+                   #{comment_lines(example_comment('oauth_code_flow', default: "Follow the OAuth2 authorization process to get an access token using\nauthorization code"), '    // ')}
                        $api->authenticate('oauth2', [
-                           // Client id and secret are given by the API server
+                   #{comment_lines(example_comment('oauth_client_credentials', default: 'Client id and secret are given by the API server'), '        // ')}
                            'client_id' => 'example-client',
                            'client_secret' => 'example-client-secret',
 
-                           // This example code should run on the URL below
+                   #{comment_lines(example_comment('oauth_callback_url', default: 'This example code should run on the URL below'), '        // ')}
                            'redirect_uri' => 'https://your-client.tld/oauth2-callback',
 
-                           // Scopes are specific to the API implementation
+                   #{comment_lines(example_comment('oauth_scopes', default: 'Scopes are specific to the API implementation'), '        // ')}
                            'scope' => 'all',
                        ]);
 
                        $provider = $api->getAuthenticationProvider();
 
-                       // We don't have authorization code yet, request one
+                   #{comment_lines(example_comment('oauth_need_code', default: 'We don\'t have authorization code yet, request one'), '    // ')}
                        if (!isset($_GET['code'])) {
-                           // Redirect the user to the authorization endpoint
+                   #{comment_lines(example_comment('oauth_redirect', default: 'Redirect the user to the authorization endpoint'), '        // ')}
                            $provider->requestAuthorizationCode();
                            exit;
                        } else {
-                           // Request access token using the token endpoint
+                   #{comment_lines(example_comment('oauth_request_token', default: 'Request access token using the token endpoint'), '        // ')}
                            $provider->requestAccessToken();
 
-                           // Store the access token in the session
+                   #{comment_lines(example_comment('oauth_store_token', default: 'Store the access token in the session'), '        // ')}
                            $_SESSION['access_token'] = $provider->jsonSerialize();
                        }
                    }
@@ -171,7 +170,7 @@ module HaveAPI::ClientExamples
       out << if sample[:status]
                response(sample)
              else
-               '// Throws exception \\HaveAPI\\Client\\Exception\\ActionFailed'
+               comment_lines(example_comment('throws_exception', default: 'Throws exception %{exception}', exception: '\\HaveAPI\\Client\\Exception\\ActionFailed'), '// ')
              end
       thorough? ? with_error_handling(["#{initialization}$api->setup();", credentials, out.chomp].reject(&:empty?).join("\n\n")) : out
     rescue HaveAPI::ClientExample::UnsupportedAuthentication => e
@@ -183,16 +182,16 @@ module HaveAPI::ClientExamples
 
       case action[:output][:layout]
       when :hash
-        out << "// $reply is an instance of \\HaveAPI\\Client\\Response\n"
-        out << "// $reply->getResponse() returns an associative array of output parameters:\n"
+        out << "#{comment_lines(example_comment('instance_of', default: '%{variable} is an instance of %{type}', variable: '$reply', type: '\\HaveAPI\\Client\\Response'), '// ')}\n"
+        out << "#{comment_lines(example_comment('response_associative', default: '%{call} returns an associative array of output parameters:', call: '$reply->getResponse()'), '// ')}\n"
         out << format_parameters(:output, sample[:response] || {}, '// ')
 
       when :hash_list
-        out << "// $reply is an instance of \\HaveAPI\\Client\\Response\n"
-        out << "// $reply->getResponse() returns an array of associative arrays:\n"
+        out << "#{comment_lines(example_comment('instance_of', default: '%{variable} is an instance of %{type}', variable: '$reply', type: '\\HaveAPI\\Client\\Response'), '// ')}\n"
+        out << "#{comment_lines(example_comment('response_associative_arrays', default: '%{call} returns an array of associative arrays:', call: '$reply->getResponse()'), '// ')}\n"
 
       when :object
-        out << "// $reply is an instance of \\HaveAPI\\Client\\ResourceInstance\n"
+        out << "#{comment_lines(example_comment('instance_of', default: '%{variable} is an instance of %{type}', variable: '$reply', type: '\\HaveAPI\\Client\\ResourceInstance'), '// ')}\n"
 
         (sample[:response] || {}).each do |pn, pv|
           param = action[:output][:parameters][pn]
@@ -210,7 +209,7 @@ module HaveAPI::ClientExamples
             out << ")\n"
 
           elsif param[:type] == 'Custom'
-            out << "// $reply->#{pn} is a custom type"
+            out << comment_lines(example_comment('custom_type', default: '%{variable} is a custom type', variable: "$reply->#{pn}"), '// ')
 
           else
             out << "// $reply->#{pn} = #{PP.pp(pv, '')}"
@@ -218,7 +217,7 @@ module HaveAPI::ClientExamples
         end
 
       when :object_list
-        out << '// $reply is an instance of \\HaveAPI\\Client\\ResourceInstanceList'
+        out << comment_lines(example_comment('instance_of', default: '%{variable} is an instance of %{type}', variable: '$reply', type: '\\HaveAPI\\Client\\ResourceInstanceList'), '// ')
       end
 
       out

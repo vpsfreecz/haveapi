@@ -206,6 +206,17 @@ příklady, aniž by se měnily přenášené požadavky nebo uložená data.
 
 <h2 id="renderer-extensions">Rozšíření rendererů</h2>
 
+Vysvětlující komentáře dodávané frameworkem se řídí jazykem dokumentace.
+Spustitelný kód, identifikátory, literály, zakomentované příkazy a ukázková data
+zůstávají beze změny. Neměnný kontext zachycuje `locale` s výchozí hodnotou `:en`
+a zachovává ho při `with`. `example_comment(key, default:, **values)` vyhledává
+`haveapi.documentation.comments.<key>`; `documentation_message` hledá ostatní
+klíče pod `haveapi.documentation`, včetně omezení generovaných klientů.
+Renderery přidávají značku komentáře ke každému fyzickému řádku textu.
+Dokumentační adaptéry mohou tyto volitelné metody kontextu používat bez závislosti
+na serverovém gemu; staré kontexty a přímá volání rendererů zachovávají anglické
+výchozí texty.
+
 Stávající poziční konstruktory rendererů a metody `init`, `auth(method, desc)`
 a `example(sample)` nebo `request(sample)`/`response(sample)` nadále fungují.
 Registr pomocí `with_context` připojuje `HaveAPI::ClientExample::Context`

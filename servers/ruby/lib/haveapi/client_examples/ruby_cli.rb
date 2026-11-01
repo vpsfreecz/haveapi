@@ -23,30 +23,27 @@ module HaveAPI::ClientExamples
       case method
       when :basic
         <<~END
-          # Provide credentials on command line
+          #{comment_lines(example_comment('cli_credentials', default: 'Provide credentials on command line'), '# ')}
           #{init} --auth basic --user user --password secret
 
-          # If username or password isn't provided, the user is asked on stdin
+          #{comment_lines(example_comment('cli_ask_stdin', default: 'If username or password isn\'t provided, the user is asked on stdin'), '# ')}
           #{init} --auth basic --user user
           # Password: secret
         END
 
       when :token
         <<~END
-          # Get token using username and password and save it to disk
-          # Note that the client always has to call some action. APIs should provide
-          # an action to get information about the current user, so that's what we're
-          # calling now.
+          #{comment_lines(example_comment('cli_save_token', default: 'Get token using username and password and save it to disk'), '# ')}
+          #{comment_lines(example_comment('cli_action_required', default: "Note that the client always has to call some action. APIs should provide\nan action to get information about the current user, so that's what we're\ncalling now."), '# ')}
           #{init} --auth token #{auth_token_credentials(desc, password: false).map { |k, v| "#{Shellwords.escape("--#{k}")} #{Shellwords.escape(v.to_s)}" }.join(' ')} --save user current
           # Password: secret
 
-          # Now the token is read from disk and the user does not have to provide username
-          # nor password and be authenticated
+          #{comment_lines(example_comment('cli_read_token', default: "Now the token is read from disk and the user does not have to provide username\nnor password and be authenticated"), '# ')}
           #{init} user current
         END
 
       when :oauth2
-        '# OAuth2 is not supported by HaveAPI Ruby CLI.'
+        comment_lines(example_comment('cli_oauth_unsupported', default: 'OAuth2 is not supported by HaveAPI Ruby CLI.'), '# ')
       end
     rescue HaveAPI::ClientExample::UnsupportedAuthentication => e
       { status: :limitation, reason: e.message }.freeze

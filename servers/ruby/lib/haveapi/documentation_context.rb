@@ -1,15 +1,16 @@
 require 'haveapi/client_example'
+require 'haveapi/i18n'
 
 module HaveAPI
   class ClientExample
     # A request-local snapshot: never freeze or retain the server's shared help.
     class Context
-      FIELDS = %i[version host base_url version_url description resource_path resource action_name action sample profile detail].freeze
+      FIELDS = %i[version host base_url version_url description resource_path resource action_name action sample profile detail locale].freeze
       attr_reader(*FIELDS)
 
       def initialize(version:, host:, base_url:, version_url:, description:,
                      resource_path: [], resource: nil, action_name: nil, action: nil,
-                     sample: nil, profile: nil, detail: :simple)
+                     sample: nil, profile: nil, detail: :simple, locale: :en)
         @version = normalize(:version, version)
         @host = normalize(:host, host)
         @base_url = normalize(:base_url, base_url)
@@ -22,6 +23,7 @@ module HaveAPI
         @sample = normalize(:sample, sample)
         @profile = normalize(:profile, profile)
         @detail = normalize(:detail, detail)
+        @locale = normalize(:locale, locale)
         freeze
       end
 
@@ -44,6 +46,14 @@ module HaveAPI
         derived.freeze
       end
 
+      def documentation_message(key, default:, **values)
+        ::I18n.t("haveapi.documentation.#{key}", locale:, default:, **values)
+      end
+
+      def example_comment(key, default:, **values)
+        documentation_message("comments.#{key}", default:, **values)
+      end
+
       private
 
       def normalize(field, value)
@@ -54,6 +64,8 @@ module HaveAPI
           copy(value.map(&:to_s))
         when :action_name
           value.nil? ? nil : value.to_s.dup.freeze
+        when :locale
+          value.to_sym
         when :profile
           value
         when :detail

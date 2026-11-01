@@ -42,17 +42,17 @@ module HaveAPI::ClientExamples
 
       when :oauth2
         <<~END
-          # 1) Request authorization code
+          #{comment_lines(example_comment('http_oauth_code', default: '1) Request authorization code'), '# ')}
           GET #{desc[:authorize_path]}?response_type=code&client_id=example-client&state=example-state&redirect_uri=https%3A%2F%2Fexample.org%2Fcallback HTTP/1.1
           Host: #{host}
 
-          # 2) The user logs in using this API
+          #{comment_lines(example_comment('http_oauth_login', default: '2) The user logs in using this API'), '# ')}
 
-          # 3) The API then redirects the user back to the client application
+          #{comment_lines(example_comment('http_oauth_redirect', default: '3) The API then redirects the user back to the client application'), '# ')}
           GET /callback?code=example-code&state=example-state
           Host: client-application
 
-          # 4) The client application requests access token
+          #{comment_lines(example_comment('http_oauth_token', default: '4) The client application requests access token'), '# ')}
           POST #{desc[:token_path]}
           Content-Type: application/x-www-form-urlencoded
 

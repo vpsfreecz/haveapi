@@ -245,8 +245,14 @@ module HaveAPI
       COMPONENTS = Release::VERSIONS
       SPECS = COMPONENTS.to_h { |path, name| ["#{path.split('/lib/').first}/#{name}.gemspec", name] }.freeze
       PATHS = (['VERSION'] + COMPONENTS.keys + SPECS.keys).freeze
+      SERVER_GEMSPEC = 'servers/ruby/haveapi.gemspec'.freeze
+      FILE_SELECTION_POLICY = 'documentation-files-v1'.freeze
+      FILE_SELECTIONS = [
+        "  s.files       = `git ls-files -z`.split(\"\\x0\") + Dir.glob('doc/*')\n",
+        "  s.files       = `git ls-files -z`.split(\"\\x0\") + Dir.glob('doc/**/*').select { |path| File.file?(path) }\n"
+      ].freeze
 
-      def self.capture(contents)
+      def self.capture(contents, normalize_files: true)
         raise ContractError, 'Incomplete own source metadata' unless contents.keys.sort == PATHS.sort
 
         own = contents.fetch('VERSION').delete_suffix("\n")
@@ -284,9 +290,22 @@ module HaveAPI
             normalized[path] = text.sub(requirement, "'haveapi-client', '~> #{PLACEHOLDER}'")
           end
         end
-        { 'contents' => contents, 'own_version' => own,
-          'raw_sha256' => contents.transform_values { |text| Digest::SHA256.hexdigest(text) },
-          'normalized_sha256' => normalized.transform_values { |text| Digest::SHA256.hexdigest(text) } }
+        files = normalize_files && documentation_files(normalized.fetch(SERVER_GEMSPEC))
+        normalized[SERVER_GEMSPEC] = files if files
+        receipt = { 'contents' => contents, 'own_version' => own,
+                    'raw_sha256' => contents.transform_values { |text| Digest::SHA256.hexdigest(text) },
+                    'normalized_sha256' => normalized.transform_values { |text| Digest::SHA256.hexdigest(text) } }
+        receipt['file_selection'] = FILE_SELECTION_POLICY if files
+        receipt
+      end
+
+      # This reviewed packaging transition does not change the dependency graph.
+      # Unknown or ambiguous declarations retain their original strict bytes.
+      def self.documentation_files(text)
+        declarations = text.lines.grep(/^\s*s\.files\b/)
+        return unless declarations.length == 1 && FILE_SELECTIONS.include?(declarations.first)
+
+        text.sub(declarations.first, "  s.files       = DOCUMENTATION_FILES\n")
       end
 
       def self.gemspec(root, path, receipt)
@@ -307,7 +326,9 @@ module HaveAPI
 
       def self.validate_inputs(inputs, source)
         receipt = inputs.fetch('source_versions')
-        raise ContractError, 'Own source metadata normalization mismatch' unless receipt == capture(receipt.fetch('contents'))
+        # Marker-absent legacy receipts used raw file-selection statements.
+        expected = capture(receipt.fetch('contents'), normalize_files: receipt.has_key?('file_selection'))
+        raise ContractError, 'Own source metadata normalization mismatch' unless receipt == expected
 
         receipt.fetch('raw_sha256').each do |path, digest|
           unless source.fetch('files_sha256').fetch(path) == digest && inputs.fetch('manifests').fetch(path) == receipt.fetch('normalized_sha256').fetch(path)

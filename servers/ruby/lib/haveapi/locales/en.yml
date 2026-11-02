@@ -324,7 +324,7 @@ en:
         overview: Overview
         parameter: Parameter
         path: Path
-        programming_language: Programming language
+        programming_language: Language
         query_parameter: 'Query parameter:'
         required: Required
         resources: Resources

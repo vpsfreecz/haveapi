@@ -234,7 +234,7 @@ en:
         examples: Examples
         input_parameters: Input parameters
         output_parameters: Output parameters
-        programming_language: Programming language
+        programming_language: Language
         client: Client
         simple: Simple
         thorough: With error handling

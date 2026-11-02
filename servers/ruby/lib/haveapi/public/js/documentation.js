@@ -726,7 +726,7 @@
         var levels = choice ? detailLevels(choice) : [];
         select.replaceChildren();
         levels.forEach(function (detail) { option(select, detail, documentationMessage(detail === 'thorough' ? 'thorough' : 'simple')); });
-        (select.closest('[data-detail-control]') || select).hidden = false;
+        (select.closest('[data-detail-control]') || select).hidden = levels.length < 2;
         select.disabled = levels.length < 2;
         select.value = effectiveDetail(state, choice);
       });

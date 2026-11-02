@@ -82,12 +82,24 @@ RSpec.describe HaveAPI::DocumentationHelpers do
   end
 
   it 'infers language from a valid client and handles singleton detail with a submitted hidden value' do
-    get '/api/v1/?example_client=python-async'
+    get '/api/v1/?resource=widget&q=name&doc_lang=cs&example_client=python-async'
     expect(example_form).to include('value="python" selected', 'value="python-async" selected')
     native_submit(example_language: 'curl', example_detail: 'thorough')
+    expect(example_form).to include('<label data-detail-control hidden>')
     expect(example_form).to match(/data-detail-select name="example_detail" disabled/)
     expect(example_form).to include('type="hidden" name="example_detail" value="simple"')
     expect(open_panels).to all(include('data-client="5"', 'data-detail="simple"'))
+    native_submit
+    expect(last_request.params).to include('example_detail' => 'simple', 'resource' => 'widget', 'q' => 'name', 'doc_lang' => 'cs')
+    expect(last_request.query_string.scan('example_detail=').length).to eq(1)
+    native_submit(example_language: 'ruby')
+    expect(example_form).to include('<label data-detail-control>')
+    expect(example_form).not_to include('type="hidden" name="example_detail"')
+    expect(example_form).not_to match(/data-detail-select[^>]*disabled/)
+    native_submit(example_detail: 'thorough')
+    expect(last_request.params['example_detail']).to eq('thorough')
+    expect(last_request.query_string.scan('example_detail=').length).to eq(1)
+    expect(open_panels).to all(include('data-client="0"', 'data-detail="thorough"'))
   end
 
   it 'falls back for unavailable profiles and unknown scalars without selecting arbitrary classes' do

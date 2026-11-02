@@ -124,9 +124,9 @@ additional error checks or diagnostics. Initialization and authentication
 examples remain on their respective pages.
 
 Choose a programming language first (labeled **Jazyk** in Czech). The Client selector appears when that language has
-multiple variants, such as Callback and Async. Examples stays visible and shows
-the choices supported by the selected client on the current page. A selector
-with only one choice is disabled.
+multiple variants, such as Callback and Async. The Examples selector appears
+when the selected client supports more than one detail level on the current
+page. If only one level is available, examples use it automatically.
 
 A client can offer only Simple on an initialization page and both levels on an
 action page. Each example uses With error handling only when that group supports

@@ -496,7 +496,7 @@ assert.equal(detailSelect.value, 'thorough');
 assert.equal(detailWrapper.hidden, false);
 assert.equal(languageSelect.disabled, false, 'Language remains the primary available choice');
 languageSelect.value = 'single'; languageSelect.listeners.change();
-assert.equal(detailWrapper.hidden, false); assert.equal(detailSelect.disabled, true);
+assert.equal(detailWrapper.hidden, true); assert.equal(detailSelect.disabled, true);
 assert.equal(variantWrapper.hidden, true); assert.equal(variantSelect.disabled, true);
 assert.deepEqual(values(variantSelect), ['single'], 'Client contains only renderers for the selected language');
 assert.deepEqual(values(detailSelect), ['simple'], 'Examples contains only the current renderer capabilities');
@@ -524,7 +524,7 @@ detailSelect.value = 'thorough'; detailSelect.listeners.change();
 assert.equal(JSON.parse(detailFixture.writes.at(-1).value).clients.capable, 'capable-other');
 detailDisplay.metadata[2].details = null;
 browserFixture('missing', false, { ...detailDisplay, saved: { language: 'single', detail: 'thorough' } });
-assert.equal(detailSelect.disabled, true); assert.equal(detailWrapper.hidden, false);
+assert.equal(detailSelect.disabled, true); assert.equal(detailWrapper.hidden, true);
 assert.deepEqual(values(detailSelect), ['simple']);
 assert.equal(detailPanels.find(panel => !panel.hidden).client, 'single', 'malformed metadata must not discard the renderer');
 assert.equal(detailPanels.find(panel => !panel.hidden).detail, 'simple');
@@ -598,7 +598,7 @@ const singletonPage = browserFixture('missing', false, { metadata: [{ id: 'callb
   saved: JSON.parse(mixedFixture.writes.at(-1).value), geometry: { scroll: 0 },
   matches: { '[data-detail-select]': [singletonPageSelect] } });
 assert.deepEqual(values(singletonPageSelect), ['simple'], 'a no-example page consumes its emitted Simple-only union');
-assert.equal(singletonPageSelect.disabled, true); assert.equal(singletonPageSelect.hidden, false);
+assert.equal(singletonPageSelect.disabled, true); assert.equal(singletonPageSelect.hidden, true);
 singletonPageSelect.listeners.change();
 assert.equal(singletonPage.writes.length, 0, 'singleton pages/events never persist over the preferred thorough choice');
 const restoredPageSelect = Object.assign(element('select'), { closest: () => null });
@@ -615,7 +615,7 @@ const oneChoice = browserFixture('missing', false, { saved: { language: 'only', 
   matches: { '[data-language-select]': [oneLanguage], '[data-variant-select]': [oneClient], '[data-detail-select]': [oneDetail] } });
 assert.deepEqual(values(oneLanguage), ['only']); assert.equal(oneLanguage.disabled, true);
 assert.equal(oneClientWrapper.hidden, true); assert.equal(oneClient.disabled, true);
-assert.equal(oneDetail.hidden, false); assert.equal(oneDetail.disabled, true); assert.equal(oneDetail.value, 'simple');
+assert.equal(oneDetail.hidden, true); assert.equal(oneDetail.disabled, true); assert.equal(oneDetail.value, 'simple');
 oneDetail.listeners.change(); assert.equal(oneChoice.writes.length, 0, 'no-example singleton controls do not erase a saved thorough preference');
 
 const fixture = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../documentation/fixtures/search_index.json'), 'utf8'));
@@ -837,7 +837,8 @@ function clipboardFixture(secure, nativeResult) {
   // copy controls share the same state rather than a second selection model.
   const copyLanguage = Object.assign(element('select'), { closest: () => null });
   const copyVariant = Object.assign(element('select'), { closest: selector => selector === '[data-variant-control]' ? { hidden: false } : null });
-  const copyDetail = Object.assign(element('select'), { closest: selector => selector === '[data-detail-control]' ? { hidden: false } : null });
+  const copyDetailWrapper = { hidden: false };
+  const copyDetail = Object.assign(element('select'), { closest: selector => selector === '[data-detail-control]' ? copyDetailWrapper : null });
   const copyPanels = ['capable', 'single'].flatMap(client => ['simple', 'thorough'].map(detail => {
     const pair = copyPanel('  ' + client + ' ' + detail + '\n', false);
     pair.panel.setAttribute('data-client', client); pair.panel.setAttribute('data-detail', detail);
@@ -862,7 +863,7 @@ function clipboardFixture(secure, nativeResult) {
   assert.equal(status(copyPanels[1]).textContent, '', 'changing selected client clears stale copied status');
   assert.deepEqual(values(copyVariant), ['single']); assert.deepEqual(values(copyDetail), ['simple']);
   assert.equal(copyVariant.disabled, true); assert.equal(copyDetail.disabled, true);
-  assert.equal(copyDetail.hidden, false);
+  assert.equal(copyDetailWrapper.hidden, true);
   button(selectedPair()).listeners.click(); await flush();
   assert.equal(actualCopies.at(-1), '  single simple\n', 'copy uses the actual Simple panel while its singleton selector is disabled');
   assert.equal(JSON.parse(copyControls.writes.at(-1).value).detail, 'thorough');

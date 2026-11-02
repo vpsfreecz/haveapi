@@ -4,10 +4,6 @@
   <% if account[:user] && controls[:signed_in] %>
     <div class="docs-account-content">
       <span class="sr-only"><%= escape_html(documentation_t('labels.account')) %> </span><span class="docs-identity"><%= escape_html(account[:user].login) %></span>
-      <form method="post" action="<%= escape_html(controls[:logout_url]) %>">
-        <input type="hidden" name="csrf" value="<%= escape_html(controls[:csrf_token]) %>">
-        <button type="submit"><%= escape_html(documentation_t('labels.sign_out')) %></button>
-      </form>
       <% if controls[:switch_user] %>
         <form method="post" action="<%= escape_html(controls[:logout_url]) %>">
           <input type="hidden" name="csrf" value="<%= escape_html(controls[:csrf_token]) %>">
@@ -15,6 +11,10 @@
           <button type="submit"><%= escape_html(documentation_t('labels.switch_user')) %></button>
         </form>
       <% end %>
+      <form method="post" action="<%= escape_html(controls[:logout_url]) %>">
+        <input type="hidden" name="csrf" value="<%= escape_html(controls[:csrf_token]) %>">
+        <button type="submit"><%= escape_html(documentation_t('labels.sign_out')) %></button>
+      </form>
     </div>
   <% else %>
     <a class="docs-sign-in" href="<%= escape_html(controls[:login_url]) %>" data-documentation-login aria-label="<%= escape_html(documentation_t('labels.sign_in')) %>" title="<%= escape_html(documentation_t('labels.sign_in')) %>">

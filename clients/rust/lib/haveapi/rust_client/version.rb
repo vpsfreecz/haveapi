@@ -1,5 +1,5 @@
 module HaveAPI
   module RustClient
-    VERSION = '0.32.1'.freeze
+    VERSION = '0.32.2'.freeze
   end
 end

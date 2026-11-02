@@ -179,10 +179,10 @@ function. A root resource named `describe` is rejected as a name collision
 during generation.
 The exported protocol description types are conservative and extensible. Fields
 can be absent or null, and consumers must narrow the parts they use. The
-executor retains responsibility for envelope errors. Static SDK action presence
-does not establish authorization or field availability; live descriptions can
-hide actions/fields or fail. The generator does not cache descriptions or infer
-permissions from them.
+executor retains responsibility for envelope errors. Static generated client
+action presence does not establish authorization or field availability; live
+descriptions can hide actions/fields or fail. The generator does not cache
+descriptions or infer permissions from them.
 
 Generated local input, JSON and path checks throw `ClientInputError`, a
 `TypeError` subclass with `code: 'HAVEAPI_CLIENT_INPUT_ERROR'` and

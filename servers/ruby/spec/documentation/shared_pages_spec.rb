@@ -252,7 +252,7 @@ RSpec.describe HaveAPI::SharedDocumentationHelpers do
       expect(response['Cache-Control']).to eq('private, no-store')
       expect(response.body).to include('href="/rack/api/"', 'href="/rack/api/doc"',
                                        'href="/rack/api/v1/"', 'href="/rack/api/v1/?page=resources"',
-                                       'src="/rack/js/documentation.js"')
+                                       "src=\"/rack/js/documentation.js?v=#{HaveAPI::DocumentationHelpers::ASSET_DIGESTS.fetch('js/documentation.js')}\"")
       expect(response.body).not_to include('href="/doc"', 'href="/v1/"')
     end
   end

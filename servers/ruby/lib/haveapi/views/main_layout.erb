@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><%= escape_html(documentation_document_title) %></title>
   <% if @documentation_ui %>
-  <script src="<%= escape_html(url('/js/documentation.js', false)) %>" data-highlighter-url="<%= escape_html(url('/js/highlighter.js', false)) %>"></script>
-  <link rel="stylesheet" href="<%= escape_html(url('/css/documentation.css', false)) %>">
+  <script src="<%= escape_html("#{url('/js/documentation.js', false)}?v=#{HaveAPI::DocumentationHelpers::ASSET_DIGESTS.fetch('js/documentation.js')}") %>" data-highlighter-url="<%= escape_html(url('/js/highlighter.js', false)) %>"></script>
+  <link rel="stylesheet" href="<%= escape_html("#{url('/css/documentation.css', false)}?v=#{HaveAPI::DocumentationHelpers::ASSET_DIGESTS.fetch('css/documentation.css')}") %>">
   <% else %>
 
   <link rel="stylesheet" href="/css/bootstrap.min.css">

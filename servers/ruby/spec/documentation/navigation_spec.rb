@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'open3'
 
 module DocumentationNavigationSpec
   User = Struct.new(:login)
@@ -273,10 +274,67 @@ describe DocumentationNavigationSpec do
     response = Rack::MockRequest.new(app).get('/v1/?resource=widget',
                                               'HTTP_HOST' => 'example.test', 'SCRIPT_NAME' => '/rack')
     expect(response.status).to eq(200)
-    expect(response.body).to include('src="/rack/js/documentation.js"',
+    digests = HaveAPI::DocumentationHelpers::ASSET_DIGESTS
+    expect(response.body).to include("src=\"/rack/js/documentation.js?v=#{digests.fetch('js/documentation.js')}\"",
                                      'data-highlighter-url="/rack/js/highlighter.js"',
-                                     'href="/rack/css/documentation.css"',
+                                     "href=\"/rack/css/documentation.css?v=#{digests.fetch('css/documentation.css')}\"",
                                      'href="/rack/v1/?page=resources"')
+  end
+
+  it 'versions the entry assets by installed content without reading files during requests' do
+    public_root = File.expand_path('../../lib/haveapi/public', __dir__)
+    digests = HaveAPI::DocumentationHelpers::ASSET_DIGESTS
+    expect(digests).to eq(%w[js/documentation.js css/documentation.css].to_h do |asset|
+      [asset, Digest::SHA256.file(File.join(public_root, asset)).hexdigest]
+    end)
+    expect(digests).to be_frozen
+    expect(digests.values).to all(be_frozen)
+    allow(Digest::SHA256).to receive(:file).and_call_original
+    %w[en cs].each do |locale|
+      get "/v1/?doc_lang=#{locale}"
+      digests.each do |asset, digest|
+        expect(last_response.body).to include("/#{asset}?v=#{digest}\"")
+      end
+    end
+    expect(Digest::SHA256).not_to have_received(:file)
+    digests.each do |asset, digest|
+      get "/#{asset}?v=#{digest}"
+      expect(last_response).to be_ok
+      expect(last_response.body).to eq(File.binread(File.join(public_root, asset)))
+    end
+  end
+
+  it 'retains content versions across loads and changes only the modified asset version' do
+    helper_path = File.expand_path('../../lib/haveapi/documentation_helpers.rb', __dir__)
+    script = <<~RUBY
+      require 'tmpdir'
+      require 'fileutils'
+      Dir.mktmpdir('haveapi-assets') do |root|
+        path = File.join(root, 'documentation_helpers.rb')
+        FileUtils.cp(ARGV.fetch(0), path)
+        %w[js/documentation.js css/documentation.css].each do |asset|
+          target = File.join(root, 'public', asset)
+          FileUtils.mkdir_p(File.dirname(target))
+          File.write(target, asset)
+        end
+        load path
+        first = HaveAPI::DocumentationHelpers::ASSET_DIGESTS
+        HaveAPI::DocumentationHelpers.send(:remove_const, :ASSET_DIGESTS)
+        load path
+        unchanged = HaveAPI::DocumentationHelpers::ASSET_DIGESTS
+        File.write(File.join(root, 'public/js/documentation.js'), 'changed JavaScript')
+        HaveAPI::DocumentationHelpers.send(:remove_const, :ASSET_DIGESTS)
+        load path
+        puts JSON.generate([first, unchanged, HaveAPI::DocumentationHelpers::ASSET_DIGESTS])
+      end
+    RUBY
+    output, status = Open3.capture2e(RbConfig.ruby, '-e', script, helper_path)
+    expect(status).to be_success, output
+    first, unchanged, changed = JSON.parse(output)
+    expect(unchanged).to eq(first)
+    expect(changed.fetch('css/documentation.css')).to eq(first.fetch('css/documentation.css'))
+    expect(changed.fetch('js/documentation.js')).to eq(Digest::SHA256.hexdigest('changed JavaScript'))
+    expect(changed.fetch('js/documentation.js')).not_to eq(first.fetch('js/documentation.js'))
   end
 
   it 'uses mounted canonical navigation and keeps shared documentation on its layout' do

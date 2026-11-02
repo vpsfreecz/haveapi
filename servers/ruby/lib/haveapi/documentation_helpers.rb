@@ -1,9 +1,14 @@
 require 'json'
 require 'uri'
+require 'digest/sha2'
 
 module HaveAPI
   # HTML navigation is derived only from this request's authorized description.
   module DocumentationHelpers
+    ASSET_DIGESTS = %w[js/documentation.js css/documentation.css].to_h do |asset|
+      [asset, Digest::SHA256.file(File.join(__dir__, 'public', asset)).hexdigest.freeze]
+    end.freeze
+
     def documentation_identity_name
       settings.api_server.documentation_name || request.host_with_port
     end

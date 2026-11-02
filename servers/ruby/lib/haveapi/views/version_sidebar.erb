@@ -65,7 +65,7 @@
     <% end %>
   </select></label>
   <% if variants.length < 2 %><input type="hidden" name="example_client" value="<%= escape_html(selection[:client].id) %>"><% end %>
-  <label data-detail-control><%= escape_html(documentation_t('labels.examples')) %> <select data-detail-select name="example_detail"<% if levels.length < 2 %> disabled<% end %>>
+  <label data-detail-control<% if levels.length < 2 %> hidden<% end %>><%= escape_html(documentation_t('labels.examples')) %> <select data-detail-select name="example_detail"<% if levels.length < 2 %> disabled<% end %>>
     <% levels.each do |level| %><option value="<%= escape_html(level) %>"<% if level == detail %> selected<% end %>><%= escape_html(documentation_t(level == 'thorough' ? 'labels.thorough' : 'labels.simple')) %></option><% end %>
   </select></label>
   <% if levels.length < 2 %><input type="hidden" name="example_detail" value="<%= escape_html(detail) %>"><% end %>

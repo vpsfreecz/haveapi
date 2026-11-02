@@ -1,5 +1,6 @@
 require 'spec_helper'
 require 'open3'
+require 'ripper'
 require_relative 'dynamic_fixture'
 
 RSpec.describe HaveAPI::ClientExample, '.render' do
@@ -154,6 +155,60 @@ RSpec.describe HaveAPI::ClientExample, '.render' do
       expect(context.detail).to eq(:simple)
       expect(context.sample).to eq(dynamic_sample)
     end
+  end
+
+  it 'loads Ruby before initialization and authentication handlers in both documentation languages' do
+    renderer = HaveAPI::ClientExamples::RubyClient
+    %i[en cs].product([[:init, nil], %i[auth basic], %i[auth token]]).each do |locale, (kind, method)|
+      %i[simple thorough].each do |detail|
+        context = dynamic_context(locale:, detail:)
+        source = renderer.render(kind, context:, auth_method: method, auth_description: token_description).fetch(:code)
+        expect(Ripper.sexp(source)).not_to be_nil
+        expect(source.scan("require 'haveapi/client'").length).to eq(1)
+        if detail == :thorough
+          expect(source).to start_with("require 'haveapi/client'\n\nbegin\n  api = HaveAPI::Client.new")
+          expect(source.index('api.setup')).to be < source.index('rescue HaveAPI::Client::ValidationError')
+        else
+          expect(source).to start_with("require 'haveapi/client'\n\napi = HaveAPI::Client.new")
+          expect(source).not_to include('begin', 'api.setup', 'rescue ')
+        end
+        next unless method == :token
+
+        expect(source).to include('continuations.fetch', "token: 'example-token'",
+                                  ::I18n.t('haveapi.documentation.comments.reuse_token', locale:))
+      end
+    end
+  end
+
+  it 'loads Ruby before handlers for public and protected actions in every response layout' do
+    %i[hash hash_list object object_list].product([true, false], [true, false]).each do |layout, success, authenticated|
+      context = dynamic_context(detail: :thorough, resource_path: ['widget'], action_name: 'show')
+      context = context.with(action: context.action.merge(auth: authenticated, output: context.action[:output].merge(layout:)),
+                             sample: context.sample.merge(status: success, path_params: [7]))
+      source = HaveAPI::ClientExamples::RubyClient.render(:example, context:).fetch(:code)
+      expect(Ripper.sexp(source)).not_to be_nil
+      expect(source).to start_with("require 'haveapi/client'\n\nbegin\n  api = HaveAPI::Client.new")
+      expect(source.scan("require 'haveapi/client'").length).to eq(1)
+      expect(source.index('api.setup')).to be < source.index('reply = api.widget.show')
+      expect(source.index('reply = api.widget.show')).to be < source.index('rescue HaveAPI::Client::ValidationError')
+      expect(source.include?("api.authenticate(:token, token: 'example-token')")).to eq(authenticated)
+    end
+  end
+
+  it 'propagates a Ruby client load failure before evaluating application rescue constants' do
+    context = dynamic_context(detail: :thorough)
+    source = HaveAPI::ClientExamples::RubyClient.render(:auth, context:, auth_method: :token, auth_description: token_description).fetch(:code)
+    missing_library = <<~RUBY
+      module Kernel
+        def require(name)
+          raise LoadError, "missing fixture library: \#{name}"
+        end
+      end
+    RUBY
+    output, status = Open3.capture2e(RbConfig.ruby, '-e', missing_library + source)
+    expect(status).not_to be_success
+    expect(output).to include('missing fixture library: haveapi/client', 'LoadError')
+    expect(output).not_to include('NameError', 'uninitialized constant')
   end
 
   it 'advertises only Simple for built-in limitations without probing another render' do

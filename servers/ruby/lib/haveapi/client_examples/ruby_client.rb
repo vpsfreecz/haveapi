@@ -14,11 +14,19 @@ module HaveAPI::ClientExamples
     end
 
     def initialization
-      "require 'haveapi/client'\n\napi = HaveAPI::Client.new(#{base_url.dump}, version: #{version.to_s.dump})\n"
+      "#{client_library}#{client_initialization}"
+    end
+
+    def client_library
+      "require 'haveapi/client'\n\n"
+    end
+
+    def client_initialization
+      "api = HaveAPI::Client.new(#{base_url.dump}, version: #{version.to_s.dump})\n"
     end
 
     def with_error_handling(body)
-      <<~RUBY
+      client_library + <<~RUBY
         begin
         #{body.lines.map { |line| line == "\n" ? line : "  #{line}" }.join.chomp}
         rescue HaveAPI::Client::ValidationError => error
@@ -35,7 +43,7 @@ module HaveAPI::ClientExamples
     end
 
     def init
-      thorough? ? with_error_handling("#{initialization}api.setup\n") : initialization
+      thorough? ? with_error_handling("#{client_initialization}api.setup\n") : initialization
     end
 
     def auth_login_literal(name, parameter, value)
@@ -71,7 +79,7 @@ module HaveAPI::ClientExamples
              end
       return unless body
 
-      source = [initialization.chomp, (thorough? ? 'api.setup' : nil), body].compact.join("\n\n")
+      source = [(thorough? ? client_initialization : initialization).chomp, (thorough? ? 'api.setup' : nil), body].compact.join("\n\n")
       thorough? ? with_error_handling(source) : source
     rescue HaveAPI::ClientExample::UnsupportedAuthentication => e
       { status: :limitation, reason: e.message }.freeze
@@ -106,7 +114,7 @@ module HaveAPI::ClientExamples
              else
                "\n#{comment_lines(example_comment('raises_exception', default: 'Raises exception %{exception}', exception: 'HaveAPI::Client::ActionFailed'), '# ')}\n"
              end
-      thorough? ? with_error_handling(["#{initialization}api.setup", credentials.chomp, out].reject(&:empty?).join("\n\n")) : out
+      thorough? ? with_error_handling(["#{client_initialization}api.setup", credentials.chomp, out].reject(&:empty?).join("\n\n")) : out
     rescue HaveAPI::ClientExample::UnsupportedAuthentication => e
       { status: :limitation, reason: e.message }.freeze
     end

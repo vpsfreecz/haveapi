@@ -96,7 +96,7 @@ go get example.org/widget/client@latest
 cargo add widget-client
 # Blocking Rust variant:
 cargo add widget-client --features blocking
-npm install @example/widget-client haveapi-client@0.30.2
+npm install @example/widget-client haveapi-client@0.32.0
 ```
 
 Go resolves `@latest` by its normal rules. Cargo selects a compatible release

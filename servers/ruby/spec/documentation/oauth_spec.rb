@@ -282,8 +282,31 @@ describe HaveAPI::DocumentationOAuth do
     end
   end
 
+  it 'keeps only the protected sign-out form when switching is unavailable' do
+    sign_in
+    get 'https://docs.example/api/v1/'
+    forms = last_response.body.scan(%r{<form method="post" action="https://docs.example/api/_documentation/oauth/logout">(.*?)</form>}m).flatten
+    expect(forms.length).to eq(1)
+    expect(forms.first).to include('>Sign out</button>')
+    expect(forms.first).to match(/name="csrf" value="[\w-]{43}"/)
+    expect(forms.first).not_to include('name="switch_user"', '>Switch user</button>')
+  end
+
   context 'with valid session CSRF and a switch-capable client' do
     let(:oauth_options) { super().merge(switch_user: true, switch_user_revoke_params: { 'end_shared_session' => '1' }) }
+
+    it 'places the native switch-user form before sign-out without changing their protected fields' do
+      sign_in
+      get 'https://docs.example/api/v1/'
+      forms = last_response.body.scan(%r{<form method="post" action="https://docs.example/api/_documentation/oauth/logout">(.*?)</form>}m).flatten
+      expect(forms.length).to eq(2)
+      expect(forms.first).to include('name="switch_user" value="1"', '>Switch user</button>')
+      expect(forms.last).to include('>Sign out</button>')
+      expect(forms.last).not_to include('name="switch_user"')
+      csrf_fields = forms.map { |form| form[/name="csrf" value="([^"]+)"/, 1] }
+      expect(csrf_fields.first).to match(/\A[\w-]{43}\z/)
+      expect(csrf_fields.last).to eq(csrf_fields.first)
+    end
 
     [nil, 'null', 'https://foreign.example', 'http://docs.example', 'https://docs.example:444'].each do |origin|
       [false, true].each do |switch_user|

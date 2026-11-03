@@ -107,7 +107,7 @@ input::placeholder { color: var(--docs-muted); }
 [data-documentation-menu-content] form + form { margin-top: .4rem; }
 .docs-theme-choices { display: flex; gap: .2rem; }
 [data-documentation-language] { padding-bottom: .75rem; margin-bottom: .75rem !important; border-bottom: 1px solid var(--docs-border); }
-[data-documentation-language] label { display: block; margin-bottom: .4rem; color: var(--docs-muted); font-size: .8125rem; font-weight: 600; }
+.docs-sidebar [data-documentation-language] label { display: block; margin: 0 0 .4rem; color: var(--docs-muted); font-size: .8125rem; font-weight: 600; }
 [data-documentation-language] select { width: 100%; margin-bottom: .4rem; }
 [data-documentation-language] button { width: 100%; }
 .docs-theme-label { display: block; margin-bottom: .4rem; color: var(--docs-muted); font-size: .8125rem; font-weight: 600; }

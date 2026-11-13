@@ -30,15 +30,18 @@ through 3.15. Each checkout resolves compatible development dependencies into
 its local lock; package dependencies keep compatible runtime ranges for
 consumers. Separate checkouts can resolve different versions.
 
-Ruff is pinned to 0.17.2 to match the native executable in the locked Nixpkgs.
+The exact Ruff development pin matches the native executable in locked Nixpkgs.
 `run_ruff.py` selects `HAVEAPI_RUFF` in Nix and checks that its version matches
 the installed locked Python distribution. Elsewhere it runs the locked Ruff
 executable. This avoids invoking PyPI's generic Linux ELF on NixOS and preserves
 formatter parity with CI. The `python-ruff-parity` flake check requires exactly
 one exact Ruff dev pin matching the selected Nix package and its executable.
-The Nixpkgs updater runs this check through `nix flake check` before committing
-an input update. Keep the Nix input and Ruff pin in sync, then run `uv sync`
-to refresh the local environment.
+The Nixpkgs updater reads Ruff's version from the newly locked Nixpkgs and
+updates the development pin. It runs `nix flake check`, then enters the newly
+locked `client-python` shell, runs `uv sync`, and checks Python formatting and
+lint with `run_ruff.py` before committing the pin and `flake.lock` together.
+The updater does not reformat Python source. For manual input changes, keep the
+Nix input and Ruff pin in sync, then run `uv sync` to refresh the local environment.
 Mypy and pytest run from the uv environment.
 
 The build requirement `uv_build>=0.13.0,<0.14` admits the locked Nix uv's native

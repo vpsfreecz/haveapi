@@ -17,12 +17,25 @@ short_rev() {
 need_cmd git
 need_cmd jq
 need_cmd nix
+need_cmd python3
+
+if ! python3 -c 'import tomllib' 2>/dev/null; then
+  echo "error: Python 3.11 or newer with tomllib is required" >&2
+  exit 1
+fi
 
 repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
 
-if ! git diff --quiet -- flake.lock || ! git diff --cached --quiet -- flake.lock; then
-  echo "error: flake.lock has uncommitted changes" >&2
+ruff_project=clients/python/pyproject.toml
+if ! git diff --quiet -- flake.lock "$ruff_project" ||
+   ! git diff --cached --quiet -- flake.lock "$ruff_project"; then
+  echo "error: flake.lock or $ruff_project has uncommitted changes" >&2
+  exit 1
+fi
+
+if ! git diff --cached --quiet; then
+  echo "error: staging area must be empty before updating nixpkgs" >&2
   exit 1
 fi
 
@@ -39,9 +52,21 @@ if [ "$old_rev" = "$new_rev" ]; then
   exit 0
 fi
 
+ruff_version=$(nix eval --impure --raw --expr \
+  '(builtins.getFlake (toString ./.)).inputs.nixpkgs.legacyPackages.${builtins.currentSystem}.ruff.version')
+python3 utils/sync-ruff.py "$ruff_version"
+
 nix flake check
 
-git add flake.lock
+nix develop .#client-python -c bash <<'EOF'
+set -euo pipefail
+cd clients/python
+uv sync
+uv run --locked python utils/run_ruff.py format --check .
+uv run --locked python utils/run_ruff.py check .
+EOF
+
+git add flake.lock "$ruff_project"
 
 if git diff --cached --quiet -- flake.lock; then
   echo "flake.lock did not change"

@@ -86,8 +86,16 @@ repository root unless explicitly stated otherwise.
   `.github/workflows/update-nixpkgs.yml`, then run `./utils/update-nixpkgs.sh`
   and review its generated commit.
   The helper uses confctl's forward-only guard; a rejection or unavailable
-  ancestry evidence stops the update. The workflow saves the original lock
-  outside the checkout and checks the final lock again before its ordinary
+  ancestry evidence stops the update. It requires Python 3.11 or newer with
+  `tomllib`, reads Ruff's version from the newly locked host Nixpkgs, and updates
+  the exact Python development pin before running `nix flake check`. It requires
+  both `flake.lock` and `clients/python/pyproject.toml` to be clean and an empty
+  staging area; only the checked lock/pin pair enters its generated commit.
+  Before staging, it enters the newly locked `client-python` shell, runs
+  `uv sync`, and checks Python formatting and lint with `run_ruff.py`.
+  Failure stops the update before staging or committing. The updater does not
+  reformat source or track the local `uv.lock`. The workflow saves the original
+  lock outside the checkout and checks the final lock again before its ordinary
   non-force push. If the target branch advances, rerun from its new baseline;
   do not rebase an old generated lock update. The commit subject must be
   `flake: nixpkgs <oldrev11> -> <newrev11>`.
